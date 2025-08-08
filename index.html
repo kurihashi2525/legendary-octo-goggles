@@ -224,7 +224,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="news-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
         <div id="modal-bg" class="absolute inset-0"></div>
         <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4">
@@ -287,7 +286,6 @@
         </div>
     </div>
 
-    <!-- Newspaper Modal -->
     <div id="newspaper-modal" class="newspaper-modal hidden">
         <div class="newspaper-modal-content">
             <div id="newspaper-modal-body"></div>
@@ -1066,17 +1064,53 @@
             throw lastError;
         }
 
-        function getRankDescription(rank) {
-            switch(rank) {
-                case 'A': return '名門校';
-                case 'B': return '強豪校';
-                case 'C': return '中堅校';
-                case 'D': return '発展途上のチーム';
-                case 'E': return '挑戦者';
-                default: return '';
+        async function generateNewspaperImage(matchData) {
+            const { winnerName, loserName, dbMatch, matchId, matchSummary } = matchData;
+            let prompt = "Japanese high school baseball game, summer tournament, anime style, dramatic moment. ";
+
+            // Add context based on the match result
+            if (matchSummary) {
+                prompt += `Focus on: ${matchSummary}. `;
+            } else {
+                const winnerRank = calculateRank(winnerName, tournamentState);
+                const loserRank = calculateRank(loserName, tournamentState);
+                const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+                const rankDiff = Math.abs(rankValues[winnerRank] - rankValues[loserRank]);
+                
+                if (rankDiff >= 2 && rankValues[winnerRank] < rankValues[loserRank]) { // Upset
+                    prompt += "A surprising upset victory, the underdog winning team is celebrating wildly. ";
+                } else if (parseInt(dbMatch.score1) + parseInt(dbMatch.score2) > 10) {
+                    prompt += "A high-scoring slugfest, players hitting the ball with intensity. ";
+                } else {
+                    prompt += "A tense pitcher's duel, focus on the pitcher's powerful throw. ";
+                }
+            }
+            prompt += "The players are celebrating a victory on the dusty field under the bright sun."
+
+            try {
+                const response = await fetch('/.netlify/functions/generateImage', {
+                    method: 'POST',
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Image generation failed: ${errorData.error}`);
+                }
+
+                const result = await response.json();
+                if (result.imageUrl) {
+                    return result.imageUrl;
+                } else {
+                    throw new Error("Invalid response structure from image generation function.");
+                }
+            } catch (error) {
+                console.error("Failed to generate newspaper image:", error);
+                return null; // Return null on failure
             }
         }
-        
+
+
         function createNewspaperHtml(articleData, matchData) {
             const { winnerName, loserName, dbMatch, matchId } = matchData;
             const [side, roundStr] = matchId.split('-');
@@ -1207,7 +1241,7 @@ ${civilWarInstruction}
                 // Generate text and image in parallel
                 const [textResponse, imageUrl] = await Promise.all([
                     fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
-                    Promise.resolve(null) // Placeholder for image generation
+                    generateNewspaperImage({ winnerName, loserName, dbMatch, matchId, matchSummary })
                 ]);
                 
                 const result = await textResponse.json();
