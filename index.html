@@ -168,6 +168,12 @@
                     <p class="text-gray-500 text-center">まだニュースはありません。</p>
                 </div>
             </div>
+             <div id="daiya-bbs-section" class="hidden display-card border-4 border-green-600">
+                <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
+                <div id="daiya-bbs-comments" class="space-y-3">
+                    <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                </div>
+            </div>
              <div id="bbs-section" class="display-card">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
                 <div id="bbs-comments" class="space-y-3">
@@ -255,6 +261,9 @@
         const mainBracketContainer = document.getElementById('main-bracket-container');
         const newsContainer = document.getElementById('news-articles');
         const bbsCommentsContainer = document.getElementById('bbs-comments');
+        const daiyaBbsSection = document.getElementById('daiya-bbs-section');
+        const daiyaBbsTitle = document.getElementById('daiya-bbs-title');
+        const daiyaBbsCommentsContainer = document.getElementById('daiya-bbs-comments');
         const tournamentYearDisplay = document.getElementById('tournament-year-display');
         const generateSummaryBtn = document.getElementById('generate-summary-btn');
         const skipR1Btn = document.getElementById('skip-r1-btn');
@@ -622,6 +631,7 @@
             tournamentState.news = [];
             tournamentState.seeds = seeds;
             tournamentState.bbsComments = [];
+            tournamentState.daiyaBbsComments = []; // Initialize special BBS
 
             const round1Setup = teams.reduce((acc, team, i) => {
                 if (i % 2 === 0) acc.push({ team1: team, team2: null });
@@ -667,6 +677,7 @@
             renderMainBracket(data);
             renderNews(data.news || []);
             renderBbsComments(data.bbsComments || []);
+            renderDaiyaBbsComments(data.daiyaBbsComments || []);
             checkTournamentProgress();
         }
 
@@ -889,6 +900,24 @@
                     <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
                 `;
                 bbsCommentsContainer.appendChild(commentEl);
+            });
+        }
+
+        function renderDaiyaBbsComments(comments) {
+            if (!comments || comments.length === 0) {
+                daiyaBbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
+                return;
+            }
+            daiyaBbsCommentsContainer.innerHTML = ''; 
+            comments.slice().reverse().forEach(comment => {
+                const commentEl = document.createElement('div');
+                commentEl.className = 'bbs-comment';
+                commentEl.innerHTML = `
+                    <p class="font-semibold text-gray-600 text-sm">${comment.personality || '名無しさん'}</p>
+                    <p class="text-gray-800 my-1">${comment.text}</p>
+                    <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
+                `;
+                daiyaBbsCommentsContainer.appendChild(commentEl);
             });
         }
 
@@ -1388,6 +1417,71 @@ ${analysis}
             }
         }
 
+        async function generateDaiyaBbsComments(winnerName, loserName, dbMatch, nextOpponentInfo) {
+            const isDaiyaWinner = winnerName === '代矢東';
+            const resultContext = isDaiyaWinner ? '勝利' : '敗北';
+            const score = isDaiyaWinner ? `${dbMatch.score1} - ${dbMatch.score2}` : `${dbMatch.score2} - ${dbMatch.score1}`;
+            
+            let nextOpponentPromptPart = "";
+            if (nextOpponentInfo) {
+                if (nextOpponentInfo.decided) {
+                    nextOpponentPromptPart = `次の対戦相手は強豪・${nextOpponentInfo.decided}だ。`;
+                } else if (nextOpponentInfo.potential && nextOpponentInfo.potential[0] && nextOpponentInfo.potential[1]) {
+                    nextOpponentPromptPart = `次の対戦相手は${nextOpponentInfo.potential[0]}と${nextOpponentInfo.potential[1]}の勝者だ。`;
+                }
+            }
+
+            const prompt = `
+あなたは、静岡の古豪「代矢東」高校野球部の熱狂的なファンです。あなたは野球に非常に詳しく、常に冷静に試合を分析し、どうすればチームが甲子園に行けるかを考えています。
+以下の試合結果について、あなたらしいコメントを5つ生成してください。
+
+### 試合情報
+- 試合結果: 代矢東の${resultContext}
+- 対戦相手: ${isDaiyaWinner ? loserName : winnerName}
+- スコア: ${score}
+- 次の試合: ${nextOpponentPromptPart}
+
+### あなたのキャラクターと指示
+- あなたは生粋の野球好きで、代矢東のファンが集う特設掲示板の常連です。
+- **もし代矢東が勝利した場合:**
+  - 喜びつつも、冷静に勝因を分析してください（例：「今日の勝因は継投のタイミングだな」「あの場面のスクイズは見事だった」）。
+  - すぐに次の対戦相手に目を向け、どうすれば勝てるかの戦略を語ってください（例：「次は〇〇か…キーマンは相手の3番打者だ。徹底的にインコースを攻めるべき」）。
+  - 決して浮かれず、常に甲子園への道を冷静に見据えてください。
+- **もし代矢東が敗北した場合:**
+  - 非常に落胆し、性格の悪さを露呈してください。
+  - 敗因を厳しく追及してください（例：「なぜあの場面でピッチャーを変えなかったんだ」「監督の采配ミスだろ」）。
+  - 「【悲報】代矢東、今年も甲子園いけず…」のような、絶望的なスレッドタイトルを必ず一つ生成してください。
+  - 来年に向けての不安や、チームの課題を辛辣に指摘してください。
+
+### 出力形式
+必ず以下のJSON配列形式で出力してください。他のテキストは含めないでください。
+[
+  {"personality": "代矢東ファン", "comment": "（コメント本文）"},
+  {"personality": "代矢東ファン", "comment": "（コメント本文）"},
+  {"personality": "代矢東ファン", "comment": "（コメント本文）"},
+  {"personality": "代矢東ファン", "comment": "（コメント本文）"},
+  {"personality": "代矢東ファン", "comment": "（コメント本文）"}
+]
+`;
+            try {
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const response = await fetchWithRetry(payload);
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const commentsJson = parseJsonFromText(rawText);
+                    if (Array.isArray(commentsJson)) {
+                        return commentsJson.map(c => ({...c, text: c.comment, timestamp: Date.now()}));
+                    }
+                }
+                throw new Error("AIからの応答が予期した形式ではありません。");
+            } catch (error) {
+                console.error("代矢東 掲示板コメントの生成に失敗しました:", error);
+                return [];
+            }
+        }
+
 
         // --- Match Processing ---
         async function processMatchWin(matchId, winnerName) {
@@ -1397,7 +1491,6 @@ ${analysis}
             const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
             dbMatch.winner = winnerName;
 
-            // Update team records
             tournamentState.teamRecords[winnerName].wins++;
             tournamentState.teamRecords[loserName].losses++;
             
@@ -1406,23 +1499,35 @@ ${analysis}
             // UIをローディング表示に更新
             newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
             if (bbsCommentsContainer.querySelector('.text-gray-500')) {
-                bbsCommentsContainer.innerHTML = ''; // 「まだ反応はありません」を消す
+                bbsCommentsContainer.innerHTML = '';
             }
             const loaderEl = document.createElement('div');
             loaderEl.className = 'loader';
             loaderEl.id = 'bbs-loader';
             loaderEl.textContent = 'AIが掲示板を監視中...';
-            bbsCommentsContainer.prepend(loaderEl); // ローダーを先頭に追加
+            bbsCommentsContainer.prepend(loaderEl);
+
+            const isDaiyaMatch = winnerName === '代矢東' || loserName === '代矢東';
+            if (isDaiyaMatch) {
+                daiyaBbsSection.classList.remove('hidden');
+                daiyaBbsCommentsContainer.innerHTML = `<div class="loader">代矢東ファンが分析中...</div>`;
+            } else {
+                daiyaBbsSection.classList.add('hidden');
+            }
 
             const [side, roundStr, matchStr] = matchId.split('-');
 
             if (side === 'F') {
-                const article = await generateNewsArticle(winnerName, loserName, dbMatch, matchId, null, dbMatch.summary);
-                const newComments = await generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary);
+                const [article, newComments, daiyaComments] = await Promise.all([
+                    generateNewsArticle(winnerName, loserName, dbMatch, matchId, null, dbMatch.summary),
+                    generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary),
+                    isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, null) : Promise.resolve([])
+                ]);
+                
                 tournamentState.news.push(article);
-                if (newComments && newComments.length > 0) {
-                    tournamentState.bbsComments.push(...newComments);
-                }
+                if (newComments && newComments.length > 0) tournamentState.bbsComments.push(...newComments);
+                if (daiyaComments && daiyaComments.length > 0) tournamentState.daiyaBbsComments = daiyaComments;
+                
                 updateTournamentFinishRecords();
                 renderTournament(tournamentState);
                 saveState();
@@ -1464,18 +1569,22 @@ ${analysis}
                 }
             }
 
-            // AIによる記事生成とコメント生成を並行して実行
-            const [article, newComments] = await Promise.all([
+            const [article, newComments, daiyaComments] = await Promise.all([
                 generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, dbMatch.summary),
-                generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary)
+                generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary),
+                isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, nextOpponentInfo) : Promise.resolve([])
             ]);
 
-            // ニュース記事を保存
             tournamentState.news.push(article);
-
-            // 掲示板コメントを保存
-            if (newComments && newComments.length > 0) {
-                tournamentState.bbsComments.push(...newComments);
+            if (newComments && newComments.length > 0) tournamentState.bbsComments.push(...newComments);
+            if (daiyaComments && daiyaComments.length > 0) {
+                tournamentState.daiyaBbsComments = daiyaComments;
+                if (winnerName !== '代矢東') {
+                    const sadTitle = daiyaComments.find(c => c.text.includes('【悲報】'));
+                    daiyaBbsTitle.textContent = sadTitle ? sadTitle.text : "【特設】代矢東 応援掲示板";
+                } else {
+                    daiyaBbsTitle.textContent = "【特設】代矢東 応援掲示板";
+                }
             }
             
             const nextRoundNum = roundNum + 1;
@@ -1492,7 +1601,6 @@ ${analysis}
                 tournamentState.matches[nextMatchId] = { team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
             }
             
-            // 次の試合に進む勝者をセット
             if(roundNum < 5){
                  const isFirstSlot = matchNum % 2 !== 0;
                  if(isFirstSlot){
@@ -1500,10 +1608,10 @@ ${analysis}
                  } else {
                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
-            } else { // 準決勝から決勝へ
+            } else { 
                  if(side === 'L'){
                       tournamentState.matches[nextMatchId].team1 = winnerName;
-                 } else { // side === 'R'
+                 } else { 
                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             }
@@ -1920,7 +2028,7 @@ ${analysis}
             const matchIds = Object.keys(tournamentState.matches || {});
 
             const getRoundStatus = (roundNumber) => {
-                const roundMatchIds = matchIds.filter(id => id.startsWith(`L-R${roundNumber}-M`) || id.startsWith(`R-R${roundNumber}-M`));
+                const roundMatchIds = matchIds.filter(id => id.includes(`-R${roundNumber}-M`));
                 const played = roundMatchIds.filter(id => tournamentState.matches[id] && tournamentState.matches[id].winner).length;
                 const total = 32 / Math.pow(2, roundNumber - 1);
                 return { total, played };
