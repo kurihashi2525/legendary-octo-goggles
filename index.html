@@ -142,20 +142,16 @@
                     </button>
                 </div>
                <div class="ml-auto">
-                    <div class="flex items-center justify-end space-x-4">
-                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">
-                            1回戦をスキップ
-                        </button>
+                    <div class="flex items-center justify-end space-x-2">
+                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
+                        <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
+                        <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
                         <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
-                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">
-                            セーブ / ロード
-                        </button>
-                        <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">
-                            はじめからやり直す
-                        </button>
+                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
+                        <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
                     </div>
                     <div id="skip-loader-container" class="h-6 text-right mt-1">
-                         <span id="skip-loader" class="hidden text-sm text-gray-600 font-bold">1回戦を進行しています...</span>
+                         <span id="skip-loader" class="hidden text-sm text-gray-600 font-bold">試合を進行しています...</span>
                     </div>
                 </div>
             </div>
@@ -262,6 +258,8 @@
         const tournamentYearDisplay = document.getElementById('tournament-year-display');
         const generateSummaryBtn = document.getElementById('generate-summary-btn');
         const skipR1Btn = document.getElementById('skip-r1-btn');
+        const skipR2Btn = document.getElementById('skip-r2-btn');
+        const skipR3Btn = document.getElementById('skip-r3-btn');
         const skipLoader = document.getElementById('skip-loader');
 
         // Modals
@@ -642,6 +640,7 @@
             renderTournament(tournamentState);
             setupEl.classList.add('hidden');
             tournamentDisplayEl.classList.remove('hidden');
+            checkTournamentProgress();
             
             newsContainer.innerHTML = `<div class="loader">AI記者が展望記事を執筆中...</div>`;
             bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
@@ -666,23 +665,10 @@
         // --- Rendering Functions ---
         function renderTournament(data) {
             tournamentYearDisplay.textContent = `${data.tournamentYear}年度大会`;
-            
-            // Check if any R1 match has a winner to control skip button visibility
-            const isAnyR1MatchPlayed = Object.keys(data.matches).some(matchId => 
-                matchId.includes('-R1-M') && data.matches[matchId].winner
-            );
-            const isTournamentOver = data.matches['F-R1-M1']?.winner;
-
-            if (isAnyR1MatchPlayed || isTournamentOver) {
-                skipR1Btn.classList.add('hidden');
-            } else {
-                skipR1Btn.classList.remove('hidden');
-                skipR1Btn.disabled = false;
-            }
-
             renderMainBracket(data);
             renderNews(data.news || []);
             renderBbsComments(data.bbsComments || []);
+            checkTournamentProgress();
         }
 
         function renderMainBracket(data) {
@@ -922,9 +908,6 @@
             return null;
         }
 
-        /**
-         * API呼び出しをリトライ機能付きで実行するラッパー関数
-         */
         // --- 修正後の fetchWithRetry 関数 ---
         async function fetchWithRetry(payload, maxRetries = 3) {
             // 送り先を、Googleではなく自分の中間サーバー（サーバーレス関数）に変更
@@ -1409,7 +1392,6 @@ ${analysis}
 
         // --- Match Processing ---
         async function processMatchWin(matchId, winnerName) {
-            skipR1Btn.classList.add('hidden');
             const dbMatch = tournamentState.matches[matchId];
             if (!dbMatch || dbMatch.winner) return;
 
@@ -1527,7 +1509,6 @@ ${analysis}
             
             renderTournament(tournamentState);
             saveState();
-            checkTournamentProgress();
         }
         
         function getRankString(rank) {
@@ -1792,7 +1773,7 @@ ${analysis}
             }
         });
         
-        // --- New Skip Round 1 Feature ---
+        // --- Skip Round Feature ---
         function generateAutoScore(rankWinner, rankLoser) {
             const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
             const diff = rankValues[rankWinner] - rankValues[rankLoser];
@@ -1817,22 +1798,25 @@ ${analysis}
             return [winnerScore, loserScore];
         }
 
-        async function skipRound1() {
-            skipR1Btn.disabled = true;
+        async function skipRound(roundNumber) {
+            const btn = document.getElementById(`skip-r${roundNumber}-btn`);
+            if (btn) btn.disabled = true;
             skipLoader.classList.remove('hidden');
 
-            const r1MatchIds = [];
+            const matchIds = [];
+            const numMatchesInRound = 32 / Math.pow(2, roundNumber - 1);
+
             ['L', 'R'].forEach(side => {
-                for (let i = 1; i <= 16; i++) {
-                    r1MatchIds.push(`${side}-R1-M${i}`);
+                for (let i = 1; i <= numMatchesInRound / 2; i++) {
+                    matchIds.push(`${side}-R${roundNumber}-M${i}`);
                 }
             });
 
-            let upsets = []; // To track upsets
+            let upsets = [];
 
-            for (const matchId of r1MatchIds) {
+            for (const matchId of matchIds) {
                 const match = tournamentState.matches[matchId];
-                if (match.winner) continue;
+                if (!match || match.winner || !match.team1 || !match.team2) continue;
 
                 const { team1, team2 } = match;
                 const rank1 = calculateRank(team1, tournamentState);
@@ -1845,7 +1829,6 @@ ${analysis}
                 const rankDiff = Math.abs(rankValues[rank1] - rankValues[rank2]);
 
                 if (rankDiff === 0) {
-                    // Same rank, 50/50 chance
                     [winnerName, loserName] = Math.random() > 0.5 ? [team1, team2] : [team2, team1];
                     [winnerRank, loserRank] = [rank1, rank2];
                 } else {
@@ -1861,7 +1844,6 @@ ${analysis}
                     const lowerRank = rankValues[rank1] > rankValues[rank2] ? rank2 : rank1;
 
                     if (Math.random() < upsetChance) {
-                        // Upset happens!
                         winnerName = lowerRankTeam;
                         loserName = higherRankTeam;
                         winnerRank = lowerRank;
@@ -1869,7 +1851,6 @@ ${analysis}
                         isUpset = true;
                         upsets.push({ winner: winnerName, loser: loserName, rankDiff });
                     } else {
-                        // No upset
                         winnerName = higherRankTeam;
                         loserName = lowerRankTeam;
                         winnerRank = higherRank;
@@ -1879,7 +1860,6 @@ ${analysis}
                 
                 let winnerScore, loserScore;
                 if (isUpset) {
-                    // Upset scores are always close
                     winnerScore = 2 + Math.floor(Math.random() * 3); // 2-4
                     loserScore = winnerScore - 1;
                 } else {
@@ -1895,7 +1875,9 @@ ${analysis}
                 
                 const [side, , matchStr] = matchId.split('-');
                 const matchNum = parseInt(matchStr.slice(1));
-                const nextMatchId = `${side}-R2-M${Math.ceil(matchNum / 2)}`;
+                const nextRoundNum = roundNumber + 1;
+                const nextMatchNum = Math.ceil(matchNum / 2);
+                const nextMatchId = `${side}-R${nextRoundNum}-M${nextMatchNum}`;
 
                 if (!tournamentState.matches[nextMatchId]) {
                     tournamentState.matches[nextMatchId] = { team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
@@ -1908,17 +1890,17 @@ ${analysis}
                 }
             }
             
-            let newsBody = "熱戦が繰り広げられた1回戦が全試合終了しました。\nシード校が順当に勝ち上がる一方、波乱の展開も見られました。\n2回戦ではどのようなドラマが待っているのか、目が離せません！";
-            let bbsCommentText = "1回戦終わったかー。やっぱりAランクのチームは安定してるな。";
+            let newsBody = `${roundNumber}回戦が全試合終了しました。\n順当に勝ち上がる強豪校もいれば、波乱の展開も見られました。\n次のラウンドではどのようなドラマが待っているのか、目が離せません！`;
+            let bbsCommentText = `${roundNumber}回戦終わったかー。やっぱり上位ランクのチームは安定してるな。`;
 
             if (upsets.length > 0) {
                 const biggestUpset = upsets.sort((a, b) => b.rankDiff - a.rankDiff)[0];
-                newsBody = `1回戦が終了し、早くも波乱の展開！\n特に${biggestUpset.winner}が強豪${biggestUpset.loser}を破るジャイアントキリングを達成し、球場を沸かせました。\n2回戦以降も目が離せない！`;
-                bbsCommentText = `まさか${biggestUpset.loser}が初戦で負けるとは…今年の夏は何が起こるか分からんぞ。`;
+                newsBody = `${roundNumber}回戦が終了し、早くも波乱の展開！\n特に${biggestUpset.winner}が強豪${biggestUpset.loser}を破るジャイアントキリングを達成し、球場を沸かせました。\n次のラウンドも目が離せない！`;
+                bbsCommentText = `まさか${biggestUpset.loser}が${roundNumber}回戦で負けるとは…今年の夏は何が起こるか分からんぞ。`;
             }
 
             tournamentState.news.push({
-                title: "1回戦全試合が終了！",
+                title: `${roundNumber}回戦全試合が終了！`,
                 body: newsBody,
                 timestamp: Date.now()
             });
@@ -1929,9 +1911,26 @@ ${analysis}
             });
 
             skipLoader.classList.add('hidden');
-            skipR1Btn.classList.add('hidden');
             renderTournament(tournamentState);
             saveState();
+        }
+
+        function checkTournamentProgress() {
+            const matches = Object.values(tournamentState.matches || {});
+            const getRoundStatus = (roundNumber) => {
+                const roundMatches = matches.filter(m => m.team1 && m.team2 && tournamentState.matches[Object.keys(tournamentState.matches).find(k => tournamentState.matches[k] === m)].startsWith( `L-R${roundNumber}-M` ) || tournamentState.matches[Object.keys(tournamentState.matches).find(k => tournamentState.matches[k] === m)].startsWith( `R-R${roundNumber}-M` ));
+                const total = roundMatches.length;
+                const played = roundMatches.filter(m => m.winner).length;
+                return { total, played };
+            };
+
+            const r1 = getRoundStatus(1);
+            const r2 = getRoundStatus(2);
+            const r3 = getRoundStatus(3);
+
+            skipR1Btn.classList.toggle('hidden', r1.played > 0);
+            skipR2Btn.classList.toggle('hidden', !(r1.played > 0 && r1.played === 32 && r2.played === 0));
+            skipR3Btn.classList.toggle('hidden', !(r2.played > 0 && r2.played === 16 && r3.played === 0));
         }
 
         // --- Initial Load & Setup ---
@@ -1998,7 +1997,19 @@ ${analysis}
         skipR1Btn.addEventListener('click', async () => {
             const confirmed = await showConfirm("1回戦の全試合をランクに基づいて自動で進行します。この操作は元に戻せません。よろしいですか？");
             if (confirmed) {
-                skipRound1();
+                skipRound(1);
+            }
+        });
+        skipR2Btn.addEventListener('click', async () => {
+            const confirmed = await showConfirm("2回戦の全試合をランクに基づいて自動で進行します。この操作は元に戻せません。よろしいですか？");
+            if (confirmed) {
+                skipRound(2);
+            }
+        });
+        skipR3Btn.addEventListener('click', async () => {
+            const confirmed = await showConfirm("3回戦の全試合をランクに基づいて自動で進行します。この操作は元に戻せません。よろしいですか？");
+            if (confirmed) {
+                skipRound(3);
             }
         });
         
@@ -2118,3 +2129,4 @@ ${analysis}
     </script>
 </body>
 </html>
+
