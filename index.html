@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【AI連携・世代交代対応版】トーナメント表</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
@@ -46,10 +46,11 @@
         .hidden { display: none; }
         .news-article { border-left: 4px solid #3b82f6; cursor: pointer; transition: background-color 0.2s; }
         #modal-bg { background-color: rgba(0,0,0,0.5); }
-        .confirm-modal, .details-modal, .save-load-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .confirm-modal-content, .details-modal-content, .save-load-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .confirm-modal, .details-modal, .save-load-modal, .newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .confirm-modal-content, .details-modal-content, .save-load-modal-content, .newspaper-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
         .details-modal-content { width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto;}
         .save-load-modal-content { width: 95%; max-width: 500px; }
+        .newspaper-modal-content { width: 95%; max-width: 800px; max-height: 95vh; overflow-y: auto; }
         .confirm-modal-content { text-align: center; }
         .loader { text-align: center; padding: 20px; font-style: italic; color: #6b7280; }
         .details-btn { background-color: #6b7280; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: auto; margin-right: 2px; }
@@ -118,6 +119,27 @@
             border-radius: 9999px;
             margin-left: 8px;
         }
+        
+        /* Newspaper Styles */
+        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
+        .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
+        .newspaper-late { border: 2px solid #a10e25; }
+        .newspaper-header { text-align: center; border-bottom: 4px double #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .newspaper-title { font-size: 1.2rem; font-weight: 700; }
+        .newspaper-date { font-size: 0.8rem; }
+        .newspaper-content { display: flex; gap: 1.5rem; }
+        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; border-right: 2px solid #333; padding-right: 1rem; margin-right: 1rem; }
+        .newspaper-late .newspaper-main-headline { color: #a10e25; border-right-color: #a10e25;}
+        .newspaper-body-content { flex-grow: 1; }
+        .newspaper-sub-headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
+        .newspaper-late .newspaper-sub-headline { color: #333; }
+        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 3; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
+        .newspaper-early .newspaper-text { column-count: 2; }
+        .newspaper-score-box { border: 2px solid #333; padding: 1rem; text-align: center; margin-top: 1rem; }
+        .newspaper-score-box h3 { font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
+        .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
+        .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -262,6 +284,16 @@
         </div>
     </div>
 
+    <!-- Newspaper Modal -->
+    <div id="newspaper-modal" class="newspaper-modal hidden">
+        <div class="newspaper-modal-content">
+            <div id="newspaper-modal-body"></div>
+            <div class="mt-4 text-center">
+                <button id="newspaper-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         // --- DOM Elements ---
@@ -304,6 +336,9 @@
         const loadFromCodeBtn = document.getElementById('load-from-code-btn');
         const saveLoadCloseBtn = document.getElementById('save-load-close');
         const copySaveCodeBtn = document.getElementById('copy-save-code-btn');
+        const newspaperModal = document.getElementById('newspaper-modal');
+        const newspaperModalBody = document.getElementById('newspaper-modal-body');
+        const newspaperCloseBtn = document.getElementById('newspaper-close');
         
         // --- State Management ---
         let tournamentState = {};
@@ -676,7 +711,7 @@
             namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
             const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-                generatePreviewArticle(tournamentState),
+                generateNewsArticle(null, null, null, 'preview', null, null), // Special call for preview
                 generateBracketReactionComments(tournamentState),
                 generateNamcoNews(tournamentState, 'bracket')
             ]);
@@ -893,15 +928,20 @@
                         <button class="retry-btn" data-error-id="${article.errorId}">再生成</button>
                     `;
                 } else {
-                    articleEl.className = 'news-article bg-white p-4 rounded-lg shadow cursor-pointer hover:bg-gray-50';
-                    articleEl.innerHTML = `<div class="flex items-center"><h3 class="font-bold text-lg text-blue-600">${article.title}</h3></div>`;
-                    articleEl.addEventListener('click', () => {
-                        document.getElementById('modal-title').textContent = article.title;
-                        document.getElementById('modal-body').textContent = article.body;
-                        document.getElementById('modal-meta').innerHTML = `<p>${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>`;
-                        newsModal.classList.remove('hidden');
-                        newsModal.classList.add('flex');
-                    });
+                    const originalIndex = news.length - 1 - index;
+                    articleEl.className = 'bg-white p-4 rounded-lg shadow';
+                    articleEl.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
+                                <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
+                            </div>
+                            <div>
+                                <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                                ${article.newspaperHtml ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞</button>` : ''}
+                            </div>
+                        </div>
+                    `;
                 }
                 newsContainer.appendChild(articleEl);
             });
@@ -1033,70 +1073,68 @@
                 default: return '';
             }
         }
+        
+        function createNewspaperHtml(articleData, matchData) {
+            const { winnerName, loserName, dbMatch, matchId } = matchData;
+            const [side, roundStr] = matchId.split('-');
+            const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+
+            const isLateRound = roundNum >= 4; // 準々決勝から
+            const containerClass = isLateRound ? 'newspaper-late' : 'newspaper-early';
+            const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+            const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+
+            return `
+                <div class="newspaper-container ${containerClass}">
+                    <div class="newspaper-header">
+                        <h2 class="newspaper-title">熱闘高校野球</h2>
+                        <p class="newspaper-date">${new Date(articleData.timestamp).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                    <div class="newspaper-content">
+                        <h1 class="newspaper-main-headline">${winnerName}</h1>
+                        <div class="newspaper-body-content">
+                            <h2 class="newspaper-sub-headline">${articleData.title}</h2>
+                            ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
+                            <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
+                            <div class="newspaper-score-box">
+                                <h3>最終スコア</h3>
+                                <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
 
-        async function generatePreviewArticle(state) {
-            const { tournamentYear, seeds, teams } = state;
+        async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
+            // Handle preview article generation separately
+            if (matchId === 'preview') {
+                const { tournamentYear, seeds, teams } = tournamentState;
+                const blockA_teams = teams.slice(0, 16);
+                const blockB_teams = teams.slice(16, 32);
+                const blockC_teams = teams.slice(32, 48);
+                const blockD_teams = teams.slice(48, 64);
+                const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
+                const formatTeamInfo = (teamList) => teamList.map(t => `- ${t} (${getRankDescription(calculateRank(t, tournamentState))}): ${DETAILED_TEAM_DATA[t] ? DETAILED_TEAM_DATA[t].summary : TEAM_DATA[t].info}`).join('\n');
 
-            const blockA_teams = teams.slice(0, 16);
-            const blockB_teams = teams.slice(16, 32);
-            const blockC_teams = teams.slice(32, 48);
-            const blockD_teams = teams.slice(48, 64);
-
-            const findPromisingSchools = (teamList) => {
-                return teamList.filter(team => 
-                    seeds.includes(team) || 
-                    DETAILED_TEAM_DATA[team] ||
-                    TEAM_DATA[team].popularity ||
-                    TEAM_DATA[team].best.includes('甲子園')
-                );
-            };
-            
-            const formatTeamInfo = (teamList) => {
-                return teamList.map(t => {
-                    const detail = DETAILED_TEAM_DATA[t];
-                    const info = detail ? detail.summary : TEAM_DATA[t].info;
-                    const rank = calculateRank(t, state);
-                    return `- ${t} (${getRankDescription(rank)}): ${info}`;
-                }).join('\n');
-            };
-
-            const promisingA = findPromisingSchools(blockA_teams);
-            const promisingB = findPromisingSchools(blockB_teams);
-            const promisingC = findPromisingSchools(blockC_teams);
-            const promisingD = findPromisingSchools(blockD_teams);
-
-            const prompt = `
+                const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-間もなく開幕する「${tournamentState.tournamentYear}年度大会」の展望記事を、各ブロックごとに分析して作成してください。
+間もなく開幕する「${tournamentYear}年度大会」の展望記事を、各ブロックごとに分析して作成してください。
 
 ### 大会全体情報
-- 大会名: ${tournamentState.tournamentYear}年度大会
+- 大会名: ${tournamentYear}年度大会
 - シード校 (昨年度ベスト8): ${seeds.join(', ') || 'なし'}
 - 昨年度王者: ${seeds[0] || 'なし'}
 
-### Aブロック分析
-- **Aブロックの主な有力校:** ${promisingA.map(t => `${t} (${getRankDescription(calculateRank(t,state))})`).join(', ') || '特になし'}
-- **分析のポイント:** これらの有力校を中心に、Aブロックを勝ち抜くのはどのチームか、ダークホースはいるかを考察してください。各有力校の背景情報も参考にしてください。
-${formatTeamInfo(promisingA)}
+### 各ブロックの有力校
+- Aブロック: ${findPromisingSchools(blockA_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Bブロック: ${findPromisingSchools(blockB_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Cブロック: ${findPromisingSchools(blockC_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Dブロック: ${findPromisingSchools(blockD_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
 
-### Bブロック分析
-- **Bブロックの主な有力校:** ${promisingB.map(t => `${t} (${getRankDescription(calculateRank(t,state))})`).join(', ') || '特になし'}
-- **分析のポイント:** これらの有力校を中心に、Bブロックの戦いを展望してください。
-${formatTeamInfo(promisingB)}
-
-### Cブロック分析
-- **Cブロックの主な有力校:** ${promisingC.map(t => `${t} (${getRankDescription(calculateRank(t,state))})`).join(', ') || '特になし'}
-- **分析のポイント:** これらの有力校を中心に、Cブロックの勝ち上がりを予想してください。
-${formatTeamInfo(promisingC)}
-
-### Dブロック分析
-- **Dブロックの主な有力校:** ${promisingD.map(t => `${t} (${getRankDescription(calculateRank(t,state))})`).join(', ') || '特になし'}
-- **分析のポイント:** これらの有力校を中心に、Dブロックの混戦模様を解説してください。
-${formatTeamInfo(promisingD)}
-
-### 記事全体の執筆指示
-- 上記のブロック分析を基に、大会全体の展望をまとめてください。
+### 執筆指示
+- 上記情報を基に、大会全体の展望をまとめてください。
 - 記事のトーンは、読者の期待感を煽るような、ドラマチックなものにしてください。
 - 各ブロックの有力校に触れつつ、全体としての優勝候補も挙げてみてください。
 - 記事内では「Aランク」のような直接的なランク表記は使わず、「名門」「強豪」といった表現で格付けを示唆してください。
@@ -1105,54 +1143,30 @@ ${formatTeamInfo(promisingD)}
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
-            try {
-                let chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                const payload = { contents: chatHistory };
-                
-                const response = await fetchWithRetry(payload);
-
-                const result = await response.json();
-                
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const rawText = result.candidates[0].content.parts[0].text;
-                    const article = parseJsonFromText(rawText);
-                    if (article) {
-                       return { ...article, timestamp: Date.now() };
+                try {
+                    const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                    const result = await response.json();
+                    if (result.candidates?.[0]?.content?.parts?.[0]) {
+                        const rawText = result.candidates[0].content.parts[0].text;
+                        const article = parseJsonFromText(rawText);
+                        if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
                     }
+                    throw new Error("AI preview article response format error.");
+                } catch (error) {
+                    console.error("AI preview article generation failed:", error);
+                    return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
                 }
-                throw new Error("AIからの応答が予期した形式ではありません。");
-
-            } catch (error) {
-                console.error("AI記事の生成に失敗しました:", error);
-                return {
-                    title: "展望記事生成エラー",
-                    body: "AI記者との通信に失敗しました。時間をおいて再度お試しください。",
-                    timestamp: Date.now(),
-                    error: true,
-                    errorId: `preview-${Date.now()}`
-                };
             }
-        }
-
-        async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
+            
+            // Regular match article generation
             const winnerData = TEAM_DATA[winnerName];
             const loserData = TEAM_DATA[loserName];
             const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
             const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
             const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
             const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-
             const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-            const getPreviousYearResult = (teamName) => {
-                if (tournamentState.tournamentYear > 1 && tournamentState.teamRecords[teamName]) {
-                    const rank = tournamentState.teamRecords[teamName].lastFinish;
-                    return `昨年度${getRankString(rank)}`;
-                }
-                return TEAM_DATA[teamName].last;
-            };
-            
             const [side, roundStr] = matchId.split('-');
             const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
             let roundAchievement = '';
@@ -1165,68 +1179,11 @@ ${formatTeamInfo(promisingD)}
                 case 6: roundAchievement = '甲子園出場決定！'; break;
             }
 
-            let detailsPromptPart = "";
-            if (dbMatch.details) {
-                detailsPromptPart = `
-### 詳細な試合データ
-- イニングスコア: ${JSON.stringify(dbMatch.details.inningScore)}
-- ${winnerName}の打者成績: ${JSON.stringify(dbMatch.details.batters[winnerName])}
-- ${loserName}の打者成績: ${JSON.stringify(dbMatch.details.batters[loserName])}
-- ${winnerName}の投手成績: ${JSON.stringify(dbMatch.details.pitchers[winnerName])}
-- ${loserName}の投手成績: ${JSON.stringify(dbMatch.details.pitchers[loserName])}
-`
-            }
-            
-            const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
-            const loserDetailedInfo = DETAILED_TEAM_DATA[loserName];
-            let detailedInfoPromptPart = "\n### チーム・選手詳細情報\n";
-            if(winnerDetailedInfo) {
-                detailedInfoPromptPart += `- **${winnerName}**: ${winnerDetailedInfo.summary}\n  - **注目選手**: ${winnerDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
-            }
-            if(loserDetailedInfo) {
-                detailedInfoPromptPart += `- **${loserName}**: ${loserDetailedInfo.summary}\n  - **注目選手**: ${loserDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
-            }
-            
-            let nextOpponentPromptPart = "";
-            if (nextOpponentInfo) {
-                if (nextOpponentInfo.decided) {
-                    const opponentName = nextOpponentInfo.decided;
-                    const winnerStats = TEAM_DATA[winnerName];
-                    const opponentStats = TEAM_DATA[opponentName];
-
-                    const isOpponentStrong = tournamentState.seeds.includes(opponentName) || 
-                                             DETAILED_TEAM_DATA[opponentName] || 
-                                             opponentStats.popularity || 
-                                             opponentStats.best.includes('甲子園');
-                    const isOpponentWeaker = winnerStats.deviation > (opponentStats.deviation + 5);
-
-                    if (isOpponentStrong) {
-                        nextOpponentPromptPart = `\n### 次の対戦相手\n次戦では強豪・${opponentName}と対戦する。厳しい戦いが予想されるが、この勢いのまま勝利を掴みたい。`;
-                    } else if (isOpponentWeaker) {
-                        nextOpponentPromptPart = `\n### 次の対戦相手\n次戦の相手は${opponentName}だ。データ上は有利に見えるが、高校野球に絶対はない。気を引き締めて次戦に臨む。`;
-                    } else {
-                        nextOpponentPromptPart = `\n### 次の対戦相手\n次戦では${opponentName}と顔を合わせる。互角の戦いが予想され、総力戦となるだろう。`;
-                    }
-                } else if (nextOpponentInfo.potential && nextOpponentInfo.potential[0] && nextOpponentInfo.potential[1]) {
-                    nextOpponentPromptPart = `\n### 次の対戦相手\n次戦では${nextOpponentInfo.potential[0]}と${nextOpponentInfo.potential[1]}の勝者と対戦する。`;
-                }
-            }
-            
-            let summaryPromptPart = "";
-            if (matchSummary) {
-                summaryPromptPart = `\n### 試合のハイライト（ユーザー入力）\n${matchSummary}`;
-            }
-
-            let civilWarInstruction = '';
-            if (isCivilWar) {
-                civilWarInstruction = `
+            let civilWarInstruction = isCivilWar ? `
 - **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**
 - 記事のタイトルにも「身内対決」「283ダービー」といった言葉を使い、ドラマチックにしてください。
 - 本文では、同じ系列校同士が雌雄を決するという非情なドラマ、選手たちの複雑な心境、応援団の様子などを描写してください。
-- 敗れたチームの健闘を称えつつ、勝利したチームが系列校の想いを背負って次に進む、というストーリーを描いてください。
-                `;
-            }
-
+- 敗れたチームの健闘を称えつつ、勝利したチームが系列校の想いを背負って次に進む、というストーリーを描いてください。` : '';
 
             const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
@@ -1235,29 +1192,15 @@ ${formatTeamInfo(promisingD)}
 ### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度大会
 - ラウンド達成記録: ${roundAchievement}
-- 勝利チーム: ${winnerName} (${winnerRankDesc}) (前年度成績: ${getPreviousYearResult(winnerName)})
-- 敗北チーム: ${loserName} (${loserRankDesc}) (前年度成績: ${getPreviousYearResult(loserName)})
+- 勝利チーム: ${winnerName} (${winnerRankDesc})
+- 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
-
-### チームの背景情報
-- 勝利チーム(${winnerName}): ${winnerData.info}
-- 敗北チーム(${loserName}): ${loserData.info}
-
-${(winnerDetailedInfo || loserDetailedInfo) ? detailedInfoPromptPart : ''}
-${detailsPromptPart}
-${summaryPromptPart}
-${nextOpponentPromptPart}
+- 試合のハイライト（ユーザー入力）: ${matchSummary || 'なし'}
 
 ### 執筆のポイント
 ${civilWarInstruction}
 - 記事の中で「${winnerName}が${roundAchievement}を決めた」という事実を必ず含めてください。
-- **試合のハイライト（ユーザー入力）がある場合は、その内容を最優先で記事に反映させてください。**
-- **チーム・選手詳細情報がある場合は、その情報を積極的に活用し、選手名やチームスローガンなどを記事に盛り込んでください。**
-- 両チームのランク（名門、強豪、中堅など）も考慮して、番狂わせなのか、順当な結果なのかを記事に含めてください。
-- 両チームの背景（「古豪」「進学校」など）や、**更新された前年度成績**を比較し、試合の文脈を深めてください。
-- **体格に関する言及は一切しないでください。**
-- **詳細な試合データがある場合は、ヒーローとなった選手の名前を挙げて、その活躍を具体的に記述してください。**
-- **次の対戦相手の情報がある場合は、記事の最後に、その展望を自然な形で含めてください。**
+- 両チームのランク（名門、強豪など）も考慮し、番狂わせか順当な結果かを記事に含めてください。
 - 記事のトーンは、ドラマチックかつ客観的に。
 
 ### 出力形式
@@ -1266,25 +1209,17 @@ ${civilWarInstruction}
 `;
 
             try {
-                let chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                const payload = { contents: chatHistory };
-                
-                const response = await fetchWithRetry(payload);
-
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
                 const result = await response.json();
-                
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
                     const rawText = result.candidates[0].content.parts[0].text;
                     const article = parseJsonFromText(rawText);
                     if (article) {
-                        return { ...article, timestamp: Date.now() };
+                        const newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
+                        return { ...article, timestamp: Date.now(), newspaperHtml };
                     }
                 }
                 throw new Error("AIからの応答が予期した形式ではありません。");
-
             } catch (error) {
                 console.error("AI記事の生成に失敗しました:", error);
                 return {
@@ -1292,8 +1227,9 @@ ${civilWarInstruction}
                     body: "AI記者との通信に失敗しました。時間をおいて再度お試しください。",
                     timestamp: Date.now(),
                     error: true,
-                    errorId: matchId, // Use matchId to uniquely identify the failed article
-                    context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary }
+                    errorId: matchId,
+                    context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary },
+                    newspaperHtml: null
                 };
             }
         }
@@ -2076,6 +2012,23 @@ ${matchups}
                 saveState();
                 renderNews(tournamentState.news);
             }
+            if (e.target.matches('.news-article-btn')) {
+                const index = parseInt(e.target.dataset.index, 10);
+                const article = tournamentState.news[index];
+                document.getElementById('modal-title').textContent = article.title;
+                document.getElementById('modal-body').textContent = article.body;
+                document.getElementById('modal-meta').innerHTML = `<p>${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>`;
+                newsModal.classList.remove('hidden');
+                newsModal.classList.add('flex');
+            }
+            if (e.target.matches('.newspaper-view-btn')) {
+                const index = parseInt(e.target.dataset.index, 10);
+                const article = tournamentState.news[index];
+                if (article.newspaperHtml) {
+                    newspaperModalBody.innerHTML = article.newspaperHtml;
+                    newspaperModal.classList.remove('hidden');
+                }
+            }
         });
 
         document.body.addEventListener('input', (e) => {
@@ -2224,12 +2177,22 @@ ${matchups}
                 newsBody = `${roundNumber}回戦が終了し、早くも波乱の展開！\n特に${biggestUpset.winner}が強豪${biggestUpset.loser}を破るジャイアントキリングを達成し、球場を沸かせました。\n次のラウンドも目が離せない！`;
                 bbsCommentText = `まさか${biggestUpset.loser}が${roundNumber}回戦で負けるとは…今年の夏は何が起こるか分からんぞ。`;
             }
-
-            tournamentState.news.push({
+            
+            const article = {
                 title: `${roundNumber}回戦全試合が終了！`,
                 body: newsBody,
                 timestamp: Date.now()
+            };
+            
+            article.newspaperHtml = createNewspaperHtml(article, { 
+                winnerName: '各校', 
+                loserName: '', 
+                dbMatch: { score1: '', score2: '' }, 
+                matchId: `L-R${roundNumber}-M1` 
             });
+
+
+            tournamentState.news.push(article);
              tournamentState.bbsComments.push({
                 personality: "野球好き",
                 text: bbsCommentText,
@@ -2346,6 +2309,8 @@ ${matchups}
         document.getElementById('details-save').addEventListener('click', saveDetailedStats);
         document.getElementById('details-close').addEventListener('click', () => detailsModal.classList.add('hidden'));
         saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
+        newspaperCloseBtn.addEventListener('click', () => newspaperModal.classList.add('hidden'));
+
 
         // Save/Load Tab Logic
         saveTabBtn.addEventListener('click', () => {
