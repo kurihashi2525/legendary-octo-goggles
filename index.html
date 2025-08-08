@@ -6,7 +6,6 @@
     <title>【AI連携・世代交代対応版】トーナメント表</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@800&family=Oswald:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
@@ -47,7 +46,7 @@
         .hidden { display: none; }
         .news-article { border-left: 4px solid #3b82f6; cursor: pointer; transition: background-color 0.2s; }
         #modal-bg { background-color: rgba(0,0,0,0.5); }
-        .confirm-modal, .details-modal, .save-load-modal, #newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .confirm-modal, .details-modal, .save-load-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
         .confirm-modal-content, .details-modal-content, .save-load-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
         .details-modal-content { width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto;}
         .save-load-modal-content { width: 95%; max-width: 500px; }
@@ -119,49 +118,6 @@
             border-radius: 9999px;
             margin-left: 8px;
         }
-
-        /* Newspaper Styles */
-        #newspaper-content {
-            background-color: #fdfdf8;
-            border: 1px solid #ccc;
-            padding: 2rem;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            max-width: 800px;
-            width: 95%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .newspaper-bw {
-            filter: grayscale(100%);
-        }
-        .newspaper-headline {
-            font-family: 'M PLUS 1p', sans-serif;
-            font-weight: 800;
-            border-bottom: 4px double black;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-        .newspaper-subheadline {
-            font-family: 'Noto Sans JP', sans-serif;
-            font-weight: 700;
-        }
-        .newspaper-body {
-            font-family: 'Noto Sans JP', serif;
-            text-align: justify;
-            column-count: 2;
-            column-gap: 2rem;
-        }
-        .newspaper-body p {
-            margin-bottom: 1em;
-        }
-        .newspaper-color .newspaper-headline {
-            color: #c23b22;
-            border-bottom-color: #c23b22;
-        }
-        .newspaper-color .newspaper-subheadline {
-            color: #005a9c;
-        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -175,7 +131,7 @@
         <div id="setup" class="setup-card">
              <div class="w-full">
                  <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">参加チーム (64チーム)</h2>
-                 <div id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg overflow-y-auto bg-gray-50 whitespace-pre"></div>
+                 <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
              </div>
              <div class="mt-8 text-center">
                  <button id="resume-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 shadow-md mb-4 w-full md:w-auto">
@@ -191,7 +147,7 @@
              <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
                 <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
                 <div id="namco-news-content" class="space-y-2"></div>
-            </div>
+             </div>
             <div class="flex justify-between items-start mb-4">
                 <div>
                     <button id="generate-summary-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">
@@ -221,7 +177,6 @@
                     <p><b>PCでの表示について:</b> トーナメント表の全体が表示されない場合は、表のエリア内でマウスのホイールを回しながら <b>Shiftキー</b> を押すか、表の下に表示されるスクロールバーを直接ドラッグすることで、左右にスクロールできます。</p>
                 </div>
                 <div id="main-bracket-container"></div>
-                <div id="newspaper-button-container" class="text-center mt-4"></div>
             </div>
             <div id="news-section" class="display-card">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">注目ニュース</h2>
@@ -234,13 +189,13 @@
                 <div id="daiya-bbs-comments" class="space-y-3">
                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
                 </div>
-            </div>
+             </div>
              <div id="bbs-section" class="display-card">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
                 <div id="bbs-comments" class="space-y-3">
                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
                 </div>
-            </div>
+             </div>
         </div>
     </div>
 
@@ -258,7 +213,7 @@
             </button>
         </div>
     </div>
-   
+    
     <div id="confirm-modal" class="confirm-modal hidden">
         <div class="confirm-modal-content">
             <p id="confirm-modal-text" class="mb-4 text-lg"></p>
@@ -277,7 +232,7 @@
             </div>
         </div>
     </div>
-   
+    
     <div id="save-load-modal" class="save-load-modal hidden">
         <div class="save-load-modal-content">
             <div class="flex border-b">
@@ -297,18 +252,14 @@
                 </div>
             </div>
             <div id="load-tab-content" class="py-4 hidden">
-                 <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
-                 <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
-                 <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
+                <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
+                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
+                <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
             </div>
              <div class="mt-4 text-right">
                 <button id="save-load-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
             </div>
         </div>
-    </div>
-
-    <div id="newspaper-modal" class="hidden">
-        <div id="newspaper-content"></div>
     </div>
 
 
@@ -337,9 +288,6 @@
         const skipR2Btn = document.getElementById('skip-r2-btn');
         const skipR3Btn = document.getElementById('skip-r3-btn');
         const skipLoader = document.getElementById('skip-loader');
-        const newspaperButtonContainer = document.getElementById('newspaper-button-container');
-        const newspaperModal = document.getElementById('newspaper-modal');
-        const newspaperContent = document.getElementById('newspaper-content');
 
         // Modals
         const newsModal = document.getElementById('news-modal');
@@ -360,7 +308,6 @@
         // --- State Management ---
         let tournamentState = {};
         let currentMatchIdForDetails = null;
-        let lastPlayedMatchId = null;
 
         // --- Team Master Data ---
         const TEAM_DATA = {
@@ -1196,6 +1143,8 @@ ${formatTeamInfo(promisingD)}
             const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
             const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
 
+            const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
+
             const getPreviousYearResult = (teamName) => {
                 if (tournamentState.tournamentYear > 1 && tournamentState.teamRecords[teamName]) {
                     const rank = tournamentState.teamRecords[teamName].lastFinish;
@@ -1268,9 +1217,14 @@ ${formatTeamInfo(promisingD)}
                 summaryPromptPart = `\n### 試合のハイライト（ユーザー入力）\n${matchSummary}`;
             }
 
-            let derbyContext = '';
-            if ((winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園')) {
-                derbyContext = 'この記事は、同じナムコグループ系列校同士の「283ダービー」です。兄貴分である283学園のプライド、弟分である283学園Bの下剋上への執念といった、同門対決ならではの特別なドラマや感情を記事に色濃く反映させてください。';
+            let civilWarInstruction = '';
+            if (isCivilWar) {
+                civilWarInstruction = `
+- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**
+- 記事のタイトルにも「身内対決」「283ダービー」といった言葉を使い、ドラマチックにしてください。
+- 本文では、同じ系列校同士が雌雄を決するという非情なドラマ、選手たちの複雑な心境、応援団の様子などを描写してください。
+- 敗れたチームの健闘を称えつつ、勝利したチームが系列校の想いを背負って次に進む、というストーリーを描いてください。
+                `;
             }
 
 
@@ -1295,7 +1249,7 @@ ${summaryPromptPart}
 ${nextOpponentPromptPart}
 
 ### 執筆のポイント
-- ${derbyContext}
+${civilWarInstruction}
 - 記事の中で「${winnerName}が${roundAchievement}を決めた」という事実を必ず含めてください。
 - **試合のハイライト（ユーザー入力）がある場合は、その内容を最優先で記事に反映させてください。**
 - **チーム・選手詳細情報がある場合は、その情報を積極的に活用し、選手名やチームスローガンなどを記事に盛り込んでください。**
@@ -1355,6 +1309,8 @@ ${nextOpponentPromptPart}
             const winnerRank = calculateRank(winnerName, tournamentState);
             const loserRank = calculateRank(loserName, tournamentState);
             
+            const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
+
             const [side, roundStr] = matchId.split('-');
             const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
             let matchContext = '';
@@ -1365,6 +1321,9 @@ ${nextOpponentPromptPart}
                 case 4: matchContext = 'これは準々決勝、ベスト4進出をかけた試合です。'; break;
                 case 5: matchContext = 'これは決勝進出をかけた準決勝です。敗れたチームもここまで勝ち上がってきた強豪です。'; break;
                 case 6: matchContext = 'これは甲子園出場をかけた決勝戦です。'; break;
+            }
+            if (isCivilWar) {
+                matchContext += ' しかも、ナムコ系列校同士の「283ダービー」です！';
             }
 
             const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
@@ -1390,10 +1349,14 @@ ${nextOpponentPromptPart}
                 antiAttitudeInstruction = `
 - **特に「アンチ」や「ライバル校ファン」としてコメントする場合:** 相手が「名門校(Aランク)」や「強豪校(Bランク)」であれば、その実力を認めた上での、少しマイルドで玄人好みの批判やコメントをしてください。 (例: 「さすがにここは勝つか。でも次の〇〇戦が本当の勝負だな」「まさかここで負けるとは…今年の夏は何が起こるか分からんぞ」)`;
             }
-
-            let derbyContext = '';
-            if ((winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園')) {
-                derbyContext = 'この試合は「283ダービー」です。ファンも特別な感情を抱いています。「本家と分家の戦い」「非情な結果」「来年はBチームからAチームに上がる選手はいるか？」といった、同門対決ならではの視点を含んだコメントを生成してください。';
+            
+            let civilWarInstruction = '';
+            if (isCivilWar) {
+                civilWarInstruction = `
+- **この試合は「283ダービー」です！この身内対決に対する特別な反応を生成してください。**
+- 例：「まさかの身内対決w」「理事長はどんな気持ちで見てるんだろ」「Bチーム勝ったら気まずすぎるだろw」「これはもう公開練習試合」
+- どちらが勝ってもナムコ系列が勝ち上がるという事実に対する、ファンたちの様々な反応（皮肉、安堵、興奮など）を盛り込んでください。
+                `;
             }
 
             const prompt = `
@@ -1421,9 +1384,9 @@ ${summaryPromptPart}
 - 単なる野球好き
 
 ### 指示
-- ${derbyContext}
 - **試合の文脈と今大会の戦績を最優先で考慮してください。初期設定のチーム情報（info, last）は参考程度に留め、矛盾するコメントは絶対に生成しないでください。** 例えば、2回戦で負けたチーム（今大会1勝1敗）に対して「公式戦未勝利」のようなコメントは不適切です。
 ${antiAttitudeInstruction}
+${civilWarInstruction}
 - 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
 - コメントは、まるで本物の匿名掲示板の書き込みのように、短く、時には口語的で、少し辛辣なものにしてください。
 - **もし詳細な選手情報や試合のハイライトがあれば、その内容に基づいた具体的なコメントを生成してください。** (例: 「姫川はやっぱり怪物だな！」「最終回の押し出しは見てられなかったな」)
@@ -1545,9 +1508,20 @@ ${analysis}
                 }
             }
 
-            let attitudeInstruction = '';
+            let victoryAttitude = `
+- **もし代矢東が勝利した場合:**
+  - 喜びつつも、冷静に勝因を分析してください（例：「今日の勝因は継投のタイミングだな」「あの場面のスクイズは見事だった」）。
+  - すぐに次の対戦相手に目を向け、どうすれば勝てるかの戦略を語ってください（例：「次は〇〇か…キーマンは相手の3番打者だ。徹底的にインコースを攻めるべき」）。
+  - 決して浮かれず、常に甲子園への道を冷静に見据えてください。
+            `;
             if (isDaiyaWinner && (opponentRank === 'D' || opponentRank === 'E')) {
-                attitudeInstruction = '対戦相手は格下でした。伝統校のファンとして、勝利は当然という態度で、少し相手を見下したような「慢心」が感じられるコメントを生成してください。（例：「まあ順当だな」「ここは勝って当たり前。次からが本番」）';
+                victoryAttitude = `
+- **もし代矢東が勝利した場合:**
+  - 対戦相手は格下のDランクかEランクです。勝利は当然という態度で、楽勝ムードを漂わせてください。これが伝統校の「慢心」です。
+  - コメント例：「まあ、ここは勝って当然だな」「ウォーミングアップにはなったか」「次の〇〇戦からが本番だろ」。
+  - 相手を見下すような、少し傲慢なコメントを生成してください。
+  - 次の対戦相手に目を向けつつも、余裕のある態度を崩さないでください。
+                `;
             }
 
             const prompt = `
@@ -1556,17 +1530,13 @@ ${analysis}
 
 ### 試合情報
 - 試合結果: 代矢東の${resultContext}
-- 対戦相手: ${opponentName} (ランク: ${opponentRank})
+- 対戦相手: ${opponentName} (${getRankDescription(opponentRank)})
 - スコア: ${score}
 - 次の試合: ${nextOpponentPromptPart}
 
 ### あなたのキャラクターと指示
 - あなたは生粋の野球好きで、代矢東のファンが集う特設掲示板の常連です。
-- ${attitudeInstruction}
-- **もし代矢東が勝利した場合:**
-  - 喜びつつも、冷静に勝因を分析してください（例：「今日の勝因は継投のタイミングだな」「あの場面のスクイズは見事だった」）。
-  - すぐに次の対戦相手に目を向け、どうすれば勝てるかの戦略を語ってください（例：「次は〇〇か…キーマンは相手の3番打者だ。徹底的にインコースを攻めるべき」）。
-  - 決して浮かれず、常に甲子園への道を冷静に見据えてください。
+${victoryAttitude}
 - **もし代矢東が敗北した場合:**
   - 非常に落胆し、性格の悪さを露呈してください。
   - 敗因を厳しく追及してください（例：「なぜあの場面でピッチャーを変えなかったんだ」「監督の采配ミスだろ」）。
@@ -1608,26 +1578,25 @@ ${analysis}
 
             if (type === 'bracket') {
                 const participatingSchools = state.teams.filter(t => namcoSchools.includes(t));
-                const opponents = participatingSchools.map(school => {
-                    const index = state.teams.indexOf(school);
-                    const opponentIndex = index % 2 === 0 ? index + 1 : index - 1;
-                    return { school, opponent: state.teams[opponentIndex] };
-                });
-
-                const opponentText = opponents.map(o => `${o.school}の初戦の相手は${o.opponent}です。`).join('\n');
+                const matchups = participatingSchools.map(school => {
+                    const schoolIndex = state.teams.indexOf(school);
+                    if (schoolIndex === -1) return null;
+                    const opponentIndex = schoolIndex % 2 === 0 ? schoolIndex + 1 : schoolIndex - 1;
+                    const opponentName = state.teams[opponentIndex];
+                    return `- ${school} の初戦は ${opponentName} と対戦します。`;
+                }).filter(item => item !== null).join('\n');
 
                 prompt = `
 あなたはナムコグループの広報担当者です。
 夏の高校野球選手権大会の組み合わせが決定しました。
 以下の情報に基づき、グループの公式サイトに掲載する、プロフェッショナルで丁寧な「お知らせ」記事を生成してください。
 
-### 参加系列校と初戦の対戦相手
-${opponentText}
+### 各校の初戦の組み合わせ
+${matchups}
 
 ### 記事のポイント
 - タイトルは「野球部（夏の選手権大会）組み合わせ決定のお知らせ」とする。
-- 本文では、抽選会が行われたこと、各校の初戦の対戦相手が決まったことを報告する。
-- 上記の対戦相手情報を必ず記事に含めてください。
+- 本文では、抽選会が行われたことと、上記の組み合わせが決定したことを報告してください。
 - 最後に、系列校野球部への応援をお願いする言葉で締めくくる。
 - 全体的に、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
 
@@ -1635,19 +1604,42 @@ ${opponentText}
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
-            } else if (type === 'matchResult' || type === 'derbyResult') {
+            } else if (type === 'matchResult') {
                 const { winnerName, loserName, dbMatch } = matchData;
-                const namcoTeam = namcoSchools.includes(winnerName) ? winnerName : loserName;
-                const opponent = namcoSchools.includes(winnerName) ? loserName : winnerName;
-                const result = namcoSchools.includes(winnerName) ? '勝利' : '敗北';
-                const score = namcoSchools.includes(winnerName) ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
-                
-                let derbyContext = '';
-                if (type === 'derbyResult') {
-                    derbyContext = 'この試合は、同じナムコグループ系列校同士の「283ダービー」でした。同門対決が実現したことへの感慨や、両チームの健闘を称える特別な言葉を必ず含めてください。';
-                }
+                const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-                prompt = `
+                if (isCivilWar) {
+                    const winnerScore = winnerName === dbMatch.team1 ? dbMatch.score1 : dbMatch.score2;
+                    const loserScore = loserName === dbMatch.team1 ? dbMatch.score1 : dbMatch.score2;
+                    prompt = `
+あなたはナムコグループの広報担当者です。
+本日行われた、夏の高校野球選手権大会の試合結果について、公式サイトに掲載する「お知らせ」記事を生成してください。
+この試合は、系列校である「283学園」と「283学園B」の直接対決でした。
+
+### 試合情報
+- 勝利校: ${winnerName}
+- 敗北校: ${loserName}
+- スコア: ${winnerScore} - ${loserScore}
+
+### 記事のポイント
+- タイトルは「野球部（夏の選手権大会）試合結果のお知らせ（283学園 vs 283学園B）」のように、特別な対戦であったことがわかるようにしてください。
+- 本文では、まず系列校同士の対戦となったことについて触れてください。
+- 両チームの選手たちが、互いに全力を尽くして戦ったことを称賛してください。
+- 応援してくださったファンの皆様への感謝を述べるとともに、勝利したチームが敗れたチームの想いも背負って次の戦いに臨むことを表明してください。
+- グループとして、両チームの健闘を誇りに思うという姿勢を示してください。
+- 全体的に、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+`;
+                } else {
+                    const namcoTeam = namcoSchools.includes(winnerName) ? winnerName : loserName;
+                    const opponent = namcoSchools.includes(winnerName) ? loserName : winnerName;
+                    const result = namcoSchools.includes(winnerName) ? '勝利' : '敗北';
+                    const score = namcoSchools.includes(winnerName) ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+
+                    prompt = `
 あなたはナムコグループの広報担当者です。
 本日行われた、夏の高校野球選手権大会の試合結果について、公式サイトに掲載する「お知らせ」記事を生成してください。
 
@@ -1658,7 +1650,6 @@ ${opponentText}
 - スコア: ${score}
 
 ### 記事のポイント
-- ${derbyContext}
 - タイトルは「野球部（夏の選手権大会）試合結果のお知らせ」とする。
 - 本文では、まず試合が行われたことと、結果を簡潔に報告する。
 - **もし勝利した場合:**
@@ -1672,6 +1663,7 @@ ${opponentText}
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
+                }
             }
 
              try {
@@ -1693,69 +1685,6 @@ ${opponentText}
             }
         }
 
-        async function generateNewspaper(matchId) {
-            const match = tournamentState.matches[matchId];
-            if (!match || !match.winner) return;
-            
-            newspaperContent.innerHTML = `<div class="loader">AI記者が号外を執筆中...</div>`;
-            newspaperModal.classList.remove('hidden');
-
-            const { winner, team1, team2, score1, score2, details, summary } = match;
-            const loser = winner === team1 ? team2 : team1;
-            const winnerScore = winner === team1 ? score1 : score2;
-            const loserScore = winner === team1 ? score2 : score1;
-            const [side, roundStr] = matchId.split('-');
-            const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
-            const isLateGame = roundNum >= 4;
-
-            const prompt = `
-あなたは、読者の心を鷲掴みにする見出しと記事を書く、ベテランのスポーツ新聞記者です。
-以下の試合結果を基に、ドラマチックな新聞記事を生成してください。
-
-### 試合情報
-- 勝利チーム: ${winner}
-- 敗北チーム: ${loser}
-- スコア: ${winnerScore} - ${loserScore}
-- ラウンド: ${roundNum}回戦
-- ユーザーによる試合の決め手: ${summary || '特になし'}
-- 詳細データ: ${details ? JSON.stringify(details) : 'なし'}
-
-### 執筆指示
-- **見出し(headline):** 試合の最もドラマチックな点を捉えた、短く、インパクトのある見出しを生成してください。固有名詞（チーム名や選手名）を積極的に使ってください。
-- **サブ見出し(subheadline):** 見出しを補足する、少し詳しい状況説明を生成してください。
-- **本文(body):** 試合の展開を物語のように記述してください。ユーザー入力の「決め手」や詳細データがある場合は、その情報を中心に記事を構成してください。ですます調で記述してください。
-
-### 出力形式
-以下のJSON形式で出力してください。
-{"headline": "見出し", "subheadline": "サブ見出し", "body": "本文（改行は\\nを使用）"}
-`;
-            try {
-                let chatHistory = [];
-                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
-                const payload = { contents: chatHistory };
-                const response = await fetchWithRetry(payload);
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const rawText = result.candidates[0].content.parts[0].text;
-                    const article = parseJsonFromText(rawText);
-                    if (article) {
-                        newspaperContent.className = isLateGame ? 'newspaper-color' : 'newspaper-bw';
-                        newspaperContent.innerHTML = `
-                            <h1 class="newspaper-headline text-4xl md:text-6xl">${article.headline}</h1>
-                            <h2 class="newspaper-subheadline text-xl md:text-2xl mb-4">${article.subheadline}</h2>
-                            <div class="newspaper-body text-sm">
-                                ${article.body.split('\n').map(p => `<p>${p}</p>`).join('')}
-                            </div>
-                        `;
-                    }
-                } else {
-                     throw new Error("AIからの応答が予期した形式ではありません。");
-                }
-            } catch(e) {
-                newspaperContent.innerHTML = `<p class="text-red-500">記事の生成に失敗しました。時間をおいて再度お試しください。</p>`;
-            }
-        }
-
 
         // --- Match Processing ---
         async function processMatchWin(matchId, winnerName) {
@@ -1768,7 +1697,6 @@ ${opponentText}
             tournamentState.teamRecords[winnerName].wins++;
             tournamentState.teamRecords[loserName].losses++;
             
-            lastPlayedMatchId = matchId;
             checkTournamentProgress();
 
             // UIをローディング表示に更新
@@ -1855,14 +1783,12 @@ ${opponentText}
                     nextOpponentInfo = { potential: [otherSemiFinal.team1, otherSemiFinal.team2] };
                 }
             }
-            
-            const isDerby = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
             const [article, newComments, daiyaComments, namcoNews] = await Promise.all([
                 generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, dbMatch.summary),
                 generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary),
                 isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, nextOpponentInfo) : Promise.resolve([]),
-                isNamcoMatch ? generateNamcoNews(tournamentState, isDerby ? 'derbyResult' : 'matchResult', { winnerName, loserName, dbMatch }) : Promise.resolve(null)
+                isNamcoMatch ? generateNamcoNews(tournamentState, 'matchResult', { winnerName, loserName, dbMatch }) : Promise.resolve(null)
             ]);
 
             tournamentState.news.push(article);
@@ -1895,15 +1821,15 @@ ${opponentText}
             if(roundNum < 5){
                  const isFirstSlot = matchNum % 2 !== 0;
                  if(isFirstSlot){
-                      tournamentState.matches[nextMatchId].team1 = winnerName;
+                       tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else {
-                      tournamentState.matches[nextMatchId].team2 = winnerName;
+                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             } else { 
                  if(side === 'L'){
-                      tournamentState.matches[nextMatchId].team1 = winnerName;
+                       tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else { 
-                      tournamentState.matches[nextMatchId].team2 = winnerName;
+                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             }
             
@@ -2332,17 +2258,6 @@ ${opponentText}
             skipR1Btn.classList.toggle('hidden', r1.played > 0);
             skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
             skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
-
-            // Newspaper button logic
-            newspaperButtonContainer.innerHTML = '';
-            if (lastPlayedMatchId) {
-                const btn = document.createElement('button');
-                btn.id = 'generate-newspaper-btn';
-                btn.className = 'bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-800 shadow-md';
-                btn.textContent = '新聞記事を生成';
-                btn.onclick = () => generateNewspaper(lastPlayedMatchId);
-                newspaperButtonContainer.appendChild(btn);
-            }
         }
 
         // --- Initial Load & Setup ---
@@ -2369,7 +2284,7 @@ ${opponentText}
             
             setupEl.classList.remove('hidden');
             tournamentDisplayEl.classList.add('hidden');
-            document.getElementById('teams-list').textContent = INITIAL_TEAM_POOL.join('\n');
+            teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
             resumeBtn.classList.remove('hidden');
         }
 
@@ -2431,11 +2346,6 @@ ${opponentText}
         document.getElementById('details-save').addEventListener('click', saveDetailedStats);
         document.getElementById('details-close').addEventListener('click', () => detailsModal.classList.add('hidden'));
         saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
-        newspaperModal.addEventListener('click', (e) => {
-            if (e.target === newspaperModal) {
-                newspaperModal.classList.add('hidden');
-            }
-        });
 
         // Save/Load Tab Logic
         saveTabBtn.addEventListener('click', () => {
