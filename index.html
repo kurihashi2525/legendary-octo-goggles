@@ -8,316 +8,212 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
-        /* --- General Game-Like UI Overhaul --- */
-        body { 
-            font-family: 'Inter', 'Noto Sans JP', sans-serif; 
-            background-color: #111827; /* Dark Blue-Gray BG */
-            color: #d1d5db;
-        }
-        
-        #app-container h1 {
-            color: #ffffff;
-            text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-        }
-
-        .setup-card, .display-card { 
-            background-color: #1f2937; /* Darker Card BG */
-            padding: 24px; 
-            border-radius: 12px; 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4); 
-            margin-bottom: 24px;
-            border: 1px solid #374151;
-        }
-        
-        .setup-card h2, .display-card h2 {
-            color: #f3f4f6;
-            border-bottom-color: #4b5563;
-        }
-
-        textarea#teams-list {
-            background-color: #374151;
-            border-color: #4b5563;
-            color: #d1d5db;
-        }
-
-        /* --- Button Redesign --- */
-        .action-btn {
-             color: #ffffff; 
-             font-weight: bold; 
-             padding: 12px 32px;
-             border-radius: 8px; 
-             transition: all 0.2s ease-in-out;
-             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-             border: none;
-             cursor: pointer;
-        }
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
-        }
-        #generate-btn { background-color: #2563eb; }
-        #generate-btn:hover { background-color: #3b82f6; }
-        #resume-btn { background-color: #16a34a; }
-        #resume-btn:hover { background-color: #22c55e; }
-        #reset-btn { background-color: #dc2626; }
-        #reset-btn:hover { background-color: #ef4444; }
-        #save-btn { background-color: #0891b2; }
-        #save-btn:hover { background-color: #06b6d4; }
-        #next-tournament-btn { background-color: #16a34a; }
-        #next-tournament-btn:hover { background-color: #22c55e; }
-
-        .skip-btn {
-            background-color: #4f46e5;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
-        .skip-btn:hover {
-            background-color: #6366f1;
-            transform: translateY(-1px);
-        }
-
-
-        /* --- Bracket Visuals --- */
-        #main-bracket-container { 
-            display: flex; 
-            justify-content: center; 
-            padding: 20px; 
-            font-size: 12px; 
-            overflow-x: auto; 
-            border: 1px solid #374151; 
-            background-color: #111827; /* Dark background for the bracket area */
-            border-radius: 8px;
-        }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
+        .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
+        #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
+        .bracket-half { display: flex; }
+        .bracket-half.right { flex-direction: row-reverse; }
+        .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
+        .bracket-final .final-matchup { border: 2px solid #f59e0b; background-color: #fffbeb; border-radius: 6px; padding: 5px; margin-top: 10px; }
+        .bracket-final .winner-box { font-weight: bold; color: #b45309; text-align: center; padding: 10px 20px; white-space: nowrap; font-size: 1.25rem; }
+        .bracket-final .final-title { font-weight: 600; color: #4b5563; margin-bottom: 10px; writing-mode: vertical-rl; letter-spacing: 2px; }
         .round { display: flex; flex-direction: column; justify-content: space-around; flex-shrink: 0; width: 180px; padding: 0 10px; }
         .matchup { margin: 8px 0; position: relative; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
-        .team-slot { 
-            display: flex; 
-            align-items: center; 
-            background-color: #374151; /* Default slot color */
-            border: 1px solid #4b5563; 
-            border-radius: 4px; 
-            margin-bottom: 4px; 
-            transition: all 0.3s; 
-            position: relative; 
-        }
-        .team-name { flex-grow: 1; padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e5e7eb; }
-        .team-name.seed { font-weight: bold; color: #facc15; }
-        .score-input { width: 40px; padding: 6px 4px; border-left: 1px solid #4b5563; text-align: center; background-color: #374151; color: #fff;}
-        .win-btn { background-color: #6b7280; color: #fff; border: none; padding: 6px 8px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
-        .team-slot:not(.empty) .win-btn { background-color: #2563eb; }
-        .team-slot:not(.empty):hover .win-btn { background-color: #3b82f6; }
-        
-        /* Winner/Loser Styling */
-        .team-slot.winner { 
-            background-color: #ca8a04; /* Gold */
-            border-color: #f59e0b; 
-            font-weight: 600; 
-            color: #18181b;
-        }
-        .team-slot.winner .team-name, .team-slot.winner .score-input { color: #18181b; }
-        .team-slot.loser { 
-            background-color: #374151; 
-            opacity: 0.5; 
-        }
-        .team-slot.empty .team-name { color: #6b7280; }
-
-        /* Bracket Connectors */
-        .matchup::after { content: ''; position: absolute; top: 50%; width: 10px; height: 2px; background-color: #4b5563; }
+        .team-slot { display: flex; align-items: center; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 4px; transition: background-color 0.3s; position: relative; }
+        .team-slot:last-of-type { margin-bottom: 0; }
+        .team-name { flex-grow: 1; padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .team-name .rank { font-weight: bold; margin-right: 4px; }
+        .team-name .rank-A { color: #ef4444; }
+        .team-name .rank-B { color: #f97316; }
+        .team-name .rank-C { color: #eab308; }
+        .team-name .rank-D { color: #3b82f6; }
+        .team-name .rank-E { color: #6b7280; }
+        .team-name.seed { font-weight: bold; color: #ca8a04; }
+        .score-input { width: 40px; padding: 6px 4px; border-left: 1px solid #e5e7eb; text-align: center; background-color: #fff; }
+        .win-btn { background-color: #d1d5db; color: #fff; border: none; padding: 6px 8px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .team-slot:not(.empty) .win-btn { background-color: #3b82f6; }
+        .team-slot:not(.empty):hover .win-btn { background-color: #2563eb; }
+        .team-slot.winner { background-color: #dbeafe; border-color: #93c5fd; font-weight: 600; }
+        .team-slot.loser { background-color: #f3f4f6; opacity: 0.6; }
+        .team-slot.empty .team-name { color: #9ca3af; }
+        .team-slot.empty .score-input, .team-slot.empty .win-btn, .team-slot.empty .details-btn { display: none; }
+        .matchup::after { content: ''; position: absolute; top: 50%; width: 10px; height: 2px; background-color: #cbd5e1; }
         .bracket-half.left .matchup::after { right: -10px; }
         .bracket-half.right .matchup::after { left: -10px; }
-        .round.subsequent-round .matchup::before { content: ''; position: absolute; top: -8px; height: calc(100% + 16px); width: 2px; background-color: #4b5563; }
+        .round.subsequent-round .matchup::before { content: ''; position: absolute; top: -8px; height: calc(100% + 16px); width: 2px; background-color: #cbd5e1; }
         .bracket-half.left .round.subsequent-round .matchup::before { right: -10px; }
         .bracket-half.right .round.subsequent-round .matchup::before { left: -10px; }
-        
-        /* Final Match Styling */
-        .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
-        .bracket-final .final-matchup { 
-            border: 3px solid #f59e0b; 
-            background-color: #1f2937; 
-            border-radius: 6px; 
-            padding: 5px; 
-            margin-top: 10px;
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
-        }
-        .bracket-final .winner-box { font-weight: bold; color: #fcd34d; text-align: center; padding: 10px 20px; white-space: nowrap; font-size: 1.5rem; text-shadow: 0 0 5px #f59e0b;}
-        .bracket-final .final-title { font-weight: 700; color: #e5e7eb; margin-bottom: 10px; writing-mode: vertical-rl; letter-spacing: 3px; font-size: 1.2rem; }
-        
-        /* Rank Colors */
-        .team-name .rank { font-weight: bold; margin-right: 4px; }
-        .team-name .rank-A { color: #ef4444; } /* Red */
-        .team-name .rank-B { color: #f97316; } /* Orange */
-        .team-name .rank-C { color: #eab308; } /* Yellow */
-        .team-name .rank-D { color: #3b82f6; } /* Blue */
-        .team-name .rank-E { color: #9ca3af; } /* Gray */
-
-        /* --- Improved Newspaper Design --- */
-        .newspaper-container { 
-            font-family: 'Noto Serif JP', serif; 
-            padding: 2rem; 
-            background-color: #fdfaf2; /* Parchment color */
-            color: #333;
-        }
-        .newspaper-early { 
-            border: 2px solid #555; 
-        }
-        .newspaper-late { 
-            border: 2px solid #a10e25; /* Strong red for late rounds */
-        }
-        .newspaper-header { 
-            text-align: center; 
-            border-bottom: 5px double #333; 
-            padding-bottom: 0.5rem; 
-            margin-bottom: 1rem; 
-        }
-        .newspaper-title { 
-            font-size: 1.5rem; 
-            font-weight: 700; 
-        }
-        .newspaper-date { font-size: 0.9rem; }
-        .newspaper-content { display: flex; gap: 1.5rem; }
-        .newspaper-main-headline { 
-            writing-mode: vertical-rl; 
-            text-orientation: mixed; 
-            font-size: 2.8rem; 
-            font-weight: 700; 
-            letter-spacing: 0.25em; 
-            border-right: 2px solid #333; 
-            padding-right: 1rem; 
-            margin-right: 1rem; 
-            flex-shrink: 0;
-        }
-        .newspaper-late .newspaper-main-headline { 
-            color: #a10e25; 
-            border-right-color: #a10e25;
-        }
-        .newspaper-body-content { flex-grow: 1; }
-        .newspaper-sub-headline { 
-            font-size: 1.8rem; 
-            font-weight: 700; 
-            margin-bottom: 1rem; 
-            border-bottom: 2px solid #666; 
-            padding-bottom: 0.5rem; 
-        }
-        .newspaper-text { 
-            font-family: 'Noto Sans JP', sans-serif; 
-            column-count: 2; /* Default to 2 columns for better flow */
-            column-gap: 1.5rem; 
-            text-align: justify; 
-            font-size: 0.95rem; 
-            line-height: 1.9; 
-            margin-top: 1rem;
-        }
-        .newspaper-late .newspaper-text { column-count: 3; } /* 3 columns for late-round major articles */
-        .newspaper-score-box { 
-            border: 2px solid #333; 
-            padding: 1rem; 
-            text-align: center; 
-            margin-top: 1.5rem; 
-        }
-        .newspaper-score-box h3 { 
-            font-weight: 700; 
-            margin-bottom: 0.5rem; 
-            font-size: 1.2rem; 
-        }
-        .newspaper-score-box .score { font-size: 2.2rem; font-weight: 700; }
-        .newspaper-late .newspaper-score-box { 
-            background-color: #fff8f8; 
-            border-color: #a10e25; 
-        }
-        
-        /* --- Other Minor UI Tweaks --- */
         .hidden { display: none; }
         .news-article { border-left: 4px solid #3b82f6; cursor: pointer; transition: background-color 0.2s; }
-        #modal-bg { background-color: rgba(0,0,0,0.7); }
-        .confirm-modal, .details-modal, .save-load-modal, .newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(10, 10, 10, 0.75); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .confirm-modal-content, .details-modal-content, .save-load-modal-content { background-color: #1f2937; color: #d1d5db; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border: 1px solid #4b5563;}
-        .newspaper-modal-content { background-color: #fdfaf2; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        #modal-bg { background-color: rgba(0,0,0,0.5); }
+        .confirm-modal, .details-modal, .save-load-modal, .newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .confirm-modal-content, .details-modal-content, .save-load-modal-content, .newspaper-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
         .details-modal-content { width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto;}
         .save-load-modal-content { width: 95%; max-width: 500px; }
         .newspaper-modal-content { width: 95%; max-width: 800px; max-height: 95vh; overflow-y: auto; }
         .confirm-modal-content { text-align: center; }
-        .loader { text-align: center; padding: 20px; font-style: italic; color: #9ca3af; }
-        #save-code-output { word-break: break-all; background-color: #111827; padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto; user-select: all; border: 1px solid #4b5563;}
-        .bbs-comment { background-color: #374151; border: 1px solid #4b5563; padding: 8px 12px; border-radius: 8px; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .match-summary-input { resize: none; height: 40px; background-color: #374151; border-color: #4b5563; color: #d1d5db; }
-        #namco-news-section { border-color: #f59e0b; }
-        #namco-news-section h2 { color: #fbbf24; }
-        .namco-news-item { cursor: pointer; transition: background-color 0.2s; }
-        .namco-news-item:hover { background-color: #374151; }
-        .namco-news-tag { background-color: #f97316; color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; margin-left: 8px; }
+        .loader { text-align: center; padding: 20px; font-style: italic; color: #6b7280; }
+        .details-btn { background-color: #6b7280; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: auto; margin-right: 2px; }
+        .details-btn:hover { background-color: #4b5563; }
+        .matchup-footer { text-align: center; margin-top: 2px; display: flex; justify-content: center; align-items: center; gap: 4px;}
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .stats-table th, .stats-table td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: center; }
+        .stats-table th { background-color: #f3f4f6; }
+        .stats-table input { width: 100%; border: none; text-align: center; background: transparent;}
+        .stats-table input:focus { outline: 1px solid #3b82f6; }
+        .modal-body-scroll {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        #save-code-output {
+            word-break: break-all;
+            background-color: #f3f4f6;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            user-select: all;
+        }
+        .bbs-comment {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .match-summary-input {
+            resize: none;
+            height: 40px;
+        }
+        .article-error {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #b91c1c;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .retry-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .retry-btn:hover {
+            background-color: #dc2626;
+        }
+        .namco-news-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .namco-news-tag {
+            background-color: #f97316;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            margin-left: 8px;
+        }
+        
+        /* Newspaper Styles */
+        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
+        .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
+        .newspaper-late { border: 2px solid #a10e25; }
+        .newspaper-header { text-align: center; border-bottom: 4px double #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .newspaper-title { font-size: 1.2rem; font-weight: 700; }
+        .newspaper-date { font-size: 0.8rem; }
+        .newspaper-content { display: flex; gap: 1.5rem; }
+        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; border-right: 2px solid #333; padding-right: 1rem; margin-right: 1rem; }
+        .newspaper-late .newspaper-main-headline { color: #a10e25; border-right-color: #a10e25;}
+        .newspaper-body-content { flex-grow: 1; }
+        .newspaper-sub-headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
+        .newspaper-late .newspaper-sub-headline { color: #333; }
+        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 3; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
+        .newspaper-early .newspaper-text { column-count: 2; }
+        .newspaper-score-box { border: 2px solid #333; padding: 1rem; text-align: center; margin-top: 1rem; }
+        .newspaper-score-box h3 { font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
+        .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
+        .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div id="app-container" class="max-w-full mx-auto">
         <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-5xl font-bold">AI記者付きトーナメント表</h1>
-            <p id="tournament-year-display" class="text-gray-400 mt-2 text-lg">（64チーム版・AI連携）</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">AI記者付きトーナメント表</h1>
+            <p id="tournament-year-display" class="text-gray-600 mt-2">（64チーム版・AI連携）</p>
         </div>
 
         <div id="setup" class="setup-card">
              <div class="w-full">
-                 <h2 class="text-xl font-semibold mb-4 border-b pb-2">参加チーム (64チーム)</h2>
-                 <textarea id="teams-list" class="w-full h-96 p-3 border rounded-lg" readonly></textarea>
+                 <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">参加チーム (64チーム)</h2>
+                 <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
              </div>
-             <div class="mt-8 text-center flex flex-col md:flex-row gap-4 justify-center">
-                 <button id="resume-btn" class="action-btn">
-                     再開（合い言葉入力）
+             <div class="mt-8 text-center">
+                 <button id="resume-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 shadow-md mb-4 w-full md:w-auto">
+                    再開（合い言葉入力）
                  </button>
-                 <button id="generate-btn" class="action-btn">
+                 <button id="generate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 shadow-md w-full md:w-auto">
                      新しいトーナメントを開始
                  </button>
              </div>
         </div>
 
         <div id="tournament-display" class="hidden">
-             <div id="namco-news-section" class="hidden display-card border-2">
-                 <h2 class="text-xl font-bold mb-3 text-center">ナムコグループからのお知らせ</h2>
-                 <div id="namco-news-content" class="space-y-2"></div>
+             <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
+                <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
+                <div id="namco-news-content" class="space-y-2"></div>
              </div>
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <button id="next-tournament-btn" class="hidden action-btn py-2 px-4 text-sm">
+                    <button id="generate-summary-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">
+                        ベスト8ハイライト記事を生成
+                    </button>
+                    <button id="next-tournament-btn" class="hidden bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 shadow-md">
                         次の大会へ進む
                     </button>
                 </div>
                <div class="ml-auto">
                     <div class="flex items-center justify-end space-x-2">
-                        <button id="skip-r1-btn" class="hidden skip-btn">1回戦スキップ</button>
-                        <button id="skip-r2-btn" class="hidden skip-btn">2回戦スキップ</button>
-                        <button id="skip-r3-btn" class="hidden skip-btn">3回戦スキップ</button>
-                        <button id="save-btn" class="action-btn py-2 px-4 text-sm">セーブ</button>
-                        <button id="reset-btn" class="action-btn py-2 px-4 text-sm">リセット</button>
+                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
+                        <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
+                        <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
+                        <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
+                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
+                        <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
                     </div>
                     <div id="skip-loader-container" class="h-6 text-right mt-1">
-                         <span id="skip-loader" class="hidden text-sm font-bold">試合を進行しています...</span>
+                         <span id="skip-loader" class="hidden text-sm text-gray-600 font-bold">試合を進行しています...</span>
                     </div>
                 </div>
             </div>
             <div class="display-card">
-                <h2 class="text-2xl font-bold mb-4 text-center">トーナメント表</h2>
-                <div class="bg-blue-900 border-l-4 border-blue-500 text-blue-200 p-4 mb-4 rounded-md text-sm">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">トーナメント表</h2>
+                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-md text-sm">
                     <p><b>PCでの表示について:</b> トーナメント表の全体が表示されない場合は、表のエリア内でマウスのホイールを回しながら <b>Shiftキー</b> を押すか、表の下に表示されるスクロールバーを直接ドラッグすることで、左右にスクロールできます。</p>
                 </div>
                 <div id="main-bracket-container"></div>
             </div>
             <div id="news-section" class="display-card">
-                <h2 class="text-2xl font-bold text-center mb-4">注目ニュース</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">注目ニュース</h2>
                 <div id="news-articles" class="space-y-4">
                     <p class="text-gray-500 text-center">まだニュースはありません。</p>
                 </div>
             </div>
              <div id="daiya-bbs-section" class="hidden display-card border-4 border-green-600">
-                 <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-400 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
-                 <div id="daiya-bbs-comments" class="space-y-3">
-                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
-                 </div>
+                <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
+                <div id="daiya-bbs-comments" class="space-y-3">
+                    <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                </div>
              </div>
              <div id="bbs-section" class="display-card">
-                <h2 class="text-2xl font-bold text-center mb-4">掲示板の反応</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
                 <div id="bbs-comments" class="space-y-3">
                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
                 </div>
@@ -325,14 +221,15 @@
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="news-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
         <div id="modal-bg" class="absolute inset-0"></div>
-        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4 text-gray-800">
-             <div class="p-6 max-h-[80vh] overflow-y-auto">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4">
+            <div class="p-6 modal-body-scroll">
                 <h3 id="modal-title" class="text-2xl font-bold text-gray-900"></h3>
                 <div id="modal-meta" class="text-gray-400 text-sm mt-2 flex items-center gap-4"></div>
                 <p id="modal-body" class="mt-4 text-gray-600 whitespace-pre-wrap"></p>
-             </div>
+            </div>
             <button id="modal-close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -343,7 +240,7 @@
         <div class="confirm-modal-content">
             <p id="confirm-modal-text" class="mb-4 text-lg"></p>
             <button id="confirm-ok" class="bg-red-600 text-white px-6 py-2 rounded-lg mr-2">はい</button>
-            <button id="confirm-cancel" class="bg-gray-500 text-gray-100 px-4 py-2 rounded-lg">いいえ</button>
+            <button id="confirm-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">いいえ</button>
         </div>
     </div>
 
@@ -353,40 +250,41 @@
             <div id="details-modal-body" class="space-y-6"></div>
             <div class="mt-6 text-center">
                 <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">保存</button>
-                <button id="details-close" class="bg-gray-500 text-gray-100 px-4 py-2 rounded-lg">閉じる</button>
+                <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
             </div>
         </div>
     </div>
     
     <div id="save-load-modal" class="save-load-modal hidden">
         <div class="save-load-modal-content">
-            <div class="flex border-b border-b-gray-600">
+            <div class="flex border-b">
                 <button id="save-tab-btn" class="px-4 py-2 font-semibold border-b-2 border-blue-500">セーブ (合い言葉の発行)</button>
-                <button id="load-tab-btn" class="px-4 py-2 text-gray-400">ロード (合い言葉の入力)</button>
+                <button id="load-tab-btn" class="px-4 py-2 text-gray-500">ロード (合い言葉の入力)</button>
             </div>
             <div id="save-tab-content" class="py-4">
                 <p class="text-sm mb-2">現在の進行状況を保存するための「合い言葉」を発行します。下のボタンを押してください。</p>
                 <button id="generate-save-code-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">合い言葉を発行</button>
                 <div id="save-code-area" class="hidden mt-4">
-                    <p class="text-sm font-bold text-green-400">合い言葉が発行されました。以下をコピーして安全な場所に保管してください。</p>
+                    <p class="text-sm font-bold text-green-600">合い言葉が発行されました。以下をコピーして安全な場所に保管してください。</p>
                     <div class="flex items-center mt-2">
                         <div id="save-code-output" class="flex-grow text-xs"></div>
-                        <button id="copy-save-code-btn" class="ml-2 bg-gray-600 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-500">コピー</button>
+                        <button id="copy-save-code-btn" class="ml-2 bg-gray-200 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-300">コピー</button>
                     </div>
-                    <p id="copy-feedback" class="text-xs text-green-400 mt-1 h-4"></p>
+                    <p id="copy-feedback" class="text-xs text-green-600 mt-1 h-4"></p>
                 </div>
             </div>
             <div id="load-tab-content" class="py-4 hidden">
                 <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
-                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2 bg-gray-700 border-gray-600 text-white"></textarea>
+                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
                 <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
             </div>
              <div class="mt-4 text-right">
-                <button id="save-load-close" class="bg-gray-500 text-gray-100 px-4 py-2 rounded-lg">閉じる</button>
+                <button id="save-load-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
             </div>
         </div>
     </div>
 
+    <!-- Newspaper Modal -->
     <div id="newspaper-modal" class="newspaper-modal hidden">
         <div class="newspaper-modal-content">
             <div id="newspaper-modal-body"></div>
@@ -395,6 +293,7 @@
             </div>
         </div>
     </div>
+
 
     <script type="module">
         // --- DOM Elements ---
@@ -406,6 +305,7 @@
         const resetBtn = document.getElementById('reset-btn');
         const nextTournamentBtn = document.getElementById('next-tournament-btn');
         const saveBtn = document.getElementById('save-btn');
+        const saveFeedback = document.getElementById('save-feedback');
         const mainBracketContainer = document.getElementById('main-bracket-container');
         const newsContainer = document.getElementById('news-articles');
         const bbsCommentsContainer = document.getElementById('bbs-comments');
@@ -415,6 +315,7 @@
         const namcoNewsSection = document.getElementById('namco-news-section');
         const namcoNewsContent = document.getElementById('namco-news-content');
         const tournamentYearDisplay = document.getElementById('tournament-year-display');
+        const generateSummaryBtn = document.getElementById('generate-summary-btn');
         const skipR1Btn = document.getElementById('skip-r1-btn');
         const skipR2Btn = document.getElementById('skip-r2-btn');
         const skipR3Btn = document.getElementById('skip-r3-btn');
@@ -443,7 +344,7 @@
         let tournamentState = {};
         let currentMatchIdForDetails = null;
 
-        // --- Team Master Data (No changes here) ---
+        // --- Team Master Data ---
         const TEAM_DATA = {
             "西浦": { name_yomi: "にしうら", type: "公立", deviation: 52, best: "県大会ベスト16", last: "県大会ベスト16", info: "三年前にできた新設校。歴史は浅いが驚異の躍進が光る。" },
             "本島越谷": { name_yomi: "もとじまこしがや", type: "私立", deviation: 32, best: "県大会ベスト8", last: "初戦敗退", info: "近年野球部に力を入れている新興私立。プロ野球選手を外部コーチに招聘している。" },
@@ -625,7 +526,7 @@
         let ROSTER_DATA = {};
         const INITIAL_TEAM_POOL = Object.keys(TEAM_DATA);
 
-        // --- Utility & State Functions (No changes here) ---
+        // --- Utility & State Functions ---
         function shuffleArray(array) {
             const newArray = [...array];
             for (let i = newArray.length - 1; i > 0; i--) {
@@ -700,7 +601,7 @@
         }
 
 
-        // --- Tournament Logic (No major changes here) ---
+        // --- Tournament Logic ---
         async function createNewTournament(isNext=false) {
             let teams;
             let seeds = [];
@@ -831,7 +732,7 @@
             saveState();
         }
 
-        // --- Rendering Functions (No major changes here, styling is in CSS) ---
+        // --- Rendering Functions ---
         function renderTournament(data) {
             tournamentYearDisplay.textContent = `${data.tournamentYear}年度大会`;
             renderMainBracket(data);
@@ -1003,11 +904,13 @@
                     <button class="win-btn">▶</button>
                 </div>
                  <div class="match-summary-container ${!t1Empty && !t2Empty ? '' : 'hidden'}">
-                     <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
-                 </div>
+                    <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
+                </div>
                 `;
             
-            return `<div class="matchup" data-match-id="${matchId}">${content}</div>`;
+            const footer = showDetailsButton ? `<div class="matchup-footer"><button class="details-btn" data-match-id="${matchId}">詳細入力</button></div>` : '';
+
+            return `<div class="matchup" data-match-id="${matchId}">${content}</div>${footer}`;
         }
         
         function renderNews(news) {
@@ -1019,23 +922,23 @@
             news.slice().reverse().forEach((article, index) => {
                 const articleEl = document.createElement('div');
                 if (article.error) {
-                    articleEl.className = 'article-error'; // Needs styling
+                    articleEl.className = 'article-error';
                     articleEl.innerHTML = `
                         <span>${article.title}</span>
                         <button class="retry-btn" data-error-id="${article.errorId}">再生成</button>
                     `;
                 } else {
                     const originalIndex = news.length - 1 - index;
-                    articleEl.className = 'bg-gray-800 p-4 rounded-lg shadow-md'; // Darker news item
+                    articleEl.className = 'bg-white p-4 rounded-lg shadow';
                     articleEl.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div>
-                                <h3 class="font-bold text-lg text-blue-400">${article.title}</h3>
+                                <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
                                 <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
                             </div>
                             <div>
-                                <button class="text-sm bg-gray-600 px-3 py-1 rounded hover:bg-gray-500 text-white news-article-btn" data-index="${originalIndex}">本文</button>
-                                ${article.newspaperHtml ? `<button class="text-sm bg-red-800 text-red-100 px-3 py-1 rounded hover:bg-red-700 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞</button>` : ''}
+                                <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                                ${article.newspaperHtml ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞</button>` : ''}
                             </div>
                         </div>
                     `;
@@ -1059,9 +962,9 @@
                 const commentEl = document.createElement('div');
                 commentEl.className = 'bbs-comment';
                 commentEl.innerHTML = `
-                    <p class="font-semibold text-gray-400 text-sm">${comment.personality || '名無しさん'}</p>
-                    <p class="text-gray-200 my-1">${comment.text}</p>
-                    <p class="text-xs text-gray-500 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
+                    <p class="font-semibold text-gray-600 text-sm">${comment.personality || '名無しさん'}</p>
+                    <p class="text-gray-800 my-1">${comment.text}</p>
+                    <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
                 `;
                 bbsCommentsContainer.appendChild(commentEl);
             });
@@ -1077,9 +980,9 @@
                 const commentEl = document.createElement('div');
                 commentEl.className = 'bbs-comment';
                 commentEl.innerHTML = `
-                    <p class="font-semibold text-gray-400 text-sm">${comment.personality || '名無しさん'}</p>
-                    <p class="text-gray-200 my-1">${comment.text}</p>
-                    <p class="text-xs text-gray-500 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
+                    <p class="font-semibold text-gray-600 text-sm">${comment.personality || '名無しさん'}</p>
+                    <p class="text-gray-800 my-1">${comment.text}</p>
+                    <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
                 `;
                 daiyaBbsCommentsContainer.appendChild(commentEl);
             });
@@ -1093,8 +996,8 @@
             namcoNewsSection.classList.remove('hidden');
             namcoNewsContent.innerHTML = '';
             const newsItem = document.createElement('div');
-            newsItem.className = 'namco-news-item p-2 rounded';
-            newsItem.innerHTML = `<p class="font-semibold text-gray-300">${news.title}<span class="namco-news-tag">野球部</span></p>`;
+            newsItem.className = 'namco-news-item p-2 hover:bg-orange-50 rounded';
+            newsItem.innerHTML = `<p class="font-semibold text-gray-700">${news.title}<span class="namco-news-tag">野球部</span></p>`;
             newsItem.addEventListener('click', () => {
                 document.getElementById('modal-title').textContent = news.title;
                 document.getElementById('modal-body').textContent = news.body;
@@ -1171,7 +1074,6 @@
             }
         }
         
-        // --- MODIFIED createNewspaperHtml ---
         function createNewspaperHtml(articleData, matchData) {
             const { winnerName, loserName, dbMatch, matchId } = matchData;
             const [side, roundStr] = matchId.split('-');
@@ -1192,6 +1094,7 @@
                         <h1 class="newspaper-main-headline">${winnerName}</h1>
                         <div class="newspaper-body-content">
                             <h2 class="newspaper-sub-headline">${articleData.title}</h2>
+                            ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
                             <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
                             <div class="newspaper-score-box">
                                 <h3>最終スコア</h3>
@@ -1854,15 +1757,15 @@ ${matchups}
             if(roundNum < 5){
                  const isFirstSlot = matchNum % 2 !== 0;
                  if(isFirstSlot){
-                      tournamentState.matches[nextMatchId].team1 = winnerName;
+                       tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else {
-                      tournamentState.matches[nextMatchId].team2 = winnerName;
+                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             } else { 
                  if(side === 'L'){
-                      tournamentState.matches[nextMatchId].team1 = winnerName;
+                       tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else { 
-                      tournamentState.matches[nextMatchId].team2 = winnerName;
+                       tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             }
             
@@ -1924,7 +1827,7 @@ ${matchups}
         }
 
 
-        // --- Details Modal Logic (No changes here) ---
+        // --- Details Modal Logic ---
         function openDetailsModal(matchId) {
             currentMatchIdForDetails = matchId;
             const match = tournamentState.matches[matchId];
@@ -1952,7 +1855,7 @@ ${matchups}
             return `
                 <div>
                     <h4 class="font-bold mb-2">イニングスコア</h4>
-                    <table class="w-full border-collapse font-mono" id="inning-score-table">
+                    <table class="stats-table" id="inning-score-table">
                         <thead>
                             <tr><th>チーム</th>${innings.map(i => `<th>${i}</th>`).join('')}<th>計</th></tr>
                         </thead>
@@ -1980,7 +1883,7 @@ ${matchups}
             let table = `
                 <div>
                     <h4 class="font-bold mb-2">${title}</h4>
-                    <table class="w-full border-collapse" data-type="${type}" data-team="${teamName}">
+                    <table class="stats-table" data-type="${type}" data-team="${teamName}">
                         <thead>
                             <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
                         </thead>
@@ -1999,7 +1902,7 @@ ${matchups}
                             }).join('')}
                         </tbody>
                     </table>
-                    <button class="add-row-btn mt-2 text-sm bg-gray-600 px-2 py-1 rounded" data-type="${type}" data-team="${teamName}">＋選手を追加</button>
+                    <button class="add-row-btn mt-2 text-sm bg-gray-200 px-2 py-1 rounded" data-type="${type}" data-team="${teamName}">＋選手を追加</button>
                 </div>`;
             return table;
         }
@@ -2412,18 +2315,18 @@ ${matchups}
         // Save/Load Tab Logic
         saveTabBtn.addEventListener('click', () => {
             saveTabBtn.classList.add('border-blue-500');
-            saveTabBtn.classList.remove('text-gray-400');
+            saveTabBtn.classList.remove('text-gray-500');
             loadTabBtn.classList.remove('border-blue-500');
-            loadTabBtn.classList.add('text-gray-400');
+            loadTabBtn.classList.add('text-gray-500');
             saveTabContent.classList.remove('hidden');
             loadTabContent.classList.add('hidden');
         });
 
         loadTabBtn.addEventListener('click', () => {
             loadTabBtn.classList.add('border-blue-500');
-            loadTabBtn.classList.remove('text-gray-400');
+            loadTabBtn.classList.remove('text-gray-500');
             saveTabBtn.classList.remove('border-blue-500');
-            saveTabBtn.classList.add('text-gray-400');
+            saveTabBtn.classList.add('text-gray-500');
             loadTabContent.classList.remove('hidden');
             saveTabContent.classList.add('hidden');
         });
