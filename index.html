@@ -121,28 +121,25 @@
         }
         
         /* Newspaper Styles */
-        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 1.5rem; background-color: #fdfbf5; }
-        .newspaper-early { filter: grayscale(100%); border: 1px solid #333; }
+        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
+        .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
         .newspaper-late { border: 2px solid #a10e25; }
         .newspaper-header { text-align: center; border-bottom: 4px double #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-        .newspaper-title { font-size: 1.5rem; font-weight: 700; color: #333; }
-        .newspaper-late .newspaper-title { color: #a10e25; }
-        .newspaper-date { font-size: 0.8rem; color: #555; }
-        .newspaper-content { display: grid; grid-template-columns: 60px 1fr; gap: 1rem; }
-        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.2rem; font-weight: 700; letter-spacing: 0.25em; line-height: 1.2; text-align: center; }
-        .newspaper-late .newspaper-main-headline { font-size: 2.8rem; color: #a10e25; }
-        .newspaper-body-content { display: flex; flex-direction: column; }
-        .newspaper-sub-headline { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
-        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 2; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
-        .newspaper-late .newspaper-text { column-count: 3; }
-        .newspaper-score-box { border: 2px solid #333; padding: 0.75rem; text-align: center; margin-top: 1rem; }
+        .newspaper-title { font-size: 1.2rem; font-weight: 700; }
+        .newspaper-date { font-size: 0.8rem; }
+        .newspaper-content { display: flex; gap: 1.5rem; }
+        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; border-right: 2px solid #333; padding-right: 1rem; margin-right: 1rem; }
+        .newspaper-late .newspaper-main-headline { color: #a10e25; border-right-color: #a10e25;}
+        .newspaper-body-content { flex-grow: 1; }
+        .newspaper-sub-headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
+        .newspaper-late .newspaper-sub-headline { color: #333; }
+        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 3; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
+        .newspaper-early .newspaper-text { column-count: 2; }
+        .newspaper-score-box { border: 2px solid #333; padding: 1rem; text-align: center; margin-top: 1rem; }
         .newspaper-score-box h3 { font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem; }
         .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
         .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
-        .newspaper-image-container { margin: 1rem 0; }
-        .newspaper-image { width: 100%; height: auto; border: 1px solid #ccc; }
-        .newspaper-caption { font-size: 0.8rem; text-align: right; color: #555; margin-top: 0.25rem; }
-        .image-loader { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
+        .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -1028,38 +1025,36 @@
 
         // --- 修正後の fetchWithRetry 関数 ---
         async function fetchWithRetry(payload, maxRetries = 3) {
-            // This function now uses the Gemini API directly
-            const apiKey = ""; // Leave blank, will be handled by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            // 送り先を、Googleではなく自分の中間サーバー（サーバーレス関数）に変更
+            const functionUrl = '/.netlify/functions/generateApiContent';
             let lastError;
 
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch(apiUrl, {
+                    const response = await fetch(functionUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(payload) // プロンプトなどを中間サーバーに送る
                     });
 
                     if (response.ok) {
-                        return response; // Success
+                        return response; // 成功したらレスポンスを返す
                     }
                     
                     if (response.status >= 400 && response.status < 500 && response.status !== 429) {
                         console.error(`Client Error: ${response.status}. Not retrying.`);
                         const errorData = await response.json();
-                        throw new Error(`API Error: ${errorData.error?.message || 'Unknown client error'}`);
+                        throw new Error(`API Error: ${errorData.error}`);
                     }
 
                     lastError = new Error(`API Error: ${response.status}`);
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    console.log(`API call failed. Retrying in ${delay.toFixed(0)}ms...`);
+                    const delay = Math.pow(2, i) * 1000;
+                    console.log(`API call failed. Retrying in ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
 
                 } catch (error) {
                     lastError = error;
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    console.error(`Network error: ${error.message}. Retrying in ${delay.toFixed(0)}ms...`);
+                    const delay = Math.pow(2, i) * 1000;
+                    console.error(`Network error: ${error.message}. Retrying in ${delay}ms...`);
                     if (i < maxRetries - 1) {
                         await new Promise(resolve => setTimeout(resolve, delay));
                     }
@@ -1079,78 +1074,15 @@
             }
         }
         
-        async function generateNewspaperImage(matchData) {
-            const { winnerName, loserName, dbMatch, matchId, matchSummary } = matchData;
-            let prompt = "Japanese high school baseball game, summer tournament, anime style, dramatic moment. ";
-
-            // Add context based on the match result
-            if (matchSummary) {
-                prompt += `Focus on: ${matchSummary}. `;
-            } else {
-                const winnerRank = calculateRank(winnerName, tournamentState);
-                const loserRank = calculateRank(loserName, tournamentState);
-                const rankDiff = Math.abs({ 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 }[winnerRank] - { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 }[loserRank]);
-                
-                if (rankDiff >= 2 && winnerRank > loserRank) { // Upset
-                    prompt += "A surprising upset victory, the winning team is celebrating wildly. ";
-                } else if (parseInt(dbMatch.score1) + parseInt(dbMatch.score2) > 10) {
-                    prompt += "A high-scoring slugfest, players hitting the ball. ";
-                } else {
-                    prompt += "A tense pitcher's duel, focus on the pitcher's intensity. ";
-                }
-            }
-            prompt += "The players are celebrating a victory on the field."
-
-            try {
-                const apiKey = ""; // Leave blank
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`Image generation API error: ${response.status}`);
-                }
-
-                const result = await response.json();
-                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                } else {
-                    throw new Error("Invalid response structure from image generation API.");
-                }
-            } catch (error) {
-                console.error("Failed to generate newspaper image:", error);
-                return null; // Return null on failure
-            }
-        }
-
         function createNewspaperHtml(articleData, matchData) {
             const { winnerName, loserName, dbMatch, matchId } = matchData;
             const [side, roundStr] = matchId.split('-');
-            const roundNum = side === 'F' ? 6 : (roundStr ? parseInt(roundStr.slice(1)) : 0);
+            const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
 
             const isLateRound = roundNum >= 4; // 準々決勝から
             const containerClass = isLateRound ? 'newspaper-late' : 'newspaper-early';
-            const winnerScore = dbMatch.score1 !== undefined ? (dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2) : '';
-            const loserScore = dbMatch.score2 !== undefined ? (dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1) : '';
-
-            let imageHtml = '';
-            if (articleData.newspaperImage) {
-                imageHtml = `<div class="newspaper-image-container">
-                                <img src="${articleData.newspaperImage}" alt="試合の様子" class="newspaper-image">
-                                <p class="newspaper-caption">${winnerName}、歓喜の瞬間</p>
-                             </div>`;
-            } else if (matchId !== 'preview') {
-                 imageHtml = `<div class="image-loader">
-                                <span>🖼️</span>
-                                <span>画像生成中...</span>
-                             </div>`;
-            }
-
+            const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+            const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
 
             return `
                 <div class="newspaper-container ${containerClass}">
@@ -1162,13 +1094,12 @@
                         <h1 class="newspaper-main-headline">${winnerName}</h1>
                         <div class="newspaper-body-content">
                             <h2 class="newspaper-sub-headline">${articleData.title}</h2>
-                            ${imageHtml}
-                            <p class="newspaper-text">${articleData.body.replace(/\\n/g, '<br>')}</p>
-                            ${winnerName !== '各校' ? `
+                            ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
+                            <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
                             <div class="newspaper-score-box">
                                 <h3>最終スコア</h3>
                                 <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
-                            </div>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1180,11 +1111,34 @@
             // Handle preview article generation separately
             if (matchId === 'preview') {
                 const { tournamentYear, seeds, teams } = tournamentState;
+                const blockA_teams = teams.slice(0, 16);
+                const blockB_teams = teams.slice(16, 32);
+                const blockC_teams = teams.slice(32, 48);
+                const blockD_teams = teams.slice(48, 64);
+                const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
+                const formatTeamInfo = (teamList) => teamList.map(t => `- ${t} (${getRankDescription(calculateRank(t, tournamentState))}): ${DETAILED_TEAM_DATA[t] ? DETAILED_TEAM_DATA[t].summary : TEAM_DATA[t].info}`).join('\n');
+
                 const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-間もなく開幕する「${tournamentYear}年度大会」の展望記事を作成してください。
-記事のトーンは、読者の期待感を煽るような、ドラマチックなものにしてください。
-全体としての優勝候補も挙げてみてください。
+間もなく開幕する「${tournamentYear}年度大会」の展望記事を、各ブロックごとに分析して作成してください。
+
+### 大会全体情報
+- 大会名: ${tournamentYear}年度大会
+- シード校 (昨年度ベスト8): ${seeds.join(', ') || 'なし'}
+- 昨年度王者: ${seeds[0] || 'なし'}
+
+### 各ブロックの有力校
+- Aブロック: ${findPromisingSchools(blockA_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Bブロック: ${findPromisingSchools(blockB_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Cブロック: ${findPromisingSchools(blockC_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+- Dブロック: ${findPromisingSchools(blockD_teams).map(t => `${t} (${getRankDescription(calculateRank(t,tournamentState))})`).join(', ') || '特になし'}
+
+### 執筆指示
+- 上記情報を基に、大会全体の展望をまとめてください。
+- 記事のトーンは、読者の期待感を煽るような、ドラマチックなものにしてください。
+- 各ブロックの有力校に触れつつ、全体としての優勝候補も挙げてみてください。
+- 記事内では「Aランク」のような直接的なランク表記は使わず、「名門」「強豪」といった表現で格付けを示唆してください。
+
 ### 出力形式
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
@@ -1195,12 +1149,12 @@
                     if (result.candidates?.[0]?.content?.parts?.[0]) {
                         const rawText = result.candidates[0].content.parts[0].text;
                         const article = parseJsonFromText(rawText);
-                        if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null, newspaperImage: null };
+                        if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
                     }
                     throw new Error("AI preview article response format error.");
                 } catch (error) {
                     console.error("AI preview article generation failed:", error);
-                    return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null, newspaperImage: null };
+                    return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
                 }
             }
             
@@ -1255,21 +1209,14 @@ ${civilWarInstruction}
 `;
 
             try {
-                // Generate text and image in parallel
-                const [textResponse, imageUrl] = await Promise.all([
-                    fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
-                    generateNewspaperImage({ winnerName, loserName, dbMatch, matchId, matchSummary })
-                ]);
-                
-                const result = await textResponse.json();
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]) {
                     const rawText = result.candidates[0].content.parts[0].text;
                     const article = parseJsonFromText(rawText);
                     if (article) {
-                        article.timestamp = Date.now();
-                        article.newspaperImage = imageUrl;
-                        article.newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
-                        return article;
+                        const newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
+                        return { ...article, timestamp: Date.now(), newspaperHtml };
                     }
                 }
                 throw new Error("AIからの応答が予期した形式ではありません。");
@@ -1282,8 +1229,7 @@ ${civilWarInstruction}
                     error: true,
                     errorId: matchId,
                     context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary },
-                    newspaperHtml: null,
-                    newspaperImage: null
+                    newspaperHtml: null
                 };
             }
         }
