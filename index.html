@@ -106,6 +106,18 @@
         .retry-btn:hover {
             background-color: #dc2626;
         }
+        .namco-news-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .namco-news-tag {
+            background-color: #f97316;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -132,6 +144,10 @@
         </div>
 
         <div id="tournament-display" class="hidden">
+             <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
+                <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
+                <div id="namco-news-content" class="space-y-2"></div>
+            </div>
             <div class="flex justify-between items-start mb-4">
                 <div>
                     <button id="generate-summary-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">
@@ -189,8 +205,8 @@
         <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4">
             <div class="p-6 modal-body-scroll">
                 <h3 id="modal-title" class="text-2xl font-bold text-gray-900"></h3>
+                <div id="modal-meta" class="text-gray-400 text-sm mt-2 flex items-center gap-4"></div>
                 <p id="modal-body" class="mt-4 text-gray-600 whitespace-pre-wrap"></p>
-                <p id="modal-timestamp" class="text-gray-400 text-xs mt-4 text-right"></p>
             </div>
             <button id="modal-close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -264,6 +280,8 @@
         const daiyaBbsSection = document.getElementById('daiya-bbs-section');
         const daiyaBbsTitle = document.getElementById('daiya-bbs-title');
         const daiyaBbsCommentsContainer = document.getElementById('daiya-bbs-comments');
+        const namcoNewsSection = document.getElementById('namco-news-section');
+        const namcoNewsContent = document.getElementById('namco-news-content');
         const tournamentYearDisplay = document.getElementById('tournament-year-display');
         const generateSummaryBtn = document.getElementById('generate-summary-btn');
         const skipR1Btn = document.getElementById('skip-r1-btn');
@@ -631,7 +649,8 @@
             tournamentState.news = [];
             tournamentState.seeds = seeds;
             tournamentState.bbsComments = [];
-            tournamentState.daiyaBbsComments = []; // Initialize special BBS
+            tournamentState.daiyaBbsComments = [];
+            tournamentState.namcoNews = null; // Initialize Namco News
 
             const round1Setup = teams.reduce((acc, team, i) => {
                 if (i % 2 === 0) acc.push({ team1: team, team2: null });
@@ -653,10 +672,13 @@
             
             newsContainer.innerHTML = `<div class="loader">AI記者が展望記事を執筆中...</div>`;
             bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+            namcoNewsSection.classList.remove('hidden');
+            namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-            const [previewArticle, bracketComments] = await Promise.all([
+            const [previewArticle, bracketComments, namcoNews] = await Promise.all([
                 generatePreviewArticle(tournamentState),
-                generateBracketReactionComments(tournamentState)
+                generateBracketReactionComments(tournamentState),
+                generateNamcoNews(tournamentState, 'bracket')
             ]);
 
             if (previewArticle) {
@@ -665,9 +687,13 @@
             if (bracketComments && bracketComments.length > 0) {
                 tournamentState.bbsComments.push(...bracketComments);
             }
+            if (namcoNews) {
+                tournamentState.namcoNews = namcoNews;
+            }
 
             renderNews(tournamentState.news);
             renderBbsComments(tournamentState.bbsComments);
+            renderNamcoNews(tournamentState.namcoNews);
             saveState();
         }
 
@@ -678,6 +704,7 @@
             renderNews(data.news || []);
             renderBbsComments(data.bbsComments || []);
             renderDaiyaBbsComments(data.daiyaBbsComments || []);
+            renderNamcoNews(data.namcoNews);
             checkTournamentProgress();
         }
 
@@ -871,7 +898,7 @@
                     articleEl.addEventListener('click', () => {
                         document.getElementById('modal-title').textContent = article.title;
                         document.getElementById('modal-body').textContent = article.body;
-                        document.getElementById('modal-timestamp').textContent = new Date(article.timestamp).toLocaleString('ja-JP');
+                        document.getElementById('modal-meta').innerHTML = `<p>${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>`;
                         newsModal.classList.remove('hidden');
                         newsModal.classList.add('flex');
                     });
@@ -919,6 +946,26 @@
                 `;
                 daiyaBbsCommentsContainer.appendChild(commentEl);
             });
+        }
+
+        function renderNamcoNews(news) {
+            if (!news) {
+                namcoNewsSection.classList.add('hidden');
+                return;
+            }
+            namcoNewsSection.classList.remove('hidden');
+            namcoNewsContent.innerHTML = '';
+            const newsItem = document.createElement('div');
+            newsItem.className = 'namco-news-item p-2 hover:bg-orange-50 rounded';
+            newsItem.innerHTML = `<p class="font-semibold text-gray-700">${news.title}<span class="namco-news-tag">野球部</span></p>`;
+            newsItem.addEventListener('click', () => {
+                document.getElementById('modal-title').textContent = news.title;
+                document.getElementById('modal-body').textContent = news.body;
+                document.getElementById('modal-meta').innerHTML = `<p>${new Date(news.timestamp).toLocaleDateString('ja-JP')}</p><p class="font-bold text-gray-500">野球部</p>`;
+                newsModal.classList.remove('hidden');
+                newsModal.classList.add('flex');
+            });
+            namcoNewsContent.appendChild(newsItem);
         }
 
         // --- AI Reporter Logic ---
@@ -1482,6 +1529,83 @@ ${analysis}
             }
         }
 
+        async function generateNamcoNews(state, type, matchData = null) {
+            const namcoSchools = ["初星学園", "765総合高校", "283学園", "美城学園", "283学園B"];
+            let prompt = '';
+
+            if (type === 'bracket') {
+                const participatingSchools = state.teams.filter(t => namcoSchools.includes(t));
+                prompt = `
+あなたはナムコグループの広報担当者です。
+夏の高校野球選手権大会の組み合わせが決定しました。
+以下の情報に基づき、グループの公式サイトに掲載する、プロフェッショナルで丁寧な「お知らせ」記事を生成してください。
+
+### 参加系列校
+- ${participatingSchools.join(', ')}
+
+### 記事のポイント
+- タイトルは「野球部（夏の選手権大会）組み合わせ決定のお知らせ」とする。
+- 本文では、抽選会が行われたこと、各校の初戦の日程と対戦相手が決まったことを報告する。
+- 具体的な日付や対戦相手の情報は、想像で補完して構わない（例：「初戦は7月12日(土)に〇〇高校と対戦します」）。
+- 最後に、系列校野球部への応援をお願いする言葉で締めくくる。
+- 全体的に、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+`;
+            } else if (type === 'matchResult') {
+                const { winnerName, loserName, dbMatch } = matchData;
+                const namcoTeam = namcoSchools.includes(winnerName) ? winnerName : loserName;
+                const opponent = namcoSchools.includes(winnerName) ? loserName : winnerName;
+                const result = namcoSchools.includes(winnerName) ? '勝利' : '敗北';
+                const score = namcoSchools.includes(winnerName) ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+
+                prompt = `
+あなたはナムコグループの広報担当者です。
+本日行われた、夏の高校野球選手権大会の試合結果について、公式サイトに掲載する「お知らせ」記事を生成してください。
+
+### 試合情報
+- 系列校: ${namcoTeam}
+- 対戦相手: ${opponent}
+- 結果: ${namcoTeam}の${result}
+- スコア: ${score}
+
+### 記事のポイント
+- タイトルは「野球部（夏の選手権大会）試合結果のお知らせ」とする。
+- 本文では、まず試合が行われたことと、結果を簡潔に報告する。
+- **もし勝利した場合:**
+  - 応援への感謝を述べ、次の試合への意気込みを語る（例：「次戦もチーム一丸となって勝利を目指します」）。
+- **もし敗北した場合:**
+  - 選手たちの健闘を称え、応援への感謝を深く述べる（例：「皆様の熱い声援が、選手の力となりました。心より感謝申し上げます」）。
+  - 新チームでの再起を誓う言葉で締めくくる。
+- 全体的に、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+`;
+            }
+
+             try {
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+                const response = await fetchWithRetry(payload);
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const newsJson = parseJsonFromText(rawText);
+                    if (newsJson) {
+                        return { ...newsJson, timestamp: Date.now() };
+                    }
+                }
+                throw new Error("AIからの応答が予期した形式ではありません。");
+            } catch (error) {
+                console.error("ナムコニュースの生成に失敗しました:", error);
+                return null;
+            }
+        }
+
 
         // --- Match Processing ---
         async function processMatchWin(matchId, winnerName) {
@@ -1515,18 +1639,30 @@ ${analysis}
                 daiyaBbsSection.classList.add('hidden');
             }
 
+            const namcoSchools = ["初星学園", "765総合高校", "283学園", "美城学園", "283学園B"];
+            const isNamcoMatch = namcoSchools.includes(winnerName) || namcoSchools.includes(loserName);
+             if (isNamcoMatch) {
+                namcoNewsSection.classList.remove('hidden');
+                namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+            } else {
+                namcoNewsSection.classList.add('hidden');
+            }
+
+
             const [side, roundStr, matchStr] = matchId.split('-');
 
             if (side === 'F') {
-                const [article, newComments, daiyaComments] = await Promise.all([
+                const [article, newComments, daiyaComments, namcoNews] = await Promise.all([
                     generateNewsArticle(winnerName, loserName, dbMatch, matchId, null, dbMatch.summary),
                     generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary),
-                    isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, null) : Promise.resolve([])
+                    isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, null) : Promise.resolve([]),
+                    isNamcoMatch ? generateNamcoNews(tournamentState, 'matchResult', { winnerName, loserName, dbMatch }) : Promise.resolve(null)
                 ]);
                 
                 tournamentState.news.push(article);
                 if (newComments && newComments.length > 0) tournamentState.bbsComments.push(...newComments);
                 if (daiyaComments && daiyaComments.length > 0) tournamentState.daiyaBbsComments = daiyaComments;
+                if (namcoNews) tournamentState.namcoNews = namcoNews;
                 
                 updateTournamentFinishRecords();
                 renderTournament(tournamentState);
@@ -1569,10 +1705,11 @@ ${analysis}
                 }
             }
 
-            const [article, newComments, daiyaComments] = await Promise.all([
+            const [article, newComments, daiyaComments, namcoNews] = await Promise.all([
                 generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, dbMatch.summary),
                 generateBbsComments(winnerName, loserName, dbMatch, matchId, dbMatch.summary),
-                isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, nextOpponentInfo) : Promise.resolve([])
+                isDaiyaMatch ? generateDaiyaBbsComments(winnerName, loserName, dbMatch, nextOpponentInfo) : Promise.resolve([]),
+                isNamcoMatch ? generateNamcoNews(tournamentState, 'matchResult', { winnerName, loserName, dbMatch }) : Promise.resolve(null)
             ]);
 
             tournamentState.news.push(article);
@@ -1586,6 +1723,7 @@ ${analysis}
                     daiyaBbsTitle.textContent = "【特設】代矢東 応援掲示板";
                 }
             }
+             if (namcoNews) tournamentState.namcoNews = namcoNews;
             
             const nextRoundNum = roundNum + 1;
             const nextMatchNum = Math.ceil(matchNum / 2);
