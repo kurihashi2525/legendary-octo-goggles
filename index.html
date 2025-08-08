@@ -1196,7 +1196,7 @@ ${nextOpponentPromptPart}
                 let chatHistory = [];
                 chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const apiKey = ""; 
+                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 
                 const response = await fetchWithRetry(apiUrl, {
@@ -1324,7 +1324,7 @@ ${antiAttitudeInstruction}
             try {
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = ""; // APIキーは空のまま
+                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const response = await fetchWithRetry(apiUrl, {
@@ -1398,7 +1398,7 @@ ${analysis}
             try {
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = "";
+                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const response = await fetchWithRetry(apiUrl, {
