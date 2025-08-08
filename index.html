@@ -640,7 +640,6 @@
             renderTournament(tournamentState);
             setupEl.classList.add('hidden');
             tournamentDisplayEl.classList.remove('hidden');
-            checkTournamentProgress();
             
             newsContainer.innerHTML = `<div class="loader">AI記者が展望記事を執筆中...</div>`;
             bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
@@ -1402,6 +1401,8 @@ ${analysis}
             tournamentState.teamRecords[winnerName].wins++;
             tournamentState.teamRecords[loserName].losses++;
             
+            checkTournamentProgress();
+
             // UIをローディング表示に更新
             newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
             if (bbsCommentsContainer.querySelector('.text-gray-500')) {
@@ -1916,11 +1917,12 @@ ${analysis}
         }
 
         function checkTournamentProgress() {
-            const matches = Object.values(tournamentState.matches || {});
+            const matchIds = Object.keys(tournamentState.matches || {});
+
             const getRoundStatus = (roundNumber) => {
-                const roundMatches = matches.filter(m => m.team1 && m.team2 && tournamentState.matches[Object.keys(tournamentState.matches).find(k => tournamentState.matches[k] === m)].startsWith( `L-R${roundNumber}-M` ) || tournamentState.matches[Object.keys(tournamentState.matches).find(k => tournamentState.matches[k] === m)].startsWith( `R-R${roundNumber}-M` ));
-                const total = roundMatches.length;
-                const played = roundMatches.filter(m => m.winner).length;
+                const roundMatchIds = matchIds.filter(id => id.startsWith(`L-R${roundNumber}-M`) || id.startsWith(`R-R${roundNumber}-M`));
+                const played = roundMatchIds.filter(id => tournamentState.matches[id] && tournamentState.matches[id].winner).length;
+                const total = 32 / Math.pow(2, roundNumber - 1);
                 return { total, played };
             };
 
@@ -1929,8 +1931,8 @@ ${analysis}
             const r3 = getRoundStatus(3);
 
             skipR1Btn.classList.toggle('hidden', r1.played > 0);
-            skipR2Btn.classList.toggle('hidden', !(r1.played > 0 && r1.played === 32 && r2.played === 0));
-            skipR3Btn.classList.toggle('hidden', !(r2.played > 0 && r2.played === 16 && r3.played === 0));
+            skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
+            skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
         }
 
         // --- Initial Load & Setup ---
@@ -2129,4 +2131,3 @@ ${analysis}
     </script>
 </body>
 </html>
-
