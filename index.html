@@ -925,36 +925,44 @@
         /**
          * API呼び出しをリトライ機能付きで実行するラッパー関数
          */
-        async function fetchWithRetry(url, options, maxRetries = 3) {
+        // --- 修正後の fetchWithRetry 関数 ---
+        async function fetchWithRetry(payload, maxRetries = 3) {
+            // 送り先を、Googleではなく自分の中間サーバー（サーバーレス関数）に変更
+            const functionUrl = '/.netlify/functions/generateApiContent';
             let lastError;
+
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch(url, options);
+                    const response = await fetch(functionUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(payload) // プロンプトなどを中間サーバーに送る
+                    });
+
                     if (response.ok) {
-                        return response;
-                    }
-                    // 400番台のエラー（429を除く）はリトライしない
-                    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-                         console.error(`Client Error: ${response.status}. Not retrying.`);
-                         throw new Error(`API Error: ${response.status}`);
+                        return response; // 成功したらレスポンスを返す
                     }
                     
+                    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                        console.error(`Client Error: ${response.status}. Not retrying.`);
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${errorData.error}`);
+                    }
+
                     lastError = new Error(`API Error: ${response.status}`);
-                    const delay = Math.pow(2, i) * 1000; // Exponential backoff: 1s, 2s, 4s
-                    console.log(`API call failed with status ${response.status}. Retrying in ${delay}ms...`);
+                    const delay = Math.pow(2, i) * 1000;
+                    console.log(`API call failed. Retrying in ${delay}ms...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
 
                 } catch (error) {
                     lastError = error;
                     const delay = Math.pow(2, i) * 1000;
                     console.error(`Network error: ${error.message}. Retrying in ${delay}ms...`);
-                    // 最後の試行でなければ待機
                     if (i < maxRetries - 1) {
-                      await new Promise(resolve => setTimeout(resolve, delay));
+                        await new Promise(resolve => setTimeout(resolve, delay));
                     }
                 }
             }
-            throw lastError; // すべてのリトライが失敗した場合、最後のエラーをスロー
+            throw lastError;
         }
 
         function getRankDescription(rank) {
@@ -1043,14 +1051,8 @@ ${formatTeamInfo(promisingD)}
                 let chatHistory = [];
                 chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithRetry(payload);
 
                 const result = await response.json();
                 
@@ -1196,14 +1198,8 @@ ${nextOpponentPromptPart}
                 let chatHistory = [];
                 chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94"; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithRetry(payload);
 
                 const result = await response.json();
                 
@@ -1324,14 +1320,8 @@ ${antiAttitudeInstruction}
             try {
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithRetry(payload);
 
                 const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]) {
@@ -1398,14 +1388,8 @@ ${analysis}
             try {
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = "AIzaSyAf3wpioHBp6Vgnxk_iv2RixQArkQpdH94";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithRetry(payload);
                 
                 const result = await response.json();
                 if (result.candidates?.[0]?.content?.parts?.[0]) {
