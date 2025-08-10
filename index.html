@@ -1313,7 +1313,7 @@ ${civilWarInstruction}
          * @param {string} userReplyText - ユーザーが入力した返信
          * @param {string} bbsType - 'general' or 'daiya'
          */
-        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona) {
+        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
             const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
             const parentComment = findCommentById(commentSource, parentCommentId);
             if (!parentComment) return null;
@@ -1327,17 +1327,25 @@ ${civilWarInstruction}
 
             const prompt = `
 あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
-以下の会話の流れの最後に、あなたのキャラクターとして、自然で短い返信をしてください。
+以下の情報を踏まえて、会話の流れの最後にあなたのキャラクターとして返信してください。
 
 ### これまでの会話
 ${conversationHistory}
 
+### トーナメント情報
+- Aブロックのチーム: ${context.blockA_teams}
+- Bブロックのチーム: ${context.blockB_teams}
+- Cブロックのチーム: ${context.blockC_teams}
+- Dブロックのチーム: ${context.blockD_teams}
+
 ### あなたへの指示
 - あなたは「${aiPersona}」です。そのキャラクター（ペルソナ）を完全に維持してください。
 - 相手の発言（最後の「あなた:」の発言）に真摯に向き合い、その意見の核心に触れる形で応答してください。
+- **上記の「トーナメント情報」を必ず参照し、「〇〇」や「△△」といった曖昧な表現ではなく、実在するチーム名を挙げて具体的に議論してください。**
 - 単に一言で済ませるのではなく、あなたの野球知識やキャラクター独自の視点を盛り込み、熱意のこもった、読み応えのある返信を1つだけ生成してください。
 - なぜそう思うのかという具体的な理由や根拠を述べ、あなたの意見に深みと説得力を持たせてください。
 - 返信の最後は、必ずしも質問で終わる必要はありません。あなたの意見をしっかりと言い切る形で終えても構いません。
+`;
 
 
 ### 出力形式
@@ -2215,7 +2223,15 @@ ${matchups}
                 if (!parentComment) return;
 
                 const aiPersona = parentComment.personality;
-
+                
+                const teams = tournamentState.teams;
+                const context = {
+                    blockA_teams: teams.slice(0, 16).join(', '),
+                    blockB_teams: teams.slice(16, 32).join(', '),
+                    blockC_teams: teams.slice(32, 48).join(', '),
+                    blockD_teams: teams.slice(48, 64).join(', ')
+                };
+                
                 const userComment = {
                     id: crypto.randomUUID(),
                     personality: 'あなた',
@@ -2233,7 +2249,7 @@ ${matchups}
                 form.closest('[id^="reply-form-container-"]').classList.add('hidden');
 
                 // 2. AIの返信を生成して追加
-                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona);
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context);
                 if (aiReply) {
                     // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
                     const userCommentInState = findCommentById(commentSource, userComment.id);
