@@ -1544,7 +1544,18 @@ function getNextOpponentInfoForPrompt(teamName) {
              const parentComment = findCommentById(commentSource, parentCommentId);
              if (!parentComment) return null;
 
-             const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
+             // ユーザーが選択したペルソナを取得
+             const form = document.querySelector(`form[data-comment-id="${parentCommentId}"]`);
+             const personaSelect = form ? form.querySelector('select') : null;
+             const selectedUserPersona = personaSelect ? personaSelect.value : 'あなた';
+
+             const userReplyObject = {
+                 id: 'temp_user_reply',
+                 personality: selectedUserPersona,
+                 text: userReplyText,
+                 replies: []
+             };
+
              parentComment.replies.push(userReplyObject);
              const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
              parentComment.replies.pop();
@@ -1563,29 +1574,37 @@ function getNextOpponentInfoForPrompt(teamName) {
 
              const prompt = `
 あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
-以下の情報を踏まえ、会話の流れの最後にあなたのキャラクターとして返信してください。
+あなたのタスクは、以下の「相手の最後の発言」に対して、あなたのキャラクターとして自然な返信をすることです。
+
+### 相手の最後の発言
+「${userReplyText}」
+
+---
+返信を作成するために、以下の補足情報を参考にしてください。
 
 ### 現在の大会状況
 ${context.tournamentSummary}
-
 ${teamPathPromptPart}
-
 ${teamNextOpponentPromptPart}
-
 ${teamHistoryPromptPart}
+---
 
-### あなたへの指示
-1.  **最重要タスク：対話の深化**
-    あなたのタスクは、一番上に示された「相手の最後の発言」に対して、**補足情報を最大限に活用して、深みのある応答を返すこと**です。相手の発言内容を肯定または否定するだけでなく、**なぜそう思うのか、その根拠を補足情報（特に「今大会の勝ち上がり状況」や「次の対戦予定」）から引用・分析して**説明してください。
+### あなたへの指示（思考プロセス）
+あなたの思考は、以下のステップに厳密に従ってください。
 
-2.  **禁止事項：無関係な解説の禁止**
-    あなたの応答は、必ず相手の発言に関連した内容でなければなりません。相手が言及していないチームの勝ち上がり状況など、会話の文脈と無関係な情報を一方的に解説し始めることは禁止します。
+1.  **相手の発言を分析せよ:**
+    まず、一番上に示された「相手の最後の発言」を注意深く読み、相手が何について話しているのか（どのチームか、どの試合か、過去か未来か）を正確に理解せよ。
 
-3.  **情報の優先順位と活用法**
-    『公式プロフィール（過去の歴史）』と『今大会の勝ち上がり状況（現在の事実）』が矛盾する場合は、必ず『現在の事実』を優先してください。その上で、「前評判は低かった〇〇が、今大会では強豪△△を大差で破っている」といったように、両方の情報を比較・分析することで、会話をさらに面白くしてください。
+2.  **関連情報を検索せよ:**
+    次に、相手の発言内容に**直接関連する情報**を、提供された補足情報の中から全て見つけ出せ。（例：相手が「あかつきの次の試合」について話しているなら、「各チームの次の対戦予定」の中から「あかつき」の情報を探し、その対戦相手候補である「常翔」「今治学園」の「今大会の勝ち上がり状況」と「公式プロフィール」を探す。）
 
-4.  **キャラクターの維持**
-    あなたは「${aiPersona}」です。そのキャラクターを完全に維持し、熱意のこもった、読み応えのある返信を1つだけ生成してください。
+3.  **応答を構築せよ:**
+    * あなたの返信は、必ずステップ1で分析した相手の発言への**直接的な応答**から始めよ。（例：「ああ、その通りだ」「いや、それは違うな」など）
+    * 続けて、その応答の**根拠**として、ステップ2で見つけ出した**関連情報だけを使い**、あなたのキャラクターらしく自然な言葉で説明せよ。
+    * **最重要ルール:** 相手が特定の試合の道筋（例：「Aの次の相手はBとCの勝者」）について話している場合、あなたの応答もその特定の道筋に**完全に焦点を合わせよ**。無関係な他の試合の状況（例：全く別のブロックの準々決勝の組み合わせ）を解説してはならない。
+
+4.  **最終チェック:**
+    完成した返信が、一方的な解説ではなく、相手との自然な会話のキャッチボールになっているか確認せよ。
 
 ### 出力形式
 必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
@@ -1612,8 +1631,7 @@ ${teamHistoryPromptPart}
                  console.error("AI返信コメントの生成に失敗しました:", error);
                  return null;
              }
-         }  
-        
+         }        
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
              const winnerData = TEAM_DATA[winnerName];
              const loserData = TEAM_DATA[loserName];
