@@ -1490,7 +1490,56 @@ function getTournamentStatusSummary() {
              // 1回戦 (R1)
              return '現在、1回戦が進行中です。';
          }
-       async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData) {
+function getNextOpponentInfoForPrompt(teamName) {
+             let latestMatchId = null;
+             let maxRound = 0;
+
+             for (const [id, match] of Object.entries(tournamentState.matches)) {
+                 if (match.team1 === teamName || match.team2 === teamName) {
+                     const roundNum = id.startsWith('F-') ? 6 : parseInt(id.split('-')[1].slice(1));
+                     if (roundNum > maxRound) {
+                         maxRound = roundNum;
+                         latestMatchId = id;
+                     }
+                 }
+             }
+             
+             if (!latestMatchId) return "（まだ試合なし）";
+
+             const latestMatch = tournamentState.matches[latestMatchId];
+             if (latestMatch.winner !== teamName) return "（この試合で敗退）";
+             if (latestMatchId.startsWith('F-')) return "（優勝）";
+
+             // 次の試合IDを計算
+             const [side, roundStr, matchStr] = latestMatchId.split('-');
+             const roundNum = parseInt(roundStr.slice(1));
+             const matchNum = parseInt(matchStr.slice(1));
+
+             if (roundNum === 5) { // 準決勝に勝った場合
+                 const otherSide = side === 'L' ? 'R' : 'L';
+                 const otherSemiFinalWinner = tournamentState.matches[`${otherSide}-R5-M1`]?.winner;
+                 if(otherSemiFinalWinner) return `決勝の相手は${otherSemiFinalWinner}です。`;
+                 else return `決勝の相手は${otherSide}ブロックの準決勝の勝者です。`;
+             }
+
+             const nextRoundNum = roundNum + 1;
+             const nextMatchNum = Math.ceil(matchNum / 2);
+             const nextMatchId = `${side}-R${nextRoundNum}-M${nextMatchNum}`;
+             
+             const nextMatch = tournamentState.matches[nextMatchId];
+             const otherOpponent = (matchNum % 2 !== 0) ? nextMatch?.team2 : nextMatch?.team1;
+             if(otherOpponent) return `次の対戦相手は${otherOpponent}です。`;
+
+             const otherFeederMatchNum = (matchNum % 2 !== 0) ? matchNum + 1 : matchNum - 1;
+             const otherFeederMatchId = `${side}-R${roundNum}-M${otherFeederMatchNum}`;
+             const otherMatch = tournamentState.matches[otherFeederMatchId];
+             if(otherMatch && otherMatch.team1 && otherMatch.team2) {
+                 return `次の対戦相手は、${otherMatch.team1} vs ${otherMatch.team2} の勝者です。`;
+             }
+
+             return "（次の対戦相手は未定）";
+         }
+       async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData, teamNextOpponentData) {
              const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
              const parentComment = findCommentById(commentSource, parentCommentId);
              if (!parentComment) return null;
@@ -1503,9 +1552,13 @@ function getTournamentStatusSummary() {
              const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
                  ? `### 関連チームの公式プロフィール（過去の歴史・前評判）\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、情報「${data.info}」`).join('\n')}`
                  : '';
-             
+             
              const teamPathPromptPart = Object.keys(teamPathData).length > 0
                  ? `### 今大会の勝ち上がり状況（現在の事実）\n${Object.entries(teamPathData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
+                 : '';
+                 
+             const teamNextOpponentPromptPart = Object.keys(teamNextOpponentData).length > 0
+                 ? `### 各チームの次の対戦予定（道筋）\n${Object.entries(teamNextOpponentData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
                  : '';
 
              const prompt = `
@@ -1517,15 +1570,16 @@ ${context.tournamentSummary}
 
 ${teamPathPromptPart}
 
+${teamNextOpponentPromptPart}
+
 ${teamHistoryPromptPart}
 
 ### あなたへの指示
-- **最優先事項:** あなたは上記の「現在の大会状況」と「今大会の勝ち上がり状況」を完全に把握しています。これらはこのシミュレーションにおける**絶対的な事実**です。
-- **矛盾の解決:** 『公式プロフィール』は過去の歴史や前評判にすぎません。もし公式プロフィールと『今大会の勝ち上がり状況』が矛盾する場合（例：プロフィールで「未勝利」のチームが今大会で勝利している）、**必ず『今大会の勝ち上がり状況』を優先**し、その「番狂わせ」や「快進撃」自体を話題にしてください。**事実と異なる歴史を捏造してはいけません。**
-- **相手の指摘への対応:** 相手の発言が大会状況と矛盾している場合、キャラクターに応じてその矛盾点を鋭く指摘してください。
-- あなたは「${aiPersona}」です。そのキャラクター（ペルソナ）を完全に維持してください。
+- **最優先事項:** あなたは上記の「現在の大会状況」「今大会の勝ち上がり状況」「各チームの次の対戦予定」を完全に把握しています。これらはこのシミュレーションにおける**絶対的な事実**です。
+- **道筋の理解:** ユーザーが「次の試合」について話している場合、**必ず「各チームの次の対戦予定」を参照し、トーナメントのどの山の話をしているかを正確に理解して**ください。無関係な他の試合について話してはいけません。
+- **矛盾の解決:** 『公式プロフィール』は過去の歴史や前評判です。もし公式プロフィールと『今大会の勝ち上がり状況』が矛盾する場合、**必ず『今大会の勝ち上がり状況』を優先**し、その「番狂わせ」や「快進撃」自体を話題にしてください。
+- あなたは「${aiPersona}」です。そのキャラクターを完全に維持してください。
 - 相手の発言に真摯に向き合い、その意見の核心に触れる形で応答してください。
-- なぜそう思うのかという具体的な理由や根拠を述べ、あなたの意見に深みと説得力を持たせてください。
 
 ### 出力形式
 必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
@@ -1552,7 +1606,7 @@ ${teamHistoryPromptPart}
                  console.error("AI返信コメントの生成に失敗しました:", error);
                  return null;
              }
-         }     
+         }  
         
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
              const winnerData = TEAM_DATA[winnerName];
@@ -2440,6 +2494,11 @@ ${matchups}
                      }
                  });
                 
+// チームの次の対戦相手（道筋）を取得
+                 const teamNextOpponentData = {};
+                 mentionedTeams.forEach(teamName => {
+                     teamNextOpponentData[teamName] = getNextOpponentInfoForPrompt(teamName);
+                 });
                 const teams = tournamentState.teams;
                 const context = {
                     blockA_teams: teams.slice(0, 16).join(', '),
@@ -2466,7 +2525,7 @@ ${matchups}
                 form.closest('[id^="reply-form-container-"]').classList.add('hidden');
 
                 // 2. AIの返信を生成して追加
-                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamHistoryData, teamPathData);
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamHistoryData, teamPathData, teamNextOpponentData);
                 if (aiReply) {
                     // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
                     const userCommentInState = findCommentById(commentSource, userComment.id);
