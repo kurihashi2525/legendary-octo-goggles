@@ -1434,33 +1434,61 @@ function getTournamentStatusSummary() {
              const matches = tournamentState.matches;
              const allMatchIds = Object.keys(matches);
 
-             // 決勝進出チーム
-             const finalMatch = matches['F-R1-M1'];
-             if (finalMatch && finalMatch.team1 && finalMatch.team2) {
-                 if (finalMatch.winner) {
-                     return `決勝戦が終了し、${finalMatch.winner}が優勝しました。`;
+             const getMatchResultString = (id) => {
+                 const match = matches[id];
+                 if (match && match.winner) {
+                     const loser = match.team1 === match.winner ? match.team2 : match.team1;
+                     const winnerScore = match.team1 === match.winner ? match.score1 : match.score2;
+                     const loserScore = match.team1 === match.winner ? match.score2 : match.score1;
+                     const winnerRankDesc = getRankDescription(calculateRank(match.winner, tournamentState));
+                     const loserRankDesc = getRankDescription(calculateRank(loser, tournamentState));
+                     return `${winnerRankDesc}・${match.winner}が${loserRankDesc}・${loser}に ${winnerScore}-${loserScore} で勝利`;
                  }
-                 return `決勝戦の組み合わせは ${finalMatch.team1} vs ${finalMatch.team2} です。`;
+                 return null;
+             };
+
+             // 決勝
+             const finalResult = getMatchResultString('F-R1-M1');
+             if (finalResult) return `決勝戦は${finalResult}し、${matches['F-R1-M1'].winner}が優勝しました。`;
+             if (matches['F-R1-M1']?.team1 && matches['F-R1-M1']?.team2) return `決勝戦の組み合わせは ${matches['F-R1-M1'].team1} vs ${matches['F-R1-M1'].team2} です。`;
+
+             // 準決勝 (R5)
+             const sfIds = ['L-R5-M1', 'R-R5-M1'];
+             const sfResults = sfIds.map(getMatchResultString).filter(Boolean);
+             const sfUpcoming = sfIds.map(id => (matches[id] && matches[id].team1 && matches[id].team2 && !matches[id].winner) ? `${matches[id].team1} vs ${matches[id].team2}` : null).filter(Boolean);
+             if (sfResults.length > 0 || sfUpcoming.length > 0) {
+                 let summary = "現在、準決勝（ベスト4）が進行中です。\n";
+                 if (sfResults.length > 0) summary += `- 終了した試合の結果: ${sfResults.join(' / ')}\n`;
+                 if (sfUpcoming.length > 0) summary += `- これからの対戦: ${sfUpcoming.join(' / ')}\n`;
+                 return summary;
              }
 
-             // 準決勝進出チーム (ベスト4)
-             const semiFinalists = [matches['L-R5-M1']?.winner, matches['R-R5-M1']?.winner].filter(Boolean);
-             if (semiFinalists.length > 0) {
-                 const leftSemiFinal = tournamentState.matches['L-R5-M1'];
-                 const rightSemiFinal = tournamentState.matches['R-R5-M1'];
-                 const remainingTeams = [leftSemiFinal.team1, leftSemiFinal.team2, rightSemiFinal.team1, rightSemiFinal.team2].filter(t => !matches['F-R1-M1']?.team1 && !matches['F-R1-M1']?.team2);
-                 return `現在、準決勝が進行中です。勝ち残っているのは ${[...new Set(remainingTeams)].join('、')} です。`;
-             }
-
-             // 準々決勝進出チーム (ベスト8)
-             const quarterFinalists = allMatchIds.filter(id => id.includes('-R4-')).map(id => matches[id].winner).filter(Boolean);
-             if(quarterFinalists.length > 0) {
-                 const remainingInR4 = allMatchIds.filter(id => id.includes('-R4-')).flatMap(id => [matches[id].team1, matches[id].team2]).filter(Boolean);
-                 return `現在、準々決勝（ベスト8）が進行中です。勝ち残っているのは ${[...new Set(remainingInR4)].join('、')} です。`;
+             // 準々決勝 (R4)
+             const qfIds = ['L-R4-M1', 'L-R4-M2', 'R-R4-M1', 'R-R4-M2'];
+             const qfResults = qfIds.map(getMatchResultString).filter(Boolean);
+             const qfUpcoming = qfIds.map(id => (matches[id] && matches[id].team1 && matches[id].team2 && !matches[id].winner) ? `${matches[id].team1} vs ${matches[id].team2}` : null).filter(Boolean);
+             if (qfResults.length > 0 || qfUpcoming.length > 0) {
+                 let summary = "現在、準々決勝（ベスト8）が進行中です。\n";
+                 if (qfResults.length > 0) summary += `- 終了した試合の結果: ${qfResults.join(' / ')}\n`;
+                 if (qfUpcoming.length > 0) summary += `- これからの対戦: ${qfUpcoming.join(' / ')}\n`;
+                 return summary;
              }
              
-             // それ以前のラウンド
-             return '現在、トーナメント序盤戦が進行中です。';
+             // ▼▼▼ ここからが修正・追加部分です ▼▼▼
+             // 3回戦 (R3)
+             const r3MatchIds = allMatchIds.filter(id => id.includes('-R3-'));
+             if (r3MatchIds.length > 0) {
+                 return '現在、3回戦が進行中です。';
+             }
+             
+             // 2回戦 (R2)
+             const r2MatchIds = allMatchIds.filter(id => id.includes('-R2-'));
+             if (r2MatchIds.length > 0) {
+                 return '現在、2回戦が進行中です。';
+             }
+             
+             // 1回戦 (R1)
+             return '現在、1回戦が進行中です。';
          }
        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData) {
              const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
