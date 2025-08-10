@@ -1462,21 +1462,23 @@ function getTournamentStatusSummary() {
              // それ以前のラウンド
              return '現在、トーナメント序盤戦が進行中です。';
          }
-    async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData) {
+       async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData) {
              const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
              const parentComment = findCommentById(commentSource, parentCommentId);
              if (!parentComment) return null;
 
-             // ユーザーの返信を会話履歴に追加するための仮オブジェクト
              const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
              parentComment.replies.push(userReplyObject);
              const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
              parentComment.replies.pop();
 
-            // チームの公式プロフィール情報をプロンプト用に整形する
-            const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
-                ? `### 関連チームの公式プロフィール\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、昨年の成績「${data.last}」、情報「${data.info}」`).join('\n')}`
-                : '### 関連チームの公式プロフィール\n特になし';
+             const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
+                 ? `### 関連チームの公式プロフィール（過去の歴史・前評判）\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、情報「${data.info}」`).join('\n')}`
+                 : '';
+             
+             const teamPathPromptPart = Object.keys(teamPathData).length > 0
+                 ? `### 今大会の勝ち上がり状況（現在の事実）\n${Object.entries(teamPathData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
+                 : '';
 
              const prompt = `
 あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
@@ -1485,17 +1487,16 @@ function getTournamentStatusSummary() {
 ### 現在の大会状況
 ${context.tournamentSummary}
 
-### これまでの会話
-${conversationHistory}
+${teamPathPromptPart}
 
 ${teamHistoryPromptPart}
 
 ### あなたへの指示
-- **あなたは上記の「現在の大会状況」を完全に把握しています。** 例えば「準決勝が進行中」とあれば、それ以前に敗退したチームがまだ勝ち残っているかのような発言は絶対にしないでください。
-- **相手の発言が大会状況と矛盾している場合（例：すでに敗退したチームを優勝候補に挙げる）、キャラクターに応じてその矛盾点を鋭く指摘してください。**
+- **最優先事項:** あなたは上記の「現在の大会状況」と「今大会の勝ち上がり状況」を完全に把握しています。これらはこのシミュレーションにおける**絶対的な事実**です。
+- **矛盾の解決:** 『公式プロフィール』は過去の歴史や前評判にすぎません。もし公式プロフィールと『今大会の勝ち上がり状況』が矛盾する場合（例：プロフィールで「未勝利」のチームが今大会で勝利している）、**必ず『今大会の勝ち上がり状況』を優先**し、その「番狂わせ」や「快進撃」自体を話題にしてください。**事実と異なる歴史を捏造してはいけません。**
+- **相手の指摘への対応:** 相手の発言が大会状況と矛盾している場合、キャラクターに応じてその矛盾点を鋭く指摘してください。
 - あなたは「${aiPersona}」です。そのキャラクター（ペルソナ）を完全に維持してください。
 - 相手の発言に真摯に向き合い、その意見の核心に触れる形で応答してください。
-- チームの過去の成績や情報について矛盾する発言や、事実でない情報を捏造しないでください。
 - なぜそう思うのかという具体的な理由や根拠を述べ、あなたの意見に深みと説得力を持たせてください。
 
 ### 出力形式
@@ -1523,8 +1524,7 @@ ${teamHistoryPromptPart}
                  console.error("AI返信コメントの生成に失敗しました:", error);
                  return null;
              }
-         }
-        
+         }     
         
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
              const winnerData = TEAM_DATA[winnerName];
@@ -2381,13 +2381,36 @@ ${matchups}
 
                 const aiPersona = parentComment.personality;
                 
-                // 会話のテキスト全体を取得し、どのチームについて話しているか特定する
-                const conversationTextForHistory = formatConversationHistory(commentSource, parentCommentId) + userReplyText;
-                const mentionedTeams = INITIAL_TEAM_POOL.filter(teamName => conversationTextForHistory.includes(teamName));
-                const teamHistoryData = {};
-                mentionedTeams.forEach(teamName => {
-                    teamHistoryData[teamName] = TEAM_DATA[teamName];
-                });
+            // 会話のテキスト全体を取得し、どのチームについて話しているか特定する
+                 const conversationTextForHistory = formatConversationHistory(commentSource, parentCommentId) + userReplyText;
+                 const mentionedTeams = INITIAL_TEAM_POOL.filter(teamName => conversationTextForHistory.includes(teamName));
+                 
+                 // チームの公式プロフィール(過去の歴史)を取得
+                 const teamHistoryData = {};
+                 mentionedTeams.forEach(teamName => {
+                     teamHistoryData[teamName] = TEAM_DATA[teamName];
+                 });
+
+                 // チームの今大会の勝ち上がり(現在の事実)を取得
+                 const teamPathData = {};
+                 mentionedTeams.forEach(teamName => {
+                     let latestMatchId = null;
+                     let maxRound = 0;
+                     for (const [id, match] of Object.entries(tournamentState.matches)) {
+                         if (match.team1 === teamName || match.team2 === teamName) {
+                             const roundNum = parseInt(id.split('-')[1].slice(1));
+                             if (roundNum > maxRound) {
+                                 maxRound = roundNum;
+                                 latestMatchId = id;
+                             }
+                         }
+                     }
+                     if (latestMatchId) {
+                         teamPathData[teamName] = getTournamentPath(teamName, latestMatchId);
+                     } else {
+                         teamPathData[teamName] = "（今大会未出場または初戦）";
+                     }
+                 });
                 
                 const teams = tournamentState.teams;
                 const context = {
@@ -2415,7 +2438,7 @@ ${matchups}
                 form.closest('[id^="reply-form-container-"]').classList.add('hidden');
 
                 // 2. AIの返信を生成して追加
-                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context, teamHistoryData);
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamHistoryData, teamPathData);
                 if (aiReply) {
                     // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
                     const userCommentInState = findCommentById(commentSource, userComment.id);
