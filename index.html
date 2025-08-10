@@ -167,8 +167,8 @@
 
         <div id="tournament-display" class="hidden">
              <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
-                <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
-                <div id="namco-news-content" class="space-y-2"></div>
+                 <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
+                 <div id="namco-news-content" class="space-y-2"></div>
              </div>
             <div class="flex justify-between items-start mb-4">
                 <div>
@@ -207,16 +207,16 @@
                 </div>
             </div>
              <div id="daiya-bbs-section" class="hidden display-card border-4 border-green-600">
-                <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
-                <div id="daiya-bbs-comments" class="space-y-3">
-                    <p class="text-gray-500 text-center">まだ反応はありません。</p>
-                </div>
+                 <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
+                 <div id="daiya-bbs-comments" class="space-y-3">
+                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                 </div>
              </div>
              <div id="bbs-section" class="display-card">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
-                <div id="bbs-comments" class="space-y-3">
-                    <p class="text-gray-500 text-center">まだ反応はありません。</p>
-                </div>
+                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
+                 <div id="bbs-comments" class="space-y-3">
+                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                 </div>
              </div>
         </div>
     </div>
@@ -948,25 +948,63 @@
         }
         
         /**
-         * 掲示板のコメントを描画する関数
-         * @param {Array} comments - 表示するコメントの配列
+         * コメントスレッドを再帰的に描画するヘルパー関数
+         * @param {Object} comment - 描画するコメントオブジェクト
+         * @param {HTMLElement} container - コメントを追加する親要素
+         * @param {string} bbsType - 'general' または 'daiya'
          */
+        function renderCommentThread(comment, container, bbsType) {
+            const threadContainer = document.createElement('div');
+            // トップレベルのコメント以外にインデントを適用
+            if (container.id === `replies-to-${comment.id}` || (container.id.includes('bbs-comments') && container.children.length > 0)) {
+                 threadContainer.className = 'ml-4 border-l-2 pl-4 mt-2';
+            } else {
+                 threadContainer.className = 'mt-2';
+            }
+
+            const personalityClass = comment.personality === 'あなた' ? 'text-blue-600 font-bold' : 'text-gray-600';
+            const commentEl = document.createElement('div');
+            commentEl.className = 'bbs-comment';
+            commentEl.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <p class="font-semibold ${personalityClass} text-sm">${comment.personality || '名無しさん'}</p>
+                    <button class="reply-btn text-xs text-blue-500 hover:underline" data-comment-id="${comment.id}" data-bbs-type="${bbsType}">返信する</button>
+                </div>
+                <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
+                <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
+                <div id="reply-form-container-${comment.id}" class="hidden mt-2">
+                    <form class="reply-form" data-comment-id="${comment.id}" data-bbs-type="${bbsType}">
+                        <textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
+                        <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>
+                    </form>
+                </div>
+            `;
+            threadContainer.appendChild(commentEl);
+
+            // 返信用のコンテナを追加
+            const repliesContainer = document.createElement('div');
+            repliesContainer.id = `replies-to-${comment.id}`;
+            threadContainer.appendChild(repliesContainer);
+
+            container.appendChild(threadContainer);
+
+            // 再帰的に返信を描画
+            if (comment.replies && comment.replies.length > 0) {
+                comment.replies.slice().reverse().forEach(reply => {
+                    renderCommentThread(reply, repliesContainer, bbsType);
+                });
+            }
+        }
+
         function renderBbsComments(comments) {
             if (!comments || comments.length === 0) {
                 bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
                 return;
             }
-            bbsCommentsContainer.innerHTML = ''; // コンテナをクリア
+            bbsCommentsContainer.innerHTML = '';
             // 新しいコメントが上に来るように逆順で表示
             comments.slice().reverse().forEach(comment => {
-                const commentEl = document.createElement('div');
-                commentEl.className = 'bbs-comment';
-                commentEl.innerHTML = `
-                    <p class="font-semibold text-gray-600 text-sm">${comment.personality || '名無しさん'}</p>
-                    <p class="text-gray-800 my-1">${comment.text}</p>
-                    <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
-                `;
-                bbsCommentsContainer.appendChild(commentEl);
+                renderCommentThread(comment, bbsCommentsContainer, 'general');
             });
         }
 
@@ -975,16 +1013,9 @@
                 daiyaBbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
                 return;
             }
-            daiyaBbsCommentsContainer.innerHTML = ''; 
+            daiyaBbsCommentsContainer.innerHTML = '';
             comments.slice().reverse().forEach(comment => {
-                const commentEl = document.createElement('div');
-                commentEl.className = 'bbs-comment';
-                commentEl.innerHTML = `
-                    <p class="font-semibold text-gray-600 text-sm">${comment.personality || '名無しさん'}</p>
-                    <p class="text-gray-800 my-1">${comment.text}</p>
-                    <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
-                `;
-                daiyaBbsCommentsContainer.appendChild(commentEl);
+                renderCommentThread(comment, daiyaBbsCommentsContainer, 'daiya');
             });
         }
 
@@ -1235,6 +1266,106 @@ ${civilWarInstruction}
         }
         
         /**
+         * コメントツリーから特定のIDを持つコメントを再帰的に検索する
+         * @param {Array} comments - 検索対象のコメント配列
+         * @param {string} id - 検索するコメントのID
+         * @returns {Object|null} - 見つかったコメントオブジェクト、またはnull
+         */
+        function findCommentById(comments, id) {
+            for (const comment of comments) {
+                if (comment.id === id) return comment;
+                if (comment.replies && comment.replies.length > 0) {
+                    const found = findCommentById(comment.replies, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * AIに渡すための会話履歴を整形する
+         * @param {Array} comments - トップレベルのコメント配列
+         * @param {string} targetId - 会話の終点となるコメントのID
+         * @returns {string} - 整形された会話履歴
+         */
+        function formatConversationHistory(comments, targetId) {
+            let history = [];
+            function findPath(currentComments, currentPath) {
+                for(const comment of currentComments) {
+                    const newPath = [...currentPath, comment];
+                    if(comment.id === targetId) {
+                        history = newPath;
+                        return true;
+                    }
+                    if(comment.replies && findPath(comment.replies, newPath)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            findPath(comments, []);
+            return history.map(c => `${c.personality}:「${c.text}」`).join('\n');
+        }
+
+        /**
+         * AIに掲示板の返信を生成させる関数
+         * @param {string} parentCommentId - 返信先のコメントID
+         * @param {string} userReplyText - ユーザーが入力した返信
+         * @param {string} bbsType - 'general' or 'daiya'
+         */
+        async function generateBbsReply(parentCommentId, userReplyText, bbsType) {
+            const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+            const parentComment = findCommentById(commentSource, parentCommentId);
+            if (!parentComment) return null;
+
+            // ユーザーの返信を会話履歴に追加するための仮オブジェクト
+            const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
+            parentComment.replies.push(userReplyObject);
+            const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
+            // 仮オブジェクトを削除
+            parentComment.replies.pop();
+
+            const prompt = `
+あなたは、匿名掲示板のキャラクター「${parentComment.personality}」です。
+以下の会話の流れの最後に、あなたのキャラクターとして、自然で短い返信をしてください。
+
+### これまでの会話
+${conversationHistory}
+
+### あなたへの指示
+- あなたは「${parentComment.personality}」です。そのキャラクターを維持してください。
+- 相手の発言（最後の「あなた:」の発言）に対して、短く、口語的で、リアルな返信を1つだけ生成してください。
+- 議論をふっかけたり、煽ったり、あるいは同意したりと、キャラクターに合った反応をしてください。
+- 返信は、まるで本物の匿名掲示板の書き込みのようにしてください。
+
+### 出力形式
+必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
+{"comment": "（あなたの返信本文）"}
+`;
+            try {
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const replyJson = parseJsonFromText(rawText);
+                    if (replyJson && replyJson.comment) {
+                        return {
+                            id: crypto.randomUUID(),
+                            personality: parentComment.personality,
+                            text: replyJson.comment,
+                            timestamp: Date.now(),
+                            replies: []
+                        };
+                    }
+                }
+                throw new Error("AIからの応答が予期した形式ではありません。");
+            } catch (error) {
+                console.error("AI返信コメントの生成に失敗しました:", error);
+                return null;
+            }
+        }
+        
+        /**
          * AIに掲示板のコメントを生成させる関数
          */
         async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
@@ -1350,8 +1481,14 @@ ${civilWarInstruction}
                     const rawText = result.candidates[0].content.parts[0].text;
                     const commentsJson = parseJsonFromText(rawText);
                     if (Array.isArray(commentsJson)) {
-                        // 各コメントにタイムスタンプを付け、キー名を統一する
-                        return commentsJson.map(c => ({...c, text: c.comment, timestamp: Date.now()}));
+                        // 各コメントにタイムスタンプとID、返信配列を付ける
+                        return commentsJson.map(c => ({
+                            id: crypto.randomUUID(),
+                            personality: c.personality,
+                            text: c.comment,
+                            timestamp: Date.now(),
+                            replies: []
+                        }));
                     }
                 }
                 throw new Error("AIからの応答が予期した形式ではありません。");
@@ -1418,7 +1555,13 @@ ${analysis}
                     const rawText = result.candidates[0].content.parts[0].text;
                     const commentsJson = parseJsonFromText(rawText);
                     if (Array.isArray(commentsJson)) {
-                        return commentsJson.map(c => ({...c, text: c.comment, timestamp: Date.now()}));
+                        return commentsJson.map(c => ({
+                            id: crypto.randomUUID(),
+                            personality: c.personality,
+                            text: c.comment,
+                            timestamp: Date.now(),
+                            replies: []
+                        }));
                     }
                 }
                 throw new Error("AIからの応答が予期した形式ではありません。");
@@ -1498,7 +1641,13 @@ ${victoryAttitude}
                     const rawText = result.candidates[0].content.parts[0].text;
                     const commentsJson = parseJsonFromText(rawText);
                     if (Array.isArray(commentsJson)) {
-                        return commentsJson.map(c => ({...c, text: c.comment, timestamp: Date.now()}));
+                        return commentsJson.map(c => ({
+                            id: crypto.randomUUID(),
+                            personality: c.personality,
+                            text: c.comment,
+                            timestamp: Date.now(),
+                            replies: []
+                        }));
                     }
                 }
                 throw new Error("AIからの応答が予期した形式ではありません。");
@@ -1757,15 +1906,15 @@ ${matchups}
             if(roundNum < 5){
                  const isFirstSlot = matchNum % 2 !== 0;
                  if(isFirstSlot){
-                       tournamentState.matches[nextMatchId].team1 = winnerName;
+                      tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else {
-                       tournamentState.matches[nextMatchId].team2 = winnerName;
+                      tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             } else { 
                  if(side === 'L'){
-                       tournamentState.matches[nextMatchId].team1 = winnerName;
+                      tournamentState.matches[nextMatchId].team1 = winnerName;
                  } else { 
-                       tournamentState.matches[nextMatchId].team2 = winnerName;
+                      tournamentState.matches[nextMatchId].team2 = winnerName;
                  }
             }
             
@@ -2031,6 +2180,72 @@ ${matchups}
             }
         });
 
+        // --- BBS Reply Logic ---
+        document.body.addEventListener('click', (e) => {
+            if (e.target.matches('.reply-btn')) {
+                e.preventDefault();
+                const commentId = e.target.dataset.commentId;
+                const formContainer = document.getElementById(`reply-form-container-${commentId}`);
+                if (formContainer) {
+                    formContainer.classList.toggle('hidden');
+                }
+            }
+        });
+
+        document.body.addEventListener('submit', async (e) => {
+            if (e.target.matches('.reply-form')) {
+                e.preventDefault();
+                const form = e.target;
+                const parentCommentId = form.dataset.commentId;
+                const bbsType = form.dataset.bbsType;
+                const textarea = form.querySelector('textarea');
+                const userReplyText = textarea.value;
+                const submitButton = form.querySelector('button[type="submit"]');
+
+                if (!userReplyText.trim()) return;
+
+                submitButton.disabled = true;
+                submitButton.textContent = '送信中...';
+
+                // 1. ユーザーの返信をステートに追加してUIに即時反映
+                const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+                const parentComment = findCommentById(commentSource, parentCommentId);
+                if (!parentComment) return;
+
+                const userComment = {
+                    id: crypto.randomUUID(),
+                    personality: 'あなた',
+                    text: userReplyText,
+                    timestamp: Date.now(),
+                    replies: []
+                };
+                parentComment.replies.push(userComment);
+                
+                // UI更新
+                if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
+                else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
+                saveState();
+                textarea.value = '';
+                form.closest('[id^="reply-form-container-"]').classList.add('hidden');
+
+                // 2. AIの返信を生成して追加
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType);
+                if (aiReply) {
+                    // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
+                    const userCommentInState = findCommentById(commentSource, userComment.id);
+                    if (userCommentInState) {
+                        userCommentInState.replies.push(aiReply);
+                        if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
+                        else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
+                        saveState();
+                    }
+                }
+
+                submitButton.disabled = false;
+                submitButton.textContent = '送信';
+            }
+        });
+
         document.body.addEventListener('input', (e) => {
             if (e.target.matches('.score-input')) {
                 const scoreInput = e.target;
@@ -2194,9 +2409,11 @@ ${matchups}
 
             tournamentState.news.push(article);
              tournamentState.bbsComments.push({
+                id: crypto.randomUUID(),
                 personality: "野球好き",
                 text: bbsCommentText,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                replies: []
             });
 
             skipLoader.classList.add('hidden');
