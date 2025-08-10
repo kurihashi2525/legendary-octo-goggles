@@ -1430,6 +1430,38 @@ ${best8Paths}
 
              return path.length > 0 ? path.join(' → ') : '（今大会初戦）';
          }
+function getTournamentStatusSummary() {
+             const matches = tournamentState.matches;
+             const allMatchIds = Object.keys(matches);
+
+             // 決勝進出チーム
+             const finalMatch = matches['F-R1-M1'];
+             if (finalMatch && finalMatch.team1 && finalMatch.team2) {
+                 if (finalMatch.winner) {
+                     return `決勝戦が終了し、${finalMatch.winner}が優勝しました。`;
+                 }
+                 return `決勝戦の組み合わせは ${finalMatch.team1} vs ${finalMatch.team2} です。`;
+             }
+
+             // 準決勝進出チーム (ベスト4)
+             const semiFinalists = [matches['L-R5-M1']?.winner, matches['R-R5-M1']?.winner].filter(Boolean);
+             if (semiFinalists.length > 0) {
+                 const leftSemiFinal = tournamentState.matches['L-R5-M1'];
+                 const rightSemiFinal = tournamentState.matches['R-R5-M1'];
+                 const remainingTeams = [leftSemiFinal.team1, leftSemiFinal.team2, rightSemiFinal.team1, rightSemiFinal.team2].filter(t => !matches['F-R1-M1']?.team1 && !matches['F-R1-M1']?.team2);
+                 return `現在、準決勝が進行中です。勝ち残っているのは ${[...new Set(remainingTeams)].join('、')} です。`;
+             }
+
+             // 準々決勝進出チーム (ベスト8)
+             const quarterFinalists = allMatchIds.filter(id => id.includes('-R4-')).map(id => matches[id].winner).filter(Boolean);
+             if(quarterFinalists.length > 0) {
+                 const remainingInR4 = allMatchIds.filter(id => id.includes('-R4-')).flatMap(id => [matches[id].team1, matches[id].team2]).filter(Boolean);
+                 return `現在、準々決勝（ベスト8）が進行中です。勝ち残っているのは ${[...new Set(remainingInR4)].join('、')} です。`;
+             }
+             
+             // それ以前のラウンド
+             return '現在、トーナメント序盤戦が進行中です。';
+         }
     async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData) {
              const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
              const parentComment = findCommentById(commentSource, parentCommentId);
@@ -1450,22 +1482,20 @@ ${best8Paths}
 あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
 以下の情報を踏まえ、会話の流れの最後にあなたのキャラクターとして返信してください。
 
+### 現在の大会状況
+${context.tournamentSummary}
+
 ### これまでの会話
 ${conversationHistory}
-
-### トーナメント情報
-- Aブロックのチーム: ${context.blockA_teams}
-- Bブロックのチーム: ${context.blockB_teams}
-- Cブロックのチーム: ${context.blockC_teams}
-- Dブロックのチーム: ${context.blockD_teams}
 
 ${teamHistoryPromptPart}
 
 ### あなたへの指示
+- **あなたは上記の「現在の大会状況」を完全に把握しています。** 例えば「準決勝が進行中」とあれば、それ以前に敗退したチームがまだ勝ち残っているかのような発言は絶対にしないでください。
+- **相手の発言が大会状況と矛盾している場合（例：すでに敗退したチームを優勝候補に挙げる）、キャラクターに応じてその矛盾点を鋭く指摘してください。**
 - あなたは「${aiPersona}」です。そのキャラクター（ペルソナ）を完全に維持してください。
-- 相手の発言（最後の「あなた:」の発言）に真摯に向き合い、その意見の核心に触れる形で応答してください。
-- **上記の「トーナメント情報」と「関連チームの公式プロフィール」を絶対に遵守し、チームの過去の成績や情報について矛盾する発言や、事実でない情報（例：「去年ベスト8」など）を捏造しないでください。**
-- 上記の公式プロフィールを踏まえた上で、あなたの野球知識やキャラクター独自の視点を盛り込み、熱意のこもった、読み応えのある返信を1つだけ生成してください。
+- 相手の発言に真摯に向き合い、その意見の核心に触れる形で応答してください。
+- チームの過去の成績や情報について矛盾する発言や、事実でない情報を捏造しないでください。
 - なぜそう思うのかという具体的な理由や根拠を述べ、あなたの意見に深みと説得力を持たせてください。
 
 ### 出力形式
@@ -2365,6 +2395,7 @@ ${matchups}
                     blockB_teams: teams.slice(16, 32).join(', '),
                     blockC_teams: teams.slice(32, 48).join(', '),
                     blockD_teams: teams.slice(48, 64).join(', ')
+　　　　　　　　　 tournamentSummary: getTournamentStatusSummary()
                 };
                 
                 const userComment = {
