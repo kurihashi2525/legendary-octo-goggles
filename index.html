@@ -1368,7 +1368,7 @@ ${best8Paths}
 - ${quarterFinalMatchups.join('\n- ')}
 
 ### 執筆指示
-- まず、ベスト8に勝ち上がったチームの顔ぶれについて触れてください。**各チームがどの高校を倒して勝ち上がってきたかという「勝ち上がり履歴」にも言及し**、これまでのトーナメントを軽く総括します。
+- まず、ベスト8に勝ち上がったチームの顔ぶれについて触れてください。**各チームがどの高校を、どのような点差で倒してきたかという「勝ち上がり履歴」にも言及し**、トーナメントを総括します。（例：「A高校は全試合10点差以上で勝ち上がっており、打線の破壊力は今大会随一だ」）
 - 次に、決定した準々決勝の4つの対戦カードそれぞれについて、見どころや注目選手、勝敗の鍵を予想してください。
 - 記事のタイトルは「激闘のベスト8！準々決勝の組み合わせが決定！」のような、読者の興味を引くものにしてください。
 - これから始まる戦いへのワクワク感を高めるような、熱意のある文章で締めくくってください。
@@ -1410,7 +1410,6 @@ function getTournamentPath(teamName, startingMatchId) {
              }
 
              for (let r = 1; r <= startRoundNum; r++) {
-                 // そのラウンドでチームが勝利した試合を探す
                  const matchInRound = Object.entries(tournamentState.matches).find(([id, match]) =>
                      id.startsWith(`${startSide}-R${r}-`) &&
                      match.winner === teamName &&
@@ -1419,8 +1418,11 @@ function getTournamentPath(teamName, startingMatchId) {
 
                  if (matchInRound) {
                      const match = matchInRound[1];
-                     const opponent = match.team1 === teamName ? match.team2 : match.team1;
-                     path.push(`${r}回戦で${opponent}に勝利`);
+                     const opponent = match.team1 === teamName ? match.team2 : teamName;
+                    // ▼▼▼ スコア情報を取得して文字列に追加 ▼▼▼
+                     const winnerScore = match.team1 === teamName ? match.score1 : match.score2;
+                     const loserScore = match.team1 === teamName ? match.score2 : match.score1;
+                     path.push(`${r}回戦で${opponent}に ${winnerScore}-${loserScore} で勝利`);
                  }
              }
 
@@ -1584,7 +1586,7 @@ ${summaryPromptPart}
 - 単なる野球好き
 
 ### 指示
-- **試合の文脈と、両チームの「これまでの勝ち上がり」を最優先で考慮してください。** 例えば、「Aを倒してきたBがここで負けるとは」「Cを破った勢いそのままに勝ったな」といった、トーナメントの流れを踏まえたコメントを生成してください。
+- **試合の文脈と、両チームの「これまでの勝ち上がり」を最優先で考慮してください。** 勝ち上がり履歴の**点差**にも注目し、「接戦をものにしてきた」「圧倒的な攻撃力で勝ち上がってきた」など、試合内容を推測したコメントを生成してください。
 - **初期設定のチーム情報（info, last）は参考程度に留め、矛盾するコメントは絶対に生成しないでください。**
 ${antiAttitudeInstruction}
 ${civilWarInstruction}
