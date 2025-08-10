@@ -1313,21 +1313,25 @@ ${civilWarInstruction}
          * @param {string} userReplyText - ユーザーが入力した返信
          * @param {string} bbsType - 'general' or 'daiya'
          */
-        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
-            const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
-            const parentComment = findCommentById(commentSource, parentCommentId);
-            if (!parentComment) return null;
+        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData) {
+             const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+             const parentComment = findCommentById(commentSource, parentCommentId);
+             if (!parentComment) return null;
 
-            // ユーザーの返信を会話履歴に追加するための仮オブジェクト
-            const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
-            parentComment.replies.push(userReplyObject);
-            const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
-            // 仮オブジェクトを削除
-            parentComment.replies.pop();
+             // ユーザーの返信を会話履歴に追加するための仮オブジェクト
+             const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
+             parentComment.replies.push(userReplyObject);
+             const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
+             parentComment.replies.pop();
 
-            const prompt = `
+            // チームの公式プロフィール情報をプロンプト用に整形する
+            const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
+                ? `### 関連チームの公式プロフィール\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、昨年の成績「${data.last}」、情報「${data.info}」`).join('\n')}`
+                : '### 関連チームの公式プロフィール\n特になし';
+
+             const prompt = `
 あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
-以下の情報を踏まえて、会話の流れの最後にあなたのキャラクターとして返信してください。
+以下の情報を踏まえ、会話の流れの最後にあなたのキャラクターとして返信してください。
 
 ### これまでの会話
 ${conversationHistory}
@@ -1338,40 +1342,41 @@ ${conversationHistory}
 - Cブロックのチーム: ${context.blockC_teams}
 - Dブロックのチーム: ${context.blockD_teams}
 
+${teamHistoryPromptPart}
+
 ### あなたへの指示
 - あなたは「${aiPersona}」です。そのキャラクター（ペルソナ）を完全に維持してください。
 - 相手の発言（最後の「あなた:」の発言）に真摯に向き合い、その意見の核心に触れる形で応答してください。
-- **上記の「トーナメント情報」を必ず参照し、「〇〇」や「△△」といった曖昧な表現ではなく、実在するチーム名を挙げて具体的に議論してください。**
-- 単に一言で済ませるのではなく、あなたの野球知識やキャラクター独自の視点を盛り込み、熱意のこもった、読み応えのある返信を1つだけ生成してください。
+- **上記の「トーナメント情報」と「関連チームの公式プロフィール」を絶対に遵守し、チームの過去の成績や情報について矛盾する発言や、事実でない情報（例：「去年ベスト8」など）を捏造しないでください。**
+- 上記の公式プロフィールを踏まえた上で、あなたの野球知識やキャラクター独自の視点を盛り込み、熱意のこもった、読み応えのある返信を1つだけ生成してください。
 - なぜそう思うのかという具体的な理由や根拠を述べ、あなたの意見に深みと説得力を持たせてください。
-- 返信の最後は、必ずしも質問で終わる必要はありません。あなたの意見をしっかりと言い切る形で終えても構いません。
 
 ### 出力形式
 必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
 {"comment": "（あなたの返信本文）"}
 `;
-            try {
-                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const rawText = result.candidates[0].content.parts[0].text;
-                    const replyJson = parseJsonFromText(rawText);
-                    if (replyJson && replyJson.comment) {
-                        return {
-                            id: crypto.randomUUID(),
-                            personality: aiPersona,
-                            text: replyJson.comment,
-                            timestamp: Date.now(),
-                            replies: []
-                        };
-                    }
-                }
-                throw new Error("AIからの応答が予期した形式ではありません。");
-            } catch (error) {
-                console.error("AI返信コメントの生成に失敗しました:", error);
-                return null;
-            }
-        }
+             try {
+                 const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                 const result = await response.json();
+                 if (result.candidates?.[0]?.content?.parts?.[0]) {
+                     const rawText = result.candidates[0].content.parts[0].text;
+                     const replyJson = parseJsonFromText(rawText);
+                     if (replyJson && replyJson.comment) {
+                         return {
+                             id: crypto.randomUUID(),
+                             personality: aiPersona,
+                             text: replyJson.comment,
+                             timestamp: Date.now(),
+                             replies: []
+                         };
+                     }
+                 }
+                 throw new Error("AIからの応答が予期した形式ではありません。");
+             } catch (error) {
+                 console.error("AI返信コメントの生成に失敗しました:", error);
+                 return null;
+             }
+         }
         
         /**
          * AIに掲示板のコメントを生成させる関数
@@ -2222,6 +2227,14 @@ ${matchups}
 
                 const aiPersona = parentComment.personality;
                 
+                // 会話のテキスト全体を取得し、どのチームについて話しているか特定する
+                const conversationTextForHistory = formatConversationHistory(commentSource, parentCommentId) + userReplyText;
+                const mentionedTeams = INITIAL_TEAM_POOL.filter(teamName => conversationTextForHistory.includes(teamName));
+                const teamHistoryData = {};
+                mentionedTeams.forEach(teamName => {
+                    teamHistoryData[teamName] = TEAM_DATA[teamName];
+                });
+                
                 const teams = tournamentState.teams;
                 const context = {
                     blockA_teams: teams.slice(0, 16).join(', '),
@@ -2247,7 +2260,7 @@ ${matchups}
                 form.closest('[id^="reply-form-container-"]').classList.add('hidden');
 
                 // 2. AIの返信を生成して追加
-                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context);
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona, context, teamHistoryData);
                 if (aiReply) {
                     // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
                     const userCommentInState = findCommentById(commentSource, userComment.id);
