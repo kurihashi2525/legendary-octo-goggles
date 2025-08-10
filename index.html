@@ -2202,12 +2202,16 @@ ${matchups}
                 updateTournamentFinishRecords();
                 renderTournament(tournamentState);
 　　　　　　　 // ラウンドが終了したかチェック
-             const totalMatchesInRound = 64 / Math.pow(2, roundNum);
-             const completedMatchesInRound = Object.values(tournamentState.matches).filter(m => {
-                 const mRound = m.id?.startsWith('F-') ? 6 : parseInt(m.id?.split('-')[1].slice(1) || 0);
-                 return mRound === roundNum && m.winner;
+             const [side, roundStr] = matchId.split('-');
+             const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+             const totalMatchesInRound = roundNum === 6 ? 1 : 64 / Math.pow(2, roundNum);
+
+             const completedMatchesInRound = Object.entries(tournamentState.matches).filter(([id, match]) => {
+                 const currentMatchRound = id.startsWith('F-') ? 6 : parseInt(id.split('-')[1].slice(1));
+                 return currentMatchRound === roundNum && match.winner;
              }).length;
-             if (totalMatchesInRound === completedMatchesInRound) {
+
+             if (totalMatchesInRound > 0 && totalMatchesInRound === completedMatchesInRound) {
                  handleRoundCompletion(roundNum);
              }
                 saveState();
