@@ -1313,7 +1313,7 @@ ${civilWarInstruction}
          * @param {string} userReplyText - ユーザーが入力した返信
          * @param {string} bbsType - 'general' or 'daiya'
          */
-        async function generateBbsReply(parentCommentId, userReplyText, bbsType) {
+        async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona) {
             const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
             const parentComment = findCommentById(commentSource, parentCommentId);
             if (!parentComment) return null;
@@ -1326,14 +1326,14 @@ ${civilWarInstruction}
             parentComment.replies.pop();
 
             const prompt = `
-あなたは、匿名掲示板のキャラクター「${parentComment.personality}」です。
+あなたは、匿名掲示板のキャラクター「${aiPersona}」です。
 以下の会話の流れの最後に、あなたのキャラクターとして、自然で短い返信をしてください。
 
 ### これまでの会話
 ${conversationHistory}
 
 ### あなたへの指示
-- あなたは「${parentComment.personality}」です。そのキャラクターを維持してください。
+- あなたは「${aiPersona}」です。そのキャラクターを維持してください。
 - 相手の発言（最後の「あなた:」の発言）に対して、短く、口語的で、リアルな返信を1つだけ生成してください。
 - 議論をふっかけたり、煽ったり、あるいは同意したりと、キャラクターに合った反応をしてください。
 - 返信は、まるで本物の匿名掲示板の書き込みのようにしてください。
@@ -1351,7 +1351,7 @@ ${conversationHistory}
                     if (replyJson && replyJson.comment) {
                         return {
                             id: crypto.randomUUID(),
-                            personality: parentComment.personality,
+                            personality: aiPersona,
                             text: replyJson.comment,
                             timestamp: Date.now(),
                             replies: []
@@ -2212,6 +2212,8 @@ ${matchups}
                 const parentComment = findCommentById(commentSource, parentCommentId);
                 if (!parentComment) return;
 
+                const aiPersona = parentComment.personality;
+
                 const userComment = {
                     id: crypto.randomUUID(),
                     personality: 'あなた',
@@ -2229,7 +2231,7 @@ ${matchups}
                 form.closest('[id^="reply-form-container-"]').classList.add('hidden');
 
                 // 2. AIの返信を生成して追加
-                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType);
+                const aiReply = await generateBbsReply(userComment.id, userReplyText, bbsType, aiPersona);
                 if (aiReply) {
                     // ユーザーのコメントを見つけ直して、そこにAIの返信を追加
                     const userCommentInState = findCommentById(commentSource, userComment.id);
