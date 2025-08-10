@@ -938,7 +938,7 @@
                             </div>
                             <div>
                                 <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
-                                ${article.newspaperHtml ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞</button>` : ''}
+                                   ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}                        
                             </div>
                         </div>
                     `;
@@ -1391,6 +1391,102 @@ ${best8Paths}
                 return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `summary-${Date.now()}`, newspaperHtml: null };
             }
         }
+
+async function generateSportsNewspaper(roundNumber) {
+             const roundNameMap = { 3: '3回戦', 4: '準々決勝', 5: '準決勝', 6: '決勝' };
+             const roundName = roundNameMap[roundNumber];
+             if (!roundName) return null;
+
+             // ラウンドの結果を収集
+             const matchIdsInRound = Object.keys(tournamentState.matches).filter(id => id.includes(`-R${roundNumber}-`) || (roundNumber === 6 && id.includes('F-R1-')));
+             const results = matchIdsInRound.map(id => tournamentState.matches[id]);
+
+             const resultsText = results.map(match => {
+                 const winnerRank = getRankDescription(calculateRank(match.winner, tournamentState));
+                 const loser = match.team1 === match.winner ? match.team2 : match.team1;
+                 const loserRank = getRankDescription(calculateRank(loser, tournamentState));
+                 return `${winnerRank}・${match.winner}が${loserRank}・${loser}に ${match.score1}-${match.score2} で勝利。`;
+             }).join('\n');
+
+             const prompt = `
+あなたは、読者の購買意欲を掻き立てるのが得意な、日本のスポーツ新聞の編集長です。
+現在、高校野球の${tournamentState.tournamentYear}年度大会が進行中です。${roundName}の全試合が終了しました。
+以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストを作成してください。
+
+### ${roundName} 全試合結果
+${resultsText}
+
+### あなたが作成するテキスト
+以下の4つの要素を、JSON形式で出力してください。
+1.  **mainHeadline**: 最も重要な結果を伝える、短く、衝撃的で、扇情的な大見出し。（例：「怪物散る！」「王者、盤石の決勝へ」）
+2.  **subHeadline**: mainHeadlineを補足する、少し詳しい小見出し。
+3.  **photoCaption**: その日のハイライトシーンを切り取った架空の写真に対する、情景が目に浮かぶようなキャプション。（例：「あと一歩及ばず、マウンドに崩れ落ちる〇〇高校のエース△△」）
+4.  **otherResults**: その他の注目すべき結果を2つ、簡潔にまとめたもの。
+
+### 出力形式
+{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."]}
+`;
+             try {
+                 const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                 const result = await response.json();
+                 if (result.candidates?.[0]?.content?.parts?.[0]) {
+                     const rawText = result.candidates[0].content.parts[0].text;
+                     const newspaperData = parseJsonFromText(rawText);
+                     if (newspaperData) return newspaperData;
+                 }
+                 throw new Error("AI newspaper response format error.");
+             } catch (error) {
+                 console.error("AI newspaper generation failed:", error);
+                 return null;
+             }
+         }
+
+async function handleRoundCompletion(roundNumber) {
+             const significantRounds = [3, 4, 5, 6]; // 3回戦、準々決勝、準決勝、決勝
+             if (!significantRounds.includes(roundNumber)) return;
+
+             // そのラウンドの新聞が既に発行済みかチェック
+             const alreadyExists = tournamentState.news.some(n => n.roundNumber === roundNumber && n.isNewspaper);
+             if (alreadyExists) return;
+
+             const newspaperData = await generateSportsNewspaper(roundNumber);
+             if (newspaperData) {
+                 const roundNameMap = { 3: '3回戦', 4: '準々決勝', 5: '準決勝', 6: '決勝' };
+                 tournamentState.news.push({
+                     title: `【熱闘新聞】${roundNameMap[roundNumber]}特集号が発行されました！`,
+                     timestamp: Date.now(),
+                     isNewspaper: true,
+                     roundNumber: roundNumber,
+                     newspaperData: newspaperData
+                 });
+                 renderNews(tournamentState.news);
+                 saveState();
+             }
+         }
+function renderNewspaperModal(newspaperData) {
+             const { mainHeadline, subHeadline, photoCaption, otherResults } = newspaperData;
+             newspaperModalBody.innerHTML = `
+                 <div class="newspaper-container newspaper-late">
+                     <div class="newspaper-header">
+                         <h2 class="newspaper-title">熱闘スポーツ</h2>
+                         <p class="newspaper-date">${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                     </div>
+                     <div class="newspaper-content">
+                         <h1 class="newspaper-main-headline">${mainHeadline}</h1>
+                         <div class="newspaper-body-content">
+                             <h2 class="newspaper-sub-headline">${subHeadline}</h2>
+                             <div class="newspaper-image-placeholder">
+                                 <p class="text-sm p-4">${photoCaption}</p>
+                             </div>
+                             <div class="newspaper-score-box">
+                                 <h3>その他の主な結果</h3>
+                                 ${otherResults.map(r => `<p>${r}</p>`).join('')}
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             `;
+         }
         /**
          * AIに掲示板の返信を生成させる関数
          * @param {string} parentCommentId - 返信先のコメントID
@@ -2105,6 +2201,15 @@ ${matchups}
                 
                 updateTournamentFinishRecords();
                 renderTournament(tournamentState);
+　　　　　　　 // ラウンドが終了したかチェック
+             const totalMatchesInRound = 64 / Math.pow(2, roundNum);
+             const completedMatchesInRound = Object.values(tournamentState.matches).filter(m => {
+                 const mRound = m.id?.startsWith('F-') ? 6 : parseInt(m.id?.split('-')[1].slice(1) || 0);
+                 return mRound === roundNum && m.winner;
+             }).length;
+             if (totalMatchesInRound === completedMatchesInRound) {
+                 handleRoundCompletion(roundNum);
+             }
                 saveState();
                 return;
             }
