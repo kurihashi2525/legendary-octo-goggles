@@ -1306,7 +1306,79 @@ ${civilWarInstruction}
             findPath(comments, []);
             return history.map(c => `${c.personality}:「${c.text}」`).join('\n');
         }
+        function checkQuarterFinalsComplete() {
+            const quarterFinalIds = ['L-R4-M1', 'L-R4-M2', 'R-R4-M1', 'R-R4-M2'];
+            const completedMatches = quarterFinalIds.filter(id => tournamentState.matches[id] && tournamentState.matches[id].winner).length;
 
+            if (completedMatches === 4) {
+                // 準々決勝が4試合すべて終わっており、まだサマリー記事が生成されていなければ表示
+                const summaryArticleExists = tournamentState.news.some(article => article.errorId && article.errorId.startsWith('summary-'));
+                const finalMatch = tournamentState.matches['F-R1-M1'];
+                if (!summaryArticleExists && (!finalMatch || !finalMatch.winner)) { // 決勝が終わっていたら表示しない
+                     generateSummaryBtn.classList.remove('hidden');
+                }
+            } else {
+                generateSummaryBtn.classList.add('hidden');
+            }
+        }
+       async function generateQuarterFinalsSummaryArticle() {
+            const quarterFinalIds = ['L-R4-M1', 'L-R4-M2', 'R-R4-M1', 'R-R4-M2'];
+            let quarterFinalResults = [];
+            let semiFinalists = [];
+            
+            quarterFinalIds.forEach(id => {
+                const match = tournamentState.matches[id];
+                if(match && match.winner) {
+                    const winner = match.winner;
+                    const loser = match.team1 === winner ? match.team2 : match.team1;
+                    const score = match.team1 === winner ? `${match.score1}-${match.score2}` : `${match.score2}-${match.score1}`;
+                    quarterFinalResults.push(`${winner}が${loser}に${score}で勝利`);
+                    semiFinalists.push(winner);
+                }
+            });
+
+            if (semiFinalists.length !== 4) return null;
+
+            const semiFinalMatchups = [
+                `${semiFinalists[0]} vs ${semiFinalists[1]}`,
+                `${semiFinalists[2]} vs ${semiFinalists[3]}`
+            ];
+
+            const prompt = `
+あなたは、情熱的な高校野球専門のAI記者です。
+${tournamentState.tournamentYear}年度大会のトーナメントは準々決勝が終了し、ベスト4が出揃いました。
+以下の情報に基づき、読者の心を揺さぶるようなドラマチックなハイライト記事を生成してください。
+
+### 準々決勝 試合結果
+- ${quarterFinalResults.join('\n- ')}
+
+### 準決勝の組み合わせ
+- ${semiFinalMatchups.join('\n- ')}
+
+### 執筆指示
+- まず、激闘となった準々決勝全体を振り返り、印象的な試合やチームについて言及してください。
+- 次に、決定した準決勝の組み合わせに触れ、それぞれの試合の見どころや展開を予想し、読者の期待感を最大限に高めてください。
+- 記事のタイトルは、大会の熱気が伝わるような、キャッチーで魅力的なものにしてください。
+- 全体として、一つの読み物として完成度の高い、熱意あふれる記事にしてください。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+`;
+            try {
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const article = parseJsonFromText(rawText);
+                    if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null, errorId: `summary-${Date.now()}` };
+                }
+                throw new Error("AI summary article response format error.");
+            } catch (error) {
+                console.error("AI summary article generation failed:", error);
+                return { title: "ハイライト記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `summary-${Date.now()}`, newspaperHtml: null };
+            }
+        }
         /**
          * AIに掲示板の返信を生成させる関数
          * @param {string} parentCommentId - 返信先のコメントID
@@ -2469,6 +2541,7 @@ ${matchups}
             skipR1Btn.classList.toggle('hidden', r1.played > 0);
             skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
             skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
+            checkQuarterFinalsComplete();
         }
 
         // --- Initial Load & Setup ---
@@ -2664,6 +2737,23 @@ ${matchups}
             }, 50);
         });
 
+                 generateSummaryBtn.addEventListener('click', async () => {
+            generateSummaryBtn.disabled = true;
+            generateSummaryBtn.textContent = '記事を生成中...';
+            newsContainer.innerHTML = `<div class="loader">AI記者がハイライト記事を執筆中...</div>`;
+
+            const summaryArticle = await generateQuarterFinalsSummaryArticle();
+
+            if (summaryArticle) {
+                tournamentState.news.push(summaryArticle);
+                saveState();
+                renderNews(tournamentState.news);
+            }
+            
+            generateSummaryBtn.classList.add('hidden'); // 使用後は非表示にする
+            generateSummaryBtn.disabled = false;
+            generateSummaryBtn.textContent = 'ベスト8ハイライト記事を生成';
+        });
 
         initializeApp();
     </script>
