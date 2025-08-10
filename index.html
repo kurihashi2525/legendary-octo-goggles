@@ -1339,19 +1339,36 @@ ${civilWarInstruction}
 
             if (quarterFinalists.length !== 8) return null;
 
+            // ▼▼▼ ここから追加したコード ▼▼▼
+            // 各チームの勝ち上がり履歴を取得
+            const best8Paths = [...new Set(quarterFinalists)].map(team => {
+                // 各チームが勝利した3回戦の試合IDを見つける
+                const round3Match = Object.entries(tournamentState.matches).find(([id, match]) =>
+                    id.includes('-R3-') && match.winner === team
+                );
+                const matchIdForPath = round3Match ? round3Match[0] : null;
+
+                if (matchIdForPath) {
+                    const path = getTournamentPath(team, matchIdForPath);
+                    return `- **${team}**: ${path}`;
+                }
+                return `- **${team}**: (勝ち上がり履歴不明)`;
+            }).join('\n');
+            // ▲▲▲ ここまで追加したコード ▲▲▲
+
             const prompt = `
 あなたは、情熱的な高校野球専門のAI記者です。
 ${tournamentState.tournamentYear}年度大会の3回戦が終了し、ベスト8に進出する8校が決定しました。
 以下の情報に基づき、これから始まる準々決勝への期待感を煽るような展望記事を生成してください。
 
-### ベスト8進出チーム一覧
-- ${[...new Set(quarterFinalists)].join(', ')}
+### ベスト8進出チームと勝ち上がり
+${best8Paths}
 
 ### 準々決勝の組み合わせ
 - ${quarterFinalMatchups.join('\n- ')}
 
 ### 執筆指示
-- まず、ベスト8に勝ち上がったチームの顔ぶれについて触れてください。順当な強豪校、予想外のダークホースなどを挙げて、これまでのトーナメントを軽く総括します。
+- まず、ベスト8に勝ち上がったチームの顔ぶれについて触れてください。**各チームがどの高校を倒して勝ち上がってきたかという「勝ち上がり履歴」にも言及し**、これまでのトーナメントを軽く総括します。
 - 次に、決定した準々決勝の4つの対戦カードそれぞれについて、見どころや注目選手、勝敗の鍵を予想してください。
 - 記事のタイトルは「激闘のベスト8！準々決勝の組み合わせが決定！」のような、読者の興味を引くものにしてください。
 - これから始まる戦いへのワクワク感を高めるような、熱意のある文章で締めくくってください。
