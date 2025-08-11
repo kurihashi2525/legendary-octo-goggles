@@ -674,139 +674,149 @@
 
 
         // --- Tournament Logic ---
-        async function createNewTournament(isNext=false) {
-            let teams;
-            let seeds = [];
+        // この関数を丸ごと置き換えてください
+   async function createNewTournament(isNext = false, nextTournamentType = 'summer') {
+        let teams;
+        let seeds = [];
+        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
 
-            if (isNext && tournamentState.teamRecords) {
-                // Store previous ranks before updating for the new tournament
-                Object.keys(tournamentState.teamRecords).forEach(teamName => {
-                    tournamentState.teamRecords[teamName].previousRank = calculateRank(teamName, tournamentState);
-                });
-
-                const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
-                    .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
-                    .sort((a, b) => a.lastFinish - b.lastFinish);
-                
-                seeds = lastTournamentTeams.slice(0, 8).map(t => t.name);
-                const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
-                const shuffledNonSeeds = shuffleArray(nonSeeds);
-                
-                teams = [];
-                const seedPositions = [0, 32, 16, 48, 8, 40, 24, 56];
-                const seedPlacements = {};
-                seeds.forEach((seed, i) => {
-                  seedPlacements[seedPositions[i]] = seed;
-                });
-
-                let nonSeedIndex = 0;
-                for (let i = 0; i < 64; i++) {
-                    if (seedPlacements[i]) {
-                        teams[i] = seedPlacements[i];
-                    } else {
-                        teams[i] = shuffledNonSeeds[nonSeedIndex++];
-                    }
-                }
-                tournamentState.tournamentYear++;
-
-            } else {
-                tournamentState.tournamentYear = 1;
-                tournamentState.teamRecords = {};
-                const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({
-                    name: teamName,
-                    rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
-                }));
-
-                historicalRanks.sort((a, b) => a.rank - b.rank);
-
-                seeds = historicalRanks.slice(0, 8).map(t => t.name);
-                const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
-                const shuffledNonSeeds = shuffleArray(nonSeeds);
-                
-                teams = [];
-                const seedPositions = [0, 32, 16, 48, 8, 40, 24, 56];
-                const seedPlacements = {};
-                seeds.forEach((seed, i) => {
-                    seedPlacements[seedPositions[i]] = seed;
-                });
-
-                let nonSeedIndex = 0;
-                for (let i = 0; i < 64; i++) {
-                    if (seedPlacements[i]) {
-                        teams[i] = seedPlacements[i];
-                    } else {
-                        teams[i] = shuffledNonSeeds[nonSeedIndex++];
-                    }
-                }
-
-                INITIAL_TEAM_POOL.forEach(t => {
-                    const historicalRank = historicalRanks.find(hr => hr.name === t);
-                    tournamentState.teamRecords[t] = { 
-                        wins: 0, 
-                        losses: 0, 
-                        best: null, 
-                        lastFinish: historicalRank ? historicalRank.rank : 64,
-                        previousRank: null // No previous rank for the first year
-                    };
-                });
+        // ------------------------------------------------------------------
+        // 1. 大会情報の更新とシード決めのロジック
+        // ------------------------------------------------------------------
+        if (isNext) { // 「次の大会へ」ボタンが押された場合
+            tournamentState.currentTournament = nextTournamentType;
+            if (nextTournamentType === 'autumn') {
+                tournamentState.tournamentYear++; // 夏→秋で年を越す
             }
-
-            tournamentState.teams = teams;
-            tournamentState.matches = {};
-            tournamentState.news = [];
-            tournamentState.seeds = seeds;
-            tournamentState.bbsComments = [];
-            tournamentState.daiyaBbsComments = [];
-            tournamentState.namcoNews = null; // Initialize Namco News
-
-            const round1Setup = teams.reduce((acc, team, i) => {
-                if (i % 2 === 0) acc.push({ team1: team, team2: null });
-                else acc[acc.length - 1].team2 = team;
-                return acc;
-            }, []);
-
-            round1Setup.forEach((match, index) => {
-                const side = index < 16 ? 'L' : 'R';
-                const matchNum = index < 16 ? index + 1 : index - 15;
-                const matchId = `${side}-R1-M${matchNum}`;
-                tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
-            });
-
-            saveState();
-            renderTournament(tournamentState);
-            setupEl.classList.add('hidden');
-            tournamentDisplayEl.classList.remove('hidden');
             
-            newsContainer.innerHTML = `<div class="loader">AI記者が展望記事を執筆中...</div>`;
-            bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-            namcoNewsSection.classList.remove('hidden');
-            namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+            const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
+                .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
+                .sort((a, b) => a.lastFinish - b.lastFinish);
+            
+            // 秋はシード4校、春・夏は8校にしてみる
+            const seedCount = (nextTournamentType === 'autumn') ? 4 : 8;
+            seeds = lastTournamentTeams.slice(0, seedCount).map(t => t.name);
 
-            const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-                generateNewsArticle(null, null, null, 'preview', null, null), // Special call for preview
-                generateBracketReactionComments(tournamentState),
-                generateNamcoNews(tournamentState, 'bracket')
-            ]);
+        } else { // ページを最初に読み込んだ場合
+            tournamentState.tournamentYear = 1;
+            tournamentState.currentTournament = 'summer'; // 最初は夏の大会から
+            tournamentState.teamRecords = {};
+            
+            const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({
+                name: teamName,
+                rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
+            }));
+            historicalRanks.sort((a, b) => a.rank - b.rank);
+            seeds = historicalRanks.slice(0, 8).map(t => t.name);
 
-            if (previewArticle) {
-                tournamentState.news.unshift(previewArticle);
-            }
-            if (bracketComments && bracketComments.length > 0) {
-                tournamentState.bbsComments.push(...bracketComments);
-            }
-            if (namcoNews) {
-                tournamentState.namcoNews = namcoNews;
-            }
-
-            renderNews(tournamentState.news);
-            renderBbsComments(tournamentState.bbsComments);
-            renderNamcoNews(tournamentState.namcoNews);
-            saveState();
+            INITIAL_TEAM_POOL.forEach(t => {
+                const historicalRank = historicalRanks.find(hr => hr.name === t);
+                tournamentState.teamRecords[t] = { 
+                    wins: 0, 
+                    losses: 0, 
+                    best: null, 
+                    lastFinish: historicalRank ? historicalRank.rank : 64,
+                    previousRank: null
+                };
+            });
         }
+        
+        // ------------------------------------------------------------------
+        // 2. トーナメント表の骨格作成ロジック (ここは以前と全く同じ)
+        // ------------------------------------------------------------------
+        // ↓↓↓↓↓↓ この部分はどの大会でも共通なので、変更は不要です ↓↓↓↓↓↓
+        const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
+        const shuffledNonSeeds = shuffleArray(nonSeeds);
+        
+        teams = [];
+        // シード数に応じてシード位置を動的に決定
+        const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56]; 
+        const seedPositions = seedPositionsTemplate.slice(0, seeds.length);
+
+        const seedPlacements = {};
+        seeds.forEach((seed, i) => {
+            seedPlacements[seedPositions[i]] = seed;
+        });
+
+        let nonSeedIndex = 0;
+        for (let i = 0; i < 64; i++) {
+            if (seedPlacements[i]) {
+                teams[i] = seedPlacements[i];
+            } else {
+                teams[i] = shuffledNonSeeds[nonSeedIndex++];
+            }
+        }
+        
+        tournamentState.teams = teams;
+        tournamentState.matches = {};
+        tournamentState.news = [];
+        tournamentState.seeds = seeds;
+        tournamentState.bbsComments = [];
+        tournamentState.daiyaBbsComments = [];
+        tournamentState.namcoNews = null;
+
+        const round1Setup = teams.reduce((acc, team, i) => {
+            if (i % 2 === 0) acc.push({ team1: team, team2: null });
+            else acc[acc.length - 1].team2 = team;
+            return acc;
+        }, []);
+
+        round1Setup.forEach((match, index) => {
+            const side = index < 16 ? 'L' : 'R';
+            const matchNum = index < 16 ? index + 1 : index - 15;
+            const matchId = `${side}-R1-M${matchNum}`;
+            tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+        });
+        // ↑↑↑↑↑↑ この部分はどの大会でも共通なので、変更は不要です ↑↑↑↑↑↑
+
+        // ------------------------------------------------------------------
+        // 3. 画面描画とAIコンテンツ生成 (ここも以前とほぼ同じ)
+        // ------------------------------------------------------------------
+        saveState();
+        renderTournament(tournamentState); // ここで大会名が正しく表示される
+        setupEl.classList.add('hidden');
+        tournamentDisplayEl.classList.remove('hidden');
+        
+        // ローディング表示
+        const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
+        newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+        namcoNewsSection.classList.remove('hidden');
+        namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+
+        // AIコンテンツ生成の呼び出し
+        const [previewArticle, bracketComments, namcoNews] = await Promise.all([
+            generateNewsArticle(null, null, null, 'preview', null, null), // この関数が内部で大会名を判断
+            generateBracketReactionComments(tournamentState),
+            generateNamcoNews(tournamentState, 'bracket')
+        ]);
+
+        if (previewArticle) {
+            tournamentState.news.unshift(previewArticle);
+        }
+        if (bracketComments && bracketComments.length > 0) {
+            tournamentState.bbsComments.push(...bracketComments);
+        }
+        if (namcoNews) {
+            tournamentState.namcoNews = namcoNews;
+        }
+
+        renderNews(tournamentState.news);
+        renderBbsComments(tournamentState.bbsComments);
+        renderNamcoNews(tournamentState.namcoNews);
+        saveState();
+    }
 
         // --- Rendering Functions ---
         function renderTournament(data) {
-            tournamentYearDisplay.textContent = `${data.tournamentYear}年度大会`;
+            const tournamentNameMap = {
+        summer: '夏季大会',
+        autumn: '秋季大会',
+        spring: '春季大会'
+    };
+    const currentTournamentName = tournamentNameMap[data.currentTournament] || '大会';
+    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${currentTournamentName}`;
+
             renderMainBracket(data);
             renderRegionMap(data);
             renderNews(data.news || []);
@@ -1258,45 +1268,42 @@ function renderRegionMap(data) {
         }
 
 
-        async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
-            // Handle preview article generation separately
-            if (matchId === 'preview') {
-                 const { tournamentYear, seeds, teams } = tournamentState;
+        // generateNewsArticle 関数
+async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
+    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+    const currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
-                 // --- 各ブロックの有力校を分析 ---
-                 const blockA_teams = teams.slice(0, 16);
-                 const blockB_teams = teams.slice(16, 32);
-                 const blockC_teams = teams.slice(32, 48);
-                 const blockD_teams = teams.slice(48, 64);
-                 const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
-                 
-                 const blockAnalysis = `
+    if (matchId === 'preview') {
+        const { tournamentYear, seeds, teams } = tournamentState;
+        const blockA_teams = teams.slice(0, 16);
+        const blockB_teams = teams.slice(16, 32);
+        const blockC_teams = teams.slice(32, 48);
+        const blockD_teams = teams.slice(48, 64);
+        const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
+        
+        const blockAnalysis = `
 - Aブロック: ${findPromisingSchools(blockA_teams).join(', ') || '特になし'}
 - Bブロック: ${findPromisingSchools(blockB_teams).join(', ') || '特になし'}
 - Cブロック: ${findPromisingSchools(blockC_teams).join(', ') || '特になし'}
 - Dブロック: ${findPromisingSchools(blockD_teams).join(', ') || '特になし'}
-                 `.trim();
+        `.trim();
 
-                 // --- 地区別勢力図を分析 ---
-                 const promisingSchools = [...new Set([...findPromisingSchools(blockA_teams), ...findPromisingSchools(blockB_teams), ...findPromisingSchools(blockC_teams), ...findPromisingSchools(blockD_teams)])];
-                 const regionPower = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
-                 promisingSchools.forEach(team => {
-                     const region = TEAM_DATA[team]?.region;
-                     if (region) {
-                         regionPower[region].push(team);
-                     }
-                 });
-                 const regionAnalysis = Object.entries(regionPower)
-                     .map(([region, schools]) => `- **${region}地区**: 有力校 ${schools.length}校 (${schools.join(', ') || 'なし'})`)
-                     .join('\n');
+        const regionPower = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+        [...new Set([...findPromisingSchools(blockA_teams), ...findPromisingSchools(blockB_teams), ...findPromisingSchools(blockC_teams), ...findPromisingSchools(blockD_teams)])].forEach(team => {
+            const region = TEAM_DATA[team]?.region;
+            if (region) regionPower[region].push(team);
+        });
+        const regionAnalysis = Object.entries(regionPower)
+            .map(([region, schools]) => `- **${region}地区**: 有力校 ${schools.length}校 (${schools.join(', ') || 'なし'})`)
+            .join('\n');
 
-                 const prompt = `
+        const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-間もなく開幕する「${tournamentYear}年度大会」の展望記事を作成してください。
+間もなく開幕する「${tournamentYear}年度 ${currentTournamentName}」の展望記事を作成してください。
 
 ### 大会全体情報
-- 大会名: ${tournamentYear}年度大会
-- シード校 (昨年度ベスト8): ${seeds.join(', ') || 'なし'}
+- 大会名: ${tournamentYear}年度 ${currentTournamentName}
+- シード校: ${seeds.join(', ') || 'なし'}
 
 ### 各ブロックの有力校
 ${blockAnalysis}
@@ -1305,62 +1312,58 @@ ${blockAnalysis}
 ${regionAnalysis}
 
 ### 執筆指示
-- 上記の**「各ブロックの有力校」と「地区別勢力図」の両方**を基に、大会全体の展望をまとめてください。
-- **「死のブロックとなったAブロックには西部地区の強豪が集中している」「東部の雄・代矢東は比較的楽なブロックに入ったか」**といった、ブロック分けと地区勢力図を組み合わせた、より深い分析をしてください。
-- 記事のトーンは、読者の期待感を煽るようなものにしてください。
+- 上記の情報を基に、大会全体の展望をまとめてください。
+- **「死のブロックとなったAブロックには西部地区の強豪が集中している」**といった、ブロック分けと地区勢力図を組み合わせた、より深い分析をしてください。
+- 読者の期待感を煽るような、情熱的なトーンでお願いします。
 
 ### 出力形式
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
-                 try {
-                     const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-                     const result = await response.json();
-                     if (result.candidates?.[0]?.content?.parts?.[0]) {
-                         const rawText = result.candidates[0].content.parts[0].text;
-                         const article = parseJsonFromText(rawText);
-                         if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
-                     }
-                     throw new Error("AI preview article response format error.");
-                 } catch (error) {
-                     console.error("AI preview article generation failed:", error);
-                     return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
-                 }
-             }
-            
-            // Regular match article generation
-            const winnerData = TEAM_DATA[winnerName];
-            const loserData = TEAM_DATA[loserName];
-            const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
-            const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
-            const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-            const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-            const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
-
-            const [side, roundStr] = matchId.split('-');
-            const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
-            let roundAchievement = '';
-            switch (roundNum) {
-                case 1: roundAchievement = '初戦突破'; break;
-                case 2: roundAchievement = '3回戦進出'; break;
-                case 3: roundAchievement = 'ベスト8進出'; break;
-                case 4: roundAchievement = 'ベスト4進出'; break;
-                case 5: roundAchievement = '決勝進出'; break;
-                case 6: roundAchievement = '甲子園出場決定！'; break;
+        try {
+            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const rawText = result.candidates[0].content.parts[0].text;
+                const article = parseJsonFromText(rawText);
+                if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
             }
+            throw new Error("AI preview article response format error.");
+        } catch (error) {
+            console.error("AI preview article generation failed:", error);
+            return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
+        }
+    }
+    
+    // 通常の試合結果記事
+    const winnerData = TEAM_DATA[winnerName];
+    const loserData = TEAM_DATA[loserName];
+    const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+    const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+    const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
+    const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
+    const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-            let civilWarInstruction = isCivilWar ? `
-- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**
-- 記事のタイトルにも「身内対決」「283ダービー」といった言葉を使い、ドラマチックにしてください。
-- 本文では、同じ系列校同士が雌雄を決するという非情なドラマ、選手たちの複雑な心境、応援団の様子などを描写してください。
-- 敗れたチームの健闘を称えつつ、勝利したチームが系列校の想いを背負って次に進む、というストーリーを描いてください。` : '';
+    const [side, roundStr] = matchId.split('-');
+    const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+    let roundAchievement = '';
+    switch (roundNum) {
+        case 1: roundAchievement = '初戦突破'; break;
+        case 2: roundAchievement = '3回戦進出'; break;
+        case 3: roundAchievement = 'ベスト8進出'; break;
+        case 4: roundAchievement = 'ベスト4進出'; break;
+        case 5: roundAchievement = '決勝進出'; break;
+        case 6: roundAchievement = (currentTournamentName === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
+    }
 
-            const prompt = `
+    let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**` : '';
+
+    const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
 以下の試合結果とチーム情報に基づき、読者の心を掴むようなドラマチックなニュース記事を生成してください。
 
 ### 試合情報
-- 大会: ${tournamentState.tournamentYear}年度大会
+- 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
 - ラウンド達成記録: ${roundAchievement}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
@@ -1370,7 +1373,7 @@ ${regionAnalysis}
 ### 執筆のポイント
 ${civilWarInstruction}
 - 記事の中で「${winnerName}が${roundAchievement}を決めた」という事実を必ず含めてください。
-- 両チームのランク（名門、強豪など）も考慮し、番狂わせか順当な結果かを記事に含めてください。
+- 両チームのランクも考慮し、番狂わせか順当な結果かを記事に含めてください。
 - 記事のトーンは、ドラマチックかつ客観的に。
 
 ### 出力形式
@@ -1378,32 +1381,32 @@ ${civilWarInstruction}
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
 
-            try {
-                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const rawText = result.candidates[0].content.parts[0].text;
-                    const article = parseJsonFromText(rawText);
-                    if (article) {
-                        const newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
-                        return { ...article, timestamp: Date.now(), newspaperHtml };
-                    }
-                }
-                throw new Error("AIからの応答が予期した形式ではありません。");
-            } catch (error) {
-                console.error("AI記事の生成に失敗しました:", error);
-                return {
-                    title: "記事生成エラー",
-                    body: "AI記者との通信に失敗しました。時間をおいて再度お試しください。",
-                    timestamp: Date.now(),
-                    error: true,
-                    errorId: matchId,
-                    context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary },
-                    newspaperHtml: null
-                };
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const article = parseJsonFromText(rawText);
+            if (article) {
+                const newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
+                return { ...article, timestamp: Date.now(), newspaperHtml };
             }
         }
-        
+        throw new Error("AIからの応答が予期した形式ではありません。");
+    } catch (error) {
+        console.error("AI記事の生成に失敗しました:", error);
+        return {
+            title: "記事生成エラー",
+            body: "AI記者との通信に失敗しました。時間をおいて再度お試しください。",
+            timestamp: Date.now(),
+            error: true,
+            errorId: matchId,
+            context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary },
+            newspaperHtml: null
+        };
+    }
+}            
+                   
         /**
          * コメントツリーから特定のIDを持つコメントを再帰的に検索する
          * @param {Array} comments - 検索対象のコメント配列
@@ -1884,75 +1887,87 @@ ${teamHistoryPromptPart}
                  return null;
              }
          }     
+// generateBbsComments 関数
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
-             const winnerData = TEAM_DATA[winnerName];
-             const loserData = TEAM_DATA[loserName];
-             const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
-             const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
-             const winnerRank = calculateRank(winnerName, tournamentState);
-             const loserRank = calculateRank(loserName, tournamentState);
-             
-             const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
+    const winnerData = TEAM_DATA[winnerName];
+    const loserData = TEAM_DATA[loserName];
+    const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+    const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+    const winnerRank = calculateRank(winnerName, tournamentState);
+    const loserRank = calculateRank(loserName, tournamentState);
+    
+    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+    const currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
-             const [side, roundStr] = matchId.split('-');
-             const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
-             let matchContext = '';
-             switch (roundNum) {
-                 case 1: matchContext = 'これは1回戦です。'; break;
-                 case 2: matchContext = 'これは2回戦です。'; break;
-                 case 3: matchContext = 'これは3回戦、ベスト8進出をかけた試合です。'; break;
-                 case 4: matchContext = 'これは準々決勝、ベスト4進出をかけた試合です。'; break;
-                 case 5: matchContext = 'これは決勝進出をかけた準決勝です。敗れたチームもここまで勝ち上がってきた強豪です。'; break;
-                 case 6: matchContext = 'これは甲子園出場をかけた決勝戦です。'; break;
-             }
-             if (isCivilWar) {
-                 matchContext += ' しかも、ナムコ系列校同士の「283ダービー」です！';
-             }
+    let tournamentContext = '';
+    switch(tournamentState.currentTournament) {
+        case 'autumn':
+            tournamentContext = '秋季大会は新チームの力を見る最初の大会だ。夏の雪辱を果たせるか、新しいスターが生まれるかに注目が集まる。';
+            break;
+        case 'spring':
+            tournamentContext = '春季大会は夏の大会のシード権を占う重要な前哨戦。秋を越えてチームがどう成長したかが見ものだ。';
+            break;
+        case 'summer':
+            tournamentContext = '3年生にとっては最後の夏、甲子園をかけた絶対に負けられない戦いだ。';
+            break;
+    }
 
-            const winnerPath = getTournamentPath(winnerName, matchId);
-            const loserPath = getTournamentPath(loserName, matchId);
-            const pathInfoPromptPart = `
+    const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
+
+    const [side, roundStr] = matchId.split('-');
+    const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+    let matchContext = '';
+    switch (roundNum) {
+        case 1: matchContext = 'これは1回戦です。'; break;
+        case 2: matchContext = 'これは2回戦です。'; break;
+        case 3: matchContext = 'これは3回戦、ベスト8進出をかけた試合です。'; break;
+        case 4: matchContext = 'これは準々決勝、ベスト4進出をかけた試合です。'; break;
+        case 5: matchContext = 'これは決勝進出をかけた準決勝です。'; break;
+        case 6: matchContext = (currentTournamentName === '夏季大会') ? 'これは甲子園出場をかけた決勝戦です。' : 'これは優勝をかけた決勝戦です。'; break;
+    }
+    if (isCivilWar) {
+        matchContext += ' しかも、ナムコ系列校同士の「283ダービー」です！';
+    }
+
+    const winnerPath = getTournamentPath(winnerName, matchId);
+    const loserPath = getTournamentPath(loserName, matchId);
+    const pathInfoPromptPart = `
 ### これまでの両チームの勝ち上がり
 - **勝者 (${winnerName})**: ${winnerPath}
 - **敗者 (${loserName})**: ${loserPath}
 `;
+    
+    const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
+    const loserDetailedInfo = DETAILED_TEAM_DATA[loserName];
+    let detailedInfoPromptPart = "\n### チーム・選手詳細情報\n";
+    if(winnerDetailedInfo) {
+        detailedInfoPromptPart += `- **${winnerName}**: ${winnerDetailedInfo.summary}\n  - **注目選手**: ${winnerDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
+    }
+    if(loserDetailedInfo) {
+        detailedInfoPromptPart += `- **${loserName}**: ${loserDetailedInfo.summary}\n  - **注目選手**: ${loserDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
+    }
+    
+    let summaryPromptPart = "";
+    if (matchSummary) {
+        summaryPromptPart = `\n### 試合のハイライト（ユーザー入力）\n${matchSummary}`;
+    }
 
-             const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
-             const loserDetailedInfo = DETAILED_TEAM_DATA[loserName];
-             let detailedInfoPromptPart = "\n### チーム・選手詳細情報\n";
-             if(winnerDetailedInfo) {
-                 detailedInfoPromptPart += `- **${winnerName}**: ${winnerDetailedInfo.summary}\n  - **注目選手**: ${winnerDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
-             }
-             if(loserDetailedInfo) {
-                 detailedInfoPromptPart += `- **${loserName}**: ${loserDetailedInfo.summary}\n  - **注目選手**: ${loserDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
-             }
-             
-             let summaryPromptPart = "";
-             if (matchSummary) {
-                 summaryPromptPart = `\n### 試合のハイライト（ユーザー入力）\n${matchSummary}`;
-             }
+    let antiAttitudeInstruction = '';
+    if (winnerRank === 'A' || winnerRank === 'B') {
+        antiAttitudeInstruction = `- **特に「アンチ」としてコメントする場合:** 勝利チームは格上の${getRankDescription(winnerRank)}です。その圧倒的な実力に焦りや恐怖を感じ、決して余裕のある素振りは見せないでください。(例: 「強すぎるだろ…」「うちが当たったらどうするんだ」「これはもう優勝決まったか？」)`;
+    } else {
+        antiAttitudeInstruction = `- **特に「アンチ」としてコメントする場合:** 相手が「名門校(Aランク)」や「強豪校(Bランク)」であれば、その実力を認めた上での、少しマイルドで玄人好みの批判やコメントをしてください。 (例: 「さすがにここは勝つか。でも次の〇〇戦が本当の勝負だな」「まさかここで負けるとは…今年の夏は何が起こるか分からんぞ」)`;
+    }
+    
+    let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です！この身内対決に対する特別な反応を生成してください。**` : '';
 
-             let antiAttitudeInstruction = '';
-             if (winnerRank === 'A' || winnerRank === 'B') {
-                 antiAttitudeInstruction = `
-- **特に「アンチ」や「ライバル校ファン」としてコメントする場合:** 勝利チームは格上の${getRankDescription(winnerRank)}です。その圧倒的な実力に焦りや恐怖を感じ、決して余裕のある素振りは見せないでください。(例: 「強すぎるだろ…」「うちが当たったらどうするんだ」「これはもう優勝決まったか？」)`;
-             } else {
-                 antiAttitudeInstruction = `
-- **特に「アンチ」や「ライバル校ファン」としてコメントする場合:** 相手が「名門校(Aランク)」や「強豪校(Bランク)」であれば、その実力を認めた上での、少しマイルドで玄人好みの批判やコメントをしてください。 (例: 「さすがにここは勝つか。でも次の〇〇戦が本当の勝負だな」「まさかここで負けるとは…今年の夏は何が起こるか分からんぞ」)`;
-             }
-             
-             let civilWarInstruction = '';
-             if (isCivilWar) {
-                 civilWarInstruction = `
-- **この試合は「283ダービー」です！この身内対決に対する特別な反応を生成してください。**
-- 例：「まさかの身内対決w」「理事長はどんな気持ちで見てるんだろ」「Bチーム勝ったら気まずすぎるだろw」「これはもう公開練習試合」
-- どちらが勝ってもナムコ系列が勝ち上がるという事実に対する、ファンたちの様々な反応（皮肉、安堵、興奮など）を盛り込んでください。
-                 `;
-             }
-
-             const prompt = `
+    const prompt = `
 あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果と文脈について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+
+### 大会情報
+- ${tournamentState.tournamentYear}年度 ${currentTournamentName}
+- 大会の位置づけ: ${tournamentContext}
 
 ### 試合情報
 - 勝利チーム: ${winnerName} (${getRankDescription(winnerRank)}, ${winnerData.region}地区)
@@ -1967,60 +1982,53 @@ ${pathInfoPromptPart}
 ${(winnerDetailedInfo || loserDetailedInfo) ? detailedInfoPromptPart : ''}
 ${summaryPromptPart}
 
-### あなたがなりきるべきキャラクター
+### あなたがなりきるべきキャラクターと指示
 - 熱狂的な勝者チームのOB
 - 上から目線の野球解説者
-- アンチ（どちらのチームに対してもよい）
+- アンチ
 - ライバル校のファン
 - 単なる野球好き
-
-### 指示
-- **地区の視点:** キャラクターのいずれかは、チームの所属地区（東部、中部、西部、伊豆）に着目したコメントをしてください。（例：「さすが西部地区はレベルが違うな」「また東部のチームが負けたか…」「〇〇は中部の希望だ！」）
-- **文脈の重視:** 試合の文脈と、両チームの「これまでの勝ち上がり」を最優先で考慮してください。
-- **事実の遵守:** 初期設定のチーム情報（info, last）は参考程度に留め、矛盾するコメントは絶対に生成しないでください。
-${antiAttitudeInstruction}
-${civilWarInstruction}
-- 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
+- **指示:**
+  - 大会の位置づけ（${tournamentContext}）を意識したコメントを必ず含めてください。
+  - 地区の視点（東部、中部、西部など）にも着目してください。
+  ${antiAttitudeInstruction}
+  ${civilWarInstruction}
+  - 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
 
 ### 出力形式
 必ず以下のJSON配列形式で出力してください。他のテキストは含めないでください。
 [
-  {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
-  {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
-  {"personality": "アンチ", "comment": "（コメント本文）"},
-  {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
-  {"personality": "野球好き", "comment": "（コメント本文）"}
+    {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
+    {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
+    {"personality": "アンチ", "comment": "（コメント本文）"},
+    {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
+    {"personality": "野球好き", "comment": "（コメント本文）"}
 ]
 `;
 
-             try {
-                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                 const payload = { contents: chatHistory };
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                }));
+            }
+        }
+        throw new Error("AIからの応答が予期した形式ではありません。");
 
-                 const response = await fetchWithRetry(payload);
-
-                 const result = await response.json();
-                 if (result.candidates?.[0]?.content?.parts?.[0]) {
-                     const rawText = result.candidates[0].content.parts[0].text;
-                     const commentsJson = parseJsonFromText(rawText);
-                     if (Array.isArray(commentsJson)) {
-                         return commentsJson.map(c => ({
-                             id: crypto.randomUUID(),
-                             personality: c.personality,
-                             text: c.comment,
-                             timestamp: Date.now(),
-                             replies: []
-                         }));
-                     }
-                 }
-                 throw new Error("AIからの応答が予期した形式ではありません。");
-
-             } catch (error) {
-                 console.error("AI掲示板コメントの生成に失敗しました:", error);
-                 return [];
-             }
-         }
-        
+    } catch (error) {
+        console.error("AI掲示板コメントの生成に失敗しました:", error);
+        return [];
+    }
+}        
         async function generateBracketReactionComments(state) {
             const { teams, seeds } = state;
 
@@ -3068,8 +3076,18 @@ ${matchups}
             loadTabBtn.click();
         });
 
-        nextTournamentBtn.addEventListener('click', () => createNewTournament(true));
-        
+        nextTournamentBtn.addEventListener('click', () => {
+    // 現在の大会に応じて、次の大会を決定する
+    let nextTournamentType;
+    if (tournamentState.currentTournament === 'summer') {
+        nextTournamentType = 'autumn';
+    } else if (tournamentState.currentTournament === 'autumn') {
+        nextTournamentType = 'spring';
+    } else { // spring
+        nextTournamentType = 'summer';
+    }
+    createNewTournament(true, nextTournamentType);
+});        
         resetBtn.addEventListener('click', async () => {
             const confirmed = await showConfirm("すべての大会記録をリセットして、最初の状態に戻しますか？");
             if(confirmed){
