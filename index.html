@@ -730,6 +730,7 @@ function simulateMatch(team1, team2) {
 /**
  * Runs the simulation for the Autumn Regional Qualifiers.
  */
+// REPLACE THIS ENTIRE FUNCTION
 function runAutumnRegionalQualifiers() {
     tournamentState.autumnPhase = 'regional';
     const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
@@ -739,63 +740,68 @@ function runAutumnRegionalQualifiers() {
     });
 
     const results = {};
-    const repCounts = { '東部': 5, '中部': 5, '西部': 5, '伊豆': 1 };
 
     for (const region in teamsByRegion) {
         let teams = shuffleArray(teamsByRegion[region]);
         let numRounds = Math.ceil(Math.log2(teams.length));
-        let matches = [];
-        
-        // Ensure team count is a power of 2 for easy bracketing, adding byes if needed
         let bracketSize = Math.pow(2, numRounds);
-        while(teams.length < bracketSize) {
+        while (teams.length < bracketSize) {
             teams.push(null); // null represents a bye
         }
-        teams = shuffleArray(teams); // Shuffle again after adding byes
+        teams = shuffleArray(teams);
 
-        let currentRoundTeams = teams;
-        for (let r = 0; r < numRounds; r++) {
-            const nextRoundTeams = [];
-            for (let i = 0; i < currentRoundTeams.length; i += 2) {
-                const team1 = currentRoundTeams[i];
-                const team2 = currentRoundTeams[i+1];
-                
-                if (!team1 && !team2) continue; // Both are byes
+        const regionalMatches = {};
+        let round1MatchCount = 0;
+        for (let i = 0; i < teams.length; i += 2) {
+            const team1 = teams[i];
+            const team2 = teams[i + 1];
+            round1MatchCount++;
+            const matchId = `R1-M${round1MatchCount}`;
+            
+            regionalMatches[matchId] = {
+                round: 1,
+                team1,
+                team2,
+                winner: null,
+                score1: '',
+                score2: '',
+                summary: ''
+            };
 
-                let matchResult;
-                if (!team1) { // team2 gets a bye
-                    matchResult = { team1: null, team2: team2, winner: team2, score1: '-', score2: '-' };
-                    nextRoundTeams.push(team2);
-                } else if (!team2) { // team1 gets a bye
-                     matchResult = { team1: team1, team2: null, winner: team1, score1: '-', score2: '-' };
-                     nextRoundTeams.push(team1);
-                } else {
-                    matchResult = simulateMatch(team1, team2);
-                    nextRoundTeams.push(matchResult.winner);
-                }
-                matches.push({ round: r + 1, ...matchResult });
+            // Handle byes immediately
+            if (!team1) {
+                regionalMatches[matchId].winner = team2;
+            } else if (!team2) {
+                regionalMatches[matchId].winner = team1;
             }
-            currentRoundTeams = nextRoundTeams;
+        }
+        
+        // Pre-populate winners for bye rounds
+        let currentMatches = Object.values(regionalMatches).filter(m => m.round === 1);
+        for(let r=1; r < numRounds; r++) {
+            let nextRoundMatchCount = 0;
+            for(let i=0; i < currentMatches.length; i+=2) {
+                nextRoundMatchCount++;
+                const matchId = `R${r+1}-M${nextRoundMatchCount}`;
+                const m1 = currentMatches[i];
+                const m2 = currentMatches[i+1];
+                regionalMatches[matchId] = {
+                    round: r+1,
+                    team1: m1 ? m1.winner : null,
+                    team2: m2 ? m2.winner : null,
+                    winner: null, score1: '', score2: '', summary: ''
+                };
+            }
+            currentMatches = Object.values(regionalMatches).filter(m => m.round === r+1);
         }
 
-        const finalMatch = matches[matches.length - 1];
-        const winner = finalMatch.winner;
-        const runnerUp = finalMatch.winner === finalMatch.team1 ? finalMatch.team2 : finalMatch.team1;
-
-        // Find semifinal losers for 3rd/4th place
-        const semiFinalMatches = matches.filter(m => m.round === numRounds - 1);
-        const semiFinalLosers = semiFinalMatches.map(m => m.winner === m.team1 ? m.team2 : m.team1).filter(t => t && t !== runnerUp);
-
-        // Get quarterfinal losers for 5th-8th place
-        const quarterFinalMatches = matches.filter(m => m.round === numRounds - 2);
-        const quarterFinalLosers = quarterFinalMatches.map(m => m.winner === m.team1 ? m.team2 : m.team1).filter(t => t && !semiFinalLosers.includes(t) && t !== runnerUp && t !== winner);
-
-        const sortedLosers = [...semiFinalLosers, ...quarterFinalLosers].sort((a,b) => calculateRank(b, tournamentState) - calculateRank(a, tournamentState));
 
         results[region] = {
-            matches: matches,
-            representatives: [winner, runnerUp, ...sortedLosers].slice(0, repCounts[region]),
-            playoffContender: runnerUp, // Runner-up goes to the 5th place playoff
+            teams: teams,
+            matches: regionalMatches,
+            winner: null,
+            representatives: [],
+            playoffContender: null,
         };
     }
 
@@ -803,38 +809,43 @@ function runAutumnRegionalQualifiers() {
     renderAutumnRegionalResults();
     saveState();
 }
-
 /**
  * Renders the results of the Autumn Regional Qualifiers.
  */
+// REPLACE THIS ENTIRE FUNCTION
 function renderAutumnRegionalResults() {
     mainBracketContainer.classList.add('hidden');
     autumnControls.classList.remove('hidden');
     autumnPhaseContainer.classList.remove('hidden');
-    startPlayoffBtn.classList.remove('hidden');
-    startMainTournamentBtn.classList.add('hidden');
-
+    
     const results = tournamentState.autumnRegionalResults;
-    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区予選結果</h2>`;
-    html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区予選</h2>`;
+    html += '<div class="space-y-8">';
 
     for (const region in results) {
         const data = results[region];
-        const reps = data.representatives;
         html += `
-            <div class="p-4 border rounded-lg shadow-sm">
+            <div class="p-4 border rounded-lg shadow-sm" data-region="${region}">
                 <h3 class="text-xl font-semibold mb-3 border-b pb-2 text-purple-700">${region}地区</h3>
-                <h4 class="font-bold mb-1">県大会出場校 (${reps.length}校)</h4>
-                <ul class="list-disc list-inside mb-4 text-green-700 font-medium">
-                    ${reps.map((team, i) => `<li>${i+1}位: ${team}</li>`).join('')}
-                </ul>
-                <h4 class="font-bold mb-1">5位代表決定戦 進出</h4>
-                <p class="text-red-600 font-medium">${data.playoffContender || 'なし'}</p>
-            </div>
+                <div class="bracket-container">
+                    ${generateRegionalBracketHTML(data)}
+                </div>
         `;
+        if (data.winner) {
+             html += `
+                <div class="mt-4 p-3 bg-yellow-100 rounded-lg">
+                    <h4 class="font-bold text-yellow-800">代表校</h4>
+                    <ul class="list-disc list-inside text-yellow-900">
+                        ${data.representatives.map(t => `<li>${t}</li>`).join('')}
+                    </ul>
+                </div>
+             `;
+        }
+        html += `</div>`;
     }
     html += '</div>';
     autumnPhaseContainer.innerHTML = html;
+    checkAllRegionalsFinished(); // Check status on initial render
 }
 
 /**
@@ -974,6 +985,129 @@ async function setupAutumnMainTournament() {
     renderNews(tournamentState.news);
     renderBbsComments(tournamentState.bbsComments);
     saveState();
+}
+// ADD THESE NEW FUNCTIONS AT THE END OF THE HELPERS SECTION
+
+/**
+ * Checks if all regional qualifiers are complete and enables the playoff button.
+ */
+function checkAllRegionalsFinished() {
+    const results = tournamentState.autumnRegionalResults;
+    const allFinished = Object.values(results).every(region => region.winner);
+    
+    if (allFinished) {
+        startPlayoffBtn.disabled = false;
+        startPlayoffBtn.classList.remove('bg-purple-300', 'cursor-not-allowed');
+        startPlayoffBtn.classList.add('bg-purple-600', 'hover:bg-purple-700');
+        startPlayoffBtn.textContent = '5位代表決定戦へ進む';
+    } else {
+        startPlayoffBtn.disabled = true;
+        startPlayoffBtn.classList.add('bg-purple-300', 'cursor-not-allowed');
+        startPlayoffBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+        startPlayoffBtn.textContent = '全地区の予選が終了するまでお待ちください';
+    }
+}
+
+/**
+ * Updates the view for a single regional bracket.
+ * @param {string} region - The name of the region to update.
+ */
+function updateRegionalBracketView(region) {
+    const regionData = tournamentState.autumnRegionalResults[region];
+    const regionContainer = document.querySelector(`div[data-region="${region}"] .bracket-container`);
+    if (regionContainer) {
+        regionContainer.innerHTML = generateRegionalBracketHTML(regionData);
+    }
+    checkAllRegionalsFinished();
+}
+
+/**
+ * Processes a win in a regional qualifier match.
+ * @param {string} region - The region where the match took place.
+ * @param {string} matchId - The ID of the match.
+ * @param {string} winnerName - The name of the winning team.
+ */
+function processRegionalMatchWin(region, matchId, winnerName) {
+    const regionData = tournamentState.autumnRegionalResults[region];
+    const dbMatch = regionData.matches[matchId];
+    if (!dbMatch || dbMatch.winner) return;
+
+    dbMatch.winner = winnerName;
+    const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
+
+    // Advance winner to the next round
+    const [_, roundStr, matchStr] = matchId.split('-');
+    const roundNum = parseInt(roundStr.slice(1));
+    const matchNum = parseInt(matchStr.slice(1));
+    const numRounds = Math.ceil(Math.log2(regionData.teams.length));
+
+    if (roundNum < numRounds) {
+        const nextRoundNum = roundNum + 1;
+        const nextMatchNum = Math.ceil(matchNum / 2);
+        const nextMatchId = `R${nextRoundNum}-M${nextMatchNum}`;
+        
+        if (!regionData.matches[nextMatchId]) {
+            regionData.matches[nextMatchId] = { team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' };
+        }
+        
+        if (matchNum % 2 !== 0) { // Winner of M1 goes to team1 slot of next match
+            regionData.matches[nextMatchId].team1 = winnerName;
+        } else { // Winner of M2 goes to team2 slot
+            regionData.matches[nextMatchId].team2 = winnerName;
+        }
+    } else {
+        // This was the final match for the region
+        regionData.winner = winnerName;
+        
+        // Determine representatives
+        const finalMatch = dbMatch;
+        const runnerUp = finalMatch.winner === finalMatch.team1 ? finalMatch.team2 : finalMatch.team1;
+        
+        const semiFinalMatches = Object.values(regionData.matches).filter(m => m.round === roundNum - 1);
+        const semiFinalLosers = semiFinalMatches.map(m => m.winner === m.team1 ? m.team2 : m.team1).filter(t => t && t !== runnerUp);
+        
+        const repCounts = { '東部': 5, '中部': 5, '西部': 5, '伊豆': 1 };
+        regionData.representatives = [winnerName, runnerUp, ...semiFinalLosers].filter(Boolean).slice(0, repCounts[region]);
+        regionData.playoffContender = runnerUp;
+    }
+
+    saveState();
+    updateRegionalBracketView(region);
+}
+
+
+/**
+ * Generates the HTML for a single regional bracket.
+ * @param {object} regionData - The data for the region from tournamentState.
+ * @returns {string} - The HTML string for the bracket.
+ */
+function generateRegionalBracketHTML(regionData) {
+    const { teams, matches } = regionData;
+    const numRounds = Math.ceil(Math.log2(teams.length));
+    let html = '<div class="flex overflow-x-auto p-2">';
+
+    for (let r = 1; r <= numRounds; r++) {
+        const numMatchesInRound = Math.pow(2, numRounds - r);
+        const isSubsequent = r > 1 ? 'subsequent-round' : '';
+        html += `<div class="round ${isSubsequent}">`;
+        
+        // Round Title
+        let roundTitle = `${r}回戦`;
+        if (r === numRounds) roundTitle = '決勝';
+        if (r === numRounds - 1) roundTitle = '準決勝';
+        if (r === numRounds - 2) roundTitle = '準々決勝';
+        html += `<h4 class="text-center font-bold mb-2 text-sm">${roundTitle}</h4>`;
+        
+        for (let m = 1; m <= numMatchesInRound; m++) {
+            const matchId = `R${r}-M${m}`;
+            const dbMatch = matches[matchId] || {};
+            html += createMatchHTML(matchId, dbMatch.team1, dbMatch.team2, dbMatch, []);
+        }
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
 }
         // --- Tournament Logic ---
         // REPLACE THIS ENTIRE FUNCTION
@@ -2989,34 +3123,56 @@ ${matchups}
 
         // --- Event Listeners ---
         document.body.addEventListener('click', async (e) => {
-            if (e.target.matches('.win-btn')) {
-                const teamSlot = e.target.closest('.team-slot');
-                const matchEl = e.target.closest('[data-match-id]');
-                if (!teamSlot || !matchEl || teamSlot.classList.contains('empty')) return;
+            // MODIFY THE '.win-btn' CLICK HANDLER in the main event listener
 
-                const matchId = matchEl.dataset.matchId;
-                const dbMatch = tournamentState.matches[matchId] || {};
-                if (dbMatch.winner) return;
+if (e.target.matches('.win-btn')) {
+    const teamSlot = e.target.closest('.team-slot');
+    const matchEl = e.target.closest('[data-match-id]');
+    if (!teamSlot || !matchEl || teamSlot.classList.contains('empty')) return;
 
-                const winnerName = teamSlot.dataset.teamName;
-                if (!winnerName) return;
+    const winnerName = teamSlot.dataset.teamName;
+    if (!winnerName) return;
 
-                const teamSlots = matchEl.querySelectorAll('.team-slot');
-                dbMatch.team1 = teamSlots[0].dataset.teamName;
-                dbMatch.team2 = teamSlots[1].dataset.teamName;
-                dbMatch.score1 = teamSlots[0].querySelector('.score-input').value;
-                dbMatch.score2 = teamSlots[1].querySelector('.score-input').value;
-                const summaryInput = matchEl.querySelector('.match-summary-input');
-                dbMatch.summary = summaryInput ? summaryInput.value : '';
+    const regionalContainer = e.target.closest('[data-region]');
+    const matchId = matchEl.dataset.matchId;
+    
+    // 地区予選の試合か、県大会本戦の試合かを判断
+    if (regionalContainer) {
+        // --- 地区予選の処理 ---
+        const region = regionalContainer.dataset.region;
+        const dbMatch = tournamentState.autumnRegionalResults[region].matches[matchId];
+        
+        const teamSlots = matchEl.querySelectorAll('.team-slot');
+        dbMatch.score1 = teamSlots[0].querySelector('.score-input').value;
+        dbMatch.score2 = teamSlots[1].querySelector('.score-input').value;
+        dbMatch.summary = matchEl.querySelector('.match-summary-input').value;
 
-                if(dbMatch.score1 === '' || dbMatch.score2 === '') {
-                    showAlert('スコアを入力してください。');
-                    return;
-                }
+        if (dbMatch.score1 === '' || dbMatch.score2 === '') {
+            showAlert('スコアを入力してください。');
+            return;
+        }
+        processRegionalMatchWin(region, matchId, winnerName);
 
-                tournamentState.matches[matchId] = dbMatch;
-                await processMatchWin(matchId, winnerName);
-            }
+    } else {
+        // --- 県大会本戦の処理（既存のロジック） ---
+        const dbMatch = tournamentState.matches[matchId];
+        if (dbMatch.winner) return;
+
+        const teamSlots = matchEl.querySelectorAll('.team-slot');
+        dbMatch.team1 = teamSlots[0].dataset.teamName;
+        dbMatch.team2 = teamSlots[1].dataset.teamName;
+        dbMatch.score1 = teamSlots[0].querySelector('.score-input').value;
+        dbMatch.score2 = teamSlots[1].querySelector('.score-input').value;
+        dbMatch.summary = matchEl.querySelector('.match-summary-input').value;
+
+        if (dbMatch.score1 === '' || dbMatch.score2 === '') {
+            showAlert('スコアを入力してください。');
+            return;
+        }
+        tournamentState.matches[matchId] = dbMatch;
+        await processMatchWin(matchId, winnerName);
+    }
+}
             if (e.target.matches('.details-btn')) {
                 openDetailsModal(e.target.dataset.matchId);
             }
