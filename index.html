@@ -961,9 +961,11 @@ function generateHalf(containerEl, setup, side, allMatches, seeds, halfSize) {
         const roundTitle = document.createElement('h3');
         roundTitle.className = 'text-center font-bold mb-2';
         
-        if (halfSize <= 8) {
-             roundTitle.textContent = roundNames[i + 2];
-        } else {
+        // 【バグ修正箇所】ラウンド名の計算ロジックを修正
+        if (halfSize <= 16) { // 32チーム以下のトーナメントの場合
+             const roundNameIndex = i + (roundNames.length - numRounds);
+             roundTitle.textContent = roundNames[roundNameIndex] || `${i+1}回戦`;
+        } else { // 64チームトーナメントの場合
              roundTitle.textContent = roundNames[i];
         }
         
@@ -999,7 +1001,6 @@ function generateHalf(containerEl, setup, side, allMatches, seeds, halfSize) {
         }
     }
 }
-
 // --- AI Reporter Logic ---
 async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
     const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
