@@ -1,422 +1,423 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【AI連携・世代交代対応版】トーナメント表</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-    <style>
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
-        .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
-        #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
-        .bracket-half { display: flex; }
-        .bracket-half.right { flex-direction: row-reverse; }
-        .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
-        .bracket-final .final-matchup { border: 2px solid #f59e0b; background-color: #fffbeb; border-radius: 6px; padding: 5px; margin-top: 10px; }
-        .bracket-final .winner-box { font-weight: bold; color: #b45309; text-align: center; padding: 10px 20px; white-space: nowrap; font-size: 1.25rem; }
-        .bracket-final .final-title { font-weight: 600; color: #4b5563; margin-bottom: 10px; writing-mode: vertical-rl; letter-spacing: 2px; }
-        .round { display: flex; flex-direction: column; justify-content: space-around; flex-shrink: 0; width: 180px; padding: 0 10px; }
-        .matchup { margin: 8px 0; position: relative; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
-        .team-slot { display: flex; align-items: center; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 4px; transition: background-color 0.3s; position: relative; }
-        .team-slot:last-of-type { margin-bottom: 0; }
-        .team-name { flex-grow: 1; padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .team-name .rank { font-weight: bold; margin-right: 4px; }
-        .team-name .rank-A { color: #ef4444; }
-        .team-name .rank-B { color: #f97316; }
-        .team-name .rank-C { color: #eab308; }
-        .team-name .rank-D { color: #3b82f6; }
-        .team-name .rank-E { color: #6b7280; }
-        .team-name.seed { font-weight: bold; color: #ca8a04; }
-        .score-input { width: 40px; padding: 6px 4px; border-left: 1px solid #e5e7eb; text-align: center; background-color: #fff; }
-        .win-btn { background-color: #d1d5db; color: #fff; border: none; padding: 6px 8px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
-        .team-slot:not(.empty) .win-btn { background-color: #3b82f6; }
-        .team-slot:not(.empty):hover .win-btn { background-color: #2563eb; }
-        .team-slot.winner { background-color: #dbeafe; border-color: #93c5fd; font-weight: 600; }
-        .team-slot.loser { background-color: #f3f4f6; opacity: 0.6; }
-        .team-slot.empty .team-name { color: #9ca3af; }
-        .team-slot.empty .score-input, .team-slot.empty .win-btn, .team-slot.empty .details-btn { display: none; }
-        .matchup::after { content: ''; position: absolute; top: 50%; width: 10px; height: 2px; background-color: #cbd5e1; }
-        .bracket-half.left .matchup::after { right: -10px; }
-        .bracket-half.right .matchup::after { left: -10px; }
-        .round.subsequent-round .matchup::before { content: ''; position: absolute; top: -8px; height: calc(100% + 16px); width: 2px; background-color: #cbd5e1; }
-        .bracket-half.left .round.subsequent-round .matchup::before { right: -10px; }
-        .bracket-half.right .round.subsequent-round .matchup::before { left: -10px; }
-        .hidden { display: none; }
-        .news-article { border-left: 4px solid #3b82f6; cursor: pointer; transition: background-color 0.2s; }
-        #modal-bg { background-color: rgba(0,0,0,0.5); }
-        .confirm-modal, .details-modal, .save-load-modal, .newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .confirm-modal-content, .details-modal-content, .save-load-modal-content, .newspaper-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-        .details-modal-content { width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto;}
-        .save-load-modal-content { width: 95%; max-width: 500px; }
-        .newspaper-modal-content { width: 95%; max-width: 800px; max-height: 95vh; overflow-y: auto; }
-        .confirm-modal-content { text-align: center; }
-        .loader { text-align: center; padding: 20px; font-style: italic; color: #6b7280; }
-        .details-btn { background-color: #6b7280; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: auto; margin-right: 2px; }
-        .details-btn:hover { background-color: #4b5563; }
-        .matchup-footer { text-align: center; margin-top: 2px; display: flex; justify-content: center; align-items: center; gap: 4px;}
-        .stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .stats-table th, .stats-table td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: center; }
-        .stats-table th { background-color: #f3f4f6; }
-        .stats-table input { width: 100%; border: none; text-align: center; background: transparent;}
-        .stats-table input:focus { outline: 1px solid #3b82f6; }
-        .modal-body-scroll {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        #save-code-output {
-            word-break: break-all;
-            background-color: #f3f4f6;
-            padding: 8px;
-            border-radius: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-            user-select: all;
-        }
-        .bbs-comment {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .match-summary-input {
-            resize: none;
-            height: 40px;
-        }
-        .article-error {
-            background-color: #fee2e2;
-            border-left: 4px solid #ef4444;
-            color: #b91c1c;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .retry-btn {
-            background-color: #ef4444;
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .retry-btn:hover {
-            background-color: #dc2626;
-        }
-        .namco-news-item {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .namco-news-tag {
-            background-color: #f97316;
-            color: white;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 9999px;
-            margin-left: 8px;
-        }
-        
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【AI連携・世代交代対応版】トーナメント表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <style>
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
+        .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
+        #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
+        .bracket-half { display: flex; }
+        .bracket-half.right { flex-direction: row-reverse; }
+        .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
+        .bracket-final .final-matchup { border: 2px solid #f59e0b; background-color: #fffbeb; border-radius: 6px; padding: 5px; margin-top: 10px; }
+        .bracket-final .winner-box { font-weight: bold; color: #b45309; text-align: center; padding: 10px 20px; white-space: nowrap; font-size: 1.25rem; }
+        .bracket-final .final-title { font-weight: 600; color: #4b5563; margin-bottom: 10px; writing-mode: vertical-rl; letter-spacing: 2px; }
+        .round { display: flex; flex-direction: column; justify-content: space-around; flex-shrink: 0; width: 180px; padding: 0 10px; }
+        .matchup { margin: 8px 0; position: relative; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; }
+        .team-slot { display: flex; align-items: center; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 4px; transition: background-color 0.3s; position: relative; }
+        .team-slot:last-of-type { margin-bottom: 0; }
+        .team-name { flex-grow: 1; padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .team-name .rank { font-weight: bold; margin-right: 4px; }
+        .team-name .rank-A { color: #ef4444; }
+        .team-name .rank-B { color: #f97316; }
+        .team-name .rank-C { color: #eab308; }
+        .team-name .rank-D { color: #3b82f6; }
+        .team-name .rank-E { color: #6b7280; }
+        .team-name.seed { font-weight: bold; color: #ca8a04; }
+        .score-input { width: 40px; padding: 6px 4px; border-left: 1px solid #e5e7eb; text-align: center; background-color: #fff; }
+        .win-btn { background-color: #d1d5db; color: #fff; border: none; padding: 6px 8px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .team-slot:not(.empty) .win-btn { background-color: #3b82f6; }
+        .team-slot:not(.empty):hover .win-btn { background-color: #2563eb; }
+        .team-slot.winner { background-color: #dbeafe; border-color: #93c5fd; font-weight: 600; }
+        .team-slot.loser { background-color: #f3f4f6; opacity: 0.6; }
+        .team-slot.empty .team-name { color: #9ca3af; }
+        .team-slot.empty .score-input, .team-slot.empty .win-btn, .team-slot.empty .details-btn { display: none; }
+        .matchup::after { content: ''; position: absolute; top: 50%; width: 10px; height: 2px; background-color: #cbd5e1; }
+        .bracket-half.left .matchup::after { right: -10px; }
+        .bracket-half.right .matchup::after { left: -10px; }
+        .round.subsequent-round .matchup::before { content: ''; position: absolute; top: -8px; height: calc(100% + 16px); width: 2px; background-color: #cbd5e1; }
+        .bracket-half.left .round.subsequent-round .matchup::before { right: -10px; }
+        .bracket-half.right .round.subsequent-round .matchup::before { left: -10px; }
+        .hidden { display: none; }
+        .news-article { border-left: 4px solid #3b82f6; cursor: pointer; transition: background-color 0.2s; }
+        #modal-bg { background-color: rgba(0,0,0,0.5); }
+        .confirm-modal, .details-modal, .save-load-modal, .newspaper-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .confirm-modal-content, .details-modal-content, .save-load-modal-content, .newspaper-modal-content { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .details-modal-content { width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto;}
+        .save-load-modal-content { width: 95%; max-width: 500px; }
+        .newspaper-modal-content { width: 95%; max-width: 800px; max-height: 95vh; overflow-y: auto; }
+        .confirm-modal-content { text-align: center; }
+        .loader { text-align: center; padding: 20px; font-style: italic; color: #6b7280; }
+        .details-btn { background-color: #6b7280; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: auto; margin-right: 2px; }
+        .details-btn:hover { background-color: #4b5563; }
+        .matchup-footer { text-align: center; margin-top: 2px; display: flex; justify-content: center; align-items: center; gap: 4px;}
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .stats-table th, .stats-table td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: center; }
+        .stats-table th { background-color: #f3f4f6; }
+        .stats-table input { width: 100%; border: none; text-align: center; background: transparent;}
+        .stats-table input:focus { outline: 1px solid #3b82f6; }
+        .modal-body-scroll {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        #save-code-output {
+            word-break: break-all;
+            background-color: #f3f4f6;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            user-select: all;
+        }
+        .bbs-comment {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .match-summary-input {
+            resize: none;
+            height: 40px;
+        }
+        .article-error {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            color: #b91c1c;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .retry-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .retry-btn:hover {
+            background-color: #dc2626;
+        }
+        .namco-news-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .namco-news-tag {
+            background-color: #f97316;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            margin-left: 8px;
+        }
+        
 .region-map {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-        }
-        .region-column {
-            background-color: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            overflow: hidden; /* 角丸デザインのため */
-        }
-        .region-header {
-            padding: 12px 16px;
-            background-color: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .region-title {
-            font-weight: 600;
-            font-size: 1rem;
-            color: #1f2937;
-        }
-        .region-stats {
-            font-size: 0.8rem;
-            color: #4b5563;
-        }
-        .region-team-list {
-            list-style: none;
-            padding: 8px 16px 16px 16px;
-            margin: 0;
-        }
-        .region-team {
-            display: flex;
-            align-items: center;
-            padding: 6px 0;
-            font-size: 0.9rem;
-            transition: background-color 0.2s;
-        }
-        .team-surviving {
-            font-weight: 500;
-            color: #1f2937;
-        }
-        /* 生き残っているチーム名の前に緑の丸を追加 */
-        .team-surviving::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #10b981; /* Green */
-            margin-right: 8px;
-        }
-        .team-eliminated {
-            color: #9ca3af;
-            text-decoration: line-through;
-            opacity: 0.7;
-        }
-        /* 敗退したチーム名の前にグレーの丸を追加 */
-        .team-eliminated::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #d1d5db; /* Gray */
-            margin-right: 8px;
-        }
-        /* Newspaper Styles */
-        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
-        .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
-        .newspaper-late { border: 2px solid #a10e25; }
-        .newspaper-header { text-align: center; border-bottom: 4px double #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-        .newspaper-title { font-size: 1.2rem; font-weight: 700; }
-        .newspaper-date { font-size: 0.8rem; }
-        .newspaper-content { display: flex; gap: 1.5rem; }
-        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; border-right: 2px solid #333; padding-right: 1rem; margin-right: 1rem; }
-        .newspaper-late .newspaper-main-headline { color: #a10e25; border-right-color: #a10e25;}
-        .newspaper-body-content { flex-grow: 1; }
-        .newspaper-sub-headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
-        .newspaper-late .newspaper-sub-headline { color: #333; }
-        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 3; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
-        .newspaper-early .newspaper-text { column-count: 2; }
-        .newspaper-score-box { border: 2px solid #333; padding: 1rem; text-align: center; margin-top: 1rem; }
-        .newspaper-score-box h3 { font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem; }
-        .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
-        .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
-        .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
-   
- </style>
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .region-column {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden; /* 角丸デザインのため */
+        }
+        .region-header {
+            padding: 12px 16px;
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .region-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        .region-stats {
+            font-size: 0.8rem;
+            color: #4b5563;
+        }
+        .region-team-list {
+            list-style: none;
+            padding: 8px 16px 16px 16px;
+            margin: 0;
+        }
+        .region-team {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        .team-surviving {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        /* 生き残っているチーム名の前に緑の丸を追加 */
+        .team-surviving::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981; /* Green */
+            margin-right: 8px;
+        }
+        .team-eliminated {
+            color: #9ca3af;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        /* 敗退したチーム名の前にグレーの丸を追加 */
+        .team-eliminated::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #d1d5db; /* Gray */
+            margin-right: 8px;
+        }
+        /* Newspaper Styles */
+        .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
+        .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
+        .newspaper-late { border: 2px solid #a10e25; }
+        .newspaper-header { text-align: center; border-bottom: 4px double #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .newspaper-title { font-size: 1.2rem; font-weight: 700; }
+        .newspaper-date { font-size: 0.8rem; }
+        .newspaper-content { display: flex; gap: 1.5rem; }
+        .newspaper-main-headline { writing-mode: vertical-rl; text-orientation: mixed; font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; border-right: 2px solid #333; padding-right: 1rem; margin-right: 1rem; }
+        .newspaper-late .newspaper-main-headline { color: #a10e25; border-right-color: #a10e25;}
+        .newspaper-body-content { flex-grow: 1; }
+        .newspaper-sub-headline { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid #666; padding-bottom: 0.5rem; }
+        .newspaper-late .newspaper-sub-headline { color: #333; }
+        .newspaper-text { font-family: 'Noto Sans JP', sans-serif; column-count: 3; column-gap: 1.5rem; text-align: justify; font-size: 0.9rem; line-height: 1.8; }
+        .newspaper-early .newspaper-text { column-count: 2; }
+        .newspaper-score-box { border: 2px solid #333; padding: 1rem; text-align: center; margin-top: 1rem; }
+        .newspaper-score-box h3 { font-weight: 700; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
+        .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
+        .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
+   
+ </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="app-container" class="max-w-full mx-auto">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">AI記者付きトーナメント表</h1>
-            <p id="tournament-year-display" class="text-gray-600 mt-2">（64チーム版・AI連携）</p>
-        </div>
+    <div id="app-container" class="max-w-full mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">AI記者付きトーナメント表</h1>
+            <p id="tournament-year-display" class="text-gray-600 mt-2">（64チーム版・AI連携）</p>
+        </div>
 
-        <div id="setup" class="setup-card">
-             <div class="w-full">
-                 <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">参加チーム (64チーム)</h2>
-                 <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
-             </div>
-             <div class="mt-8 text-center">
-                 <button id="resume-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 shadow-md mb-4 w-full md:w-auto">
-                    再開（合い言葉入力）
-                 </button>
-                 <button id="generate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 shadow-md w-full md:w-auto">
-                     新しいトーナメントを開始
-                 </button>
-             </div>
-        </div>
+        <div id="setup" class="setup-card">
+             <div class="w-full">
+                 <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">参加チーム (64チーム)</h2>
+                 <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
+             </div>
+             <div class="mt-8 text-center">
+                 <button id="resume-btn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 shadow-md mb-4 w-full md:w-auto">
+                    再開（合い言葉入力）
+                 </button>
+                 <button id="generate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 shadow-md w-full md:w-auto">
+                     新しいトーナメントを開始
+                 </button>
+             </div>
+        </div>
 
-        <div id="tournament-display" class="hidden">
+        <div id="tournament-display" class="hidden">
 <div id="region-map-section" class="display-card hidden">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">地区別 勝ち残り状況</h2>
                 <div id="region-map-container" class="w-full"></div>
             </div>
-             <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
-                 <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
-                 <div id="namco-news-content" class="space-y-2"></div>
-             </div>
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <button id="generate-summary-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">
-                        ここまでの大会ハイライト記事を生成
-                    </button>
-                    <button id="next-tournament-btn" class="hidden bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 shadow-md">
-                        次の大会へ進む
-                    </button>
-                </div>
-               <div class="ml-auto">
-                    <div class="flex items-center justify-end space-x-2">
-                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
-                        <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
-                        <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
-                        <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
-                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
-                        <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
-                    </div>
-                    <div id="skip-loader-container" class="h-6 text-right mt-1">
-                         <span id="skip-loader" class="hidden text-sm text-gray-600 font-bold">試合を進行しています...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="display-card">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">トーナメント表</h2>
-                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-md text-sm">
-                    <p><b>PCでの表示について:</b> トーナメント表の全体が表示されない場合は、表のエリア内でマウスのホイールを回しながら <b>Shiftキー</b> を押すか、表の下に表示されるスクロールバーを直接ドラッグすることで、左右にスクロールできます。</p>
-                </div>
-                <div id="tournament-phase-container">
+             <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
+                 <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
+                 <div id="namco-news-content" class="space-y-2"></div>
+             </div>
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <button id="generate-summary-btn" class="hidden bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 shadow-md">
+                        ここまでの大会ハイライト記事を生成
+                    </button>
+                    <button id="next-tournament-btn" class="hidden bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 shadow-md">
+                        次の大会へ進む
+                    </button>
+                </div>
+               <div class="ml-auto">
+                    <div class="flex items-center justify-end space-x-2">
+                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
+                        <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
+                        <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
+                        <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
+                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
+                        <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
+                    </div>
+                    <div id="skip-loader-container" class="h-6 text-right mt-1">
+                         <span id="skip-loader" class="hidden text-sm text-gray-600 font-bold">試合を進行しています...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="display-card">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">トーナメント表</h2>
+                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-md text-sm">
+                    <p><b>PCでの表示について:</b> トーナメント表の全体が表示されない場合は、表のエリア内でマウスのホイールを回しながら <b>Shiftキー</b> を押すか、表の下に表示されるスクロールバーを直接ドラッグすることで、左右にスクロールできます。</p>
+                </div>
+                <div id="main-bracket-container"></div>
+            </div>
+            <div id="news-section" class="display-card">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">注目ニュース</h2>
+                <div id="news-articles" class="space-y-4">
+                    <p class="text-gray-500 text-center">まだニュースはありません。</p>
+                </div>
+            </div>
+             <div id="daiya-bbs-section" class="hidden display-card border-4 border-green-600">
+                 <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
+                 <div id="daiya-bbs-comments" class="space-y-3">
+                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                 </div>
+             </div>
+             <div id="bbs-section" class="display-card">
+                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
+                 <div id="bbs-comments" class="space-y-3">
+                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
+                 </div>
+             </div>
+        </div>
     </div>
-            </div>
-            <div id="news-section" class="display-card">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">注目ニュース</h2>
-                <div id="news-articles" class="space-y-4">
-                    <p class="text-gray-500 text-center">まだニュースはありません。</p>
-                </div>
-            </div>
-             <div id="daiya-bbs-section" class="hidden display-card border-4 border-green-600">
-                 <h2 id="daiya-bbs-title" class="text-2xl font-bold text-green-800 mb-4 text-center">【特設】代矢東 応援掲示板</h2>
-                 <div id="daiya-bbs-comments" class="space-y-3">
-                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
-                 </div>
-             </div>
-             <div id="bbs-section" class="display-card">
-                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
-                 <div id="bbs-comments" class="space-y-3">
-                     <p class="text-gray-500 text-center">まだ反応はありません。</p>
-                 </div>
-             </div>
-        </div>
-    </div>
 
-        <div id="news-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-        <div id="modal-bg" class="absolute inset-0"></div>
-        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4">
-            <div class="p-6 modal-body-scroll">
-                <h3 id="modal-title" class="text-2xl font-bold text-gray-900"></h3>
-                <div id="modal-meta" class="text-gray-400 text-sm mt-2 flex items-center gap-4"></div>
-                <p id="modal-body" class="mt-4 text-gray-600 whitespace-pre-wrap"></p>
-            </div>
-            <button id="modal-close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-    </div>
-    
-    <div id="confirm-modal" class="confirm-modal hidden">
-        <div class="confirm-modal-content">
-            <p id="confirm-modal-text" class="mb-4 text-lg"></p>
-            <button id="confirm-ok" class="bg-red-600 text-white px-6 py-2 rounded-lg mr-2">はい</button>
-            <button id="confirm-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">いいえ</button>
-        </div>
-    </div>
+    <!-- Modals -->
+    <div id="news-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+        <div id="modal-bg" class="absolute inset-0"></div>
+        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full m-4">
+            <div class="p-6 modal-body-scroll">
+                <h3 id="modal-title" class="text-2xl font-bold text-gray-900"></h3>
+                <div id="modal-meta" class="text-gray-400 text-sm mt-2 flex items-center gap-4"></div>
+                <p id="modal-body" class="mt-4 text-gray-600 whitespace-pre-wrap"></p>
+            </div>
+            <button id="modal-close" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+    
+    <div id="confirm-modal" class="confirm-modal hidden">
+        <div class="confirm-modal-content">
+            <p id="confirm-modal-text" class="mb-4 text-lg"></p>
+            <button id="confirm-ok" class="bg-red-600 text-white px-6 py-2 rounded-lg mr-2">はい</button>
+            <button id="confirm-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">いいえ</button>
+        </div>
+    </div>
 
-    <div id="details-modal" class="details-modal hidden">
-        <div class="details-modal-content">
-            <h3 class="text-xl font-bold mb-4 text-center">試合詳細入力</h3>
-            <div id="details-modal-body" class="space-y-6"></div>
-            <div class="mt-6 text-center">
-                <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">保存</button>
-                <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="save-load-modal" class="save-load-modal hidden">
-        <div class="save-load-modal-content">
-            <div class="flex border-b">
-                <button id="save-tab-btn" class="px-4 py-2 font-semibold border-b-2 border-blue-500">セーブ (合い言葉の発行)</button>
-                <button id="load-tab-btn" class="px-4 py-2 text-gray-500">ロード (合い言葉の入力)</button>
-            </div>
-            <div id="save-tab-content" class="py-4">
-                <p class="text-sm mb-2">現在の進行状況を保存するための「合い言葉」を発行します。下のボタンを押してください。</p>
-                <button id="generate-save-code-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">合い言葉を発行</button>
-                <div id="save-code-area" class="hidden mt-4">
-                    <p class="text-sm font-bold text-green-600">合い言葉が発行されました。以下をコピーして安全な場所に保管してください。</p>
-                    <div class="flex items-center mt-2">
-                        <div id="save-code-output" class="flex-grow text-xs"></div>
-                        <button id="copy-save-code-btn" class="ml-2 bg-gray-200 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-300">コピー</button>
-                    </div>
-                    <p id="copy-feedback" class="text-xs text-green-600 mt-1 h-4"></p>
-                </div>
-            </div>
-            <div id="load-tab-content" class="py-4 hidden">
-                <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
-                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
-                <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
-            </div>
-             <div class="mt-4 text-right">
-                <button id="save-load-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
-            </div>
-        </div>
-    </div>
+    <div id="details-modal" class="details-modal hidden">
+        <div class="details-modal-content">
+            <h3 class="text-xl font-bold mb-4 text-center">試合詳細入力</h3>
+            <div id="details-modal-body" class="space-y-6"></div>
+            <div class="mt-6 text-center">
+                <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">保存</button>
+                <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="save-load-modal" class="save-load-modal hidden">
+        <div class="save-load-modal-content">
+            <div class="flex border-b">
+                <button id="save-tab-btn" class="px-4 py-2 font-semibold border-b-2 border-blue-500">セーブ (合い言葉の発行)</button>
+                <button id="load-tab-btn" class="px-4 py-2 text-gray-500">ロード (合い言葉の入力)</button>
+            </div>
+            <div id="save-tab-content" class="py-4">
+                <p class="text-sm mb-2">現在の進行状況を保存するための「合い言葉」を発行します。下のボタンを押してください。</p>
+                <button id="generate-save-code-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">合い言葉を発行</button>
+                <div id="save-code-area" class="hidden mt-4">
+                    <p class="text-sm font-bold text-green-600">合い言葉が発行されました。以下をコピーして安全な場所に保管してください。</p>
+                    <div class="flex items-center mt-2">
+                        <div id="save-code-output" class="flex-grow text-xs"></div>
+                        <button id="copy-save-code-btn" class="ml-2 bg-gray-200 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-300">コピー</button>
+                    </div>
+                    <p id="copy-feedback" class="text-xs text-green-600 mt-1 h-4"></p>
+                </div>
+            </div>
+            <div id="load-tab-content" class="py-4 hidden">
+                <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
+                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
+                <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
+            </div>
+             <div class="mt-4 text-right">
+                <button id="save-load-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+            </div>
+        </div>
+    </div>
 
-        <div id="newspaper-modal" class="newspaper-modal hidden">
-        <div class="newspaper-modal-content">
-            <div id="newspaper-modal-body"></div>
-            <div class="mt-4 text-center">
-                <button id="newspaper-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
-            </div>
-        </div>
-    </div>
+    <!-- Newspaper Modal -->
+    <div id="newspaper-modal" class="newspaper-modal hidden">
+        <div class="newspaper-modal-content">
+            <div id="newspaper-modal-body"></div>
+            <div class="mt-4 text-center">
+                <button id="newspaper-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+            </div>
+        </div>
+    </div>
 
 
-    <script type="module">
-       // --- DOM Elements ---
-        const setupEl = document.getElementById('setup');
-        const tournamentDisplayEl = document.getElementById('tournament-display');
-        const teamsTextarea = document.getElementById('teams-list');
-        const generateBtn = document.getElementById('generate-btn');
-        const resumeBtn = document.getElementById('resume-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const nextTournamentBtn = document.getElementById('next-tournament-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const saveFeedback = document.getElementById('save-feedback');
-        const mainBracketContainer = document.getElementById('main-bracket-container');
-        const newsContainer = document.getElementById('news-articles');
-        const bbsCommentsContainer = document.getElementById('bbs-comments');
-        const daiyaBbsSection = document.getElementById('daiya-bbs-section');
-        const daiyaBbsTitle = document.getElementById('daiya-bbs-title');
-        const daiyaBbsCommentsContainer = document.getElementById('daiya-bbs-comments');
-        const namcoNewsSection = document.getElementById('namco-news-section');
-        const namcoNewsContent = document.getElementById('namco-news-content');
-        const tournamentYearDisplay = document.getElementById('tournament-year-display');
-        const generateSummaryBtn = document.getElementById('generate-summary-btn');
-        const skipR1Btn = document.getElementById('skip-r1-btn');
-        const skipR2Btn = document.getElementById('skip-r2-btn');
-        const skipR3Btn = document.getElementById('skip-r3-btn');
-        const skipLoader = document.getElementById('skip-loader');
+    <script type="module">
+        // --- DOM Elements ---
+        const setupEl = document.getElementById('setup');
+        const tournamentDisplayEl = document.getElementById('tournament-display');
+        const teamsTextarea = document.getElementById('teams-list');
+        const generateBtn = document.getElementById('generate-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const nextTournamentBtn = document.getElementById('next-tournament-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const saveFeedback = document.getElementById('save-feedback');
+        const mainBracketContainer = document.getElementById('main-bracket-container');
+        const newsContainer = document.getElementById('news-articles');
+        const bbsCommentsContainer = document.getElementById('bbs-comments');
+        const daiyaBbsSection = document.getElementById('daiya-bbs-section');
+        const daiyaBbsTitle = document.getElementById('daiya-bbs-title');
+        const daiyaBbsCommentsContainer = document.getElementById('daiya-bbs-comments');
+        const namcoNewsSection = document.getElementById('namco-news-section');
+        const namcoNewsContent = document.getElementById('namco-news-content');
+        const tournamentYearDisplay = document.getElementById('tournament-year-display');
+        const generateSummaryBtn = document.getElementById('generate-summary-btn');
+        const skipR1Btn = document.getElementById('skip-r1-btn');
+        const skipR2Btn = document.getElementById('skip-r2-btn');
+        const skipR3Btn = document.getElementById('skip-r3-btn');
+        const skipLoader = document.getElementById('skip-loader');
 
-        // Modals
-        const newsModal = document.getElementById('news-modal');
-        const modalBg = document.getElementById('modal-bg');
-        const modalClose = document.getElementById('modal-close');
-        const confirmModal = document.getElementById('confirm-modal');
-        const detailsModal = document.getElementById('details-modal');
-        const saveLoadModal = document.getElementById('save-load-modal');
-        const saveTabBtn = document.getElementById('save-tab-btn');
-        const loadTabBtn = document.getElementById('load-tab-btn');
-        const saveTabContent = document.getElementById('save-tab-content');
-        const loadTabContent = document.getElementById('load-tab-content');
-        const generateSaveCodeBtn = document.getElementById('generate-save-code-btn');
-        const loadFromCodeBtn = document.getElementById('load-from-code-btn');
-        const saveLoadCloseBtn = document.getElementById('save-load-close');
-        const copySaveCodeBtn = document.getElementById('copy-save-code-btn');
-        const newspaperModal = document.getElementById('newspaper-modal');
-        const newspaperModalBody = document.getElementById('newspaper-modal-body');
-        const newspaperCloseBtn = document.getElementById('newspaper-close');
-        
-        // --- State Management ---
-        let tournamentState = {};
-        let currentMatchIdForDetails = null;
+        // Modals
+        const newsModal = document.getElementById('news-modal');
+        const modalBg = document.getElementById('modal-bg');
+        const modalClose = document.getElementById('modal-close');
+        const confirmModal = document.getElementById('confirm-modal');
+        const detailsModal = document.getElementById('details-modal');
+        const saveLoadModal = document.getElementById('save-load-modal');
+        const saveTabBtn = document.getElementById('save-tab-btn');
+        const loadTabBtn = document.getElementById('load-tab-btn');
+        const saveTabContent = document.getElementById('save-tab-content');
+        const loadTabContent = document.getElementById('load-tab-content');
+        const generateSaveCodeBtn = document.getElementById('generate-save-code-btn');
+        const loadFromCodeBtn = document.getElementById('load-from-code-btn');
+        const saveLoadCloseBtn = document.getElementById('save-load-close');
+        const copySaveCodeBtn = document.getElementById('copy-save-code-btn');
+        const newspaperModal = document.getElementById('newspaper-modal');
+        const newspaperModalBody = document.getElementById('newspaper-modal-body');
+        const newspaperCloseBtn = document.getElementById('newspaper-close');
+        
+        // --- State Management ---
+        let tournamentState = {};
+        let currentMatchIdForDetails = null;
 
-        // --- Team Master Data ---
-        const TEAM_DATA = {
+        // --- Team Master Data ---
+        const TEAM_DATA = {
             "西浦": { name_yomi: "にしうら", region: "西部", type: "公立", deviation: 52, best: "県大会ベスト16", last: "県大会ベスト16", info: "三年前にできた新設校。歴史は浅いが驚異の躍進が光る。" },
             "本島越谷": { name_yomi: "もとじまこしがや", region: "東部", type: "私立", deviation: 32, best: "県大会ベスト8", last: "初戦敗退", info: "近年野球部に力を入れている新興私立。プロ野球選手を外部コーチに招聘している。" },
             "海堂学園": { name_yomi: "かいどうがくえん", region: "西部", type: "私立", deviation: 40, best: "県大会ベスト8", last: "県大会2回戦", info: "かつては甲子園を優勝し県内で海堂ブームを巻き起こした。が、それも30年前の話であり、今となってはかつての輝きは見えない古豪と化している" },
@@ -482,600 +483,855 @@
             "島田": { name_yomi: "しまだ", region: "中部", type: "公立", deviation: 53, best: "県大会2回戦", last: "初戦敗退", info: "大正8年からある古い学校だが、野球部の実績は乏しい。以前は部員数が足りない際には伊豆中央と連合チームを組んでいた。" },
             "伊豆中央": { name_yomi: "いずちゅうおう", region: "伊豆", type: "公立", deviation: 51, best: "県大会2回戦", last: "初戦敗退", info: "今年は久しぶりにメンバーがそろい、単独チームでの出場となった。以前は部員数が足りない際には島田と連合チームを組んでいた。" }
         };
-        const DETAILED_TEAM_DATA = {
-            "283学園": {
-                summary: "夏の連覇の先に、聖地での勝利を目指す。昨年王者、守備の一体感と打線のつながりを強みに、試合ごとに成長。チームスローガンは『強』。個の技量に頼らず、一人ひとりの力を集めて戦う。",
-                players: [
-                    { name: "姫川友紀", year: 3, position: "ピッチャー", desc: "投打の中心。MAX151kmの直球とスプリット、高校通算42本塁打の怪物。" },
-                    { name: "花海雄介", year: 3, position: "センター", desc: "走攻守三拍子揃ったリードオフマン。監督が「ものが違う」と絶賛。" },
-                    { name: "鈴木佐奈", year: 2, position: "ファースト", desc: "芯で捉える技術を持つ3番打者。守備でも存在感。" },
-                    { name: "十王星南", year: 3, position: "ショート", desc: "鉄壁の守備を誇る名手。チャンスメイクも得意な2番打者。" },
-                    { name: "浅倉享", year: 2, position: "レフト", desc: "2年生ながら5番に座るクラッチヒッター。ポテンシャルが高い。" },
-                    { name: "島村海斗", year: 3, position: "サード", desc: "強肩強打のパワーヒッター。勝負強い打撃が光る。" },
-                    { name: "有栖川悠覇", year: 3, position: "キャッチャー", desc: "大舞台に強い主軸。変化球打ちの技術はチームトップクラス。" },
-                    { name: "芹沢優吾", year: 2, position: "セカンド", desc: "小技と守備センスが光る二塁手。チャンスでの一打も。" },
-                    { name: "花海佑樹", year: 1, position: "ライト", desc: "1年生のスーパースター。兄・雄介との連携も抜群。既に通算13本塁打。" },
-                    { name: "天海晴彦", year: 2, position: "ピッチャー", desc: "チーム最速の直球を持つ。春はメンバー外の悔しさをバネに復調を目指す。" },
-                    { name: "松本晴康", year: 3, position: "ピッチャー", desc: "春の大会で完全試合を達成。伸び上がるストレートが武器。" }
-                ]
-            },
-            "天下無双学園": {
-                summary: "個々のレベルアップが結実し昨年は準優勝。個人成績の可視化と実力主義でチーム内の競争を活性化させ、初の甲子園を目指す。スローガンは『個々の能力重視』。",
-                players: [
-                    { name: "沖田総司", year: 3, position: "ピッチャー", desc: "投打の大黒柱。MAX157kmの速球を持つ主砲。" },
-                    { name: "土方任三郎", year: 3, position: "キャッチャー", desc: "グラウンド上の監督。高いスローイング技術と高校通算28本塁打のパワーを持つ。" },
-                    { name: "宮本和佐", year: 3, position: "ファースト", desc: "力強い打撃と勝負強さが魅力の3番打者。" },
-                    { name: "柳生俊昌", year: 2, position: "セカンド", desc: "バッティングセンスに優れる2年生。落ち着いたプレーが光る。" },
-                    { name: "近藤春樹", year: 3, position: "サード", desc: "ガッツあふれるプレーでチームを引っ張る5番打者。高校通算46本塁打。" },
-                    { name: "坂本俊樹", year: 3, position: "ショート", desc: "走攻守三拍子揃った抜群の身体能力を持つショート。" },
-                    { name: "岡田克也", year: 3, position: "ライト", desc: "高校通算71本塁打を誇る絶対的な4番。恵まれた体格からの強打が武器。" },
-                    { name: "森晴継", year: 2, position: "センター", desc: "50m6秒フラットの俊足。攻守にわたり抜群の勝負強さを見せる。" },
-                    { name: "上泉誠", year: 3, position: "レフト", desc: "バランスと勝負強い打撃が武器。逆転劇のきっかけを作る。" },
-                    { name: "拝拓也", year: 3, position: "ピッチャー", desc: "巧みな投球術と強い精神力を持つ控え投手。MAX155km。" },
-                    { name: "疋田文也", year: 2, position: "ピッチャー", desc: "クレバーさと強気を兼ね備えた2年生投手。昨夏も登板経験あり。" }
-                ]
-            },
-            "雷門南": {
-                summary: "昨年ベスト4。選手の長所を活かす野球で、磨き上げた守備力とタイプの違う3年生投手3人の継投を武器に、2005年以来の夏の聖地を目指す。",
-                players: [
-                    { name: "豪円秀一", year: 3, position: "ピッチャー", desc: "最速158kmの直球と縦スライダーで打者を打ち取る絶対的エース。" },
-                    { name: "遠藤憲作", year: 3, position: "キャッチャー", desc: "冷静なリードで多彩な投手陣を引っ張る扇の要。3番打者としても活躍。" },
-                    { name: "風山英二郎", year: 3, position: "ファースト", desc: "190cmの長身を生かした守備と長打力が魅力。" },
-                    { name: "飯田慎二", year: 3, position: "セカンド", desc: "小柄ながら攻守に堅実なプレーでチームに貢献。" },
-                    { name: "一ノ瀬拓郎", year: 3, position: "サード", desc: "チーム一の打球の速さを誇る2番打者。" },
-                    { name: "土門海斗", year: 3, position: "ショート", desc: "ミスの少ない堅実な守備で試合のリズムを作る内野の要。" },
-                    { name: "外岡竜吾", year: 3, position: "レフト", desc: "監督も絶大な信頼を寄せる大砲。気持ちの強さも魅力。" },
-                    { name: "花丸一郎", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段にアップ。" },
-                    { name: "久松鉄平", year: 2, position: "ライト", desc: "力強いスイングから放たれる長打が魅力の2年生。" },
-                    { name: "木頭優斗", year: 3, position: "ピッチャー", desc: "キレのある縦スライダーと内角への直球が魅力の右腕。" },
-                    { name: "松野裕介", year: 2, position: "ピッチャー", desc: "MAX144kmのストレートとカットボールが武器の2年生。奪三振能力が高い。" }
-                ]
-            },
-            "代矢東": {
-                summary: "投打の大黒柱を中心にダイナミックなベースボールを展開。攻めの姿勢を貫き、1999年以来の聖地を見据える伝統校。どこからでも得点できる打線が強み。",
-                players: [
-                    { name: "渋谷卓", year: 3, position: "ピッチャー", desc: "常時150km超の速球を投げる本格派エース。" },
-                    { name: "片野坂晴人", year: 3, position: "キャッチャー", desc: "小柄ながら強肩強打の司令塔。盗塁阻止率は随一。" },
-                    { name: "郷野将暉", year: 3, position: "ファースト", desc: "高校通算63本塁打のプロ注目スラッガー。得点圏での勝負強さが光る。" },
-                    { name: "片倉郁弥", year: 3, position: "セカンド", desc: "俊足と広い守備範囲が武器の機動力内野手。" },
-                    { name: "島津成哉", year: 3, position: "サード", desc: "反応速度と強肩が武器の守備の要。広角に打ち分ける打撃も。" },
-                    { name: "藤原元輝", year: 3, position: "ショート", desc: "軽快なフットワークが光る守備職人。つなぎ役もこなす。" },
-                    { name: "倉科哲史", year: 3, position: "レフト", desc: "小柄ながら高い身体能力を持つ。クリーンアップの前を打つ。" },
-                    { name: "滝川文隆", year: 3, position: "センター", desc: "抜群の走力でセンターラインを統率するリードオフマン。" },
-                    { name: "川又良太", year: 3, position: "ライト", desc: "安定した打率を誇る右打者。正確な返球も魅力。" },
-                    { name: "六反田良弥", year: 3, position: "ピッチャー", desc: "最速152kmの剛腕。リリーフも先発もこなす万能型。" },
-                    { name: "鳥羽晴康", year: 3, position: "ピッチャー", desc: "左腕から多彩な変化球を投げるクローザー的存在。" }
-                ]
-            },
-            "青道": {
-                summary: "昨年ベスト8。選手の長所を活かした攻撃力と堅守を武器に雪辱を期す。タイプの異なる3人の投手による継投が強み。",
-                players: [
-                    { name: "沢村栄玲", year: 2, position: "ピッチャー", desc: "最速140kmの直球と多彩な変化球で三振を奪う次世代エース左腕。" },
-                    { name: "降谷暁", year: 3, position: "ピッチャー", desc: "長身から投げ下ろすスライダーとシュートが武器の大型右腕。" },
-                    { name: "御幸一也", year: 3, position: "キャッチャー", desc: "攻守にわたる高い野球センスを誇るプロ注目の司令塔。" },
-                    { name: "前園裕太", year: 2, position: "一塁手／外野手", desc: "高い打撃技術と強肩を持つ大型野手。" },
-                    { name: "小湊夏樹", year: 3, position: "二塁手", desc: "堅実な守備と巧みなバットコントロールが光る。" },
-                    { name: "金村真也", year: 3, position: "三塁手", desc: "打球反応が速く、強肩が武器。中距離ヒッター。" },
-                    { name: "倉田実", year: 2, position: "ショート", desc: "俊敏な動きと華麗な守備が魅力の内野の要。" },
-                    { name: "結城大介", year: 3, position: "レフト", desc: "長打力を武器に快音を響かせる強打者。" },
-                    { name: "西城光希", year: 3, position: "センター", desc: "強肩と確実な捕球で外野を統率する守備職人。" },
-                    { name: "白瀬浩司", year: 3, position: "ライト", desc: "打撃センスが光る左打者。冷静な状況判断が持ち味。" }
-                ]
-            },
-            "武蔵野第一": {
-                summary: "雪辱を期す知性派軍団。絶対的エース榛名を擁し、データを駆使した緻密な野球で昨夏の悔しさを晴らす。チームスローガンは『知は力なり』。",
-                players: [
-                    { name: "榛名 元希", year: 3, position: "ピッチャー", desc: "最速140km後半の直球と高速スライダーで三振の山を築く絶対的エース。打っても5番。" },
-                    { name: "秋丸協平", year: 3, position: "キャッチャー", desc: "冷静沈着なリードでエース榛名を支える扇の要。" },
-                    { name: "大川 公彦", year: 3, position: "ファースト", desc: "チーム不動の4番。一振りで試合の流れを変えるパワーが魅力。" },
-                    { name: "福原 恭介", year: 3, position: "ショート", desc: "卓越したバットコントロールと選球眼を持つ1番打者。守備も堅実。" },
-                    { name: "町田誠", year: 3, position: "センター", desc: "走攻守三拍子揃ったアベレージヒッター。3番を担う。" }
-                ]
-            },
-            "稲城実業": {
-                summary: "王座奪還へ、揺るぎなき『王国』のプライド。昨年の雪辱に燃える絶対王者。投打にタレントを揃え、最強左腕・成宮を軸に再び全国の頂点を目指す。スローガンは『常勝』。",
-                players: [
-                    { name: "成宮 鳴", year: 3, position: "ピッチャー", desc: "「キング」の異名を持つ世代最強左腕。MAX150km/hの直球と魔球チェンジアップを操る。" },
-                    { name: "神谷 カルロス 俊樹", year: 3, position: "センター", desc: "50m5秒台の俊足を誇る「チーター」。攻守に規格外の身体能力を見せる。" },
-                    { name: "白河 勝之", year: 3, position: "ショート", desc: "卓越した野球センスと華麗な守備が光る内野の司令塔。" },
-                    { name: "多田野 樹", year: 2, position: "キャッチャー", desc: "「キング」成宮の女房役を射止めた2年生捕手。冷静なリードが持ち味。" },
-                    { name: "山岡 陸", year: 3, position: "サード", desc: "稲実の新たな4番打者。勝負強いクラッチヒッター。高校通算61本。" }
-                ]
-            },
-            "あかつき大付属": {
-                summary: "あかつき史上最強の『黄金世代』。投打の柱・猪狩兄弟を擁し、個の力で世代の頂点を証明する。セレクション落ちの雑草軍団が狙うは完全優勝。スローガンは『実力主義』。",
-                players: [
-                    { name: "猪狩 守", year: 3, position: "ピッチャー", desc: "「黄金世代」を率いるキャプテンにして絶対的エース。「ライジングキャノン」と呼ばれる剛速球が武器。" },
-                    { name: "猪狩 進", year: 2, position: "キャッチャー", desc: "兄・守とバッテリーを組む天才捕手。「球界の頭脳」と称されるリードと俊足が武器。" },
-                    { name: "三本松 一", year: 3, position: "ファースト", desc: "不動の4番。高校生離れしたパワーを誇る規格外の長距離砲。" },
-                    { name: "七井将暉", year: 3, position: "レフト", desc: "三本松と双璧をなす長距離砲。広角に打ち分ける技術と「バズーカ」強肩も。" },
-                    { name: "矢部 翔雄", year: 3, position: "センター", desc: "俊足が武器の外野手。意外な勝負強さも見せる。" }
-                ]
-            }
-        };
+        const DETAILED_TEAM_DATA = {
+            "283学園": {
+                summary: "夏の連覇の先に、聖地での勝利を目指す。昨年王者、守備の一体感と打線のつながりを強みに、試合ごとに成長。チームスローガンは『強』。個の技量に頼らず、一人ひとりの力を集めて戦う。",
+                players: [
+                    { name: "姫川友紀", year: 3, position: "ピッチャー", desc: "投打の中心。MAX151kmの直球とスプリット、高校通算42本塁打の怪物。" },
+                    { name: "花海雄介", year: 3, position: "センター", desc: "走攻守三拍子揃ったリードオフマン。監督が「ものが違う」と絶賛。" },
+                    { name: "鈴木佐奈", year: 2, position: "ファースト", desc: "芯で捉える技術を持つ3番打者。守備でも存在感。" },
+                    { name: "十王星南", year: 3, position: "ショート", desc: "鉄壁の守備を誇る名手。チャンスメイクも得意な2番打者。" },
+                    { name: "浅倉享", year: 2, position: "レフト", desc: "2年生ながら5番に座るクラッチヒッター。ポテンシャルが高い。" },
+                    { name: "島村海斗", year: 3, position: "サード", desc: "強肩強打のパワーヒッター。勝負強い打撃が光る。" },
+                    { name: "有栖川悠覇", year: 3, position: "キャッチャー", desc: "大舞台に強い主軸。変化球打ちの技術はチームトップクラス。" },
+                    { name: "芹沢優吾", year: 2, position: "セカンド", desc: "小技と守備センスが光る二塁手。チャンスでの一打も。" },
+                    { name: "花海佑樹", year: 1, position: "ライト", desc: "1年生のスーパースター。兄・雄介との連携も抜群。既に通算13本塁打。" },
+                    { name: "天海晴彦", year: 2, position: "ピッチャー", desc: "チーム最速の直球を持つ。春はメンバー外の悔しさをバネに復調を目指す。" },
+                    { name: "松本晴康", year: 3, position: "ピッチャー", desc: "春の大会で完全試合を達成。伸び上がるストレートが武器。" }
+                ]
+            },
+            "天下無双学園": {
+                summary: "個々のレベルアップが結実し昨年は準優勝。個人成績の可視化と実力主義でチーム内の競争を活性化させ、初の甲子園を目指す。スローガンは『個々の能力重視』。",
+                players: [
+                    { name: "沖田総司", year: 3, position: "ピッチャー", desc: "投打の大黒柱。MAX157kmの速球を持つ主砲。" },
+                    { name: "土方任三郎", year: 3, position: "キャッチャー", desc: "グラウンド上の監督。高いスローイング技術と高校通算28本塁打のパワーを持つ。" },
+                    { name: "宮本和佐", year: 3, position: "ファースト", desc: "力強い打撃と勝負強さが魅力の3番打者。" },
+                    { name: "柳生俊昌", year: 2, position: "セカンド", desc: "バッティングセンスに優れる2年生。落ち着いたプレーが光る。" },
+                    { name: "近藤春樹", year: 3, position: "サード", desc: "ガッツあふれるプレーでチームを引っ張る5番打者。高校通算46本塁打。" },
+                    { name: "坂本俊樹", year: 3, position: "ショート", desc: "走攻守三拍子揃った抜群の身体能力を持つショート。" },
+                    { name: "岡田克也", year: 3, position: "ライト", desc: "高校通算71本塁打を誇る絶対的な4番。恵まれた体格からの強打が武器。" },
+                    { name: "森晴継", year: 2, position: "センター", desc: "50m6秒フラットの俊足。攻守にわたり抜群の勝負強さを見せる。" },
+                    { name: "上泉誠", year: 3, position: "レフト", desc: "バランスと勝負強い打撃が武器。逆転劇のきっかけを作る。" },
+                    { name: "拝拓也", year: 3, position: "ピッチャー", desc: "巧みな投球術と強い精神力を持つ控え投手。MAX155km。" },
+                    { name: "疋田文也", year: 2, position: "ピッチャー", desc: "クレバーさと強気を兼ね備えた2年生投手。昨夏も登板経験あり。" }
+                ]
+            },
+            "雷門南": {
+                summary: "昨年ベスト4。選手の長所を活かす野球で、磨き上げた守備力とタイプの違う3年生投手3人の継投を武器に、2005年以来の夏の聖地を目指す。",
+                players: [
+                    { name: "豪円秀一", year: 3, position: "ピッチャー", desc: "最速158kmの直球と縦スライダーで打者を打ち取る絶対的エース。" },
+                    { name: "遠藤憲作", year: 3, position: "キャッチャー", desc: "冷静なリードで多彩な投手陣を引っ張る扇の要。3番打者としても活躍。" },
+                    { name: "風山英二郎", year: 3, position: "ファースト", desc: "190cmの長身を生かした守備と長打力が魅力。" },
+                    { name: "飯田慎二", year: 3, position: "セカンド", desc: "小柄ながら攻守に堅実なプレーでチームに貢献。" },
+                    { name: "一ノ瀬拓郎", year: 3, position: "サード", desc: "チーム一の打球の速さを誇る2番打者。" },
+                    { name: "土門海斗", year: 3, position: "ショート", desc: "ミスの少ない堅実な守備で試合のリズムを作る内野の要。" },
+                    { name: "外岡竜吾", year: 3, position: "レフト", desc: "監督も絶大な信頼を寄せる大砲。気持ちの強さも魅力。" },
+                    { name: "花丸一郎", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段にアップ。" },
+                    { name: "久松鉄平", year: 2, position: "ライト", desc: "力強いスイングから放たれる長打が魅力の2年生。" },
+                    { name: "木頭優斗", year: 3, position: "ピッチャー", desc: "キレのある縦スライダーと内角への直球が魅力の右腕。" },
+                    { name: "松野裕介", year: 2, position: "ピッチャー", desc: "MAX144kmのストレートとカットボールが武器の2年生。奪三振能力が高い。" }
+                ]
+            },
+            "代矢東": {
+                summary: "投打の大黒柱を中心にダイナミックなベースボールを展開。攻めの姿勢を貫き、1999年以来の聖地を見据える伝統校。どこからでも得点できる打線が強み。",
+                players: [
+                    { name: "渋谷卓", year: 3, position: "ピッチャー", desc: "常時150km超の速球を投げる本格派エース。" },
+                    { name: "片野坂晴人", year: 3, position: "キャッチャー", desc: "小柄ながら強肩強打の司令塔。盗塁阻止率は随一。" },
+                    { name: "郷野将暉", year: 3, position: "ファースト", desc: "高校通算63本塁打のプロ注目スラッガー。得点圏での勝負強さが光る。" },
+                    { name: "片倉郁弥", year: 3, position: "セカンド", desc: "俊足と広い守備範囲が武器の機動力内野手。" },
+                    { name: "島津成哉", year: 3, position: "サード", desc: "反応速度と強肩が武器の守備の要。広角に打ち分ける打撃も。" },
+                    { name: "藤原元輝", year: 3, position: "ショート", desc: "軽快なフットワークが光る守備職人。つなぎ役もこなす。" },
+                    { name: "倉科哲史", year: 3, position: "レフト", desc: "小柄ながら高い身体能力を持つ。クリーンアップの前を打つ。" },
+                    { name: "滝川文隆", year: 3, position: "センター", desc: "抜群の走力でセンターラインを統率するリードオフマン。" },
+                    { name: "川又良太", year: 3, position: "ライト", desc: "安定した打率を誇る右打者。正確な返球も魅力。" },
+                    { name: "六反田良弥", year: 3, position: "ピッチャー", desc: "最速152kmの剛腕。リリーフも先発もこなす万能型。" },
+                    { name: "鳥羽晴康", year: 3, position: "ピッチャー", desc: "左腕から多彩な変化球を投げるクローザー的存在。" }
+                ]
+            },
+            "青道": {
+                summary: "昨年ベスト8。選手の長所を活かした攻撃力と堅守を武器に雪辱を期す。タイプの異なる3人の投手による継投が強み。",
+                players: [
+                    { name: "沢村栄玲", year: 2, position: "ピッチャー", desc: "最速140kmの直球と多彩な変化球で三振を奪う次世代エース左腕。" },
+                    { name: "降谷暁", year: 3, position: "ピッチャー", desc: "長身から投げ下ろすスライダーとシュートが武器の大型右腕。" },
+                    { name: "御幸一也", year: 3, position: "キャッチャー", desc: "攻守にわたる高い野球センスを誇るプロ注目の司令塔。" },
+                    { name: "前園裕太", year: 2, position: "一塁手／外野手", desc: "高い打撃技術と強肩を持つ大型野手。" },
+                    { name: "小湊夏樹", year: 3, position: "二塁手", desc: "堅実な守備と巧みなバットコントロールが光る。" },
+                    { name: "金村真也", year: 3, position: "三塁手", desc: "打球反応が速く、強肩が武器。中距離ヒッター。" },
+                    { name: "倉田実", year: 2, position: "ショート", desc: "俊敏な動きと華麗な守備が魅力の内野の要。" },
+                    { name: "結城大介", year: 3, position: "レフト", desc: "長打力を武器に快音を響かせる強打者。" },
+                    { name: "西城光希", year: 3, position: "センター", desc: "強肩と確実な捕球で外野を統率する守備職人。" },
+                    { name: "白瀬浩司", year: 3, position: "ライト", desc: "打撃センスが光る左打者。冷静な状況判断が持ち味。" }
+                ]
+            },
+            "武蔵野第一": {
+                summary: "雪辱を期す知性派軍団。絶対的エース榛名を擁し、データを駆使した緻密な野球で昨夏の悔しさを晴らす。チームスローガンは『知は力なり』。",
+                players: [
+                    { name: "榛名 元希", year: 3, position: "ピッチャー", desc: "最速140km後半の直球と高速スライダーで三振の山を築く絶対的エース。打っても5番。" },
+                    { name: "秋丸協平", year: 3, position: "キャッチャー", desc: "冷静沈着なリードでエース榛名を支える扇の要。" },
+                    { name: "大川 公彦", year: 3, position: "ファースト", desc: "チーム不動の4番。一振りで試合の流れを変えるパワーが魅力。" },
+                    { name: "福原 恭介", year: 3, position: "ショート", desc: "卓越したバットコントロールと選球眼を持つ1番打者。守備も堅実。" },
+                    { name: "町田誠", year: 3, position: "センター", desc: "走攻守三拍子揃ったアベレージヒッター。3番を担う。" }
+                ]
+            },
+            "稲城実業": {
+                summary: "王座奪還へ、揺るぎなき『王国』のプライド。昨年の雪辱に燃える絶対王者。投打にタレントを揃え、最強左腕・成宮を軸に再び全国の頂点を目指す。スローガンは『常勝』。",
+                players: [
+                    { name: "成宮 鳴", year: 3, position: "ピッチャー", desc: "「キング」の異名を持つ世代最強左腕。MAX150km/hの直球と魔球チェンジアップを操る。" },
+                    { name: "神谷 カルロス 俊樹", year: 3, position: "センター", desc: "50m5秒台の俊足を誇る「チーター」。攻守に規格外の身体能力を見せる。" },
+                    { name: "白河 勝之", year: 3, position: "ショート", desc: "卓越した野球センスと華麗な守備が光る内野の司令塔。" },
+                    { name: "多田野 樹", year: 2, position: "キャッチャー", desc: "「キング」成宮の女房役を射止めた2年生捕手。冷静なリードが持ち味。" },
+                    { name: "山岡 陸", year: 3, position: "サード", desc: "稲実の新たな4番打者。勝負強いクラッチヒッター。高校通算61本。" }
+                ]
+            },
+            "あかつき大付属": {
+                summary: "あかつき史上最強の『黄金世代』。投打の柱・猪狩兄弟を擁し、個の力で世代の頂点を証明する。セレクション落ちの雑草軍団が狙うは完全優勝。スローガンは『実力主義』。",
+                players: [
+                    { name: "猪狩 守", year: 3, position: "ピッチャー", desc: "「黄金世代」を率いるキャプテンにして絶対的エース。「ライジングキャノン」と呼ばれる剛速球が武器。" },
+                    { name: "猪狩 進", year: 2, position: "キャッチャー", desc: "兄・守とバッテリーを組む天才捕手。「球界の頭脳」と称されるリードと俊足が武器。" },
+                    { name: "三本松 一", year: 3, position: "ファースト", desc: "不動の4番。高校生離れしたパワーを誇る規格外の長距離砲。" },
+                    { name: "七井将暉", year: 3, position: "レフト", desc: "三本松と双璧をなす長距離砲。広角に打ち分ける技術と「バズーカ」強肩も。" },
+                    { name: "矢部 翔雄", year: 3, position: "センター", desc: "俊足が武器の外野手。意外な勝負強さも見せる。" }
+                ]
+            }
+        };
 
-        let ROSTER_DATA = {};
-        const INITIAL_TEAM_POOL = Object.keys(TEAM_DATA);
+        let ROSTER_DATA = {};
+        const INITIAL_TEAM_POOL = Object.keys(TEAM_DATA);
 
-        // --- Utility & State Functions ---
-        function shuffleArray(array) {
-            const newArray = [...array];
-            for (let i = newArray.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-            }
-            return newArray;
-        }
-        
-        function saveState() {
-            try {
-                localStorage.setItem('tournamentState', JSON.stringify(tournamentState));
-            } catch (e) {
-                console.error("進行状況の保存に失敗しました:", e);
-                showAlert("進行状況の保存に失敗しました。ブラウザのストレージ容量が不足している可能性があります。");
-            }
-        }
-        
-        function uint8ArrayToBase64(bytes) {
-            let binary = '';
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary);
-        }
+        // --- Utility & State Functions ---
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+        
+        function saveState() {
+            try {
+                localStorage.setItem('tournamentState', JSON.stringify(tournamentState));
+            } catch (e) {
+                console.error("進行状況の保存に失敗しました:", e);
+                showAlert("進行状況の保存に失敗しました。ブラウザのストレージ容量が不足している可能性があります。");
+            }
+        }
+        
+        function uint8ArrayToBase64(bytes) {
+            let binary = '';
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
 
-        // --- Custom Alert/Confirm ---
-        function showAlert(message) {
-            alert(message);
-        }
+        // --- Custom Alert/Confirm ---
+        function showAlert(message) {
+            alert(message);
+        }
 
-        function showConfirm(message) {
-            return new Promise((resolve) => {
-                const confirmOk = document.getElementById('confirm-ok');
-                const confirmCancel = document.getElementById('confirm-cancel');
-                document.getElementById('confirm-modal-text').textContent = message;
-                confirmModal.classList.remove('hidden');
+        function showConfirm(message) {
+            return new Promise((resolve) => {
+                const confirmOk = document.getElementById('confirm-ok');
+                const confirmCancel = document.getElementById('confirm-cancel');
+                document.getElementById('confirm-modal-text').textContent = message;
+                confirmModal.classList.remove('hidden');
 
-                const onOk = () => {
-                    confirmModal.classList.add('hidden');
-                    cleanup();
-                    resolve(true);
-                };
+                const onOk = () => {
+                    confirmModal.classList.add('hidden');
+                    cleanup();
+                    resolve(true);
+                };
 
-                const onCancel = () => {
-                    confirmModal.classList.add('hidden');
-                    cleanup();
-                    resolve(false);
-                };
-                
-                const cleanup = () => {
-                    confirmOk.removeEventListener('click', onOk);
-                    confirmCancel.removeEventListener('click', onCancel);
-                };
+                const onCancel = () => {
+                    confirmModal.classList.add('hidden');
+                    cleanup();
+                    resolve(false);
+                };
+                
+                const cleanup = () => {
+                    confirmOk.removeEventListener('click', onOk);
+                    confirmCancel.removeEventListener('click', onCancel);
+                };
 
-                confirmOk.addEventListener('click', onOk);
-                confirmCancel.addEventListener('click', onCancel);
-            });
-        }
+                confirmOk.addEventListener('click', onOk);
+                confirmCancel.addEventListener('click', onCancel);
+            });
+        }
 
-        function getRankFromHistoryString(historyString) {
-            if (historyString.includes('優勝')) return 1;
-            if (historyString.includes('準優勝')) return 2;
-            if (historyString.includes('ベスト4')) return 4;
-            if (historyString.includes('ベスト8')) return 8;
-            if (historyString.includes('ベスト16')) return 16;
-            if (historyString.includes('3回戦')) return 16;
-            if (historyString.includes('2回戦')) return 32;
-            if (historyString.includes('初戦敗退')) return 64;
-            return 64; // Default for "なし" or other cases
-        }
-
-       // --- Tournament Logic ---
-// 地区予選トーナメントを生成する関数
-function generateRegionalBrackets(teamsByRegion) {
-    tournamentState.matches = {}; // 試合データをリセット
-    const regionNameMap = { '東部': 'East', '中部': 'Central', '西部': 'West', '伊豆': 'Izu' };
-
-    for(const region in teamsByRegion) {
-        const teams = teamsByRegion[region];
-        const teamCount = teams.length;
-        if (teamCount === 0) continue;
-
-        const bracketSize = Math.pow(2, Math.ceil(Math.log2(teamCount)));
-        const byes = bracketSize - teamCount;
-        
-        const side = regionNameMap[region];
-        const matchesR1 = [];
-        
-        // 不戦勝チーム（シード上位）を決定
-        const byeTeams = teams.slice(0, byes);
-        // 1回戦を戦うチーム
-        const playingTeams = teams.slice(byes);
-        
-        // 1回戦の組み合わせを作成
-        for(let i = 0; i < playingTeams.length / 2; i++) {
-            matchesR1.push({ team1: playingTeams[i], team2: playingTeams[playingTeams.length - 1 - i] });
-        }
-        
-        // 1回戦のマッチオブジェクトをstateに保存
-        matchesR1.forEach((match, i) => {
-            const matchId = `${side}-R1-M${i + 1}`;
-            tournamentState.matches[matchId] = { ...match, winner: null, score1: '', score2: '', details: null, summary: '' };
-        });
-        
-        // 不戦勝のチームを2回戦のマッチオブジェクトとしてstateに保存
-        byeTeams.forEach((team, i) => {
-             // どの1回戦勝者と当たるかを計算
-            const r2matchIndex = Math.floor(i / 2) + 1;
-            const matchId = `${side}-R2-M${r2matchIndex}`;
-            if (!tournamentState.matches[matchId]) {
-                tournamentState.matches[matchId] = { team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
-            }
-            if (i % 2 === 0) {
-                 tournamentState.matches[matchId].team1 = team;
-            } else {
-                 tournamentState.matches[matchId].team2 = team;
-            }
-        });
-    }
-}
-
-// 地区予選が全て終了したかチェックする関数
-function checkAndFinalizeRegionals() {
-    // この後のステップで実装します
-    return false;
-}
-
-// 県大会本戦のトーナメントを生成する関数
-function generatePrefecturalBracket() {
-    // この後のステップで実装します
-}
+        function getRankFromHistoryString(historyString) {
+            if (historyString.includes('優勝')) return 1;
+            if (historyString.includes('準優勝')) return 2;
+            if (historyString.includes('ベスト4')) return 4;
+            if (historyString.includes('ベスト8')) return 8;
+            if (historyString.includes('ベスト16')) return 16;
+            if (historyString.includes('3回戦')) return 16;
+            if (historyString.includes('2回戦')) return 32;
+            if (historyString.includes('初戦敗退')) return 64;
+            return 64; // Default for "なし" or other cases
+        }
 
 
-async function createNewTournament(isNext = false, nextTournamentType = 'summer') {
-    let teams;
-    let seeds = [];
-    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+        // --- Tournament Logic ---
+        // この関数を丸ごと置き換えてください
+   async function createNewTournament(isNext = false, nextTournamentType = 'summer') {
+        let teams;
+        let seeds = [];
+        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
 
-    // ◆ 秋季大会の場合、全く新しい処理を実行
-    if (nextTournamentType === 'autumn' && isNext) {
-        tournamentState.currentTournament = 'autumn';
-        tournamentState.tournamentYear++;
-        
-        const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
-        INITIAL_TEAM_POOL.forEach(teamName => {
-            const region = TEAM_DATA[teamName]?.region;
-            if (region) teamsByRegion[region].push(teamName);
-        });
+        // ------------------------------------------------------------------
+        // 1. 大会情報の更新とシード決めのロジック
+        // ------------------------------------------------------------------
+        if (isNext) { // 「次の大会へ」ボタンが押された場合
+            tournamentState.currentTournament = nextTournamentType;
+            if (nextTournamentType === 'autumn') {
+                tournamentState.tournamentYear++; // 夏→秋で年を越す
+            }
+            
+            const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
+                .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
+                .sort((a, b) => a.lastFinish - b.lastFinish);
+            
+            // 秋はシード4校、春・夏は8校にしてみる
+            const seedCount = (nextTournamentType === 'autumn') ? 4 : 8;
+            seeds = lastTournamentTeams.slice(0, seedCount).map(t => t.name);
 
-        for (const region in teamsByRegion) {
-            teamsByRegion[region].sort((a, b) => {
-                const rankA = tournamentState.teamRecords[a]?.lastFinish || 65;
-                const rankB = tournamentState.teamRecords[b]?.lastFinish || 65;
-                return rankA - rankB;
-            });
-        }
-        
-        tournamentState.autumnData = {
-            phase: 'regionals',
-            teamsByRegion: teamsByRegion,
-            representatives: { '東部': [], '中部': [], '西部': [], '伊豆': [] },
-            playoffTeams: { '東部': [], '中部': [], '西部': [] }
-        };
+        } else { // ページを最初に読み込んだ場合
+            tournamentState.tournamentYear = 1;
+            tournamentState.currentTournament = 'summer'; // 最初は夏の大会から
+            tournamentState.teamRecords = {};
+            
+            const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({
+                name: teamName,
+                rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
+            }));
+            historicalRanks.sort((a, b) => a.rank - b.rank);
+            seeds = historicalRanks.slice(0, 8).map(t => t.name);
 
-        generateRegionalBrackets(teamsByRegion);
+            INITIAL_TEAM_POOL.forEach(t => {
+                const historicalRank = historicalRanks.find(hr => hr.name === t);
+                tournamentState.teamRecords[t] = { 
+                    wins: 0, 
+                    losses: 0, 
+                    best: null, 
+                    lastFinish: historicalRank ? historicalRank.rank : 64,
+                    previousRank: null
+                };
+            });
+        }
+        
+        // ------------------------------------------------------------------
+        // 2. トーナメント表の骨格作成ロジック (ここは以前と全く同じ)
+        // ------------------------------------------------------------------
+        // ↓↓↓↓↓↓ この部分はどの大会でも共通なので、変更は不要です ↓↓↓↓↓↓
+        const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
+        const shuffledNonSeeds = shuffleArray(nonSeeds);
+        
+        teams = [];
+        // シード数に応じてシード位置を動的に決定
+        const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56]; 
+        const seedPositions = seedPositionsTemplate.slice(0, seeds.length);
 
-    } else { // ◆ 秋季大会以外（夏・春・初回）の場合
-        tournamentState.autumnData = null;
-        if (isNext) {
-            tournamentState.currentTournament = nextTournamentType;
-            const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
-                .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
-                .sort((a, b) => a.lastFinish - b.lastFinish);
-            const seedCount = 8;
-            seeds = lastTournamentTeams.slice(0, seedCount).map(t => t.name);
-        } else {
-            tournamentState.tournamentYear = 1;
-            tournamentState.currentTournament = 'summer';
-            tournamentState.teamRecords = {};
-            const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-            historicalRanks.sort((a, b) => a.rank - b.rank);
-            seeds = historicalRanks.slice(0, 8).map(t => t.name);
-            
-            // 【バグ修正箇所】この初期化処理が抜けていました
-            INITIAL_TEAM_POOL.forEach(t => {
-                const hr = historicalRanks.find(hr => hr.name === t);
-                tournamentState.teamRecords[t] = { wins: 0, losses: 0, best: null, lastFinish: hr ? hr.rank : 64, previousRank: null };
-            });
-        }
-        
-        const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
-        const shuffledNonSeeds = shuffleArray(nonSeeds);
-        teams = [];
-        const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
-        const seedPositions = seedPositionsTemplate.slice(0, seeds.length);
-        const seedPlacements = {};
-        seeds.forEach((seed, i) => { seedPlacements[seedPositions[i]] = seed; });
-        let nonSeedIndex = 0;
-        for (let i = 0; i < 64; i++) {
-            teams[i] = seedPlacements[i] || shuffledNonSeeds[nonSeedIndex++];
-        }
-        tournamentState.teams = teams;
-        const round1Setup = teams.reduce((acc, team, i) => {
-            if (i % 2 === 0) acc.push({ team1: team, team2: null });
-            else acc[acc.length - 1].team2 = team;
-            return acc;
-        }, []);
-        round1Setup.forEach((match, index) => {
-            const side = index < 16 ? 'L' : 'R';
-            const matchNum = index < 16 ? index + 1 : index - 15;
-            const matchId = `${side}-R1-M${matchNum}`;
-            tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
-        });
-    }
+        const seedPlacements = {};
+        seeds.forEach((seed, i) => {
+            seedPlacements[seedPositions[i]] = seed;
+        });
 
-    tournamentState.matches = tournamentState.matches || {};
-    tournamentState.news = [];
-    tournamentState.seeds = seeds;
-    tournamentState.bbsComments = [];
-    tournamentState.daiyaBbsComments = [];
-    tournamentState.namcoNews = null;
-    
-    saveState();
-    renderTournament(tournamentState);
-    setupEl.classList.add('hidden');
-    tournamentDisplayEl.classList.remove('hidden');
-    
-    const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-    namcoNewsSection.classList.remove('hidden');
-    namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+        let nonSeedIndex = 0;
+        for (let i = 0; i < 64; i++) {
+            if (seedPlacements[i]) {
+                teams[i] = seedPlacements[i];
+            } else {
+                teams[i] = shuffledNonSeeds[nonSeedIndex++];
+            }
+        }
+        
+        tournamentState.teams = teams;
+        tournamentState.matches = {};
+        tournamentState.news = [];
+        tournamentState.seeds = seeds;
+        tournamentState.bbsComments = [];
+        tournamentState.daiyaBbsComments = [];
+        tournamentState.namcoNews = null;
 
-    const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-        generateNewsArticle(null, null, null, 'preview', null, null),
-        generateBracketReactionComments(tournamentState),
-        generateNamcoNews(tournamentState, 'bracket')
-    ]);
+        const round1Setup = teams.reduce((acc, team, i) => {
+            if (i % 2 === 0) acc.push({ team1: team, team2: null });
+            else acc[acc.length - 1].team2 = team;
+            return acc;
+        }, []);
 
-    if (previewArticle) tournamentState.news.unshift(previewArticle);
-    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
-    if (namcoNews) tournamentState.namcoNews = namcoNews;
+        round1Setup.forEach((match, index) => {
+            const side = index < 16 ? 'L' : 'R';
+            const matchNum = index < 16 ? index + 1 : index - 15;
+            const matchId = `${side}-R1-M${matchNum}`;
+            tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+        });
+        // ↑↑↑↑↑↑ この部分はどの大会でも共通なので、変更は不要です ↑↑↑↑↑↑
 
-    renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments);
-    renderNamcoNews(tournamentState.namcoNews);
-    saveState();
-}
+        // ------------------------------------------------------------------
+        // 3. 画面描画とAIコンテンツ生成 (ここも以前とほぼ同じ)
+        // ------------------------------------------------------------------
+        saveState();
+        renderTournament(tournamentState); // ここで大会名が正しく表示される
+        setupEl.classList.add('hidden');
+        tournamentDisplayEl.classList.remove('hidden');
+        
+        // ローディング表示
+        const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
+        newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+        namcoNewsSection.classList.remove('hidden');
+        namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-// --- Rendering Functions ---
-function renderTournament(data) {
-    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
-    const currentTournamentName = tournamentNameMap[data.currentTournament] || '大会';
-    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${currentTournamentName}`;
+        // AIコンテンツ生成の呼び出し
+        const [previewArticle, bracketComments, namcoNews] = await Promise.all([
+            generateNewsArticle(null, null, null, 'preview', null, null), // この関数が内部で大会名を判断
+            generateBracketReactionComments(tournamentState),
+            generateNamcoNews(tournamentState, 'bracket')
+        ]);
 
-    renderMainBracket(data);
-    renderRegionMap(data);
-    renderNews(data.news || []);
-    renderBbsComments(data.bbsComments || []);
-    renderDaiyaBbsComments(data.daiyaBbsComments || []);
-    renderNamcoNews(data.namcoNews);
-    checkTournamentProgress();
-}
+        if (previewArticle) {
+            tournamentState.news.unshift(previewArticle);
+        }
+        if (bracketComments && bracketComments.length > 0) {
+            tournamentState.bbsComments.push(...bracketComments);
+        }
+        if (namcoNews) {
+            tournamentState.namcoNews = namcoNews;
+        }
 
-// あなたのコードにある古い renderMainBracket 関数を、以下のコードで丸ごと置き換えてください
+        renderNews(tournamentState.news);
+        renderBbsComments(tournamentState.bbsComments);
+        renderNamcoNews(tournamentState.namcoNews);
+        saveState();
+    }
 
-function renderMainBracket(data) {
-    const container = document.getElementById('tournament-phase-container');
-    container.innerHTML = ''; 
+        // --- Rendering Functions ---
+        function renderTournament(data) {
+            const tournamentNameMap = {
+        summer: '夏季大会',
+        autumn: '秋季大会',
+        spring: '春季大会'
+    };
+    const currentTournamentName = tournamentNameMap[data.currentTournament] || '大会';
+    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${currentTournamentName}`;
 
-    if (data.currentTournament === 'autumn' && data.autumnData) {
-        // ◆ 秋季大会の描画ロジック
-        const { phase, teamsByRegion } = data.autumnData;
-        const regionNameMap = { '東部': 'East', '中部': 'Central', '西部': 'West', '伊豆': 'Izu' };
+            renderMainBracket(data);
+            renderRegionMap(data);
+            renderNews(data.news || []);
+            renderBbsComments(data.bbsComments || []);
+            renderDaiyaBbsComments(data.daiyaBbsComments || []);
+            renderNamcoNews(data.namcoNews);
+            checkTournamentProgress();
+        }
 
-        if (phase === 'regionals' || phase === 'playoffs') {
-             container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 地区予選</h2>`;
-             for(const region in teamsByRegion) {
-                if (teamsByRegion[region].length === 0) continue;
-                const bracketWrapper = document.createElement('div');
-                bracketWrapper.className = 'mb-8';
-                bracketWrapper.innerHTML = `
-                    <h3 class="text-xl font-semibold text-gray-700 mb-3 text-center">${region}地区</h3>
-                    <div class="bracket-half left" id="bracket-${regionNameMap[region]}"></div>
-                `;
-                container.appendChild(bracketWrapper);
-                generateHalf(
-                    document.getElementById(`bracket-${regionNameMap[region]}`), 
-                    [],
-                    regionNameMap[region],
-                    data.matches,
-                    data.seeds,
-                    Math.pow(2, Math.ceil(Math.log2(teamsByRegion[region].length)))
-                );
-             }
-        } else if (phase === 'prefectural') {
-            container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 県大会本戦</h2>`;
-            const bracketWrapper = document.createElement('div');
-            bracketWrapper.className = 'display-card';
-            bracketWrapper.innerHTML = `<div id="main-bracket-container" class="flex justify-center"></div>`;
-            container.appendChild(bracketWrapper);
-
-            const mainBracketContainer = document.getElementById('main-bracket-container');
+        function renderMainBracket(data) {
+            const { matches, teams } = data;
+            
+            const bracketContentWrapper = document.createElement('div');
+            bracketContentWrapper.className = 'flex flex-row';
+            
             const leftBracketEl = document.createElement('div');
             leftBracketEl.className = 'bracket-half left';
+
             const rightBracketEl = document.createElement('div');
             rightBracketEl.className = 'bracket-half right';
+
+            const finalMatch = matches['F-R1-M1'] || {};
+            const leftChampion = matches['L-R5-M1']?.winner || null;
+            const rightChampion = matches['R-R5-M1']?.winner || null;
+            const finalTeam1 = finalMatch.team1 || leftChampion;
+            const finalTeam2 = finalMatch.team2 || rightChampion;
+
+            const finalEl = document.createElement('div');
+            finalEl.className = 'bracket-final';
+            finalEl.innerHTML = `<div class="final-title">決勝</div><div class="final-matchup" data-match-id="F-R1-M1">${createMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, data.seeds)}</div><div class="winner-box" id="tournament-winner">${finalMatch.winner ? `🏆 ${finalMatch.winner} 🏆` : '🏆'}</div>`;
+
+            const round1Setup = teams.reduce((acc, team, i) => {
+                if (i % 2 === 0) acc.push({ team1: team, team2: null });
+                else acc[acc.length - 1].team2 = team;
+                return acc;
+            }, []);
             
-            generateHalf(leftBracketEl, [], 'PF_L', data.matches, data.seeds, 8);
-            generateHalf(rightBracketEl, [], 'PF_R', data.matches, data.seeds, 8);
+            const leftHalfSetup = round1Setup.slice(0, 16);
+            const rightHalfSetup = round1Setup.slice(16, 32);
 
-            mainBracketContainer.append(leftBracketEl, rightBracketEl);
+            generateHalf(leftBracketEl, leftHalfSetup, 'L', matches, data.seeds);
+            generateHalf(rightBracketEl, rightHalfSetup, 'R', matches, data.seeds);
+
+            mainBracketContainer.innerHTML = '';
+            bracketContentWrapper.append(leftBracketEl, finalEl, rightBracketEl);
+            mainBracketContainer.appendChild(bracketContentWrapper);
+
+
+            if (finalMatch.winner) {
+                nextTournamentBtn.classList.remove('hidden');
+            } else {
+                nextTournamentBtn.classList.add('hidden');
+            }
         }
 
-    } else {
-        // ◆ 通常の夏・春大会の描画ロジック
-        const mainBracketContainer = document.createElement('div');
-        mainBracketContainer.id = 'main-bracket-container';
-        container.appendChild(mainBracketContainer);
+function renderRegionMap(data) {
+             const regionMapSection = document.getElementById('region-map-section');
+             if (Object.keys(data.matches).length === 0) {
+                 regionMapSection.classList.add('hidden');
+                 return;
+             }
+             regionMapSection.classList.remove('hidden');
 
-        const bracketContentWrapper = document.createElement('div');
-        bracketContentWrapper.className = 'flex flex-row';
-        const leftBracketEl = document.createElement('div');
-        leftBracketEl.className = 'bracket-half left';
-        const rightBracketEl = document.createElement('div');
-        rightBracketEl.className = 'bracket-half right';
-        const finalEl = document.createElement('div');
-        finalEl.className = 'bracket-final';
+             const container = document.getElementById('region-map-container');
+             const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+             INITIAL_TEAM_POOL.forEach(teamName => {
+                 const region = TEAM_DATA[teamName]?.region;
+                 if (region && teamsByRegion[region]) {
+                     teamsByRegion[region].push(teamName);
+                 }
+             });
 
-        const finalMatch = data.matches['F-R1-M1'] || {};
-        const leftChampion = data.matches['L-R5-M1']?.winner || null;
-        const rightChampion = data.matches['R-R5-M1']?.winner || null;
-        const finalTeam1 = finalMatch.team1 || leftChampion;
-        const finalTeam2 = finalMatch.team2 || rightChampion;
-        finalEl.innerHTML = `<div class="final-title">決勝</div><div class="final-matchup" data-match-id="F-R1-M1">${createMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, data.seeds)}</div><div class="winner-box" id="tournament-winner">${finalMatch.winner ? `🏆 ${finalMatch.winner} 🏆` : '🏆'}</div>`;
+             const eliminatedTeams = new Set(
+                 Object.values(data.matches)
+                     .filter(match => match.winner)
+                     .map(match => match.team1 === match.winner ? match.team2 : match.team1)
+             );
 
-        generateHalf(leftBracketEl, [], 'L', data.matches, data.seeds, 32);
-        generateHalf(rightBracketEl, [], 'R', data.matches, data.seeds, 32);
+             let html = '<div class="region-map">';
+             for (const region in teamsByRegion) {
+                 const teams = teamsByRegion[region];
+                 const survivingCount = teams.filter(team => !eliminatedTeams.has(team)).length;
 
-        bracketContentWrapper.append(leftBracketEl, finalEl, rightBracketEl);
-        mainBracketContainer.appendChild(bracketContentWrapper);
+                html += `
+                <div class="region-column">
+                    <div class="region-header">
+                        <h3 class="region-title">${region}地区</h3>
+                        <p class="region-stats">${survivingCount} / ${teams.length} チーム生存</p>
+                    </div>
+                    <ul class="region-team-list">
+                        ${teams.map(team => `
+                            <li class="region-team ${eliminatedTeams.has(team) ? 'team-eliminated' : 'team-surviving'}">
+                                ${team}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+             }
+             html += '</div>';
+             container.innerHTML = html;
+         }
+        function generateHalf(containerEl, setup, side, allMatches, seeds) {
+            containerEl.innerHTML = '';
+            const numRounds = 5;
 
-        if (finalMatch.winner) {
-            nextTournamentBtn.classList.remove('hidden');
-        } else {
-            nextTournamentBtn.classList.add('hidden');
+            const roundElements = [];
+            for (let i = 0; i < numRounds; i++) {
+                const roundEl = document.createElement('div');
+                roundEl.className = 'round';
+                if (i > 0) roundEl.classList.add('subsequent-round');
+
+                const roundTitle = document.createElement('h3');
+                roundTitle.className = 'text-center font-bold mb-2';
+                const roundNames = ["1回戦", "2回戦", "3回戦", "準々決勝", "準決勝"];
+                roundTitle.textContent = roundNames[i];
+                roundEl.appendChild(roundTitle);
+
+                containerEl.appendChild(roundEl);
+                roundElements.push(roundEl);
+            }
+
+            setup.forEach((matchSetup, index) => {
+                const matchId = `${side}-R1-M${index + 1}`;
+                let dbMatch = allMatches[matchId] || {};
+                roundElements[0].insertAdjacentHTML('beforeend', createMatchHTML(matchId, matchSetup.team1, matchSetup.team2, dbMatch, seeds));
+            });
+
+            for (let r = 2; r <= numRounds; r++) {
+                const numMatchesInRound = 16 / Math.pow(2, r - 1);
+                for (let m = 1; m <= numMatchesInRound; m++) {
+                    const matchId = `${side}-R${r}-M${m}`;
+                    const prevMatch1Id = `${side}-R${r - 1}-M${(m * 2) - 1}`;
+                    const prevMatch2Id = `${side}-R${r - 1}-M${m * 2}`;
+                    const team1 = allMatches[prevMatch1Id]?.winner || null;
+                    const team2 = allMatches[prevMatch2Id]?.winner || null;
+                    const dbMatch = allMatches[matchId] || {};
+                    roundElements[r - 1].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
+                }
+            }
         }
-    }
-}
-function generateHalf(containerEl, setup, side, allMatches, seeds, halfSize) {
-    containerEl.innerHTML = '';
-    const numRounds = halfSize > 1 ? Math.log2(halfSize) : 0;
-    if(numRounds === 0) return;
-    const roundElements = [];
-    const roundNames = ["1回戦", "2回戦", "3回戦", "準々決勝", "準決勝", "決勝"];
+        
+        function calculateRank(teamName, state) {
+            if (!teamName) return ''; 
 
-    for (let i = 0; i < numRounds; i++) {
-        const roundEl = document.createElement('div');
-        roundEl.className = 'round';
-        if (i > 0) roundEl.classList.add('subsequent-round');
-        const roundTitle = document.createElement('h3');
-        roundTitle.className = 'text-center font-bold mb-2';
-        
-        // 【バグ修正箇所】ラウンド名の計算ロジックを修正
-        if (halfSize <= 16) { // 32チーム以下のトーナメントの場合
-             const roundNameIndex = i + (roundNames.length - numRounds);
-             roundTitle.textContent = roundNames[roundNameIndex] || `${i+1}回戦`;
-        } else { // 64チームトーナメントの場合
-             roundTitle.textContent = roundNames[i];
-        }
-        
-        roundEl.appendChild(roundTitle);
-        containerEl.appendChild(roundEl);
-        roundElements.push(roundEl);
-    }
-    
-    const numMatchesR1 = halfSize / 2;
-    for (let m = 1; m <= numMatchesR1; m++) {
-        const matchId = `${side}-R1-M${m}`;
-        const dbMatch = allMatches[matchId] || {};
-        roundElements[0].insertAdjacentHTML('beforeend', createMatchHTML(matchId, dbMatch.team1, dbMatch.team2, dbMatch, seeds));
-    }
+            const teamData = TEAM_DATA[teamName];
+            let score = 0;
 
-    for (let r = 2; r <= numRounds; r++) {
-        const numMatchesInRound = halfSize / Math.pow(2, r);
-        for (let m = 1; m <= numMatchesInRound; m++) {
-            const matchId = `${side}-R${r}-M${m}`;
-            const prevMatch1Id = `${side}-R${r - 1}-M${(m * 2) - 1}`;
-            const prevMatch2Id = `${side}-R${r - 1}-M${m * 2}`;
-            const team1 = allMatches[prevMatch1Id]?.winner || null;
-            const team2 = allMatches[prevMatch2Id]?.winner || null;
-            
-            if(!allMatches[matchId]) {
-                 allMatches[matchId] = { team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
-            }
-            allMatches[matchId].team1 = team1;
-            allMatches[matchId].team2 = team2;
+            score += teamData.deviation;
 
-            const dbMatch = allMatches[matchId];
-            roundElements[r - 1].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
-        }
-    }
-}
-// --- AI Reporter Logic ---
+            if (teamData.best.includes('優勝')) score += 25;
+            else if (teamData.best.includes('準優勝')) score += 20;
+            else if (teamData.best.includes('ベスト4')) score += 15;
+            else if (teamData.best.includes('ベスト8')) score += 10;
+            else if (teamData.best.includes('出場')) score += 10;
+            else if (teamData.best.includes('ベスト16')) score += 5;
+
+            if (teamData.popularity) score += 5;
+
+            if (state.teamRecords && state.teamRecords[teamName]) {
+                const lastFinish = state.teamRecords[teamName].lastFinish;
+                const rankMultiplier = 3.0; 
+                if (lastFinish === 1) score += 30 * rankMultiplier; 
+                else if (lastFinish === 2) score += 25 * rankMultiplier;
+                else if (lastFinish <= 4) score += 20 * rankMultiplier;
+                else if (lastFinish <= 8) score += 15 * rankMultiplier;
+                else if (lastFinish <= 16) score += 5 * rankMultiplier;
+                else if (lastFinish >= 64) score -= 5 * rankMultiplier;
+            }
+            
+            if (score >= 85) return 'A';
+            if (score >= 70) return 'B';
+            if (score >= 55) return 'C';
+            if (score >= 40) return 'D';
+            return 'E';
+        }
+
+
+        function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
+            const t1Empty = !team1;
+            const t2Empty = !team2;
+            const rank1 = calculateRank(team1, tournamentState);
+            const rank2 = calculateRank(team2, tournamentState);
+            const rankColor = (rank) => {
+                switch(rank) {
+                    case 'A': return 'rank-A';
+                    case 'B': return 'rank-B';
+                    case 'C': return 'rank-C';
+                    case 'D': return 'rank-D';
+                    case 'E': return 'rank-E';
+                    default: return '';
+                }
+            };
+            
+            const roundStr = matchId.split('-')[1];
+            const showDetailsButton = !t1Empty && !t2Empty && (roundStr === 'R5' || matchId.startsWith('F-'));
+            const isSeed1 = seeds.includes(team1);
+            const isSeed2 = seeds.includes(team2);
+
+            const content = `
+                <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
+                    <span class="team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}">
+                        ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
+                        ${isSeed1 ? 'S ' : ''}${team1 || '---'}
+                    </span>
+                    <input type="text" class="score-input" value="${dbMatch.score1 ?? ''}" data-team-pos="1">
+                    <button class="win-btn">▶</button>
+                </div>
+                <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
+                    <span class="team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}">
+                         ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
+                        ${isSeed2 ? 'S ' : ''}${team2 || '---'}
+                    </span>
+                    <input type="text" class="score-input" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
+                    <button class="win-btn">▶</button>
+                </div>
+                 <div class="match-summary-container ${!t1Empty && !t2Empty ? '' : 'hidden'}">
+                    <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
+                </div>
+                `;
+            
+            const footer = showDetailsButton ? `<div class="matchup-footer"><button class="details-btn" data-match-id="${matchId}">詳細入力</button></div>` : '';
+
+            return `<div class="matchup" data-match-id="${matchId}">${content}</div>${footer}`;
+        }
+        
+        function renderNews(news) {
+            if (!news || news.length === 0) {
+                newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
+                return;
+            }
+            newsContainer.innerHTML = '';
+            news.slice().reverse().forEach((article, index) => {
+                const articleEl = document.createElement('div');
+                if (article.error) {
+                    articleEl.className = 'article-error';
+                    articleEl.innerHTML = `
+                        <span>${article.title}</span>
+                        <button class="retry-btn" data-error-id="${article.errorId}">再生成</button>
+                    `;
+                } else {
+                    const originalIndex = news.length - 1 - index;
+                    articleEl.className = 'bg-white p-4 rounded-lg shadow';
+                    articleEl.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
+                                <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
+                            </div>
+                            <div>
+                                <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                                   ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}                        
+                            </div>
+                        </div>
+                    `;
+                }
+                newsContainer.appendChild(articleEl);
+            });
+        }
+        
+        /**
+         * コメントスレッドを再帰的に描画するヘルパー関数
+         * @param {Object} comment - 描画するコメントオブジェクト
+         * @param {HTMLElement} container - コメントを追加する親要素
+         * @param {string} bbsType - 'general' または 'daiya'
+         */
+        function renderCommentThread(comment, container, bbsType) {
+            const threadContainer = document.createElement('div');
+            // トップレベルのコメント以外にインデントを適用
+            if (container.id === `replies-to-${comment.id}` || (container.id.includes('bbs-comments') && container.children.length > 0)) {
+                 threadContainer.className = 'ml-4 border-l-2 pl-4 mt-2';
+            } else {
+                 threadContainer.className = 'mt-2';
+            }
+
+            const personalityClass = comment.personality === 'あなた' ? 'text-blue-600 font-bold' : 'text-gray-600';
+            const commentEl = document.createElement('div');
+            commentEl.className = 'bbs-comment';
+            commentEl.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <p class="font-semibold ${personalityClass} text-sm">${comment.personality || '名無しさん'}</p>
+                    <button class="reply-btn text-xs text-blue-500 hover:underline" data-comment-id="${comment.id}" data-bbs-type="${bbsType}">返信する</button>
+                </div>
+                <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
+                <p class="text-xs text-gray-400 text-right">${new Date(comment.timestamp).toLocaleString('ja-JP')}</p>
+                <div id="reply-form-container-${comment.id}" class="hidden mt-2">
+                    <form class="reply-form" data-comment-id="${comment.id}" data-bbs-type="${bbsType}">
+                        <textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
+                        <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>
+                    </form>
+                </div>
+            `;
+            threadContainer.appendChild(commentEl);
+
+            // 返信用のコンテナを追加
+            const repliesContainer = document.createElement('div');
+            repliesContainer.id = `replies-to-${comment.id}`;
+            threadContainer.appendChild(repliesContainer);
+
+            container.appendChild(threadContainer);
+
+            // 再帰的に返信を描画
+            if (comment.replies && comment.replies.length > 0) {
+                comment.replies.slice().reverse().forEach(reply => {
+                    renderCommentThread(reply, repliesContainer, bbsType);
+                });
+            }
+        }
+
+        function renderBbsComments(comments) {
+            if (!comments || comments.length === 0) {
+                bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
+                return;
+            }
+            bbsCommentsContainer.innerHTML = '';
+            // 新しいコメントが上に来るように逆順で表示
+            comments.slice().reverse().forEach(comment => {
+                renderCommentThread(comment, bbsCommentsContainer, 'general');
+            });
+        }
+
+        function renderDaiyaBbsComments(comments) {
+            if (!comments || comments.length === 0) {
+                daiyaBbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
+                return;
+            }
+            daiyaBbsCommentsContainer.innerHTML = '';
+            comments.slice().reverse().forEach(comment => {
+                renderCommentThread(comment, daiyaBbsCommentsContainer, 'daiya');
+            });
+        }
+
+        function renderNamcoNews(news) {
+            if (!news) {
+                namcoNewsSection.classList.add('hidden');
+                return;
+            }
+            namcoNewsSection.classList.remove('hidden');
+            namcoNewsContent.innerHTML = '';
+            const newsItem = document.createElement('div');
+            newsItem.className = 'namco-news-item p-2 hover:bg-orange-50 rounded';
+            newsItem.innerHTML = `<p class="font-semibold text-gray-700">${news.title}<span class="namco-news-tag">野球部</span></p>`;
+            newsItem.addEventListener('click', () => {
+                document.getElementById('modal-title').textContent = news.title;
+                document.getElementById('modal-body').textContent = news.body;
+                document.getElementById('modal-meta').innerHTML = `<p>${new Date(news.timestamp).toLocaleDateString('ja-JP')}</p><p class="font-bold text-gray-500">野球部</p>`;
+                newsModal.classList.remove('hidden');
+                newsModal.classList.add('flex');
+            });
+            namcoNewsContent.appendChild(newsItem);
+        }
+
+        // --- AI Reporter Logic ---
+        function parseJsonFromText(text) {
+            try {
+                // マークダウンのコードブロックを除去
+                const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const jsonMatch = cleanedText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+            } catch (e) {
+                console.error("Failed to parse JSON from text:", text, e);
+            }
+            return null;
+        }
+
+        // --- 修正後の fetchWithRetry 関数 ---
+        async function fetchWithRetry(payload, maxRetries = 3) {
+            // 送り先を、Googleではなく自分の中間サーバー（サーバーレス関数）に変更
+            const functionUrl = '/.netlify/functions/generateApiContent';
+            let lastError;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(functionUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(payload) // プロンプトなどを中間サーバーに送る
+                    });
+
+                    if (response.ok) {
+                        return response; // 成功したらレスポンスを返す
+                    }
+                    
+                    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                        console.error(`Client Error: ${response.status}. Not retrying.`);
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${errorData.error}`);
+                    }
+
+                    lastError = new Error(`API Error: ${response.status}`);
+                    const delay = Math.pow(2, i) * 1000;
+                    console.log(`API call failed. Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+
+                } catch (error) {
+                    lastError = error;
+                    const delay = Math.pow(2, i) * 1000;
+                    console.error(`Network error: ${error.message}. Retrying in ${delay}ms...`);
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+            throw lastError;
+        }
+
+        function getRankDescription(rank) {
+            switch(rank) {
+                case 'A': return '名門校';
+                case 'B': return '強豪校';
+                case 'C': return '中堅校';
+                case 'D': return '発展途上のチーム';
+                case 'E': return '挑戦者';
+                default: return '';
+            }
+        }
+        
+        function createNewspaperHtml(articleData, matchData) {
+            const { winnerName, loserName, dbMatch, matchId } = matchData;
+            const [side, roundStr] = matchId.split('-');
+            const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+
+            const isLateRound = roundNum >= 4; // 準々決勝から
+            const containerClass = isLateRound ? 'newspaper-late' : 'newspaper-early';
+            const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+            const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+
+            return `
+                <div class="newspaper-container ${containerClass}">
+                    <div class="newspaper-header">
+                        <h2 class="newspaper-title">熱闘高校野球</h2>
+                        <p class="newspaper-date">${new Date(articleData.timestamp).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                    <div class="newspaper-content">
+                        <h1 class="newspaper-main-headline">${winnerName}</h1>
+                        <div class="newspaper-body-content">
+                            <h2 class="newspaper-sub-headline">${articleData.title}</h2>
+                            ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
+                            <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
+                            <div class="newspaper-score-box">
+                                <h3>最終スコア</h3>
+                                <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+
+        // generateNewsArticle 関数
 async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary) {
     const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
     if (matchId === 'preview') {
         const { tournamentYear, seeds, teams } = tournamentState;
+        const blockA_teams = teams.slice(0, 16);
+        const blockB_teams = teams.slice(16, 32);
+        const blockC_teams = teams.slice(32, 48);
+        const blockD_teams = teams.slice(48, 64);
+        const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
         
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnData) {
-            // 秋季大会の展望記事ロジック
-            const { teamsByRegion } = tournamentState.autumnData;
-            let regionalPreviews = '';
-            for (const region in teamsByRegion) {
-                const topTeams = teamsByRegion[region].slice(0, 4).join(', ');
-                regionalPreviews += `- **${region}地区**: 夏の雪辱を誓うシード校 ${teamsByRegion[region][0]} を中心に、${topTeams}などが注目される。\n`;
-            }
-            const prompt = `
-あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-新チームが始動する「${tournamentYear}年度 ${currentTournamentName}」の地区予選の展望記事を作成してください。
+        const blockAnalysis = `
+- Aブロック: ${findPromisingSchools(blockA_teams).join(', ') || '特になし'}
+- Bブロック: ${findPromisingSchools(blockB_teams).join(', ') || '特になし'}
+- Cブロック: ${findPromisingSchools(blockC_teams).join(', ') || '特になし'}
+- Dブロック: ${findPromisingSchools(blockD_teams).join(', ') || '特になし'}
+        `.trim();
 
-### 大会概要
-夏の大会が終わり、3年生が引退。各校が新チームで春の甲子園への第一歩となる、重要な秋季大会が始まる。まずは各地区の代表権をかけた戦いだ。
+        const regionPower = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+        [...new Set([...findPromisingSchools(blockA_teams), ...findPromisingSchools(blockB_teams), ...findPromisingSchools(blockC_teams), ...findPromisingSchools(blockD_teams)])].forEach(team => {
+            const region = TEAM_DATA[team]?.region;
+            if (region) regionPower[region].push(team);
+        });
+        const regionAnalysis = Object.entries(regionPower)
+            .map(([region, schools]) => `- **${region}地区**: 有力校 ${schools.length}校 (${schools.join(', ') || 'なし'})`)
+            .join('\n');
 
-### 各地区の注目校
-${regionalPreviews}
-
-### 執筆指示
-- 新チームの始動という観点から、フレッシュな期待感を煽るような記事にしてください。
-- 夏の大会で上位だったチームが順当に勝ち上がるのか、それとも新しい勢力が台頭するのか、という点に焦点を当ててください。
-
-### 出力形式
-{"title": "新チーム始動！秋季大会地区予選の展望", "body": "記事の本文（改行は\\nを使用）"}
-`;
-            try {
-                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
-                    if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
-                }
-            } catch (error) {
-                console.error("AI autumn preview failed:", error);
-                return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
-            }
-
-        } else { // 夏・春大会の展望記事
-            const blockA_teams = teams.slice(0, 16);
-            const blockB_teams = teams.slice(16, 32);
-            const blockC_teams = teams.slice(32, 48);
-            const blockD_teams = teams.slice(48, 64);
-            const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園'));
-            const blockAnalysis = `- Aブロック: ${findPromisingSchools(blockA_teams).join(', ')}\n- Bブロック: ${findPromisingSchools(blockB_teams).join(', ')}\n- Cブロック: ${findPromisingSchools(blockC_teams).join(', ')}\n- Dブロック: ${findPromisingSchools(blockD_teams).join(', ')}`;
-            const prompt = `
+        const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
 間もなく開幕する「${tournamentYear}年度 ${currentTournamentName}」の展望記事を作成してください。
+
+### 大会全体情報
 - 大会名: ${tournamentYear}年度 ${currentTournamentName}
 - シード校: ${seeds.join(', ') || 'なし'}
-- 各ブロックの有力校: \n${blockAnalysis}
-- 上記情報を基に、大会全体の展望をまとめてください。
+
+### 各ブロックの有力校
+${blockAnalysis}
+
+### 今大会の地区別勢力図
+${regionAnalysis}
+
+### 執筆指示
+- 上記の情報を基に、大会全体の展望をまとめてください。
+- **「死のブロックとなったAブロックには西部地区の強豪が集中している」**といった、ブロック分けと地区勢力図を組み合わせた、より深い分析をしてください。
 - 読者の期待感を煽るような、情熱的なトーンでお願いします。
-- 出力形式: {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
-            try {
-                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
-                    if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
-                }
-            } catch (error) {
-                 console.error("AI preview failed:", error);
-                 return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
+        try {
+            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const rawText = result.candidates[0].content.parts[0].text;
+                const article = parseJsonFromText(rawText);
+                if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null };
             }
+            throw new Error("AI preview article response format error.");
+        } catch (error) {
+            console.error("AI preview article generation failed:", error);
+            return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}`, newspaperHtml: null };
         }
     }
     
@@ -1089,43 +1345,556 @@ ${regionalPreviews}
     const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
     const [side, roundStr] = matchId.split('-');
-    const roundNum = side.startsWith('PF_') ? parseInt(roundStr.slice(1)) + 2 : (side === 'F' ? 6 : parseInt(roundStr.slice(1)));
+    const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
     let roundAchievement = '';
-    // ... (roundAchievementの決定ロジックは必要に応じて調整)
+    switch (roundNum) {
+        case 1: roundAchievement = '初戦突破'; break;
+        case 2: roundAchievement = '3回戦進出'; break;
+        case 3: roundAchievement = 'ベスト8進出'; break;
+        case 4: roundAchievement = 'ベスト4進出'; break;
+        case 5: roundAchievement = '決勝進出'; break;
+        case 6: roundAchievement = (currentTournamentName === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
+    }
+
+    let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**` : '';
 
     const prompt = `
-あなたは高校野球専門のAI記者です。
-以下の試合結果に基づき、ドラマチックなニュース記事を生成してください。
+あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
+以下の試合結果とチーム情報に基づき、読者の心を掴むようなドラマチックなニュース記事を生成してください。
+
+### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
+- ラウンド達成記録: ${roundAchievement}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
-- 執筆のポイント: 両チームのランクを考慮し、番狂わせか順当な結果かを記事に含めてください。
-- 出力形式: {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+- 試合のハイライト（ユーザー入力）: ${matchSummary || 'なし'}
+
+### 執筆のポイント
+${civilWarInstruction}
+- 記事の中で「${winnerName}が${roundAchievement}を決めた」という事実を必ず含めてください。
+- 両チームのランクも考慮し、番狂わせか順当な結果かを記事に含めてください。
+- 記事のトーンは、ドラマチックかつ客観的に。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
 `;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            const rawText = result.candidates[0].content.parts[0].text;
+            const article = parseJsonFromText(rawText);
             if (article) {
                 const newspaperHtml = createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId });
                 return { ...article, timestamp: Date.now(), newspaperHtml };
             }
         }
-        throw new Error("AI response format error.");
+        throw new Error("AIからの応答が予期した形式ではありません。");
     } catch (error) {
-        console.error("AI article generation failed:", error);
-        return { title: "記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: matchId, context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary }, newspaperHtml: null };
+        console.error("AI記事の生成に失敗しました:", error);
+        return {
+            title: "記事生成エラー",
+            body: "AI記者との通信に失敗しました。時間をおいて再度お試しください。",
+            timestamp: Date.now(),
+            error: true,
+            errorId: matchId,
+            context: { winnerName, loserName, dbMatch, matchId, nextOpponentInfo, matchSummary },
+            newspaperHtml: null
+        };
     }
-}
+}            
+                   
+        /**
+         * コメントツリーから特定のIDを持つコメントを再帰的に検索する
+         * @param {Array} comments - 検索対象のコメント配列
+         * @param {string} id - 検索するコメントのID
+         * @returns {Object|null} - 見つかったコメントオブジェクト、またはnull
+         */
+        function findCommentById(comments, id) {
+            for (const comment of comments) {
+                if (comment.id === id) return comment;
+                if (comment.replies && comment.replies.length > 0) {
+                    const found = findCommentById(comment.replies, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
 
+        /**
+         * AIに渡すための会話履歴を整形する
+         * @param {Array} comments - トップレベルのコメント配列
+         * @param {string} targetId - 会話の終点となるコメントのID
+         * @returns {string} - 整形された会話履歴
+         */
+        function formatConversationHistory(comments, targetId) {
+            let history = [];
+            function findPath(currentComments, currentPath) {
+                for(const comment of currentComments) {
+                    const newPath = [...currentPath, comment];
+                    if(comment.id === targetId) {
+                        history = newPath;
+                        return true;
+                    }
+                    if(comment.replies && findPath(comment.replies, newPath)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            findPath(comments, []);
+            return history.map(c => `${c.personality}:「${c.text}」`).join('\n');
+        }
+        function checkBest8Decided() {
+            const round3MatchIds = ['L-R3-M1', 'L-R3-M2', 'L-R3-M3', 'L-R3-M4', 'R-R3-M1', 'R-R3-M2', 'R-R3-M3', 'R-R3-M4'];
+            const completedMatches = round3MatchIds.filter(id => tournamentState.matches[id] && tournamentState.matches[id].winner).length;
+
+            // 3回戦が8試合すべて終わったらボタンを表示
+            if (completedMatches === 8) {
+                const summaryArticleExists = tournamentState.news.some(article => article.errorId && article.errorId.startsWith('summary-'));
+                const quarterFinalsStarted = Object.keys(tournamentState.matches).some(id => id.includes('R4') && tournamentState.matches[id].winner);
+
+                // まだ記事がなく、準々決勝が始まっていなければ表示
+                if (!summaryArticleExists && !quarterFinalsStarted) {
+                     generateSummaryBtn.classList.remove('hidden');
+                }
+            } else {
+                generateSummaryBtn.classList.add('hidden');
+            }
+        }
+       async function generateBest8PreviewArticle() {
+            // ベスト8のチームと準々決勝の組み合わせを取得
+            const quarterFinalists = [];
+            const quarterFinalMatchups = [];
+            const quarterFinalIds = ['L-R4-M1', 'L-R4-M2', 'R-R4-M1', 'R-R4-M2'];
+
+            quarterFinalIds.forEach(id => {
+                const match = tournamentState.matches[id];
+                if (match && match.team1 && match.team2) {
+                    quarterFinalists.push(match.team1, match.team2);
+                    quarterFinalMatchups.push(`${match.team1} vs ${match.team2}`);
+                }
+            });
+
+            if (quarterFinalists.length !== 8) return null;
+
+            // ▼▼▼ ここから追加したコード ▼▼▼
+            // 各チームの勝ち上がり履歴を取得
+            const best8Paths = [...new Set(quarterFinalists)].map(team => {
+                // 各チームが勝利した3回戦の試合IDを見つける
+                const round3Match = Object.entries(tournamentState.matches).find(([id, match]) =>
+                    id.includes('-R3-') && match.winner === team
+                );
+                const matchIdForPath = round3Match ? round3Match[0] : null;
+
+                if (matchIdForPath) {
+                    const path = getTournamentPath(team, matchIdForPath);
+                    return `- **${team}**: ${path}`;
+                }
+                return `- **${team}**: (勝ち上がり履歴不明)`;
+            }).join('\n');
+            // ▲▲▲ ここまで追加したコード ▲▲▲
+
+            const prompt = `
+あなたは、情熱的な高校野球専門のAI記者です。
+${tournamentState.tournamentYear}年度大会の3回戦が終了し、ベスト8に進出する8校が決定しました。
+以下の情報に基づき、これから始まる準々決勝への期待感を煽るような展望記事を生成してください。
+
+### ベスト8進出チームと勝ち上がり
+${best8Paths}
+
+### 準々決勝の組み合わせ
+- ${quarterFinalMatchups.join('\n- ')}
+
+### 執筆指示
+- まず、ベスト8に勝ち上がったチームの顔ぶれについて触れてください。**各チームがどの格付け（名門校、強豪校など）の高校を、どのような点差で倒してきたかという「勝ち上がり履歴」にも言及し**、トーナメントを総括します。（例：「A高校は全試合大差だが相手は格下揃い。一方B高校は名門C高校を1点差で破っており、真の実力は上かもしれない」）
+- 次に、決定した準々決勝の4つの対戦カードそれぞれについて、見どころや注目選手、勝敗の鍵を予想してください。
+- 記事のタイトルは「激闘のベスト8！準々決勝の組み合わせが決定！」のような、読者の興味を引くものにしてください。
+- これから始まる戦いへのワクワク感を高めるような、熱意のある文章で締めくくってください。
+
+### 出力形式
+以下のJSON形式で、タイトルと本文を生成してください。
+{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}
+`;
+            try {
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const rawText = result.candidates[0].content.parts[0].text;
+                    const article = parseJsonFromText(rawText);
+                    if (article) return { ...article, timestamp: Date.now(), newspaperHtml: null, errorId: `summary-${Date.now()}` };
+                }
+                throw new Error("AI summary article response format error.");
+            } catch (error) {
+                console.error("AI summary article generation failed:", error);
+                return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `summary-${Date.now()}`, newspaperHtml: null };
+            }
+        }
+
+async function generateSportsNewspaper(roundNumber) {
+             const roundNameMap = { 3: '3回戦', 4: '準々決勝', 5: '準決勝', 6: '決勝' };
+             const roundName = roundNameMap[roundNumber];
+             if (!roundName) return null;
+
+             // ラウンドの結果を収集
+             const matchIdsInRound = Object.keys(tournamentState.matches).filter(id => id.includes(`-R${roundNumber}-`) || (roundNumber === 6 && id.includes('F-R1-')));
+             const results = matchIdsInRound.map(id => tournamentState.matches[id]);
+
+             const resultsText = results.map(match => {
+                 const winnerRank = getRankDescription(calculateRank(match.winner, tournamentState));
+                 const loser = match.team1 === match.winner ? match.team2 : match.team1;
+                 const loserRank = getRankDescription(calculateRank(loser, tournamentState));
+                 return `${winnerRank}・${match.winner}が${loserRank}・${loser}に ${match.score1}-${match.score2} で勝利。`;
+             }).join('\n');
+
+             const prompt = `
+あなたは、読者の購買意欲を掻き立てるのが得意な、日本のスポーツ新聞の編集長です。
+現在、高校野球の${tournamentState.tournamentYear}年度大会が進行中です。${roundName}の全試合が終了しました。
+以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストと、そのシーンを撮影するための画像生成プロンプトを作成してください。
+
+### ${roundName} 全試合結果
+${resultsText}
+
+### あなたが作成するテキストとプロンプト
+以下の5つの要素を、JSON形式で出力してください。
+1.  **mainHeadline**: 最も重要な結果を伝える、短く、衝撃的で、扇情的な大見出し。（例：「怪物散る！」「王者、盤石の決勝へ」）
+2.  **subHeadline**: mainHeadlineを補足する、少し詳しい小見出し。
+3.  **photoCaption**: その日のハイライトシーンを切り取った架空の写真に対する、情景が目に浮かぶようなキャプション。（例：「あと一歩及ばず、マウンドに崩れ落ちる〇〇高校のエース△△」）
+4.  **otherResults**: その他の注目すべき結果を2つ、簡潔にまとめたもの。
+5.  **imagePrompt**: mainHeadlineとphotoCaptionの情景を表現する、英語の画像生成プロンプト。リアルな写真ではなく、感動的なアニメや漫画のスタイルで生成すること。（例：'A high school baseball pitcher collapsing on the mound in defeat, dramatic anime style, cinematic lighting'）
+
+### 出力形式
+{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."], "imagePrompt": "..."}
+`;
+             try {
+                 const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                 const result = await response.json();
+                 if (result.candidates?.[0]?.content?.parts?.[0]) {
+                     const rawText = result.candidates[0].content.parts[0].text;
+                     const newspaperData = parseJsonFromText(rawText);
+                     if (newspaperData) return newspaperData;
+                 }
+                 throw new Error("AI newspaper response format error.");
+             } catch (error) {
+                 console.error("AI newspaper generation failed:", error);
+                 return null;
+             }
+         }
+
+async function handleRoundCompletion(roundNumber) {
+             const significantRounds = [3, 4, 5, 6]; // 3回戦、準々決勝、準決勝、決勝
+             if (!significantRounds.includes(roundNumber)) return;
+
+             const alreadyExists = tournamentState.news.some(n => n.roundNumber === roundNumber && n.isNewspaper);
+             if (alreadyExists) return;
+
+             const newspaperData = await generateSportsNewspaper(roundNumber);
+             if (newspaperData) {
+                 // ここで画像生成を試みる
+                 if (newspaperData.imagePrompt) {
+                     try {
+                         // 本来はここに画像生成APIの呼び出しが入ります
+                         // このデモではダミー画像URLを使用します
+                         newspaperData.imageUrl = `https://via.placeholder.com/400x200.png?text=Image+for:${newspaperData.mainHeadline.replace(/\s/g, '+')}`;
+                     } catch (e) {
+                         console.error("Image generation failed:", e);
+                     }
+                 }
+
+                 const roundNameMap = { 3: '3回戦', 4: '準々決勝', 5: '準決勝', 6: '決勝' };
+                 tournamentState.news.push({
+                     title: `【熱闘新聞】${roundNameMap[roundNumber]}特集号が発行されました！`,
+                     body: newspaperData.subHeadline, // 本文にはサブヘッドラインを流用
+                     timestamp: Date.now(),
+                     isNewspaper: true,
+                     roundNumber: roundNumber,
+                     newspaperData: newspaperData
+                 });
+                 renderNews(tournamentState.news);
+                 saveState();
+             }
+         }
+function renderNewspaperModal(newspaperData) {
+             const { mainHeadline, subHeadline, photoCaption, otherResults, imageUrl } = newspaperData;
+             
+             const imageHtml = imageUrl 
+               ? `<img src="${imageUrl}" alt="${photoCaption}" class="w-full h-auto my-4 border">` 
+               : `<div class="newspaper-image-placeholder"><p class="text-sm p-4">${photoCaption}</p></div>`;
+
+             newspaperModalBody.innerHTML = `
+                 <div class="newspaper-container newspaper-late">
+                     <div class="newspaper-header">
+                         <h2 class="newspaper-title">熱闘スポーツ</h2>
+                         <p class="newspaper-date">${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                     </div>
+                     <div class="newspaper-content">
+                         <h1 class="newspaper-main-headline">${mainHeadline}</h1>
+                         <div class="newspaper-body-content">
+                             <h2 class="newspaper-sub-headline">${subHeadline}</h2>
+                             ${imageHtml}
+                             <div class="newspaper-score-box">
+                                 <h3>その他の主な結果</h3>
+                                 ${otherResults.map(r => `<p>${r}</p>`).join('')}
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             `;
+         }
+        /**
+         * AIに掲示板の返信を生成させる関数
+         * @param {string} parentCommentId - 返信先のコメントID
+         * @param {string} userReplyText - ユーザーが入力した返信
+         * @param {string} bbsType - 'general' or 'daiya'
+         */
+    function getTournamentPath(teamName, startingMatchId) {
+             if (!teamName) return "（不明）";
+             const path = [];
+             const [startSide, startRoundStr] = startingMatchId.split('-');
+             let startRoundNum = parseInt(startRoundStr.slice(1));
+
+             const matchData = tournamentState.matches[startingMatchId];
+             if (matchData && matchData.winner !== teamName) {
+                 startRoundNum--;
+             }
+
+             for (let r = 1; r <= startRoundNum; r++) {
+                 const matchInRound = Object.entries(tournamentState.matches).find(([id, match]) =>
+                     id.startsWith(`${startSide}-R${r}-`) &&
+                     match.winner === teamName &&
+                     (match.team1 === teamName || match.team2 === teamName)
+                 );
+
+                 if (matchInRound) {
+                     const match = matchInRound[1];
+                     const opponent = match.team1 === teamName ? match.team2 : teamName;
+                     const opponentRank = calculateRank(opponent, tournamentState);
+                    // ▼▼▼ ランクを「名門校」などの説明に変換 ▼▼▼
+                     const opponentRankDesc = getRankDescription(opponentRank); 
+                     const winnerScore = match.team1 === teamName ? match.score1 : match.score2;
+                     const loserScore = match.team1 === teamName ? match.score2 : match.score1;
+                    // ▼▼▼ 履歴の文字列表現を自然な形に修正 ▼▼▼
+                     path.push(`${r}回戦で${opponentRankDesc}・${opponent}に ${winnerScore}-${loserScore} で勝利`);
+                 }
+             }
+
+             return path.length > 0 ? path.join(' → ') : '（今大会初戦）';
+         }
+function getTournamentStatusSummary() {
+             const matches = tournamentState.matches;
+             const allMatchIds = Object.keys(matches);
+
+             const getMatchResultString = (id) => {
+                 const match = matches[id];
+                 if (match && match.winner) {
+                     const loser = match.team1 === match.winner ? match.team2 : match.team1;
+                     const winnerScore = match.team1 === match.winner ? match.score1 : match.score2;
+                     const loserScore = match.team1 === match.winner ? match.score2 : match.score1;
+                     const winnerRankDesc = getRankDescription(calculateRank(match.winner, tournamentState));
+                     const loserRankDesc = getRankDescription(calculateRank(loser, tournamentState));
+                     return `${winnerRankDesc}・${match.winner}が${loserRankDesc}・${loser}に ${winnerScore}-${loserScore} で勝利`;
+                 }
+                 return null;
+             };
+
+             // 決勝
+             const finalResult = getMatchResultString('F-R1-M1');
+             if (finalResult) return `決勝戦は${finalResult}し、${matches['F-R1-M1'].winner}が優勝しました。`;
+             if (matches['F-R1-M1']?.team1 && matches['F-R1-M1']?.team2) return `決勝戦の組み合わせは ${matches['F-R1-M1'].team1} vs ${matches['F-R1-M1'].team2} です。`;
+
+             // 準決勝 (R5)
+             const sfIds = ['L-R5-M1', 'R-R5-M1'];
+             const sfResults = sfIds.map(getMatchResultString).filter(Boolean);
+             const sfUpcoming = sfIds.map(id => (matches[id] && matches[id].team1 && matches[id].team2 && !matches[id].winner) ? `${matches[id].team1} vs ${matches[id].team2}` : null).filter(Boolean);
+             if (sfResults.length > 0 || sfUpcoming.length > 0) {
+                 let summary = "現在、準決勝（ベスト4）が進行中です。\n";
+                 if (sfResults.length > 0) summary += `- 終了した試合の結果: ${sfResults.join(' / ')}\n`;
+                 if (sfUpcoming.length > 0) summary += `- これからの対戦: ${sfUpcoming.join(' / ')}\n`;
+                 return summary;
+             }
+
+             // 準々決勝 (R4)
+             const qfIds = ['L-R4-M1', 'L-R4-M2', 'R-R4-M1', 'R-R4-M2'];
+             const qfResults = qfIds.map(getMatchResultString).filter(Boolean);
+             const qfUpcoming = qfIds.map(id => (matches[id] && matches[id].team1 && matches[id].team2 && !matches[id].winner) ? `${matches[id].team1} vs ${matches[id].team2}` : null).filter(Boolean);
+             if (qfResults.length > 0 || qfUpcoming.length > 0) {
+                 let summary = "現在、準々決勝（ベスト8）が進行中です。\n";
+                 if (qfResults.length > 0) summary += `- 終了した試合の結果: ${qfResults.join(' / ')}\n`;
+                 if (qfUpcoming.length > 0) summary += `- これからの対戦: ${qfUpcoming.join(' / ')}\n`;
+                 return summary;
+             }
+             
+             // ▼▼▼ ここからが修正・追加部分です ▼▼▼
+             // 3回戦 (R3)
+             const r3MatchIds = allMatchIds.filter(id => id.includes('-R3-'));
+             if (r3MatchIds.length > 0) {
+                 return '現在、3回戦が進行中です。';
+             }
+             
+             // 2回戦 (R2)
+             const r2MatchIds = allMatchIds.filter(id => id.includes('-R2-'));
+             if (r2MatchIds.length > 0) {
+                 return '現在、2回戦が進行中です。';
+             }
+             
+             // 1回戦 (R1)
+             return '現在、1回戦が進行中です。';
+         }
+function getNextOpponentInfoForPrompt(teamName) {
+             let latestMatchId = null;
+             let maxRound = 0;
+
+             for (const [id, match] of Object.entries(tournamentState.matches)) {
+                 if (match.team1 === teamName || match.team2 === teamName) {
+                     const roundNum = id.startsWith('F-') ? 6 : parseInt(id.split('-')[1].slice(1));
+                     if (roundNum > maxRound) {
+                         maxRound = roundNum;
+                         latestMatchId = id;
+                     }
+                 }
+             }
+             
+             if (!latestMatchId) return "（まだ試合なし）";
+
+             const latestMatch = tournamentState.matches[latestMatchId];
+             if (latestMatch.winner !== teamName) return "（この試合で敗退）";
+             if (latestMatchId.startsWith('F-')) return "（優勝）";
+
+             // 次の試合IDを計算
+             const [side, roundStr, matchStr] = latestMatchId.split('-');
+             const roundNum = parseInt(roundStr.slice(1));
+             const matchNum = parseInt(matchStr.slice(1));
+
+             if (roundNum === 5) { // 準決勝に勝った場合
+                 const otherSide = side === 'L' ? 'R' : 'L';
+                 const otherSemiFinalWinner = tournamentState.matches[`${otherSide}-R5-M1`]?.winner;
+                 if(otherSemiFinalWinner) return `決勝の相手は${otherSemiFinalWinner}です。`;
+                 else return `決勝の相手は${otherSide}ブロックの準決勝の勝者です。`;
+             }
+
+             const nextRoundNum = roundNum + 1;
+             const nextMatchNum = Math.ceil(matchNum / 2);
+             const nextMatchId = `${side}-R${nextRoundNum}-M${nextMatchNum}`;
+             
+             const nextMatch = tournamentState.matches[nextMatchId];
+             const otherOpponent = (matchNum % 2 !== 0) ? nextMatch?.team2 : nextMatch?.team1;
+             if(otherOpponent) return `次の対戦相手は${otherOpponent}です。`;
+
+             const otherFeederMatchNum = (matchNum % 2 !== 0) ? matchNum + 1 : matchNum - 1;
+             const otherFeederMatchId = `${side}-R${roundNum}-M${otherFeederMatchNum}`;
+             const otherMatch = tournamentState.matches[otherFeederMatchId];
+             if(otherMatch && otherMatch.team1 && otherMatch.team2) {
+                 return `次の対戦相手は、${otherMatch.team1} vs ${otherMatch.team2} の勝者です。`;
+             }
+
+             return "（次の対戦相手は未定）";
+         }
+       async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData, teamNextOpponentData) {
+             const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+             const parentComment = findCommentById(commentSource, parentCommentId);
+             if (!parentComment) return null;
+
+             // ユーザーが選択したペルソナを取得
+             const form = document.querySelector(`form[data-comment-id="${parentCommentId}"]`);
+             const personaSelect = form ? form.querySelector('select') : null;
+             const selectedUserPersona = personaSelect ? personaSelect.value : 'あなた';
+
+             const userReplyObject = {
+                 id: 'temp_user_reply',
+                 personality: selectedUserPersona,
+                 text: userReplyText,
+                 replies: []
+             };
+
+             parentComment.replies.push(userReplyObject);
+             const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
+             parentComment.replies.pop();
+
+             const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
+                 ? `### 関連チームの公式プロフィール（過去の歴史・前評判）\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、情報「${data.info}」`).join('\n')}`
+                 : '';
+             
+             const teamPathPromptPart = Object.keys(teamPathData).length > 0
+                 ? `### 今大会の勝ち上がり状況（現在の事実）\n${Object.entries(teamPathData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
+                 : '';
+                 
+             const teamNextOpponentPromptPart = Object.keys(teamNextOpponentData).length > 0
+                 ? `### 各チームの次の対戦予定（道筋）\n${Object.entries(teamNextOpponentData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
+                 : '';
+
+             const prompt = `
+あなたは、匿名掲示板のキャラクター「${aiPersona}」です。あなたは今、他のユーザーと高校野球について会話しています。
+
+---
+### これまでの会話の流れ
+${conversationHistory}
+---
+
+あなたのタスクは、この会話の流れにおける**最後の発言**「${userReplyText}」に対して、あなたのキャラクターとして、最も自然で的を射た返信をすることです。
+
+返信を作成するにあたり、以下のあなたの「知識（補足情報）」を活用してください。
+
+### あなたの知識（補足情報）
+- **現在の大会状況:** ${context.tournamentSummary}
+${teamPathPromptPart}
+${teamNextOpponentPromptPart}
+${teamHistoryPromptPart}
+---
+
+### あなたへの指示（思考プロセス）
+あなたの思考は、以下のステップに厳密に従ってください。
+
+1.  **文脈を特定せよ（最重要）:**
+    まず「これまでの会話の流れ」を熟読し、今何が話題の中心になっているかを把握せよ。特に、最後の発言にある「そのチーム」「その2校」のような代名詞が、会話の中で具体的にどのチームを指しているのかを絶対に間違えるな。
+
+2.  **相手の発言の意図を理解せよ:**
+    文脈を踏まえ、「相手の最後の発言」が何を尋ね、何を主張しているのかを正確に理解せよ。
+
+3.  **応答を構築せよ:**
+    * あなたの返信は、必ずステップ2で理解した相手の発言への**直接的な応答**から始めよ。
+    * 続けて、その応答の**根拠**として、「あなたの知識」の中から**関連する情報だけを**選び出し、キャラクターらしい自然な言葉で説明せよ。
+    * **禁止事項:** 相手が話していない、無関係なチームや試合の情報を一方的に解説してはならない。
+
+4.  **最終チェック:**
+    完成した返信が、相手との自然な会話のキャッチボールになっているか確認せよ。
+
+### 出力形式
+必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
+{"comment": "（あなたの返信本文）"}
+`;
+             try {
+                 const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+                 const result = await response.json();
+                 if (result.candidates?.[0]?.content?.parts?.[0]) {
+                     const rawText = result.candidates[0].content.parts[0].text;
+                     const replyJson = parseJsonFromText(rawText);
+                     if (replyJson && replyJson.comment) {
+                         return {
+                             id: crypto.randomUUID(),
+                             personality: aiPersona,
+                             text: replyJson.comment,
+                             timestamp: Date.now(),
+                             replies: []
+                         };
+                     }
+                 }
+                 throw new Error("AIからの応答が予期した形式ではありません。");
+             } catch (error) {
+                 console.error("AI返信コメントの生成に失敗しました:", error);
+                 return null;
+             }
+         }     
+// generateBbsComments 関数
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
     const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
     const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+    const winnerRank = calculateRank(winnerName, tournamentState);
+    const loserRank = calculateRank(loserName, tournamentState);
     
     const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
@@ -1133,49 +1902,116 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matc
     let tournamentContext = '';
     switch(tournamentState.currentTournament) {
         case 'autumn':
-            tournamentContext = '秋季大会は新チームの試金石。ここでの戦いぶりが春につながるからな。';
+            tournamentContext = '秋季大会は新チームの力を見る最初の大会だ。夏の雪辱を果たせるか、新しいスターが生まれるかに注目が集まる。';
             break;
         case 'spring':
-            tournamentContext = '春季大会は夏のシードを占う大事な大会だ。';
+            tournamentContext = '春季大会は夏の大会のシード権を占う重要な前哨戦。秋を越えてチームがどう成長したかが見ものだ。';
             break;
         case 'summer':
-            tournamentContext = '3年生最後の夏、甲子園がかかった一戦だ。';
+            tournamentContext = '3年生にとっては最後の夏、甲子園をかけた絶対に負けられない戦いだ。';
             break;
     }
 
+    const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
+
+    const [side, roundStr] = matchId.split('-');
+    const roundNum = side === 'F' ? 6 : parseInt(roundStr.slice(1));
+    let matchContext = '';
+    switch (roundNum) {
+        case 1: matchContext = 'これは1回戦です。'; break;
+        case 2: matchContext = 'これは2回戦です。'; break;
+        case 3: matchContext = 'これは3回戦、ベスト8進出をかけた試合です。'; break;
+        case 4: matchContext = 'これは準々決勝、ベスト4進出をかけた試合です。'; break;
+        case 5: matchContext = 'これは決勝進出をかけた準決勝です。'; break;
+        case 6: matchContext = (currentTournamentName === '夏季大会') ? 'これは甲子園出場をかけた決勝戦です。' : 'これは優勝をかけた決勝戦です。'; break;
+    }
+    if (isCivilWar) {
+        matchContext += ' しかも、ナムコ系列校同士の「283ダービー」です！';
+    }
+
+    const winnerPath = getTournamentPath(winnerName, matchId);
+    const loserPath = getTournamentPath(loserName, matchId);
+    const pathInfoPromptPart = `
+### これまでの両チームの勝ち上がり
+- **勝者 (${winnerName})**: ${winnerPath}
+- **敗者 (${loserName})**: ${loserPath}
+`;
+    
+    const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
+    const loserDetailedInfo = DETAILED_TEAM_DATA[loserName];
+    let detailedInfoPromptPart = "\n### チーム・選手詳細情報\n";
+    if(winnerDetailedInfo) {
+        detailedInfoPromptPart += `- **${winnerName}**: ${winnerDetailedInfo.summary}\n  - **注目選手**: ${winnerDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
+    }
+    if(loserDetailedInfo) {
+        detailedInfoPromptPart += `- **${loserName}**: ${loserDetailedInfo.summary}\n  - **注目選手**: ${loserDetailedInfo.players.map(p => `${p.name}(${p.desc})`).join(' / ')}\n`;
+    }
+    
+    let summaryPromptPart = "";
+    if (matchSummary) {
+        summaryPromptPart = `\n### 試合のハイライト（ユーザー入力）\n${matchSummary}`;
+    }
+
+    let antiAttitudeInstruction = '';
+    if (winnerRank === 'A' || winnerRank === 'B') {
+        antiAttitudeInstruction = `- **特に「アンチ」としてコメントする場合:** 勝利チームは格上の${getRankDescription(winnerRank)}です。その圧倒的な実力に焦りや恐怖を感じ、決して余裕のある素振りは見せないでください。(例: 「強すぎるだろ…」「うちが当たったらどうするんだ」「これはもう優勝決まったか？」)`;
+    } else {
+        antiAttitudeInstruction = `- **特に「アンチ」としてコメントする場合:** 相手が「名門校(Aランク)」や「強豪校(Bランク)」であれば、その実力を認めた上での、少しマイルドで玄人好みの批判やコメントをしてください。 (例: 「さすがにここは勝つか。でも次の〇〇戦が本当の勝負だな」「まさかここで負けるとは…今年の夏は何が起こるか分からんぞ」)`;
+    }
+    
+    let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です！この身内対決に対する特別な反応を生成してください。**` : '';
+
     const prompt = `
-あなたは匿名掲示板の高校野球ファンです。
-以下の試合結果について、それぞれのキャラクターになりきって、リアルな短いコメントを5つ生成してください。
+あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+以下の試合結果と文脈について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 
 ### 大会情報
 - ${tournamentState.tournamentYear}年度 ${currentTournamentName}
 - 大会の位置づけ: ${tournamentContext}
 
 ### 試合情報
-- 勝利チーム: ${winnerName} (${winnerData.region}地区)
-- 敗北チーム: ${loserName} (${loserData.region}地区)
+- 勝利チーム: ${winnerName} (${getRankDescription(winnerRank)}, ${winnerData.region}地区)
+- 敗北チーム: ${loserName} (${getRankDescription(loserRank)}, ${loserData.region}地区)
 - スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
+- 試合の文脈: ${matchContext}
+${pathInfoPromptPart}
 
-### あなたがなりきるべきキャラクター
+### 各チームの背景
+- ${winnerName}: ${winnerData.info}
+- ${loserName}: ${loserData.info}
+${(winnerDetailedInfo || loserDetailedInfo) ? detailedInfoPromptPart : ''}
+${summaryPromptPart}
+
+### あなたがなりきるべきキャラクターと指示
 - 熱狂的な勝者チームのOB
 - 上から目線の野球解説者
 - アンチ
 - ライバル校のファン
 - 単なる野球好き
-
-### 指示
-- 大会の位置づけ（${tournamentContext}）を意識したコメントを必ず含めてください。
-- 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
+- **指示:**
+  - 大会の位置づけ（${tournamentContext}）を意識したコメントを必ず含めてください。
+  - 地区の視点（東部、中部、西部など）にも着目してください。
+  ${antiAttitudeInstruction}
+  ${civilWarInstruction}
+  - 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
 
 ### 出力形式
-JSON配列形式: [{"personality": "...", "comment": "..."}, ...]
+必ず以下のJSON配列形式で出力してください。他のテキストは含めないでください。
+[
+    {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
+    {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
+    {"personality": "アンチ", "comment": "（コメント本文）"},
+    {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
+    {"personality": "野球好き", "comment": "（コメント本文）"}
+]
 `;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const commentsJson = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
             if (Array.isArray(commentsJson)) {
                 return commentsJson.map(c => ({
                     id: crypto.randomUUID(),
@@ -1186,12 +2022,13 @@ JSON配列形式: [{"personality": "...", "comment": "..."}, ...]
                 }));
             }
         }
-        throw new Error("AI response format error.");
+        throw new Error("AIからの応答が予期した形式ではありません。");
+
     } catch (error) {
-        console.error("AI BBS comments generation failed:", error);
+        console.error("AI掲示板コメントの生成に失敗しました:", error);
         return [];
     }
-}    
+}        
         async function generateBracketReactionComments(state) {
             const { teams, seeds } = state;
 
