@@ -2554,14 +2554,14 @@ ${matchups}
                 newsModal.classList.remove('hidden');
                 newsModal.classList.add('flex');
             }
-            if (e.target.matches('.newspaper-view-btn')) {
-                const index = parseInt(e.target.dataset.index, 10);
-                const article = tournamentState.news[index];
-                if (article.newspaperHtml) {
-                    newspaperModalBody.innerHTML = article.newspaperHtml;
-                    newspaperModal.classList.remove('hidden');
-                }
-            }
+           if (e.target.matches('.newspaper-view-btn')) {
+                 const index = parseInt(e.target.dataset.index, 10);
+                 const article = tournamentState.news[index];
+                 if (article.isNewspaper && article.newspaperData) {
+                     renderNewspaperModal(article.newspaperData);
+                     newspaperModal.classList.remove('hidden');
+                 }
+             }
         });
 
         // --- BBS Reply Logic ---
