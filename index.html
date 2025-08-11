@@ -1411,20 +1411,21 @@ async function generateSportsNewspaper(roundNumber) {
              const prompt = `
 あなたは、読者の購買意欲を掻き立てるのが得意な、日本のスポーツ新聞の編集長です。
 現在、高校野球の${tournamentState.tournamentYear}年度大会が進行中です。${roundName}の全試合が終了しました。
-以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストを作成してください。
+以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストと、そのシーンを撮影するための画像生成プロンプトを作成してください。
 
 ### ${roundName} 全試合結果
 ${resultsText}
 
-### あなたが作成するテキスト
-以下の4つの要素を、JSON形式で出力してください。
+### あなたが作成するテキストとプロンプト
+以下の5つの要素を、JSON形式で出力してください。
 1.  **mainHeadline**: 最も重要な結果を伝える、短く、衝撃的で、扇情的な大見出し。（例：「怪物散る！」「王者、盤石の決勝へ」）
 2.  **subHeadline**: mainHeadlineを補足する、少し詳しい小見出し。
 3.  **photoCaption**: その日のハイライトシーンを切り取った架空の写真に対する、情景が目に浮かぶようなキャプション。（例：「あと一歩及ばず、マウンドに崩れ落ちる〇〇高校のエース△△」）
 4.  **otherResults**: その他の注目すべき結果を2つ、簡潔にまとめたもの。
+5.  **imagePrompt**: mainHeadlineとphotoCaptionの情景を表現する、英語の画像生成プロンプト。リアルな写真ではなく、感動的なアニメや漫画のスタイルで生成すること。（例：'A high school baseball pitcher collapsing on the mound in defeat, dramatic anime style, cinematic lighting'）
 
 ### 出力形式
-{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."]}
+{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."], "imagePrompt": "..."}
 `;
              try {
                  const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
@@ -1445,15 +1446,26 @@ async function handleRoundCompletion(roundNumber) {
              const significantRounds = [3, 4, 5, 6]; // 3回戦、準々決勝、準決勝、決勝
              if (!significantRounds.includes(roundNumber)) return;
 
-             // そのラウンドの新聞が既に発行済みかチェック
              const alreadyExists = tournamentState.news.some(n => n.roundNumber === roundNumber && n.isNewspaper);
              if (alreadyExists) return;
 
              const newspaperData = await generateSportsNewspaper(roundNumber);
              if (newspaperData) {
+                 // ここで画像生成を試みる
+                 if (newspaperData.imagePrompt) {
+                     try {
+                         // 本来はここに画像生成APIの呼び出しが入ります
+                         // このデモではダミー画像URLを使用します
+                         newspaperData.imageUrl = `https://via.placeholder.com/400x200.png?text=Image+for:${newspaperData.mainHeadline.replace(/\s/g, '+')}`;
+                     } catch (e) {
+                         console.error("Image generation failed:", e);
+                     }
+                 }
+
                  const roundNameMap = { 3: '3回戦', 4: '準々決勝', 5: '準決勝', 6: '決勝' };
                  tournamentState.news.push({
                      title: `【熱闘新聞】${roundNameMap[roundNumber]}特集号が発行されました！`,
+                     body: newspaperData.subHeadline, // 本文にはサブヘッドラインを流用
                      timestamp: Date.now(),
                      isNewspaper: true,
                      roundNumber: roundNumber,
@@ -1464,7 +1476,12 @@ async function handleRoundCompletion(roundNumber) {
              }
          }
 function renderNewspaperModal(newspaperData) {
-             const { mainHeadline, subHeadline, photoCaption, otherResults } = newspaperData;
+             const { mainHeadline, subHeadline, photoCaption, otherResults, imageUrl } = newspaperData;
+             
+             const imageHtml = imageUrl 
+               ? `<img src="${imageUrl}" alt="${photoCaption}" class="w-full h-auto my-4 border">` 
+               : `<div class="newspaper-image-placeholder"><p class="text-sm p-4">${photoCaption}</p></div>`;
+
              newspaperModalBody.innerHTML = `
                  <div class="newspaper-container newspaper-late">
                      <div class="newspaper-header">
@@ -1475,9 +1492,7 @@ function renderNewspaperModal(newspaperData) {
                          <h1 class="newspaper-main-headline">${mainHeadline}</h1>
                          <div class="newspaper-body-content">
                              <h2 class="newspaper-sub-headline">${subHeadline}</h2>
-                             <div class="newspaper-image-placeholder">
-                                 <p class="text-sm p-4">${photoCaption}</p>
-                             </div>
+                             ${imageHtml}
                              <div class="newspaper-score-box">
                                  <h3>その他の主な結果</h3>
                                  ${otherResults.map(r => `<p>${r}</p>`).join('')}
