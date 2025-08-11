@@ -2846,7 +2846,7 @@ ${matchups}
                 timestamp: Date.now(),
                 replies: []
             });
-            tournamentState.bbsComments.push({
+            await handleRoundCompletion(roundNumber);
 
             skipLoader.classList.add('hidden');
             renderTournament(tournamentState);
