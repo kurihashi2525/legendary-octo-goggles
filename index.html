@@ -693,32 +693,25 @@
                     if (region && teamsByRegion[region]) teamsByRegion[region].push(teamName);
                 });
 
-                const getRepresentatives = (teamList, numReps, hasPlayoff) => {
+                // 代表校選出ロジック (敗者復活戦を簡略化してシミュレート)
+                const getRepresentatives = (teamList, numReps) => {
                     if (!teamList || teamList.length === 0) return [];
+                    // チームをランク順にソート
                     const sortedTeams = [...teamList].sort((a, b) => {
                         const rankA = calculateRank(a, tournamentState);
                         const rankB = calculateRank(b, tournamentState);
                         const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-                        return rankValues[rankB] - rankValues[rankA];
+                        return (rankValues[rankB] || 0) - (rankValues[rankA] || 0);
                     });
-
-                    if (!hasPlayoff) { // 伊豆地区
-                        return sortedTeams.slice(0, numReps);
-                    } else { // 東・中・西地区
-                        const qualified = sortedTeams.slice(0, 4); // ベスト4
-                        const playoffContenders = sortedTeams.slice(4, 8); // 準々決勝敗者
-                        if (playoffContenders.length > 0) {
-                            qualified.push(playoffContenders[0]); // 敗者復活戦勝者（ランク最上位と仮定）
-                        }
-                        return qualified.slice(0, numReps);
-                    }
+                    // 上位から指定された数の代表校を選ぶ
+                    return sortedTeams.slice(0, numReps);
                 };
 
                 const reps = {
-                    '東部': getRepresentatives(teamsByRegion['東部'], 5, true),
-                    '中部': getRepresentatives(teamsByRegion['中部'], 5, true),
-                    '西部': getRepresentatives(teamsByRegion['西部'], 5, true),
-                    '伊豆': getRepresentatives(teamsByRegion['伊豆'], 1, false)
+                    '東部': getRepresentatives(teamsByRegion['東部'], 5),
+                    '中部': getRepresentatives(teamsByRegion['中部'], 5),
+                    '西部': getRepresentatives(teamsByRegion['西部'], 5),
+                    '伊豆': getRepresentatives(teamsByRegion['伊豆'], 1)
                 };
                 const kenTeams = Object.values(reps).flat();
 
@@ -738,7 +731,7 @@
                 }
 
                 // 3. stateの更新
-                tournamentState.teams = teams;
+                tournamentState.teams = teams.filter(Boolean); // nullを除去
                 tournamentState.matches = {};
                 tournamentState.news = [];
                 tournamentState.seeds = seeds;
@@ -747,7 +740,7 @@
                 tournamentState.namcoNews = null;
                 tournamentState.representatives = reps; // 地区代表情報を保存
 
-                const round1Setup = teams.reduce((acc, team, i) => {
+                const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
                     if (i % 2 === 0) acc.push({ team1: team, team2: null });
                     else acc[acc.length - 1].team2 = team;
                     return acc;
@@ -974,14 +967,14 @@ function renderRegionMap(data) {
        // この関数を丸ごと置き換えてください
         function generateHalf(containerEl, setup, side, allMatches, seeds) {
             containerEl.innerHTML = '';
-            const numMatchesInFirstRound = setup.length; // 4 (16チーム) or 16 (64チーム)
+            const numMatchesInFirstRound = setup.length; // 8 (16チーム) or 32 (64チーム) / 2
             const numTeamsOnSide = numMatchesInFirstRound * 2; // 8 or 32
             const numRounds = Math.log2(numTeamsOnSide); // 3 or 5
 
-            // ラウンド名マップ
-            const roundNameMap = numTeamsOnSide === 32
-                ? { 1: "1回戦", 2: "2回戦", 3: "3回戦", 4: "準々決勝", 5: "準決勝" } // 64チーム大会
-                : { 1: "1回戦", 2: "準々決勝", 3: "準決勝" }; // 16チーム大会
+            // ラウンド名マップ (トーナメント規模によって変更)
+            const roundNameMap = tournamentState.is16team
+                ? { 1: "1回戦", 2: "準々決勝", 3: "準決勝" } // 16チーム大会
+                : { 1: "1回戦", 2: "2回戦", 3: "3回戦", 4: "準々決勝", 5: "準決勝" }; // 64チーム大会
 
             const roundElements = [];
             for (let i = 0; i < numRounds; i++) {
@@ -998,12 +991,14 @@ function renderRegionMap(data) {
                 roundElements.push(roundEl);
             }
 
+            // 1回戦の試合を描画
             setup.forEach((matchSetup, index) => {
                 const matchId = `${side}-R1-M${index + 1}`;
                 let dbMatch = allMatches[matchId] || {};
                 roundElements[0].insertAdjacentHTML('beforeend', createMatchHTML(matchId, matchSetup.team1, matchSetup.team2, dbMatch, seeds));
             });
 
+            // 2回戦以降の試合を描画
             for (let r = 2; r <= numRounds; r++) {
                 const numMatchesInRound = numMatchesInFirstRound / Math.pow(2, r - 1);
                 for (let m = 1; m <= numMatchesInRound; m++) {
@@ -1016,8 +1011,7 @@ function renderRegionMap(data) {
                     roundElements[r - 1].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
                 }
             }
-        }
-        
+        }        
         function calculateRank(teamName, state) {
             if (!teamName) return ''; 
 
@@ -1436,7 +1430,7 @@ ${regionAnalysis}
                 }
             }
             
-            // 通常の試合結果記事（変更なし）
+            // 通常の試合結果記事
             const winnerData = TEAM_DATA[winnerName];
             const loserData = TEAM_DATA[loserName];
             const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
@@ -1446,7 +1440,7 @@ ${regionAnalysis}
             const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
             const [side, roundStr] = matchId.split('-');
-            const roundNum = side === 'F' ? 4 + 1 : parseInt(roundStr.slice(1));
+            const roundNum = side === 'F' ? (tournamentState.is16team ? 4 : 6) : parseInt(roundStr.slice(1));
             let roundAchievement = '';
 
             // ラウンド達成記録の名称を大会規模に合わせて調整
@@ -1457,7 +1451,7 @@ ${regionAnalysis}
                     case 3: roundAchievement = '準決勝突破(決勝進出)'; break;
                     case 4: roundAchievement = '優勝！'; break;
                 }
-            } else {
+            } else { // 64チーム大会
                 switch (roundNum) {
                     case 1: roundAchievement = '初戦突破'; break;
                     case 2: roundAchievement = '2回戦突破'; break;
@@ -1467,10 +1461,6 @@ ${regionAnalysis}
                     case 6: roundAchievement = (currentTournamentName === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
                 }
             }
-            if (matchId.startsWith('F-')) {
-                roundAchievement = (currentTournamentName === '夏季大会') ? '甲子園出場決定！' : '優勝！';
-            }
-
 
             let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**` : '';
 
@@ -1521,7 +1511,7 @@ ${civilWarInstruction}
                     newspaperHtml: null
                 };
             }
-        }           
+        }        
                    
         /**
          * コメントツリーから特定のIDを持つコメントを再帰的に検索する
