@@ -140,7 +140,49 @@
         .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
         .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
         .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
-    </style>
+   .region-map {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .region-column {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #f9fafb;
+        }
+        .region-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+        .region-stats {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+        .region-team-list {
+            list-style: none;
+            padding: 0;
+        }
+        .region-team {
+            padding: 4px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        .team-surviving {
+            background-color: #e0f2fe;
+            font-weight: 500;
+        }
+        .team-eliminated {
+            background-color: #f3f4f6;
+            color: #9ca3af;
+            text-decoration: line-through;
+        }
+ </style>
 </head>
 <body class="p-4 md:p-8">
 
@@ -166,6 +208,10 @@
         </div>
 
         <div id="tournament-display" class="hidden">
+<div id="region-map-section" class="display-card hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">地区別 勝ち残り状況</h2>
+                <div id="region-map-container" class="w-full"></div>
+            </div>
              <div id="namco-news-section" class="hidden display-card border-2 border-orange-400">
                  <h2 class="text-xl font-bold text-orange-600 mb-3 text-center">ナムコグループからのお知らせ</h2>
                  <div id="namco-news-content" class="space-y-2"></div>
@@ -736,6 +782,7 @@
         function renderTournament(data) {
             tournamentYearDisplay.textContent = `${data.tournamentYear}年度大会`;
             renderMainBracket(data);
+            renderRegionMap(data);
             renderNews(data.news || []);
             renderBbsComments(data.bbsComments || []);
             renderDaiyaBbsComments(data.daiyaBbsComments || []);
@@ -789,6 +836,51 @@
             }
         }
 
+function renderRegionMap(data) {
+             const regionMapSection = document.getElementById('region-map-section');
+             if (Object.keys(data.matches).length === 0) {
+                 regionMapSection.classList.add('hidden');
+                 return;
+             }
+             regionMapSection.classList.remove('hidden');
+
+             const container = document.getElementById('region-map-container');
+             const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+             INITIAL_TEAM_POOL.forEach(teamName => {
+                 const region = TEAM_DATA[teamName]?.region;
+                 if (region && teamsByRegion[region]) {
+                     teamsByRegion[region].push(teamName);
+                 }
+             });
+
+             const eliminatedTeams = new Set(
+                 Object.values(data.matches)
+                     .filter(match => match.winner)
+                     .map(match => match.team1 === match.winner ? match.team2 : match.team1)
+             );
+
+             let html = '<div class="region-map">';
+             for (const region in teamsByRegion) {
+                 const teams = teamsByRegion[region];
+                 const survivingCount = teams.filter(team => !eliminatedTeams.has(team)).length;
+
+                 html += `
+                     <div class="region-column">
+                         <h3 class="region-title">${region}地区</h3>
+                         <p class="region-stats">${survivingCount} / ${teams.length} チーム生存</p>
+                         <ul class="region-team-list">
+                             ${teams.map(team => `
+                                 <li class="region-team ${eliminatedTeams.has(team) ? 'team-eliminated' : 'team-surviving'}">
+                                     ${team}
+                                 </li>
+                             `).join('')}
+                         </ul>
+                     </div>
+                 `;
+             }
+             html += '</div>';
+             container.innerHTML = html;
+         }
         function generateHalf(containerEl, setup, side, allMatches, seeds) {
             containerEl.innerHTML = '';
             const numRounds = 5;
