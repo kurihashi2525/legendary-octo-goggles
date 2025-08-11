@@ -867,86 +867,90 @@ function renderTournament(data) {
     checkTournamentProgress();
 }
 
+// あなたのコードにある古い renderMainBracket 関数を、以下のコードで丸ごと置き換えてください
+
 function renderMainBracket(data) {
-    const container = document.getElementById('tournament-phase-container');
-    container.innerHTML = ''; 
+    const container = document.getElementById('tournament-phase-container');
+    container.innerHTML = ''; 
 
-    if (data.currentTournament === 'autumn' && data.autumnData) {
-        const { phase, teamsByRegion } = data.autumnData;
-        const regionNameMap = { '東部': 'East', '中部': 'Central', '西部': 'West', '伊豆': 'Izu' };
+    if (data.currentTournament === 'autumn' && data.autumnData) {
+        // ◆ 秋季大会の描画ロジック
+        const { phase, teamsByRegion } = data.autumnData;
+        const regionNameMap = { '東部': 'East', '中部': 'Central', '西部': 'West', '伊豆': 'Izu' };
 
-        if (phase === 'regionals' || phase === 'playoffs') {
-             container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 地区予選</h2>`;
-             for(const region in teamsByRegion) {
-                if (teamsByRegion[region].length === 0) continue;
-                const bracketWrapper = document.createElement('div');
-                bracketWrapper.className = 'mb-8';
-                bracketWrapper.innerHTML = `
-                    <h3 class="text-xl font-semibold text-gray-700 mb-3 text-center">${region}地区</h3>
-                    <div class="bracket-half left" id="bracket-${regionNameMap[region]}"></div>
-                `;
-                container.appendChild(bracketWrapper);
-                generateHalf(
-                    document.getElementById(`bracket-${regionNameMap[region]}`), 
-                    [],
-                    regionNameMap[region],
-                    data.matches,
-                    data.seeds,
-                    Math.pow(2, Math.ceil(Math.log2(teamsByRegion[region].length)))
-                );
-             }
-        } else if (phase === 'prefectural') {
-            container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 県大会本戦</h2>`;
-            const bracketWrapper = document.createElement('div');
-            bracketWrapper.className = 'display-card';
-            bracketWrapper.innerHTML = `<div id="main-bracket-container" class="flex justify-center"></div>`;
-            container.appendChild(bracketWrapper);
+        if (phase === 'regionals' || phase === 'playoffs') {
+             container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 地区予選</h2>`;
+             for(const region in teamsByRegion) {
+                if (teamsByRegion[region].length === 0) continue;
+                const bracketWrapper = document.createElement('div');
+                bracketWrapper.className = 'mb-8';
+                bracketWrapper.innerHTML = `
+                    <h3 class="text-xl font-semibold text-gray-700 mb-3 text-center">${region}地区</h3>
+                    <div class="bracket-half left" id="bracket-${regionNameMap[region]}"></div>
+                `;
+                container.appendChild(bracketWrapper);
+                generateHalf(
+                    document.getElementById(`bracket-${regionNameMap[region]}`), 
+                    [],
+                    regionNameMap[region],
+                    data.matches,
+                    data.seeds,
+                    Math.pow(2, Math.ceil(Math.log2(teamsByRegion[region].length)))
+                );
+             }
+        } else if (phase === 'prefectural') {
+            container.innerHTML = `<h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">秋季大会 県大会本戦</h2>`;
+            const bracketWrapper = document.createElement('div');
+            bracketWrapper.className = 'display-card';
+            bracketWrapper.innerHTML = `<div id="main-bracket-container" class="flex justify-center"></div>`;
+            container.appendChild(bracketWrapper);
 
-            const mainBracketContainer = document.getElementById('main-bracket-container');
-            const leftBracketEl = document.createElement('div');
-            leftBracketEl.className = 'bracket-half left';
-            const rightBracketEl = document.createElement('div');
-            rightBracketEl.className = 'bracket-half right';
-            
-            generateHalf(leftBracketEl, [], 'PF_L', data.matches, data.seeds, 8);
-            generateHalf(rightBracketEl, [], 'PF_R', data.matches, data.seeds, 8);
+            const mainBracketContainer = document.getElementById('main-bracket-container');
+            const leftBracketEl = document.createElement('div');
+            leftBracketEl.className = 'bracket-half left';
+            const rightBracketEl = document.createElement('div');
+            rightBracketEl.className = 'bracket-half right';
+            
+            generateHalf(leftBracketEl, [], 'PF_L', data.matches, data.seeds, 8);
+            generateHalf(rightBracketEl, [], 'PF_R', data.matches, data.seeds, 8);
 
-            mainBracketContainer.append(leftBracketEl, rightBracketEl);
-        }
+            mainBracketContainer.append(leftBracketEl, rightBracketEl);
+        }
 
-    } else {
-        const mainBracketContainer = document.createElement('div');
-        mainBracketContainer.id = 'main-bracket-container';
-        container.appendChild(mainBracketContainer);
+    } else {
+        // ◆ 通常の夏・春大会の描画ロジック
+        const mainBracketContainer = document.createElement('div');
+        mainBracketContainer.id = 'main-bracket-container';
+        container.appendChild(mainBracketContainer);
 
-        const bracketContentWrapper = document.createElement('div');
-        bracketContentWrapper.className = 'flex flex-row';
-        const leftBracketEl = document.createElement('div');
-        leftBracketEl.className = 'bracket-half left';
-        const rightBracketEl = document.createElement('div');
-        rightBracketEl.className = 'bracket-half right';
-        const finalEl = document.createElement('div');
-        finalEl.className = 'bracket-final';
+        const bracketContentWrapper = document.createElement('div');
+        bracketContentWrapper.className = 'flex flex-row';
+        const leftBracketEl = document.createElement('div');
+        leftBracketEl.className = 'bracket-half left';
+        const rightBracketEl = document.createElement('div');
+        rightBracketEl.className = 'bracket-half right';
+        const finalEl = document.createElement('div');
+        finalEl.className = 'bracket-final';
 
-        const finalMatch = data.matches['F-R1-M1'] || {};
-        const leftChampion = data.matches['L-R5-M1']?.winner || null;
-        const rightChampion = data.matches['R-R5-M1']?.winner || null;
-        const finalTeam1 = finalMatch.team1 || leftChampion;
-        const finalTeam2 = finalMatch.team2 || rightChampion;
-        finalEl.innerHTML = `<div class="final-title">決勝</div><div class="final-matchup" data-match-id="F-R1-M1">${createMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, data.seeds)}</div><div class="winner-box" id="tournament-winner">${finalMatch.winner ? `🏆 ${finalMatch.winner} 🏆` : '🏆'}</div>`;
+        const finalMatch = data.matches['F-R1-M1'] || {};
+        const leftChampion = data.matches['L-R5-M1']?.winner || null;
+        const rightChampion = data.matches['R-R5-M1']?.winner || null;
+        const finalTeam1 = finalMatch.team1 || leftChampion;
+        const finalTeam2 = finalMatch.team2 || rightChampion;
+        finalEl.innerHTML = `<div class="final-title">決勝</div><div class="final-matchup" data-match-id="F-R1-M1">${createMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, data.seeds)}</div><div class="winner-box" id="tournament-winner">${finalMatch.winner ? `🏆 ${finalMatch.winner} 🏆` : '🏆'}</div>`;
 
-        generateHalf(leftBracketEl, [], 'L', data.matches, data.seeds, 32);
-        generateHalf(rightBracketEl, [], 'R', data.matches, data.seeds, 32);
+        generateHalf(leftBracketEl, [], 'L', data.matches, data.seeds, 32);
+        generateHalf(rightBracketEl, [], 'R', data.matches, data.seeds, 32);
 
-        bracketContentWrapper.append(leftBracketEl, finalEl, rightBracketEl);
-        mainBracketContainer.appendChild(bracketContentWrapper);
+        bracketContentWrapper.append(leftBracketEl, finalEl, rightBracketEl);
+        mainBracketContainer.appendChild(bracketContentWrapper);
 
-        if (finalMatch.winner) {
-            nextTournamentBtn.classList.remove('hidden');
-        } else {
-            nextTournamentBtn.classList.add('hidden');
-        }
-    }
+        if (finalMatch.winner) {
+            nextTournamentBtn.classList.remove('hidden');
+        } else {
+            nextTournamentBtn.classList.add('hidden');
+        }
+    }
 }
 function generateHalf(containerEl, setup, side, allMatches, seeds, halfSize) {
     containerEl.innerHTML = '';
