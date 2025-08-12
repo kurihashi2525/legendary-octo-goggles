@@ -207,7 +207,20 @@
         .newspaper-score-box .score { font-size: 2rem; font-weight: 700; }
         .newspaper-late .newspaper-score-box { background-color: #fff8f8; border-color: #a10e25; }
         .newspaper-image-placeholder { width: 100%; height: 200px; background-color: #e0e0e0; margin: 1rem 0; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP', sans-serif; color: #888; border: 1px dashed #aaa; }
-   
+   .rivalry-match .team-slot {
+    border: 2px solid #ef4444 !important; /* 赤色の太い枠線 */
+    background-color: #fff1f2; /* 薄い赤色の背景 */
+}
+.feud-match .team-slot {
+    border: 2px solid #8b5cf6 !important; /* 紫色の太い枠線 */
+    background-color: #f5f3ff; /* 薄い紫色の背景 */
+}
+.rivalry-match .team-slot.winner {
+    background-color: #fecaca; /* 勝者は少し濃い赤色 */
+}
+.feud-match .team-slot.winner {
+    background-color: #ddd6fe; /* 勝者は少し濃い紫色 */
+}
  </style>
 </head>
 <body class="p-4 md:p-8">
@@ -378,6 +391,13 @@
 
 
     <script type="module">
+  // 【追加】ライバル関係の定義
+    const RIVALRIES = [
+        { teams: ["代矢東", "雷門南"], type: "公立の覇権争い" },
+        { teams: ["283学園", "稲城実業"], type: "私立の王者対決" },
+        { teams: ["765総合高校", "代矢東"], type: "新旧王者対決" },
+        { teams: ["青道", "稲城実業"], type: "西東京ライバル対決" }
+    ];
     // --- DOM Elements ---
     const setupEl = document.getElementById('setup');
     const tournamentDisplayEl = document.getElementById('tournament-display');
@@ -952,6 +972,8 @@
             tournamentState.seeds = [];
             tournamentState.bbsComments = [];
             tournamentState.daiyaBbsComments = [];
+            tournamentState.rivalries = RIVALRIES; 
+            tournamentState.feuds = tournamentState.feuds || []; 
             tournamentState.namcoNews = null;
             tournamentState.autumnBrackets = {};
             tournamentState.is16team = false;
@@ -1261,6 +1283,28 @@
     function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
         const t1Empty = !team1;
         const t2Empty = !team2;
+
+        // 【ここからが変更・追加箇所】
+        let specialMatchClass = '';
+        if (!t1Empty && !t2Empty) {
+            // 因縁関係をチェック (優先度 高)
+            const feud = tournamentState.feuds?.find(f => 
+                (f.teams.includes(team1) && f.teams.includes(team2))
+            );
+            if (feud) {
+                specialMatchClass = 'feud-match';
+            } else {
+                // ライバル関係をチェック
+                const rivalry = tournamentState.rivalries?.find(r => 
+                    (r.teams.includes(team1) && r.teams.includes(team2))
+                );
+                if (rivalry) {
+                    specialMatchClass = 'rivalry-match';
+                }
+            }
+        }
+        // 【ここまでが変更・追加箇所】
+
         const rank1 = calculateRank(team1, tournamentState);
         const rank2 = calculateRank(team2, tournamentState);
         const rankColor = (rank) => {
@@ -1304,9 +1348,9 @@
         
         const footer = showDetailsButton ? `<div class="matchup-footer"><button class="details-btn" data-match-id="${matchId}">詳細入力</button></div>` : '';
 
-        return `<div class="matchup" data-match-id="${matchId}">${content}${footer}</div>`;
-    }
-    
+        // 【最後のreturn文も変更】
+        return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">${content}${footer}</div>`;
+    }    
     function renderNews(news) {
         if (!news || news.length === 0) {
             newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
@@ -1634,6 +1678,8 @@ ${regionAnalysis}
         const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
         const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
+
+
         const [side, roundStr] = matchId.split('-');
         const roundNum = side === 'F' ? (tournamentState.is16team ? 4 : 6) : parseInt(roundStr.slice(1));
         let roundAchievement = '';
@@ -1657,6 +1703,20 @@ ${regionAnalysis}
         }
 
         let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**` : '';
+
+// 【ここから追加】
+    // 対戦の背景情報を設定
+    let specialContext = '';
+    // 因縁を優先的にチェック
+    const feud = tournamentState.feuds?.find(f => f.teams.includes(winnerName) && f.teams.includes(loserName));
+    if (feud) {
+        specialContext = `### この試合の特別な背景\nこの対戦は、過去の激闘から生まれた因縁の対決です。背景:「${feud.reason}」。このドラマチックな文脈を記事に色濃く反映させてください。`;
+    } else {
+        // 因縁がなければライバル関係をチェック
+        const rivalry = tournamentState.rivalries?.find(r => r.teams.includes(winnerName) && r.teams.includes(loserName));
+        if (rivalry) {
+            specialContext = `### この試合の特別な背景\nこの対戦は、「${rivalry.type}」として知られる伝統のライバル対決です。このテーマを軸に記事を構成してください。`;
+        }
 
         const prompt = `
 あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
@@ -2236,6 +2296,18 @@ ${teamHistoryPromptPart}
             antiAttitudeInstruction = `- **特に「アンチ」としてコメントする場合:** 相手が「名門校(Aランク)」や「強豪校(Bランク)」であれば、その実力を認めた上での、少しマイルドで玄人好みの批判やコメントをしてください。 (例: 「さすがにここは勝つか。でも次の〇〇戦が本当の勝負だな」「まさかここで負けるとは…今年の夏は何が起こるか分からんぞ」)`;
         }
         
+ // 【ここから追加】
+    // 対戦の背景情報を設定
+    let specialBbsContext = '';
+    const rivalry = tournamentState.rivalries?.find(r => r.teams.includes(winnerName) && r.teams.includes(loserName));
+    const feud = tournamentState.feuds?.find(f => f.teams.includes(winnerName) && f.teams.includes(loserName));
+
+    if (feud) {
+        specialBbsContext = `### 特記事項\nこの試合は「${feud.reason}」という因縁の対決でした。ファンはこの背景を知っており、「ついに来たか！」「またこのカードかよw」「今日だけは絶対に負けられん！」といった、通常よりも遥かに熱のこもった反応をします。この熱量をコメントに反映させてください。`;
+    } else if (rivalry) {
+        specialBbsContext = `### 特記事項\nこの試合は「${rivalry.type}」という有名なライバル対決でした。ファンはこの対決を非常に意識しており、プライドをかけたコメントが多くなります。その雰囲気をコメントに反映させてください。`;
+    }
+
         let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です！この身内対決に対する特別な反応を生成してください。**` : '';
 
         const prompt = `
@@ -2605,6 +2677,41 @@ ${matchups}
 
         const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
         dbMatch.winner = winnerName;
+
+ // 【ここから追加】
+    // 因縁発生ロジック
+    const score1 = parseInt(dbMatch.score1);
+    const score2 = parseInt(dbMatch.score2);
+
+    // スコアが入力されていない場合は何もしない
+    if (!isNaN(score1) && !isNaN(score2)) {
+        const scoreDiff = Math.abs(score1 - score2);
+
+        // 条件1: 1点差の劇的な試合
+        // 条件2: ユーザーが「サヨナラ」や「逆転」といった言葉をサマリーに入力
+        const isDramatic = scoreDiff === 1 || (dbMatch.summary && (dbMatch.summary.includes('サヨナラ') || dbMatch.summary.includes('逆転')));
+
+        if (isDramatic) {
+            const teams = [winnerName, loserName].sort(); // チーム名をソートして常に同じ順序にする
+            let existingFeud = tournamentState.feuds.find(f => f.teams[0] === teams[0] && f.teams[1] === teams[1]);
+
+            if (existingFeud) {
+                // 既存の因縁があれば、深さを増す
+                existingFeud.intensity = (existingFeud.intensity || 1) + 1;
+                const oldReason = existingFeud.reason;
+                existingFeud.reason = `${tournamentState.tournamentYear}年度 ${tournamentState.currentTournament}でも激突！(前回: ${oldReason})`; // 理由を更新
+            } else {
+                // 新しい因縁を追加
+                tournamentState.feuds.push({
+                    teams: teams,
+                    reason: `${tournamentState.tournamentYear}年度 ${tournamentState.currentTournament}での激闘 (${winnerName}が${dbMatch.score1}-${dbMatch.score2}で勝利)`,
+                    intensity: 1
+                });
+            }
+        }
+    }
+    // 【ここまで追加】
+
 
         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
