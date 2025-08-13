@@ -1383,6 +1383,115 @@ function renderTournament(data) {
             return rowData;
         }).filter(d => d['選手名'] && d['選手名'].trim() !== '');
     }
+/**
+     * 【修正版】スキップ機能関連
+     */
+    function generateAutoScore(rankWinner, rankLoser) {
+        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+        const diff = rankValues[rankWinner] - rankValues[rankLoser];
+        let winnerScore, loserScore;
+
+        if (diff >= 3) { // 大差
+            winnerScore = 7 + Math.floor(Math.random() * 4);
+            loserScore = Math.floor(Math.random() * 3);
+        } else if (diff >= 2) { // 中差
+            winnerScore = 5 + Math.floor(Math.random() * 3);
+            loserScore = Math.max(0, winnerScore - (3 + Math.floor(Math.random() * 2)));
+        } else if (diff >= 1) { // 小差
+            winnerScore = 3 + Math.floor(Math.random() * 4);
+            loserScore = Math.max(0, winnerScore - (1 + Math.floor(Math.random() * 2)));
+        } else { // 同ランク
+            winnerScore = 2 + Math.floor(Math.random() * 5);
+            loserScore = winnerScore - 1;
+        }
+        return [winnerScore, loserScore];
+    }
+
+    async function skipRound(roundNumber) {
+        const btnId = `skip-r${roundNumber}-btn`;
+        const btn = document.getElementById(btnId);
+        if (btn) btn.disabled = true;
+
+        const matchIds = [];
+        const numMatchesInRoundSide = (tournamentState.teams.length / 2) / Math.pow(2, roundNumber - 1);
+
+        ['L', 'R'].forEach(side => {
+            for (let i = 1; i <= numMatchesInRoundSide; i++) {
+                matchIds.push(`${side}-R${roundNumber}-M${i}`);
+            }
+        });
+
+        // ステップ1：ラウンドの全試合の勝敗を決定
+        for (const matchId of matchIds) {
+            const match = tournamentState.matches[matchId];
+            if (!match || match.winner || !match.team1 || !match.team2) continue;
+
+            const { team1, team2 } = match;
+            const rank1 = calculateRank(team1, tournamentState);
+            const rank2 = calculateRank(team2, tournamentState);
+            const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+            let winnerName, loserName;
+            
+            const upsetChance = 0.15 - (Math.abs(rankValues[rank1] - rankValues[rank2]) * 0.03);
+
+            if (Math.random() < upsetChance) { // 番狂わせ
+                winnerName = rankValues[rank1] < rankValues[rank2] ? team1 : team2;
+            } else { // 順当
+                winnerName = rankValues[rank1] >= rankValues[rank2] ? team1 : team2;
+            }
+            loserName = winnerName === team1 ? team2 : team1;
+            
+            const winnerRank = calculateRank(winnerName, tournamentState);
+            const loserRank = calculateRank(loserName, tournamentState);
+
+            const [winnerScore, loserScore] = generateAutoScore(winnerRank, loserRank);
+            match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
+            match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
+            match.winner = winnerName;
+            
+            if (tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
+            if (tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
+        }
+        
+        // ステップ2：勝者を次のラウンドに進める（ここが抜けていました）
+        const nextRoundNum = roundNumber + 1;
+        const numTeams = tournamentState.teams.length;
+        const finalRound = Math.log2(numTeams);
+
+        if (nextRoundNum <= finalRound) {
+            const numMatchesInNextRoundSide = numTeams / 2 / Math.pow(2, nextRoundNum - 1);
+            for (const side of ['L', 'R']) {
+                if (nextRoundNum < finalRound) {
+                    for (let m = 1; m <= numMatchesInNextRoundSide; m++) {
+                        const prevMatch1Id = `${side}-R${roundNumber}-M${(m * 2) - 1}`;
+                        const prevMatch2Id = `${side}-R${roundNumber}-M${m * 2}`;
+                        const winner1 = tournamentState.matches[prevMatch1Id]?.winner;
+                        const winner2 = tournamentState.matches[prevMatch2Id]?.winner;
+                        const nextMatchId = `${side}-R${nextRoundNum}-M${m}`;
+                        
+                        if (!tournamentState.matches[nextMatchId]) {
+                            tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                        }
+                        tournamentState.matches[nextMatchId].team1 = winner1;
+                        tournamentState.matches[nextMatchId].team2 = winner2;
+                    }
+                } else { // 決勝戦への進出処理
+                    const finalMatchId = 'F-R1-M1';
+                    if (!tournamentState.matches[finalMatchId]) {
+                         tournamentState.matches[finalMatchId] = { id: finalMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                    }
+                    const semiFinalWinner = tournamentState.matches[`${side}-R${roundNumber}-M1`]?.winner;
+                    if (side === 'L') tournamentState.matches[finalMatchId].team1 = semiFinalWinner;
+                    if (side === 'R') tournamentState.matches[finalMatchId].team2 = semiFinalWinner;
+                }
+            }
+        }
+        
+        // ステップ3：UIの更新と保存
+        renderTournament(tournamentState);
+        saveState();
+        if (btn) btn.classList.add('hidden');
+    }
 // --- NEW Autumn Tournament System ---
 
     /**
@@ -2229,7 +2338,41 @@ ${matchups}
 /**
      * AIにスポーツ新聞の一面を生成させる
      */
-    async function generateSportsNewspaper(roundNumber) {
+    /**
+     * AIが生成した新聞データからHTMLを生成する
+     */
+    function createNewspaperHtml(articleData, matchData) {
+        const { winnerName, loserName, dbMatch, matchId } = matchData;
+        const idParts = matchId.split('-');
+        const roundNum = idParts[0] === 'F' ? Math.log2(tournamentState.teams.length) : parseInt(idParts[1].slice(1));
+
+        const isLateRound = roundNum >= 4;
+        const containerClass = isLateRound ? 'newspaper-late' : 'newspaper-early';
+        const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
+        const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
+
+        return `
+            <div class="newspaper-container ${containerClass}">
+                <div class="newspaper-header">
+                    <h2 class="newspaper-title">熱闘高校野球</h2>
+                    <p class="newspaper-date">${new Date(articleData.timestamp).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+                <div class="newspaper-content">
+                    <h1 class="newspaper-main-headline">${winnerName.slice(0, 4)}</h1>
+                    <div class="newspaper-body-content">
+                        <h2 class="newspaper-sub-headline">${articleData.title}</h2>
+                        ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
+                        <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
+                        <div class="newspaper-score-box">
+                            <h3>最終スコア</h3>
+                            <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+async function generateSportsNewspaper(roundNumber) {
         const numTeams = tournamentState.is16team ? 16 : 64;
         const finalRound = Math.log2(numTeams);
 
