@@ -334,6 +334,7 @@
     const newspaperModal = document.getElementById('newspaper-modal');
     const newspaperModalBody = document.getElementById('newspaper-modal-body');
     const newspaperCloseBtn = document.getElementById('newspaper-close');
+
     
     // --- State Management ---
     let tournamentState = {};
@@ -852,46 +853,46 @@
      * 現在のトーナメント状態に基づいてUI全体を再描画する
      * @param {object} data - 現在のtournamentState
      */
-    function renderTournament(data) {
-        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
-        let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
+// 【修正対象1】
+function renderTournament(data) {
+    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+    let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
 
-        // 表示コンテナの表示/非表示を一度リセット
-        mainBracketWrapper.classList.add('hidden');
-        autumnRegionalContainer.classList.add('hidden');
-        autumnRankingContainer.classList.add('hidden');
-        
-        if (data.currentTournament === 'autumn') {
-            switch(data.autumnPhase) {
-                case 'regional_blocks': 
-                    tournamentNameString = '秋季大会 地区ブロック予選';
-                    autumnRegionalContainer.classList.remove('hidden');
-                    renderAutumnRegionalBlocks();
-                    break;
-                case 'regional_ranking': 
-                    tournamentNameString = '秋季大会 地区内順位決定戦';
-                    autumnRankingContainer.classList.remove('hidden');
-                    renderAutumnRankingTournaments();
-                    break;
-                case 'main': 
-                    tournamentNameString = '秋季大会 県大会本戦';
-                    mainBracketWrapper.classList.remove('hidden');
-                    renderMainBracket(data);
-                    break;
-            }
-        } else {
-            mainBracketWrapper.classList.remove('hidden');
-            renderMainBracket(data);
+    mainBracketWrapper.classList.add('hidden');
+    autumnRegionalContainer.classList.add('hidden');
+    autumnRankingContainer.classList.add('hidden');
+    
+    if (data.currentTournament === 'autumn') {
+        switch(data.autumnPhase) {
+            case 'regional_blocks': 
+                tournamentNameString = '秋季大会 地区ブロック予選';
+                autumnRegionalContainer.classList.remove('hidden');
+                renderAutumnRegionalBlocks(); // 修正済み
+                break;
+            case 'regional_ranking': 
+                tournamentNameString = '秋季大会 地区内順位決定戦';
+                autumnRankingContainer.classList.remove('hidden');
+                renderAutumnRankingTournaments(); // 修正済み
+                break;
+            case 'main': 
+                tournamentNameString = '秋季大会 県大会本戦';
+                mainBracketWrapper.classList.remove('hidden');
+                renderMainBracket(data);
+                break;
         }
-        tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${tournamentNameString}`;
-
-        renderRegionMap(data);
-        renderNews(data.news || []);
-        renderBbsComments(data.bbsComments || []);
-        renderDaiyaBbsComments(data.daiyaBbsComments || []);
-        renderNamcoNews(data.namcoNews);
-        checkTournamentProgress();
+    } else {
+        mainBracketWrapper.classList.remove('hidden');
+        renderMainBracket(data);
     }
+    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${tournamentNameString}`;
+
+    renderRegionMap(data);
+    renderNews(data.news || []);
+    renderBbsComments(data.bbsComments || []);
+    renderDaiyaBbsComments(data.daiyaBbsComments || []);
+    renderNamcoNews(data.namcoNews);
+    checkTournamentProgress();
+}
 
     /**
      * メインのトーナメント表（64チームまたは16チーム）を描画する
@@ -1359,33 +1360,34 @@
      * 5チーム構成のブロックトーナメントHTMLを生成する
      * @param {object} blockData - 対象ブロックのデータ
      */
-    function create5TeamBlockHTML(blockData) {
-        const { id, matches } = blockData;
-        const playIn = matches[`${id}-R0-M1`];
-        const semi1 = matches[`${id}-R1-M1`];
-        const semi2 = matches[`${id}-R1-M2`];
-        const final = matches[`${id}-R2-M1`];
+    // 【修正対象2】
+function create5TeamBlockHTML(blockData) {
+    const { id, matches } = blockData;
+    const playIn = matches[`${id}-R0-M1`];
+    const semi1 = matches[`${id}-R1-M1`];
+    const semi2 = matches[`${id}-R1-M2`];
+    const final = matches[`${id}-R2-M1`];
 
-        // 試合の進行状況を更新
-        semi1.team1 = playIn.winner;
-        final.team1 = semi1.winner;
-        final.team2 = semi2.winner;
+    // 試合の進行状況を更新
+    semi1.team1 = playIn.winner;
+    final.team1 = semi1.winner;
+    final.team2 = semi2.winner;
 
-        return `
-            <div class="flex items-center justify-center space-x-2 text-xs">
-                <div class="flex flex-col justify-around h-full space-y-4">
-                    <div class="w-40">${createMatchHTML(playIn.id, playIn.team1, playIn.team2, playIn, [])}</div>
-                    <div class="w-40">${createMatchHTML(semi2.id, semi2.team1, semi2.team2, semi2, [])}</div>
-                </div>
-                <div class="flex flex-col justify-center h-full w-40">
-                    ${createMatchHTML(semi1.id, semi1.team1, semi1.team2, semi1, [])}
-                </div>
-                <div class="flex flex-col justify-center h-full w-40">
-                    ${createMatchHTML(final.id, final.team1, final.team2, final, [])}
-                </div>
+    return `
+        <div class="flex items-center justify-center space-x-2 text-xs">
+            <div class="flex flex-col justify-around h-full space-y-4">
+                <div class="w-40">${createMatchHTML(playIn.id, playIn.team1, playIn.team2, playIn, [])}</div>
+                <div class="w-40">${createMatchHTML(semi2.id, semi2.team1, semi2.team2, semi2, [])}</div>
             </div>
-        `;
-    }
+            <div class="flex flex-col justify-center h-full w-40">
+                ${createMatchHTML(semi1.id, semi1.team1, semi1.team2, semi1, [])}
+            </div>
+            <div class="flex flex-col justify-center h-full w-40">
+                ${createMatchHTML(final.id, final.team1, final.team2, final, [])}
+            </div>
+        </div>
+    `;
+}
 
     /**
      * [秋季大会 ステージ2] 地区内順位決定戦を開始する
@@ -1431,160 +1433,159 @@
     /**
      * [秋季大会 ステージ2 UI] 地区内順位決定戦を描画する
      */
-    function renderAutumnRankingTournaments() {
-        let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区内順位決定戦</h2>`;
-        html += '<div class="space-y-8">';
-        
-        for (const region of ['東部', '中部', '西部']) {
-             const regionData = tournamentState.autumnData.regions[region];
-             if (!regionData.champBracket) continue;
+   // 【修正対象3】
+function renderAutumnRankingTournaments() {
+    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区内順位決定戦</h2>`;
+    html += '<div class="space-y-8">';
+    
+    for (const region of ['東部', '中部', '西部']) {
+         const regionData = tournamentState.autumnData.regions[region];
+         if (!regionData.champBracket) continue;
 
-             const champ = regionData.champBracket;
-             const rep = regionData.repechageBracket;
-             
-             // 試合進行を更新
-             champ.matches[`${champ.id}-R2-M1`].team1 = champ.matches[`${champ.id}-R1-M1`].winner;
-             champ.matches[`${champ.id}-R2-M1`].team2 = champ.matches[`${champ.id}-R1-M2`].winner;
-             champ.matches[`${champ.id}-R2-M2`].team1 = champ.matches[`${champ.id}-R1-M1`].winner === champ.matches[`${champ.id}-R1-M1`].team1 ? champ.matches[`${champ.id}-R1-M1`].team2 : champ.matches[`${champ.id}-R1-M1`].team1;
-             champ.matches[`${champ.id}-R2-M2`].team2 = champ.matches[`${champ.id}-R1-M2`].winner === champ.matches[`${champ.id}-R1-M2`].team1 ? champ.matches[`${champ.id}-R1-M2`].team2 : champ.matches[`${champ.id}-R1-M2`].team1;
-             rep.matches[`${rep.id}-R2-M1`].team1 = rep.matches[`${rep.id}-R1-M1`].winner;
-             rep.matches[`${rep.id}-R2-M1`].team2 = rep.matches[`${rep.id}-R1-M2`].winner;
-             
-             html += `
-                <div class="p-4 border-2 rounded-lg shadow-md">
-                    <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区</h3>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <h4 class="font-bold text-center text-lg mb-2">上位校トーナメント (1～4位)</h4>
-                            <div class="flex items-center justify-center space-x-4">
-                                <div class="space-y-4">
-                                    ${createMatchHTML(champ.matches[`${champ.id}-R1-M1`].id, champ.teams[0], champ.teams[1], champ.matches[`${champ.id}-R1-M1`], [])}
-                                    ${createMatchHTML(champ.matches[`${champ.id}-R1-M2`].id, champ.teams[2], champ.teams[3], champ.matches[`${champ.id}-R1-M2`], [])}
-                                </div>
-                                <div class="space-y-4">
-                                    <p class="text-center font-semibold">1位決定戦</p>
-                                    ${createMatchHTML(champ.matches[`${champ.id}-R2-M1`].id, champ.matches[`${champ.id}-R2-M1`].team1, champ.matches[`${champ.id}-R2-M1`].team2, champ.matches[`${champ.id}-R2-M1`], [])}
-                                    <p class="text-center font-semibold">3位決定戦</p>
-                                    ${createMatchHTML(champ.matches[`${champ.id}-R2-M2`].id, champ.matches[`${champ.id}-R2-M2`].team1, champ.matches[`${champ.id}-R2-M2`].team2, champ.matches[`${champ.id}-R2-M2`], [])}
-                                </div>
+         const champ = regionData.champBracket;
+         const rep = regionData.repechageBracket;
+         
+         const champSemi1 = champ.matches[`${champ.id}-R1-M1`];
+         const champSemi2 = champ.matches[`${champ.id}-R1-M2`];
+         champ.matches[`${champ.id}-R2-M1`].team1 = champSemi1.winner;
+         champ.matches[`${champ.id}-R2-M1`].team2 = champSemi2.winner;
+         champ.matches[`${champ.id}-R2-M2`].team1 = champSemi1.winner === champSemi1.team1 ? champSemi1.team2 : champSemi1.team1;
+         champ.matches[`${champ.id}-R2-M2`].team2 = champSemi2.winner === champSemi2.team1 ? champSemi2.team2 : champSemi2.team1;
+
+         const repSemi1 = rep.matches[`${rep.id}-R1-M1`];
+         const repSemi2 = rep.matches[`${rep.id}-R1-M2`];
+         rep.matches[`${rep.id}-R2-M1`].team1 = repSemi1.winner;
+         rep.matches[`${rep.id}-R2-M1`].team2 = repSemi2.winner;
+         
+         html += `
+            <div class="p-4 border-2 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-center text-lg mb-2">上位校トーナメント (1～4位)</h4>
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="space-y-4">
+                                ${createMatchHTML(champSemi1.id, champSemi1.team1, champSemi1.team2, champSemi1, [])}
+                                ${createMatchHTML(champSemi2.id, champSemi2.team1, champSemi2.team2, champSemi2, [])}
+                            </div>
+                            <div class="space-y-4">
+                                <p class="text-center font-semibold">1位決定戦</p>
+                                ${createMatchHTML(champ.matches[`${champ.id}-R2-M1`].id, champ.matches[`${champ.id}-R2-M1`].team1, champ.matches[`${champ.id}-R2-M1`].team2, champ.matches[`${champ.id}-R2-M1`], [])}
+                                <p class="text-center font-semibold">3位決定戦</p>
+                                ${createMatchHTML(champ.matches[`${champ.id}-R2-M2`].id, champ.matches[`${champ.id}-R2-M2`].team1, champ.matches[`${champ.id}-R2-M2`].team2, champ.matches[`${champ.id}-R2-M2`], [])}
                             </div>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-center text-lg mb-2">第5代表決定トーナメント</h4>
-                            <div class="flex items-center justify-center space-x-4">
-                                <div class="space-y-4">
-                                    ${createMatchHTML(rep.matches[`${rep.id}-R1-M1`].id, rep.teams[0], rep.teams[1], rep.matches[`${rep.id}-R1-M1`], [])}
-                                    ${createMatchHTML(rep.matches[`${rep.id}-R1-M2`].id, rep.teams[2], rep.teams[3], rep.matches[`${rep.id}-R1-M2`], [])}
-                                </div>
-                                <div>
-                                    ${createMatchHTML(rep.matches[`${rep.id}-R2-M1`].id, rep.matches[`${rep.id}-R2-M1`].team1, rep.matches[`${rep.id}-R2-M1`].team2, rep.matches[`${rep.id}-R2-M1`], [])}
-                                </div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-center text-lg mb-2">第5代表決定トーナメント</h4>
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="space-y-4">
+                                ${createMatchHTML(repSemi1.id, repSemi1.team1, repSemi1.team2, repSemi1, [])}
+                                ${createMatchHTML(repSemi2.id, repSemi2.team1, repSemi2.team2, repSemi2, [])}
+                            </div>
+                            <div>
+                                ${createMatchHTML(rep.matches[`${rep.id}-R2-M1`].id, rep.matches[`${rep.id}-R2-M1`].team1, rep.matches[`${rep.id}-R2-M1`].team2, rep.matches[`${rep.id}-R2-M1`], [])}
                             </div>
                         </div>
                     </div>
                 </div>
-             `;
-        }
-        html += '</div>';
-        autumnRankingContainer.innerHTML = html;
-        checkAutumnRankingTournamentsComplete();
+            </div>
+         `;
     }
-
+    html += '</div>';
+    autumnRankingContainer.innerHTML = html;
+    checkAutumnRankingTournamentsComplete();
+}
     /**
      * [秋季大会 ステージ3] 県大会本戦を開始する
      */
-    async function setupAutumnMainTournament() {
-        tournamentState.autumnPhase = 'main';
-        tournamentState.is16team = true;
+   // 【修正対象4】
+async function setupAutumnMainTournament() {
+    tournamentState.autumnPhase = 'main';
+    tournamentState.is16team = true;
 
-        const allReps = [];
-        for (const region of ['東部', '中部', '西部', '伊豆']) {
-            tournamentState.autumnData.regions[region].finalReps.forEach(rep => {
-                allReps.push({ ...rep, region });
-            });
-        }
-        
-        const qualifiedTeamNames = allReps.map(r => r.team);
-        INITIAL_TEAM_POOL.forEach(teamName => {
-            if (!qualifiedTeamNames.includes(teamName) && tournamentState.teamRecords[teamName]) {
-                tournamentState.teamRecords[teamName].lastFinish = 32;
-            }
+    const allReps = [];
+    for (const region of ['東部', '中部', '西部', '伊豆']) {
+        tournamentState.autumnData.regions[region].finalReps.forEach(rep => {
+            allReps.push({ ...rep, region });
         });
-
-        // ポット分け
-        const pots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-        allReps.forEach(rep => {
-            if (pots[rep.rank]) pots[rep.rank].push(rep);
-        });
-        
-        for (const potNum in pots) {
-            pots[potNum] = shuffleArray(pots[potNum]);
+    }
+    
+    const qualifiedTeamNames = allReps.map(r => r.team);
+    INITIAL_TEAM_POOL.forEach(teamName => {
+        if (!qualifiedTeamNames.includes(teamName) && tournamentState.teamRecords[teamName]) {
+            tournamentState.teamRecords[teamName].lastFinish = 32;
         }
+    });
 
-        // 組み合わせ抽選アルゴリズム
-        const matchups = [];
-        let remainingTeams = [...allReps];
-        const sortedPots = Object.keys(pots).sort((a,b) => parseInt(a) - parseInt(b));
-
-        // ポット1のチームから順に組み合わせを決定
-        for (const potNum of sortedPots) {
-            const teamsInPot = remainingTeams.filter(t => t.rank === parseInt(potNum));
-            for (const teamA of teamsInPot) {
-                if (!remainingTeams.some(t => t.team === teamA.team)) continue; // 既に組まれていたらスキップ
-
-                let opponent = null;
-                // 最下位ポットから対戦相手を探す
-                for (let i = sortedPots.length - 1; i >= 0; i--) {
-                    const opponentPotNum = sortedPots[i];
-                    const candidates = remainingTeams.filter(t => t.rank === parseInt(opponentPotNum) && t.region !== teamA.region && t.team !== teamA.team);
-                    if (candidates.length > 0) {
-                        opponent = candidates[0];
-                        break;
-                    }
-                }
-                // もし同地区しか残っていなかった場合のフォールバック
-                if (!opponent) {
-                    opponent = remainingTeams.find(t => t.team !== teamA.team);
-                }
-                
-                if (opponent) {
-                    matchups.push({ team1: teamA.team, team2: opponent.team });
-                    remainingTeams = remainingTeams.filter(t => t.team !== teamA.team && t.team !== opponent.team);
-                }
-            }
-        }
-
-        tournamentState.teams = matchups.flatMap(m => [m.team1, m.team2]);
-        tournamentState.matches = {};
-        tournamentState.seeds = pots[1].map(p => p.team); // 地区1位をシード扱い
-        
-        round1Setup.forEach((match, index) => {
-            const side = index < 4 ? 'L' : 'R';
-            const matchNum = index < 4 ? index + 1 : index - 3;
-            const matchId = `${side}-R1-M${matchNum}`;
-            tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
-        });
-
-        renderTournament(tournamentState);
-        saveState();
-
-        const currentTournamentName = "秋季県大会本戦";
-        newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
-        bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-
-        const [previewArticle, bracketComments] = await Promise.all([
-            generateNewsArticle(null, null, null, 'preview', null, null),
-            generateBracketReactionComments(tournamentState)
-        ]);
-
-        if (previewArticle) tournamentState.news.unshift(previewArticle);
-        if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
-        
-        renderNews(tournamentState.news);
-        renderBbsComments(tournamentState.bbsComments);
-        saveState();
+    const pots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    allReps.forEach(rep => {
+        if (pots[rep.rank]) pots[rep.rank].push(rep);
+    });
+    
+    for (const potNum in pots) {
+        pots[potNum] = shuffleArray(pots[potNum]);
     }
 
+    const matchups = [];
+    let remainingTeams = [...allReps];
+    const sortedPots = Object.keys(pots).sort((a,b) => parseInt(a) - parseInt(b));
+
+    for (const potNum of sortedPots) {
+        const teamsInPot = remainingTeams.filter(t => t.rank === parseInt(potNum));
+        for (const teamA of teamsInPot) {
+            if (!remainingTeams.some(t => t.team === teamA.team)) continue;
+
+            let opponent = null;
+            for (let i = sortedPots.length - 1; i >= 0; i--) {
+                const opponentPotNum = sortedPots[i];
+                const candidates = remainingTeams.filter(t => t.rank === parseInt(opponentPotNum) && t.region !== teamA.region && t.team !== teamA.team);
+                if (candidates.length > 0) {
+                    opponent = candidates[0];
+                    break;
+                }
+            }
+            if (!opponent) {
+                opponent = remainingTeams.find(t => t.team !== teamA.team);
+            }
+            
+            if (opponent) {
+                matchups.push({ team1: teamA.team, team2: opponent.team });
+                remainingTeams = remainingTeams.filter(t => t.team !== teamA.team && t.team !== opponent.team);
+            }
+        }
+    }
+
+    tournamentState.teams = matchups.flatMap(m => [m.team1, m.team2]);
+    tournamentState.matches = {};
+    tournamentState.seeds = pots[1].map(p => p.team);
+    
+    matchups.forEach((match, index) => { // ★修正点
+        const side = index < 4 ? 'L' : 'R';
+        const matchNum = index < 4 ? index + 1 : index - 3;
+        const matchId = `${side}-R1-M${matchNum}`;
+        tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+    });
+
+    renderTournament(tournamentState);
+    saveState();
+
+    const currentTournamentName = "秋季県大会本戦";
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+
+    const [previewArticle, bracketComments] = await Promise.all([
+        generateNewsArticle(null, null, null, 'preview', null, null),
+        generateBracketReactionComments(tournamentState)
+    ]);
+
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
+    
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments);
+    saveState();
+}
     /**
      * 秋季地区ブロック予選がすべて終了したかチェックする
      */
@@ -2504,130 +2505,128 @@ ${teamHistoryPromptPart}
      * 試合の勝者を処理する中心的関数。
      * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
      */
-    async function processMatchWin(matchId, winnerName) {
-        let dbMatch;
-        let loserName;
+    // 【修正対象5】
+async function processMatchWin(matchId, winnerName) {
+    let dbMatch;
+    let loserName;
 
-        // 試合データを特定
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-            const [region, bracketId] = matchId.split('-');
-            if(tournamentState.autumnData.regions[region]) {
-                const regionData = tournamentState.autumnData.regions[region];
-                if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
-                else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
-                else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
-            }
-        } 
-        if (!dbMatch) { // Main Tournament
-            dbMatch = tournamentState.matches[matchId];
+    // 試合データを特定
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+        const [region, bracketId] = matchId.split('-');
+        if(tournamentState.autumnData.regions[region]) {
+            const regionData = tournamentState.autumnData.regions[region];
+            if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
+            else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
+            else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
         }
-
-        if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
-        
-        loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
-        dbMatch.winner = winnerName;
-
-        // --- 「称号」付与ロジック ---
-        const winnerRank = calculateRank(winnerName, tournamentState);
-        const loserRank = calculateRank(loserName, tournamentState);
-        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-        if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
-            const winnerRecord = tournamentState.teamRecords[winnerName];
-            if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.GIANT_KILLER.id)) {
-                winnerRecord.teamTraits.push(TITLES.GIANT_KILLER.id);
-            }
-        }
-        
-        // --- UI更新とAIコンテンツ生成の準備 ---
-        newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
-        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
-
-        // --- 秋季大会の進行処理 ---
-        if (tournamentState.currentTournament === 'autumn') {
-            const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-            const roundNum = parseInt(roundStr.slice(1));
-            const matchNum = parseInt(matchStr.slice(1));
-
-            if (bracketId.startsWith('B')) { // Stage 1
-                const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
-                if (roundNum === 2) { // Final
-                    tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
-                    tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
-                }
-            }
-            else if (bracketId === 'CHAMP' || bracketId === 'REP') { // Stage 2
-                const isChamp = bracketId === 'CHAMP';
-                const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-                if(roundNum === 1){
-                    const finalMatch = bracket.matches[isChamp ? `${bracket.id}-R2-M1` : `${bracket.id}-R2-M1`];
-                    if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-                    if(isChamp){
-                        const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
-                        if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
-                    }
-                } else if (roundNum === 2) {
-                    if (isChamp) {
-                        if (dbMatch.type === 'final') {
-                            tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
-                            tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
-                        } else {
-                            tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
-                            tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
-                        }
-                    } else {
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
-                        const winnerRecord = tournamentState.teamRecords[winnerName];
-                        if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.REPECHAGE_KING.id)) {
-                             winnerRecord.teamTraits.push(TITLES.REPECHAGE_KING.id);
-                        }
-                    }
-                }
-            }
-            renderTournament(tournamentState);
-        }
-        // --- 主要大会の進行処理 ---
-        else {
-             if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
-             if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
-             
-             const [side, roundStrMain] = matchId.split('-');
-             if (side !== 'F') {
-                 const roundNum = parseInt(roundStrMain.slice(1));
-                 const numTeamsInTournament = tournamentState.teams.length;
-                 const finalRound = Math.log2(numTeamsInTournament);
-
-                 if (roundNum < finalRound) {
-                     const matchNum = parseInt(matchId.split('-M')[1]);
-                     const nextRoundNum = roundNum + 1;
-                     let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
-
-                     if (!tournamentState.matches[nextMatchId]) {
-                         tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
-                     }
-                     
-                     let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
-                     tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
-                 }
-             } else {
-                 updateTournamentFinishRecords();
-             }
-             renderTournament(tournamentState);
-        }
-
-        // --- AIコンテンツ生成 ---
-        const [article, newComments] = await Promise.all([
-            generateNewsArticle(winnerName, loserName, dbMatch, matchId),
-            generateBbsComments(winnerName, loserName, dbMatch, matchId)
-        ]);
-
-        if (article) tournamentState.news.push(article);
-        if (newComments?.length) tournamentState.bbsComments.push(...newComments);
-
-        renderNews(tournamentState.news);
-        renderBbsComments(tournamentState.bbsComments);
-        saveState();
+    } 
+    if (!dbMatch) { // Main Tournament
+        dbMatch = tournamentState.matches[matchId];
     }
 
+    if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
+    
+    loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
+    dbMatch.winner = winnerName;
+
+    const winnerRank = calculateRank(winnerName, tournamentState);
+    const loserRank = calculateRank(loserName, tournamentState);
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
+        const winnerRecord = tournamentState.teamRecords[winnerName];
+        if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.GIANT_KILLER.id)) {
+            winnerRecord.teamTraits.push(TITLES.GIANT_KILLER.id);
+        }
+    }
+    
+    newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
+        const roundNum = parseInt(roundStr.slice(1));
+        const matchNum = parseInt(matchStr.slice(1));
+
+        if (bracketId.startsWith('B')) { // Stage 1
+            const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
+            if (roundNum === 0) {
+                block.matches[`${block.id}-R1-M1`].team1 = winnerName;
+            } else if (roundNum === 2) {
+                tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
+                tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
+            }
+        }
+        else if (bracketId === 'CHAMP' || bracketId === 'REP') { // Stage 2
+            const isChamp = bracketId === 'CHAMP';
+            const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
+            if(roundNum === 1){
+                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
+                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+                if(isChamp){
+                    const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
+                    if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
+                }
+            } else if (roundNum === 2) {
+                if (isChamp) {
+                    if (dbMatch.type === 'final') {
+                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
+                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
+                    } else {
+                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
+                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
+                    }
+                } else {
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
+                    const winnerRecord = tournamentState.teamRecords[winnerName];
+                    if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.REPECHAGE_KING.id)) {
+                         winnerRecord.teamTraits.push(TITLES.REPECHAGE_KING.id);
+                    }
+                }
+            }
+        }
+        renderTournament(tournamentState);
+    }
+    else {
+         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
+         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
+         
+         const [side, roundStrMain] = matchId.split('-');
+         if (side !== 'F') {
+             const roundNum = parseInt(roundStrMain.slice(1));
+             const numTeamsInTournament = tournamentState.teams.length;
+             const finalRound = Math.log2(numTeamsInTournament);
+
+             if (roundNum < finalRound) {
+                 const matchNum = parseInt(matchId.split('-M')[1]);
+                 const nextRoundNum = roundNum + 1;
+                 let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+
+                 if (!tournamentState.matches[nextMatchId]) {
+                     tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                 }
+                 
+                 let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
+                 tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
+             }
+         } else {
+             updateTournamentFinishRecords();
+         }
+         renderTournament(tournamentState);
+    }
+
+    // AIコンテンツ生成
+    const [article, newComments] = await Promise.all([
+        generateNewsArticle(winnerName, loserName, dbMatch, matchId),
+        generateBbsComments(winnerName, loserName, dbMatch, matchId)
+    ]);
+
+    if (article) tournamentState.news.push(article);
+    if (newComments?.length) tournamentState.bbsComments.push(...newComments);
+
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments);
+    saveState();
+}
     /**
      * アプリケーションの初期化処理
      */
