@@ -1596,7 +1596,6 @@ async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, next
     const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
     let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
-    // 【変更点】秋季地区予選用の処理を追加
     const regionalMatchParts = matchId.match(/^(東部|中部|西部|伊豆)/);
     if (regionalMatchParts) {
         const region = regionalMatchParts[0];
@@ -1604,6 +1603,7 @@ async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, next
     }
 
     if (matchId === 'preview') {
+        // ... （プレビュー記事の生成ロジックは変更ありません）
         let prompt;
         const { tournamentYear, seeds, teams } = tournamentState;
 
@@ -1712,7 +1712,6 @@ ${regionAnalysis}
     const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
     const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-    // 【変更点】前大会の成績を取得
     const winnerPrevRankStr = tournamentState.teamRecords[winnerName]?.previousRank ? ` (前大会: ${getRankString(tournamentState.teamRecords[winnerName].previousRank)})` : '';
     const loserPrevRankStr = tournamentState.teamRecords[loserName]?.previousRank ? ` (前大会: ${getRankString(tournamentState.teamRecords[loserName].previousRank)})` : '';
 
@@ -1722,7 +1721,6 @@ ${regionAnalysis}
     if (regionalMatchParts) {
          roundAchievement = (roundNum === 2) ? '地区予選突破(県大会出場決定)' : '地区予選1回戦突破';
     } else if (tournamentState.is16team) {
-        // ... (16チームトーナメントのラウンド達成記録)
         switch (roundNum) {
             case 1: roundAchievement = '初戦突破(ベスト8進出)'; break;
             case 2: roundAchievement = '準々決勝突破(ベスト4進出)'; break;
@@ -1730,12 +1728,12 @@ ${regionAnalysis}
             case 4: roundAchievement = '優勝！'; break;
         }
     } else {
-        // ... (64チームトーナメントのラウンド達成記録)
+        // ### 【ここが修正箇所です】 ###
         switch (roundNum) {
             case 1: roundAchievement = '初戦突破'; break;
             case 2: roundAchievement = '2回戦突破'; break;
-            case 3: roundAchievement = '3回戦突破(ベスト16進出)'; break;
-            case 4: roundAchievement = '準々決勝突破(ベスト8進出)'; break;
+            case 3: roundAchievement = '3回戦突破(ベスト8進出)'; break;
+            case 4: roundAchievement = '準々決勝突破(ベスト4進出)'; break;
             case 5: roundAchievement = '準決勝突破(決勝進出)'; break;
             case 6: roundAchievement = (tournamentState.currentTournament === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
         }
@@ -1787,7 +1785,6 @@ ${civilWarInstruction}
             const rawText = result.candidates[0].content.parts[0].text;
             const article = parseJsonFromText(rawText);
             if (article) {
-                // 秋季地区予選では新聞は生成しない
                 const newspaperHtml = !regionalMatchParts ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
                 return { ...article, timestamp: Date.now(), newspaperHtml };
             }
@@ -2256,7 +2253,7 @@ ${teamHistoryPromptPart}
         }
     }   
     
-    // ↓↓↓ この関数を、既存のものと丸ごと入れ替えてください ↓↓↓
+   // ↓↓↓ この関数を、既存のものと丸ごと入れ替えてください ↓↓↓
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matchSummary) {
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
@@ -2268,12 +2265,12 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matc
     const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
     let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
-    // 【変更点】前大会の成績を取得
     const winnerPrevRankStr = tournamentState.teamRecords[winnerName]?.previousRank ? ` (前大会: ${getRankString(tournamentState.teamRecords[winnerName].previousRank)})` : '';
     const loserPrevRankStr = tournamentState.teamRecords[loserName]?.previousRank ? ` (前大会: ${getRankString(tournamentState.teamRecords[loserName].previousRank)})` : '';
 
     let tournamentContext = '';
     switch(tournamentState.currentTournament) {
+        // ... （大会の文脈設定は変更なし）
         case 'autumn':
             tournamentContext = '秋季大会は新チームの力を見る最初の大会だ。夏の雪辱を果たせるか、新しいスターが生まれるかに注目が集まる。';
             break;
@@ -2296,7 +2293,6 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matc
         currentTournamentName = `秋季大会 ${region}地区予選`;
         matchContext = (roundNum === 2) ? 'これは県大会出場をかけた地区予選の決勝です。' : 'これは地区予選の1回戦です。';
     } else if(tournamentState.is16team) {
-        // ... (16チームトーナメントの試合文脈)
         switch (roundNum) {
             case 1: matchContext = 'これは1回戦です。'; break;
             case 2: matchContext = 'これは準々決勝です。'; break;
@@ -2304,14 +2300,14 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matc
             case 4: matchContext = 'これは決勝戦です。'; break;
         }
     } else {
-        // ... (64チームトーナメントの試合文脈)
+        // ### 【ここが修正箇所です】 ###
         switch (roundNum) {
             case 1: matchContext = 'これは1回戦です。'; break;
             case 2: matchContext = 'これは2回戦です。'; break;
-            case 3: matchContext = 'これは3回戦、ベスト16進出をかけた試合です。'; break;
-            case 4: matchContext = 'これは準々決勝、ベスト8進出をかけた試合です。'; break;
+            case 3: matchContext = 'これは3回戦、ベスト8進出をかけた試合です。'; break;
+            case 4: matchContext = 'これは準々決勝、ベスト4進出をかけた試合です。'; break;
             case 5: matchContext = 'これは決勝進出をかけた準決勝です。'; break;
-            case 6: matchContext = (currentTournamentName === '夏季大会') ? 'これは甲子園出場をかけた決勝戦です。' : 'これは優勝をかけた決勝戦です。'; break;
+            case 6: matchContext = (tournamentState.currentTournament === '夏季大会') ? 'これは甲子園出場をかけた決勝戦です。' : 'これは優勝をかけた決勝戦です。'; break;
         }
     }
     if (isCivilWar) {
@@ -2326,6 +2322,7 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, matc
 - **敗者 (${loserName})**: ${loserPath}
 `;
     
+    // ... (以降のプロンプト生成ロジックは変更ありません)
     const winnerDetailedInfo = DETAILED_TEAM_DATA[winnerName];
     const loserDetailedInfo = DETAILED_TEAM_DATA[loserName];
     let detailedInfoPromptPart = "\n### チーム・選手詳細情報\n";
@@ -2430,7 +2427,7 @@ ${specialBbsContext}
         return [];
     }
 }
-// ↑↑↑ この関数を、既存のものと丸ごと入れ替えてください ↑↑↑    
+// ↑↑↑ この関数を、既存のものと丸ごと入れ替えてください ↑↑↑   
     async function generateBracketReactionComments(state) {
         const { teams, seeds } = state;
         if(teams.length < 16) return []; // Don't run for small brackets
