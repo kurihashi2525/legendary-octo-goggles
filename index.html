@@ -1752,8 +1752,48 @@ async function setupAutumnMainTournament() {
     async function generateNewsArticle(winnerName, loserName, dbMatch, matchId) {
         const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
         let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
+ if (matchId === 'preview') {
+            let prompt;
+            const { tournamentYear, seeds, teams } = tournamentState;
+
+            if (tournamentState.is16team) { // 秋季県大会
+                const reps = tournamentState.autumnData;
+                const repText = Object.entries(reps.regions).map(([region, data]) => {
+                    if (region === '伊豆') return `- ${region} (1校): ${data.finalReps[0].team}`;
+                    const repNames = data.finalReps.sort((a,b) => a.rank - b.rank).map(r => `${r.team}(${r.rank}位)`);
+                    return `- ${region} (${data.finalReps.length}校): ${repNames.join(', ')}`;
+                }).join('\n');
+                
+                const matchups = [];
+                for(let i=0; i<teams.length; i+=2) {
+                    matchups.push(`- ${teams[i]} vs ${teams[i+1]}`);
+                }
+                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 秋季大会 県大会本戦」の展望記事を作成してください...\n\n### 県大会出場校一覧 (地区順位順)\n${repText}\n\n### 県大会1回戦の組み合わせ\n${matchups.join('\n')}`;
+            } else { // 夏季・春季大会
+                const blockA_teams = teams.slice(0, 32);
+                const blockB_teams = teams.slice(32, 64);
+                const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || TEAM_DATA[team].popularity);
+                const blockAnalysis = `- Aブロック: ${findPromisingSchools(blockA_teams).join(', ')}\n- Bブロック: ${findPromisingSchools(blockB_teams).join(', ')}`;
+                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${currentTournamentName}」の展望記事を作成してください...\n\n### シード校\n${seeds.join(', ')}\n\n### 各ブロックの有力校\n${blockAnalysis}`;
+            }
+
+            try {
+                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt + '\n\n### 出力形式\n以下のJSON形式で出力してください。\n{"title": "記事のタイトル", "body": "記事の本文"}' }] }] });
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+                    if (article) return { ...article, timestamp: Date.now() };
+                }
+                throw new Error("AI preview response format error.");
+            } catch (error) {
+                console.error("AI preview article generation failed:", error);
+                return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
+            }
+      return;   
+}
         
         // --- コンテキスト（文脈）の分析 ---
+　　　　const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
         const winnerData = TEAM_DATA[winnerName];
         const loserData = TEAM_DATA[loserName];
         const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
