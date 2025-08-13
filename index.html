@@ -1407,6 +1407,9 @@ function renderTournament(data) {
         return [winnerScore, loserScore];
     }
 
+    /**
+     * 【修正版】ラウンドを自動でスキップする
+     */
     async function skipRound(roundNumber) {
         const btnId = `skip-r${roundNumber}-btn`;
         const btn = document.getElementById(btnId);
@@ -1420,6 +1423,8 @@ function renderTournament(data) {
                 matchIds.push(`${side}-R${roundNumber}-M${i}`);
             }
         });
+
+        const results = []; // このラウンドの結果を格納する配列
 
         // ステップ1：ラウンドの全試合の勝敗を決定
         for (const matchId of matchIds) {
@@ -1451,9 +1456,12 @@ function renderTournament(data) {
             
             if (tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
             if (tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
+            
+            // ダイジェスト記事用に結果を保存
+            results.push({ winnerName, loserName, winnerScore, loserScore, rankDiff: Math.abs(rankValues[rank1] - rankValues[rank2]) });
         }
         
-        // ステップ2：勝者を次のラウンドに進める（ここが抜けていました）
+        // ステップ2：勝者を次のラウンドに進める
         const nextRoundNum = roundNumber + 1;
         const numTeams = tournamentState.teams.length;
         const finalRound = Math.log2(numTeams);
@@ -1487,8 +1495,16 @@ function renderTournament(data) {
             }
         }
         
-        // ステップ3：UIの更新と保存
+        // ステップ3：UIの更新とダイジェスト記事の生成
         renderTournament(tournamentState);
+        newsContainer.innerHTML = `<div class="loader">AI記者が${roundNumber}回戦のダイジェスト記事を執筆中...</div>`;
+
+        const summaryArticle = await generateSkipRoundSummaryArticle(roundNumber, results);
+        if (summaryArticle) {
+            tournamentState.news.push(summaryArticle);
+        }
+        
+        renderNews(tournamentState.news);
         saveState();
         if (btn) btn.classList.add('hidden');
     }
@@ -1832,14 +1848,24 @@ async function setupAutumnMainTournament() {
     /**
      * 秋季地区内順位決定戦がすべて終了したかチェックする
      */
+    /**
+     * 【修正版】秋季地区内順位決定戦がすべて終了したかチェックする
+     */
     function checkAutumnRankingTournamentsComplete() {
         let allRankingsFinished = true;
         for (const region of ['東部', '中部', '西部']) {
             const regionData = tournamentState.autumnData.regions[region];
-            const champFinal = regionData.champBracket.matches[`${region}-CHAMP-R2-M1`];
-            const repechageFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`];
+            if (!regionData.champBracket || !regionData.repechageBracket) {
+                allRankingsFinished = false;
+                break;
+            }
 
-            if (!champFinal.winner || !repechageFinal.winner) {
+            const champFinal = regionData.champBracket.matches[`${region}-CHAMP-R2-M1`]; // 1位/2位
+            const thirdPlaceMatch = regionData.champBracket.matches[`${region}-CHAMP-R2-M2`]; // ★これが抜けていました
+            const repechageFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`]; // 5位
+
+            // 1位, 3位, 5位決定戦のすべてが終わっているかチェック
+            if (!champFinal.winner || !thirdPlaceMatch.winner || !repechageFinal.winner) {
                 allRankingsFinished = false;
                 break;
             }
@@ -1847,31 +1873,37 @@ async function setupAutumnMainTournament() {
         
         if (allRankingsFinished) {
             autumnControls.classList.remove('hidden');
+            startRankingPlayoffsBtn.classList.add('hidden'); // 前のボタンは隠す
             startMainTournamentBtn.classList.remove('hidden');
         } else {
             autumnControls.classList.add('hidden');
             startMainTournamentBtn.classList.add('hidden');
         }
-    }// --- AI Content Generation & Helpers (Part A: Main Generators) ---
+    }
+// --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
     /**
      * AI記者にニュース記事を執筆させるメイン関数。
      * 試合の文脈（大会、ラウンド、チームの背景など）をAIに渡し、動的な記事を生成させる。
      */
+   /**
+     * 【最終修正版】AI記者にニュース記事を執筆させるメイン関数。
+     */
     async function generateNewsArticle(winnerName, loserName, dbMatch, matchId) {
-        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
-        let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
- if (matchId === 'preview') {
+        // 展望記事を生成する場合の処理
+        if (matchId === 'preview') {
             let prompt;
-            const { tournamentYear, seeds, teams } = tournamentState;
+            const { tournamentYear, seeds, teams, currentTournament, is16team, autumnData } = tournamentState;
+            const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
-            if (tournamentState.is16team) { // 秋季県大会
-                const reps = tournamentState.autumnData;
+            if (is16team) { // 秋季県大会
+                const reps = autumnData;
                 const repText = Object.entries(reps.regions).map(([region, data]) => {
+                    if (!data.finalReps || data.finalReps.length === 0) return null;
                     if (region === '伊豆') return `- ${region} (1校): ${data.finalReps[0].team}`;
                     const repNames = data.finalReps.sort((a,b) => a.rank - b.rank).map(r => `${r.team}(${r.rank}位)`);
                     return `- ${region} (${data.finalReps.length}校): ${repNames.join(', ')}`;
-                }).join('\n');
+                }).filter(Boolean).join('\n');
                 
                 const matchups = [];
                 for(let i=0; i<teams.length; i+=2) {
@@ -1883,7 +1915,7 @@ async function setupAutumnMainTournament() {
                 const blockB_teams = teams.slice(32, 64);
                 const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || TEAM_DATA[team].popularity);
                 const blockAnalysis = `- Aブロック: ${findPromisingSchools(blockA_teams).join(', ')}\n- Bブロック: ${findPromisingSchools(blockB_teams).join(', ')}`;
-                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${currentTournamentName}」の展望記事を作成してください...\n\n### シード校\n${seeds.join(', ')}\n\n### 各ブロックの有力校\n${blockAnalysis}`;
+                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください...\n\n### シード校\n${seeds.join(', ')}\n\n### 各ブロックの有力校\n${blockAnalysis}`;
             }
 
             try {
@@ -1898,12 +1930,11 @@ async function setupAutumnMainTournament() {
                 console.error("AI preview article generation failed:", error);
                 return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
             }
-      return;   
-}
-        
-        // --- コンテキスト（文脈）の分析 ---
-　　　　
-       const winnerData = TEAM_DATA[winnerName];
+        }
+
+        // --- 以下は試合結果の記事生成ロジック ---
+        const winnerData = TEAM_DATA[winnerName];
+        // ... (ここから下の部分は変更ありませんが、関数の全体を置き換えてください)
         const loserData = TEAM_DATA[loserName];
         const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
         const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
@@ -1911,18 +1942,13 @@ async function setupAutumnMainTournament() {
         const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
         const winnerRecord = tournamentState.teamRecords[winnerName];
         const loserRecord = tournamentState.teamRecords[loserName];
-
         const winnerPrevRankStr = winnerRecord?.previousRank ? ` (前大会: ${getRankString(winnerRecord.previousRank)})` : '';
         const loserPrevRankStr = loserRecord?.previousRank ? ` (前大会: ${getRankString(loserRecord.previousRank)})` : '';
-        
         const winnerTitles = winnerRecord?.teamTraits?.map(tId => TITLES[tId]?.name).join(', ') || '';
         const loserTitles = loserRecord?.teamTraits?.map(tId => TITLES[tId]?.name).join(', ') || '';
+        let roundAchievement = '', seedingImplication = '', specialNarrativeContext = '';
+        let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
 
-        let roundAchievement = '';
-        let seedingImplication = '';
-        let specialNarrativeContext = '';
-
-        // --- 秋季大会の特別な文脈を生成 ---
         if (tournamentState.currentTournament === 'autumn') {
             const phase = tournamentState.autumnPhase;
             const [region, bracketType, roundStr] = matchId.split('-');
@@ -1930,7 +1956,7 @@ async function setupAutumnMainTournament() {
             
             if (phase === 'regional_blocks') {
                 currentTournamentName = `秋季大会 ${region}地区ブロック予選`;
-                if (roundNum === 2) { // ブロック決勝
+                if (roundNum === 2) {
                     roundAchievement = 'ブロック優勝';
                     const winnerRank = calculateRank(winnerName, tournamentState);
                     if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
@@ -1954,15 +1980,10 @@ async function setupAutumnMainTournament() {
                     if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
                          specialNarrativeContext = `### 【物語のハイライト】\n県大会出場だけでも快挙だった公立校「${winnerName}」が、初戦を突破し【来春のシード権】まで獲得しました！これは二重の奇跡です。この「シンデレラ・ストーリーの最高潮」をテーマに、歴史的快挙として記事を執筆してください。`;
                     }
-                } else if (roundNumMain === 2) {
-                     roundAchievement = '準々決勝突破(ベスト4進出)';
-                } else if (roundNumMain === 3) {
-                     roundAchievement = '準決勝突破(決勝進出)';
-                }
+                } else if (roundNumMain === 2) roundAchievement = '準々決勝突破(ベスト4進出)';
+                else if (roundNumMain === 3) roundAchievement = '準決勝突破(決勝進出)';
             }
-        }
-        // --- 夏季・春季大会の文脈を生成 ---
-        else {
+        } else {
             const roundNum = parseInt(matchId.split('-')[1].slice(1));
             switch (roundNum) {
                 case 1: roundAchievement = '初戦突破'; break;
@@ -1980,7 +2001,6 @@ async function setupAutumnMainTournament() {
 
         const prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
 以下の試合結果とチーム情報に基づき、読者の心を掴むようなドラマチックなニュース記事を生成してください。
-
 ### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})${winnerPrevRankStr} ${winnerTitles ? `【称号: ${winnerTitles}】` : ''}
@@ -1989,26 +2009,19 @@ async function setupAutumnMainTournament() {
 - 達成記録: ${roundAchievement || 'なし'}
 - シード権への影響: ${seedingImplication || '特になし'}
 - ユーザーによる試合の決め手: ${dbMatch.summary || 'なし'}
-
 ${specialNarrativeContext}
-
 ### 執筆のポイント
 - **【最重要】**: もし「物語のハイライト」がある場合、そのテーマを記事全体の中心に据えてください。
-- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」を記事に盛り込み、物語に深みを与えてください。（例：「昨秋、敗者復活から這い上がったあの粘りが、この夏も大舞台で発揮された」）
+- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」を記事に盛り込み、物語に深みを与えてください。
 - **下克上の強調**: 格下のチームが格上を破った場合は、その衝撃を大きく報じてください。
-- **シード権の重要性**: もし「シード権への影響」に情報があれば、その重要性を記事に含めてください。
-- **秋季大会の特殊性**: 秋季大会の記事では、新チームであることや、地区順位（例：「東部1位」「西部第5代表」）にも触れてください。
-
 ### 出力形式
-以下のJSON形式で、タイトルと本文を生成してください。
-{"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}`;
+JSON形式で出力してください: {"title": "記事のタイトル", "body": "記事の本文"}`;
 
         try {
             const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
             const result = await response.json();
             if (result.candidates?.[0]?.content?.parts?.[0]) {
-                const rawText = result.candidates[0].content.parts[0].text;
-                const article = parseJsonFromText(rawText);
+                const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
                 if (article) {
                     const newspaperHtml = (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main') ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
                     return { ...article, timestamp: Date.now(), newspaperHtml };
@@ -2017,11 +2030,62 @@ ${specialNarrativeContext}
             throw new Error("AIからの応答が予期した形式ではありません。");
         } catch (error) {
             console.error("AI記事の生成に失敗しました:", error);
-            return { title: "記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: matchId };
+            // ★★★ ここからが修正箇所 ★★★
+            // 再挑戦（リトライ）に必要な情報を context として保存する
+            return { 
+                title: "記事生成エラー", 
+                body: "AI記者との通信に失敗しました。", 
+                timestamp: Date.now(), 
+                error: true, 
+                errorId: matchId,
+                context: { winnerName, loserName, dbMatch, matchId, summary: dbMatch.summary }
+            };
+            // ★★★ ここまでが修正箇所 ★★★
+        }
+    }
+    
+/**
+     * AIにスキップしたラウンドのダイジェスト記事を生成させる
+     */
+    async function generateSkipRoundSummaryArticle(roundNumber, results) {
+        // 最も番狂わせが大きかった試合を1つ選出
+        const biggestUpset = results.filter(r => r.rankDiff >= 2).sort((a,b) => b.rankDiff - a.rankDiff)[0];
+        
+        let highlightText = "シード校や有力校が順当に勝ち進みました。";
+        if (biggestUpset) {
+            highlightText = `最大の波乱は${biggestUpset.winnerName}が強豪${biggestUpset.loserName}を${biggestUpset.winnerScore}-${biggestUpset.loserScore}で破った一戦でした。`;
+        }
+
+        const prompt = `あなたは高校野球専門のAI記者です。
+現在、${tournamentState.tournamentYear}年度${tournamentNameMap[tournamentState.currentTournament]}が進行中です。
+${roundNumber}回戦の全試合が終了しました。以下のハイライトを元に、簡潔なダイジェスト記事を生成してください。
+
+### ${roundNumber}回戦ハイライト
+- ${highlightText}
+- 次のラウンドでは、勝ち上がった猛者たちによる更なる激戦が期待されます。
+
+### 執筆指示
+- 上記のハイライトを自然な文章にまとめてください。
+- タイトルは「${roundNumber}回戦が終了！波乱は起きるか？」のように、次への期待感を煽るものにしてください。
+
+### 出力形式
+JSON形式で出力してください: {"title": "記事のタイトル", "body": "記事の本文"}`;
+
+        try {
+            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+                if (article) return { ...article, timestamp: Date.now() };
+            }
+            throw new Error("AI summary response format error.");
+        } catch (error) {
+            console.error("AI summary article generation failed:", error);
+            return { title: "ダイジェスト記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `skip-summary-${roundNumber}` };
         }
     }
 
-    /**
+/**
      * AIに掲示板のコメントを生成させるメイン関数。
      */
     async function generateBbsComments(winnerName, loserName, dbMatch, matchId) {
