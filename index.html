@@ -1279,6 +1279,110 @@ function renderTournament(data) {
     }
 
     function checkBest8Decided(){} // checkTournamentProgressに統合
+// --- 試合詳細モーダル関連の関数 ---
+    
+    function openDetailsModal(matchId) {
+        currentMatchIdForDetails = matchId;
+        const match = tournamentState.matches[matchId];
+        const detailsBody = document.getElementById('details-modal-body');
+        
+        const details = match.details || {
+            inningScore: { [match.team1]: Array(9).fill(''), [match.team2]: Array(9).fill('') },
+            batters: { [match.team1]: Array(9).fill({}), [match.team2]: Array(9).fill({}) },
+            pitchers: { [match.team1]: Array(3).fill({}), [match.team2]: Array(3).fill({}) },
+        };
+
+        detailsBody.innerHTML = `
+            ${createInningScoreTable(match.team1, match.team2, details.inningScore)}
+            ${createStatsTable('batters', `打者成績: ${match.team1}`, details.batters[match.team1], ['選手名', '打数', '安打', '打点', '本塁打', '三振'], match.team1)}
+            ${createStatsTable('pitchers', `投手成績: ${match.team1}`, details.pitchers[match.team1], ['選手名', '投球回', '被安打', '奪三振', '与四球', '失点'], match.team1)}
+            <hr class="my-4">
+            ${createStatsTable('batters', `打者成績: ${match.team2}`, details.batters[match.team2], ['選手名', '打数', '安打', '打点', '本塁打', '三振'], match.team2)}
+            ${createStatsTable('pitchers', `投手成績: ${match.team2}`, details.pitchers[match.team2], ['選手名', '投球回', '被安打', '奪三振', '与四球', '失点'], match.team2)}
+        `;
+        detailsModal.classList.remove('hidden');
+    }
+
+    function createInningScoreTable(team1, team2, data) {
+        const innings = Array.from({length: 9}, (_, i) => i + 1);
+        return `
+            <div>
+                <h4 class="font-bold mb-2">イニングスコア</h4>
+                <table class="stats-table" id="inning-score-table">
+                    <thead>
+                        <tr><th>チーム</th>${innings.map(i => `<th>${i}</th>`).join('')}<th>計</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${team1}</td>
+                            ${innings.map((_, i) => `<td><input type="number" value="${data[team1]?.[i] || ''}" data-team="${team1}" data-inning="${i}"></td>`).join('')}
+                            <td id="total-${team1}"></td>
+                        </tr>
+                        <tr>
+                            <td>${team2}</td>
+                            ${innings.map((_, i) => `<td><input type="number" value="${data[team2]?.[i] || ''}" data-team="${team2}" data-inning="${i}"></td>`).join('')}
+                            <td id="total-${team2}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function createStatsTable(type, title, data, headers, teamName) {
+        let table = `
+            <div>
+                <h4 class="font-bold mb-2">${title}</h4>
+                <table class="stats-table" data-type="${type}" data-team="${teamName}">
+                    <thead>
+                        <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${(data && data.length > 0 ? data : [{}]).map((playerData, rowIndex) => {
+                            let rowHtml = '<tr>';
+                            headers.forEach((h, colIndex) => {
+                                rowHtml += `<td><input type="text" value="${playerData[h] || ''}" data-row="${rowIndex}" data-col="${h}"></td>`;
+                            });
+                            rowHtml += '</tr>';
+                            return rowHtml;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <button class="add-row-btn mt-2 text-sm bg-gray-200 px-2 py-1 rounded" data-type="${type}" data-team="${teamName}">＋選手を追加</button>
+            </div>`;
+        return table;
+    }
+    
+    function saveDetailedStats() {
+        if (!currentMatchIdForDetails) return;
+        const match = tournamentState.matches[currentMatchIdForDetails];
+        const details = { inningScore: {}, batters: {}, pitchers: {} };
+
+        const inningTable = document.getElementById('inning-score-table');
+        details.inningScore[match.team1] = Array.from(inningTable.querySelectorAll(`input[data-team="${match.team1}"]`)).map(inp => inp.value);
+        details.inningScore[match.team2] = Array.from(inningTable.querySelectorAll(`input[data-team="${match.team2}"]`)).map(inp => inp.value);
+        
+        ['batters', 'pitchers'].forEach(type => {
+            details[type][match.team1] = parseStatsTable(document.querySelector(`table[data-type="${type}"][data-team="${match.team1}"]`));
+            details[type][match.team2] = parseStatsTable(document.querySelector(`table[data-type="${type}"][data-team="${match.team2}"]`));
+        });
+
+        match.details = details;
+        saveState();
+        detailsModal.classList.add('hidden');
+    }
+
+    function parseStatsTable(tableEl) {
+        const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent);
+        const rows = Array.from(tableEl.querySelectorAll('tbody tr'));
+        return rows.map(row => {
+            const rowData = {};
+            Array.from(row.querySelectorAll('input, select')).forEach((input, i) => {
+                rowData[headers[i]] = input.value;
+            });
+            return rowData;
+        }).filter(d => d['選手名'] && d['選手名'].trim() !== '');
+    }
 // --- NEW Autumn Tournament System ---
 
     /**
