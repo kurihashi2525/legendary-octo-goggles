@@ -2650,6 +2650,12 @@ ${teamHistoryPromptPart}
                 localStorage.removeItem('tournamentState'); 
             }
         }
+ // ### 【ここが修正箇所です】 ###
+        // スタート画面に戻る際、必ずチーム一覧を表示する
+        setupEl.classList.remove('hidden');
+        tournamentDisplayEl.classList.add('hidden');
+        teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
+    }
         
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
