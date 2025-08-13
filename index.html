@@ -2506,127 +2506,129 @@ ${teamHistoryPromptPart}
      * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
      */
     // 【修正対象5】
-async function processMatchWin(matchId, winnerName) {
-    let dbMatch;
-    let loserName;
+/**
+     * 【修正版】試合の勝者を処理する中心的関数
+     */
+    async function processMatchWin(matchId, winnerName) {
+        let dbMatch;
+        let loserName;
 
-    // 試合データを特定
-    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-        const [region, bracketId] = matchId.split('-');
-        if(tournamentState.autumnData.regions[region]) {
+        // 試合データを特定
+        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+            const [region, bracketId] = matchId.split('-');
             const regionData = tournamentState.autumnData.regions[region];
             if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
             else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
             else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
+        } else {
+            dbMatch = tournamentState.matches[matchId];
         }
-    } 
-    if (!dbMatch) { // Main Tournament
-        dbMatch = tournamentState.matches[matchId];
-    }
 
-    if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
-    
-    loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
-    dbMatch.winner = winnerName;
+        if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
+        
+        loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
+        dbMatch.winner = winnerName;
 
-    const winnerRank = calculateRank(winnerName, tournamentState);
-    const loserRank = calculateRank(loserName, tournamentState);
-    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
-        const winnerRecord = tournamentState.teamRecords[winnerName];
-        if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.GIANT_KILLER.id)) {
-            winnerRecord.teamTraits.push(TITLES.GIANT_KILLER.id);
-        }
-    }
-    
-    newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
-
-    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        const roundNum = parseInt(roundStr.slice(1));
-        const matchNum = parseInt(matchStr.slice(1));
-
-        if (bracketId.startsWith('B')) { // Stage 1
-            const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
-            if (roundNum === 0) {
-                block.matches[`${block.id}-R1-M1`].team1 = winnerName;
-            } else if (roundNum === 2) {
-                tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
-                tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
+        const winnerRank = calculateRank(winnerName, tournamentState);
+        const loserRank = calculateRank(loserName, tournamentState);
+        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+        if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
+            const winnerRecord = tournamentState.teamRecords[winnerName];
+            if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.GIANT_KILLER.id)) {
+                winnerRecord.teamTraits.push(TITLES.GIANT_KILLER.id);
             }
         }
-        else if (bracketId === 'CHAMP' || bracketId === 'REP') { // Stage 2
-            const isChamp = bracketId === 'CHAMP';
-            const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-            if(roundNum === 1){
-                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-                if(isChamp){
-                    const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
-                    if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
+        
+        newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+
+        // ★★★ ここからが修正箇所 ★★★
+        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+            const [region, bracketId, roundStr, matchStr] = matchId.split('-');
+            const roundNum = parseInt(roundStr.slice(1));
+            const matchNum = parseInt(matchStr.slice(1));
+
+            if (bracketId.startsWith('B')) { // Stage 1
+                const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
+                if (roundNum === 2) { // Final
+                    tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
+                    tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
                 }
-            } else if (roundNum === 2) {
-                if (isChamp) {
-                    if (dbMatch.type === 'final') {
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
+            }
+            else if (bracketId === 'CHAMP' || bracketId === 'REP') { // Stage 2
+                const isChamp = bracketId === 'CHAMP';
+                const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
+                if(roundNum === 1){
+                    const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
+                    if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+                    if(isChamp){
+                        const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
+                        if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
+                    }
+                } else if (roundNum === 2) {
+                    if (isChamp) {
+                        if (dbMatch.type === 'final') {
+                            tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
+                            tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
+                        } else {
+                            tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
+                            tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
+                        }
                     } else {
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
-                    }
-                } else {
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
-                    const winnerRecord = tournamentState.teamRecords[winnerName];
-                    if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.REPECHAGE_KING.id)) {
-                         winnerRecord.teamTraits.push(TITLES.REPECHAGE_KING.id);
+                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
+                        const winnerRecord = tournamentState.teamRecords[winnerName];
+                        if (winnerRecord && !winnerRecord.teamTraits.includes(TITLES.REPECHAGE_KING.id)) {
+                             winnerRecord.teamTraits.push(TITLES.REPECHAGE_KING.id);
+                        }
                     }
                 }
             }
         }
-        renderTournament(tournamentState);
-    }
-    else {
-         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
-         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
-         
-         const [side, roundStrMain] = matchId.split('-');
-         if (side !== 'F') {
-             const roundNum = parseInt(roundStrMain.slice(1));
-             const numTeamsInTournament = tournamentState.teams.length;
-             const finalRound = Math.log2(numTeamsInTournament);
+        else { // 主要大会 (夏季・春季・秋季県大会)
+             if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
+             if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
+             
+             const idParts = matchId.split('-');
+             const side = idParts[0];
 
-             if (roundNum < finalRound) {
-                 const matchNum = parseInt(matchId.split('-M')[1]);
-                 const nextRoundNum = roundNum + 1;
-                 let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+             if (side !== 'F') {
+                 const roundStrMain = idParts[1];
+                 const roundNum = parseInt(roundStrMain.slice(1));
+                 const numTeamsInTournament = tournamentState.teams.length;
+                 const finalRound = Math.log2(numTeamsInTournament);
 
-                 if (!tournamentState.matches[nextMatchId]) {
-                     tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                 if (roundNum < finalRound) {
+                     const matchNum = parseInt(idParts[2].slice(1));
+                     const nextRoundNum = roundNum + 1;
+                     let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+
+                     if (!tournamentState.matches[nextMatchId]) {
+                         tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                     }
+                     
+                     let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
+                     tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
                  }
-                 
-                 let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
-                 tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
+             } else {
+                 updateTournamentFinishRecords();
              }
-         } else {
-             updateTournamentFinishRecords();
-         }
-         renderTournament(tournamentState);
+        }
+
+        renderTournament(tournamentState);
+        // ★★★ ここまでが修正箇所 ★★★
+
+        const [article, newComments] = await Promise.all([
+            generateNewsArticle(winnerName, loserName, dbMatch, matchId),
+            generateBbsComments(winnerName, loserName, dbMatch, matchId)
+        ]);
+
+        if (article) tournamentState.news.push(article);
+        if (newComments?.length) tournamentState.bbsComments.push(...newComments);
+
+        renderNews(tournamentState.news);
+        renderBbsComments(tournamentState.bbsComments);
+        saveState();
     }
-
-    // AIコンテンツ生成
-    const [article, newComments] = await Promise.all([
-        generateNewsArticle(winnerName, loserName, dbMatch, matchId),
-        generateBbsComments(winnerName, loserName, dbMatch, matchId)
-    ]);
-
-    if (article) tournamentState.news.push(article);
-    if (newComments?.length) tournamentState.bbsComments.push(...newComments);
-
-    renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments);
-    saveState();
-}
     /**
      * アプリケーションの初期化処理
      */
@@ -2682,6 +2684,7 @@ async function processMatchWin(matchId, winnerName) {
         
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
+　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
     }
 
     // --- Event Listeners ---
