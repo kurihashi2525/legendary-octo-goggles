@@ -2630,7 +2630,36 @@ async function processMatchWin(matchId, winnerName) {
     /**
      * アプリケーションの初期化処理
      */
+    /**
+     * 【診断用】アプリケーションの初期化処理
+     */
     async function initializeApp() {
+        // --- ここから診断コード ---
+        try {
+            alert('デバッグ開始：initializeApp関数が実行されました。');
+            
+            if (teamsTextarea) {
+                alert('成功：チーム一覧を表示するテキストエリアが見つかりました。');
+            } else {
+                alert('エラー：チーム一覧を表示するテキストエリアが見つかりません！ id="teams-list" を確認してください。');
+                return;
+            }
+
+            if (INITIAL_TEAM_POOL && INITIAL_TEAM_POOL.length > 0) {
+                alert(`成功：${INITIAL_TEAM_POOL.length}件のチームデータが読み込まれました。`);
+            } else {
+                alert('エラー：チームデータが読み込めていません！ TEAM_DATAの定義を確認してください。');
+                return;
+            }
+
+            teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
+            alert('成功：チーム一覧をテキストエリアに表示しました。');
+
+        } catch (e) {
+            alert('致命的なエラーが発生しました： ' + e.message);
+        }
+        // --- ここまで診断コード ---
+
         const savedStateJSON = localStorage.getItem('tournamentState');
         if (savedStateJSON) {
             try {
@@ -2650,16 +2679,9 @@ async function processMatchWin(matchId, winnerName) {
                 localStorage.removeItem('tournamentState'); 
             }
         }
- // ### 【ここが修正箇所です】 ###
-        // スタート画面に戻る際、必ずチーム一覧を表示する
-        setupEl.classList.remove('hidden');
-        tournamentDisplayEl.classList.add('hidden');
-        teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
-    }
         
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
-        teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
     }
 
     // --- Event Listeners ---
