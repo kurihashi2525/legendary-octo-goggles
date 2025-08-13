@@ -875,81 +875,93 @@
     /**
      * Sets up the final 16-team Autumn Prefectural Tournament using regional winners.
      */
-    async function setupAutumnMainTournament() {
-        tournamentState.autumnPhase = 'main';
-        autumnPhaseContainer.classList.add('hidden');
-        autumnControls.classList.add('hidden');
-        mainBracketContainer.classList.remove('hidden');
+    // ↓↓↓ この関数を、既存のものと丸ごと入れ替えてください ↓↓↓
+async function setupAutumnMainTournament() {
+    tournamentState.autumnPhase = 'main';
+    autumnPhaseContainer.classList.add('hidden');
+    autumnControls.classList.add('hidden');
+    mainBracketContainer.classList.remove('hidden');
 
-        const allReps = [];
-        const seeds = [];
-        const regionOrder = ['東部', '西部', '中部', '伊豆']; // For seeding placement
+    const allReps = [];
+    const seeds = [];
+    const regionOrder = ['東部', '西部', '中部', '伊豆'];
 
-        regionOrder.forEach(region => {
-            const regionData = tournamentState.autumnBrackets[region];
-            if (regionData && regionData.reps.length > 0) {
-                // Shuffle reps within the region before adding, except for the first one (seed)
-                const regionalSeed = regionData.reps[0];
-                const otherReps = shuffleArray(regionData.reps.slice(1));
-                allReps.push(regionalSeed, ...otherReps);
-                seeds.push(regionalSeed); 
-            }
-        });
-        
-        const nonSeeds = allReps.filter(t => !seeds.includes(t));
-        const shuffledNonSeeds = shuffleArray(nonSeeds);
-
-        let teams = Array(16).fill(null);
-        const seedPositions = [0, 8, 12, 4]; // Distribute seeds across the bracket
-        seeds.forEach((seed, i) => {
-            if(seedPositions[i] !== undefined) teams[seedPositions[i]] = seed;
-        });
-
-        let nonSeedIndex = 0;
-        for (let i = 0; i < 16; i++) {
-            if (teams[i] === null) {
-                teams[i] = shuffledNonSeeds[nonSeedIndex++];
-            }
+    regionOrder.forEach(region => {
+        const regionData = tournamentState.autumnBrackets[region];
+        if (regionData && regionData.reps.length > 0) {
+            const regionalSeed = regionData.reps[0];
+            const otherReps = shuffleArray(regionData.reps.slice(1));
+            allReps.push(regionalSeed, ...otherReps);
+            seeds.push(regionalSeed);
         }
+    });
+    
+    // ### 【ここからが追加・変更箇所です】 ###
+    const qualifiedTeams = allReps.filter(Boolean);
 
-        tournamentState.teams = teams.filter(Boolean);
-        tournamentState.matches = {}; // Reset main matches
-        tournamentState.seeds = seeds;
-        tournamentState.is16team = true;
+    // 秋季県大会に出場できなかったチームの成績をリセットし、シード選考から除外する
+    INITIAL_TEAM_POOL.forEach(teamName => {
+        if (!qualifiedTeams.includes(teamName) && tournamentState.teamRecords[teamName]) {
+            // 県大会出場チーム(16チーム)より悪い成績(32位)に設定
+            tournamentState.teamRecords[teamName].lastFinish = 32;
+        }
+    });
+    // ### 【ここまでが追加・変更箇所です】 ###
 
-        const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
-            if (i % 2 === 0) acc.push({ team1: team, team2: null });
-            else acc[acc.length - 1].team2 = team;
-            return acc;
-        }, []);
+    const nonSeeds = allReps.filter(t => !seeds.includes(t) && t);
+    const shuffledNonSeeds = shuffleArray(nonSeeds);
 
-        round1Setup.forEach((match, index) => {
-            const side = index < 4 ? 'L' : 'R';
-            const matchNum = index < 4 ? index + 1 : index - 3;
-            const matchId = `${side}-R1-M${matchNum}`;
-            tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
-        });
+    let teams = Array(16).fill(null);
+    const seedPositions = [0, 8, 12, 4];
+    seeds.forEach((seed, i) => {
+        if(seedPositions[i] !== undefined) teams[seedPositions[i]] = seed;
+    });
 
-        saveState();
-        renderTournament(tournamentState);
-        
-        const currentTournamentName = "秋季県大会本戦";
-        newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
-        bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-
-        const [previewArticle, bracketComments] = await Promise.all([
-            generateNewsArticle(null, null, null, 'preview', null, null),
-            generateBracketReactionComments(tournamentState)
-        ]);
-
-        if (previewArticle) tournamentState.news.unshift(previewArticle);
-        if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
-        
-        renderNews(tournamentState.news);
-        renderBbsComments(tournamentState.bbsComments);
-        saveState();
+    let nonSeedIndex = 0;
+    for (let i = 0; i < 16; i++) {
+        if (teams[i] === null) {
+            teams[i] = shuffledNonSeeds[nonSeedIndex++];
+        }
     }
 
+    tournamentState.teams = teams.filter(Boolean);
+    tournamentState.matches = {};
+    tournamentState.seeds = seeds;
+    tournamentState.is16team = true;
+
+    const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
+        return acc;
+    }, []);
+
+    round1Setup.forEach((match, index) => {
+        const side = index < 4 ? 'L' : 'R';
+        const matchNum = index < 4 ? index + 1 : index - 3;
+        const matchId = `${side}-R1-M${matchNum}`;
+        tournamentState.matches[matchId] = { team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+    });
+
+    saveState();
+    renderTournament(tournamentState);
+    
+    const currentTournamentName = "秋季県大会本戦";
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+
+    const [previewArticle, bracketComments] = await Promise.all([
+        generateNewsArticle(null, null, null, 'preview', null, null),
+        generateBracketReactionComments(tournamentState)
+    ]);
+
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
+    
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments);
+    saveState();
+}
+// ↑↑↑ この関数を、既存のものと丸ごと入れ替えてください ↑↑↑
     // --- Tournament Logic ---
    // ↓↓↓ この関数を、既存のものと丸ごと入れ替えてください ↓↓↓
 async function createNewTournament(isNext = false, nextTournamentType = 'summer') {
@@ -1717,27 +1729,44 @@ ${regionAnalysis}
 
     const roundNum = regionalMatchParts ? parseInt(matchId.split('-')[2].slice(1)) : (matchId.startsWith('F-') ? (tournamentState.is16team ? 4 : 6) : parseInt(matchId.split('-')[1].slice(1)));
 
+    // ### 【ここからが修正箇所です】 ###
     let roundAchievement = '';
+    let seedingImplication = ''; // シード権に関する言及を格納する変数
+
     if (regionalMatchParts) {
          roundAchievement = (roundNum === 2) ? '地区予選突破(県大会出場決定)' : '地区予選1回戦突破';
-    } else if (tournamentState.is16team) {
+    } else if (tournamentState.is16team) { // 秋季県大会 (16チーム)
         switch (roundNum) {
-            case 1: roundAchievement = '初戦突破(ベスト8進出)'; break;
-            case 2: roundAchievement = '準々決勝突破(ベスト4進出)'; break;
-            case 3: roundAchievement = '準決勝突破(決勝進出)'; break;
-            case 4: roundAchievement = '優勝！'; break;
+            case 1: 
+                roundAchievement = '初戦突破(ベスト8進出)';
+                seedingImplication = 'この勝利で、来季の春季大会のシード権獲得を確実なものとした。';
+                break;
+            case 2: 
+                roundAchievement = '準々決勝突破(ベスト4進出)';
+                seedingImplication = 'すでに確保している来季のシード権に加え、大会の頂点も見えてきた。';
+                break;
+            case 3: 
+                roundAchievement = '準決勝突破(決勝進出)';
+                break;
+            case 4: 
+                roundAchievement = '優勝！'; 
+                break;
         }
-    } else {
-        // ### 【ここが修正箇所です】 ###
+    } else { // 夏季・春季大会 (64チーム)
         switch (roundNum) {
             case 1: roundAchievement = '初戦突破'; break;
             case 2: roundAchievement = '2回戦突破'; break;
-            case 3: roundAchievement = '3回戦突破(ベスト8進出)'; break;
+            case 3: roundAchievement = '3回戦突破(ベスト8進出)'; 
+                if (tournamentState.currentTournament === 'spring') {
+                    seedingImplication = 'この勝利で、夏の選手権大会のシード権獲得を確実なものとした。';
+                }
+                break;
             case 4: roundAchievement = '準々決勝突破(ベスト4進出)'; break;
             case 5: roundAchievement = '準決勝突破(決勝進出)'; break;
             case 6: roundAchievement = (tournamentState.currentTournament === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
         }
     }
+    // ### 【ここまでが修正箇所です】 ###
 
     let civilWarInstruction = isCivilWar ? `- **この試合は「283ダービー」です。この「身内対決」を記事の最大のテーマとしてください。**` : '';
     
@@ -1763,12 +1792,14 @@ ${regionAnalysis}
 - 敗北チーム: ${loserName} (${loserRankDesc})${loserPrevRankStr}
 - スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
 - 試合のハイライト（ユーザー入力）: ${matchSummary || 'なし'}
+- **シード権への影響**: ${seedingImplication || '特になし'}
 
 ${specialContext}
 
 ### 執筆のポイント
 ${civilWarInstruction}
 - 記事の中で「${winnerName}が${roundAchievement}を決めた」という事実を必ず含めてください。
+- **もし「シード権への影響」に情報があれば、その重要性を記事に含めてください。**
 - 両チームのランク（${winnerRankDesc}, ${loserRankDesc}）と【前大会の成績】を考慮し、番狂わせか順当な結果かを記事に含めてください。
 - **【最重要】もし前大会で好成績だったチーム（例：ベスト4以上）が敗退した場合、その衝撃を大きく報じてください。（例：「夏の覇者、秋は地区予選で散る」「まさかの敗退」など）**
 - 記事のトーンは、ドラマチックかつ客観的に。
@@ -1803,7 +1834,7 @@ ${civilWarInstruction}
         };
     }
 }
-// ↑↑↑ この関数を、既存のものと丸ごと入れ替えてください ↑↑↑    
+// ↑↑↑ この関数を、既存のものと丸ごと入れ替えてください ↑↑↑ 
     /**
      * Finds a comment by its ID in a nested comment structure.
      */
