@@ -1793,8 +1793,8 @@ async function setupAutumnMainTournament() {
 }
         
         // --- コンテキスト（文脈）の分析 ---
-　　　　const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
-        const winnerData = TEAM_DATA[winnerName];
+　　　　
+       const winnerData = TEAM_DATA[winnerName];
         const loserData = TEAM_DATA[loserName];
         const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
         const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
