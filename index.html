@@ -1785,7 +1785,7 @@ function openDetailsModal(matchId) {
         const createRow = (teamKey, teamName) => {
             let cells = '';
             for (let i = 0; i < numInnings; i++) {
-                // ★★★ inningScoreの参照方法を修正 ★★★                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
+                                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
             }
             return `<tr>
                         <th class="text-left pr-2">${teamName}</th>
@@ -1848,7 +1848,7 @@ function openDetailsModal(matchId) {
 
     // スコアの合計を計算して表示
     updateTotalScores();
-}
+   }
 
     /**
      * 個人別打席結果のテーブルHTMLを生成する
