@@ -643,12 +643,11 @@ function updateTotalScores() {
     table.querySelectorAll('tbody tr').forEach(row => {
         const total = Array.from(row.querySelectorAll('input')).reduce((sum, input) => {
             const value = parseInt(input.value);
-            return isNaN(value) ? sum : sum + value;
+            return isNaN(value) ? sum : sum + value; // 数字でない場合は無視
         }, 0);
         row.querySelector('.total-score').textContent = total;
     });
 }
-
 /**
  * 戦績レコードを読みやすい文字列に変換する
  */
@@ -4512,27 +4511,23 @@ document.body.addEventListener('click', async (e) => {
         swapTeamDetails(matchId);
     }
 
-// ★★★ ここが追加された「+」ボタンの処理です ★★★
+    // ★★★ ここまで追加 ★★★
+ // ★★★ ここが「+」ボタンの処理です ★★★
     else if (e.target.matches('#add-inning-score-btn')) {
         e.preventDefault();
         const table = document.getElementById('inning-score-table');
         if (!table) return;
-
-        // ヘッダーに行を追加
         const headerRow = table.querySelector('thead tr');
         const newInningNum = headerRow.children.length - 3; // チーム,計,+を除く
         const newTh = document.createElement('th');
         newTh.textContent = newInningNum;
         headerRow.insertBefore(newTh, headerRow.children[headerRow.children.length - 2]);
-
-        // 各チームの行にインプット欄を追加
         table.querySelectorAll('tbody tr').forEach(row => {
             const newTd = document.createElement('td');
             newTd.innerHTML = `<input type="text" value="">`;
             row.insertBefore(newTd, row.lastElementChild);
         });
     }
-    // ★★★ ここまで追加 ★★★
     
     // --- チーム名クリック（ステータス表示） ---
     else if (e.target.matches('.clickable-team-name')) {
@@ -4615,13 +4610,7 @@ document.body.addEventListener('click', async (e) => {
         }
     });
 
-// 詳細モーダル内のスコア入力で合計点を自動計算
-document.body.addEventListener('input', (e) => {
-    // イベントが発生したのがイニングスコアテーブルの中の要素かどうかを確認
-    if (e.target.closest('#inning-score-table')) {
-        updateTotalScores();
-    }
-});
+
 
     document.body.addEventListener('input', (e) => {
         if (e.target.matches('.match-summary-input')) {
@@ -4643,6 +4632,12 @@ document.body.addEventListener('input', (e) => {
                 saveState();
             }
         }
+// イニングスコアが入力された場合
+    else if (e.target.closest('#inning-score-table')) {
+        updateTotalScores();
+    }
+
+
     });
 
     modalBg.addEventListener('click', () => newsModal.classList.add('hidden'));
