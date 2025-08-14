@@ -650,6 +650,31 @@ function formatRecordToString(record) {
 }
 
 /**
+ * 詳細入力モーダル内のチームデータを入れ替える
+ * @param {string} matchId - 対象の試合ID
+ */
+function swapTeamDetails(matchId) {
+    const match = findMatchById(matchId);
+    if (!match || !match.details) {
+        alert('詳細データが入力されていないため、入れ替えできません。');
+        return;
+    }
+
+    // 打撃データを一時的に保管して入れ替え
+    const tempBatting = match.details.batting.team1;
+    match.details.batting.team1 = match.details.batting.team2;
+    match.details.batting.team2 = tempBatting;
+
+    // 投手データを一時的に保管して入れ替え
+    const tempPitching = match.details.pitching.team1;
+    match.details.pitching.team1 = match.details.pitching.team2;
+    match.details.pitching.team2 = tempPitching;
+
+    // モーダルを再描画して変更を反映
+    openDetailsModal(matchId);
+}
+
+/**
  * チームステータスモーダルを表示する
  */
 function showTeamStatusModal(teamName) {
@@ -1731,7 +1756,15 @@ function openDetailsModal(matchId) {
                     <h4 class="font-bold mb-2">${match.team2} 打撃成績</h4>
                     ${createPlayerBattingTable(match.team2, 'team2', details)}
                 </div>
-                <div>
+                <div><div class="text-center my-4 border-t border-b py-2">
+            <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                <span>先攻・後攻を入れ替え</span>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div>
+
                     <h4 class="font-bold mb-2">${match.team1} 投手成績</h4>
                     ${createPitchingStatsTable('team1', details)}
                 </div>
@@ -4440,6 +4473,13 @@ document.body.addEventListener('click', async (e) => {
             <td><input type="number" value=""></td>
         `;
     }
+// ★★★ この else if ブロックを新しく追加 ★★★
+    // --- 【詳細モーdal内】先攻後攻入れ替えボタン ---
+    else if (e.target.matches('#swap-teams-btn')) {
+        const matchId = e.target.dataset.matchId;
+        swapTeamDetails(matchId);
+    }
+    // ★★★ ここまで追加 ★★★
     
     // --- チーム名クリック（ステータス表示） ---
     else if (e.target.matches('.clickable-team-name')) {
