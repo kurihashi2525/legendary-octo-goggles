@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【最終実装版】AI記者付きトーナメント表</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Roboto+Condensed:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
@@ -125,66 +126,6 @@
         .details-table select { width: 100%; border: none; background: transparent; font-size: 12px; }
         .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
         .add-row-btn:hover { background-color: #d1d5db; }
-/* ★★★ 野球風UI スタートパック ★★★ */
-
-/* --- 全体のテーマカラーとフォント --- */
-body {
-    background-color: #fcfaf5; /* 少しクリーム色がかった背景 */
-    font-family: 'Roboto Condensed', 'Noto Sans JP', sans-serif; /* 引き締まったフォント */
-}
-
-/* 見出しのフォントを力強く */
-h1, h2, h3 {
-    font-family: 'Oswald', 'Noto Sans JP', sans-serif;
-    text-transform: uppercase; /* アルファベットを大文字に */
-    letter-spacing: 1.5px;
-}
-
-/* --- 主要なパーツのカラー変更 --- */
-.setup-card, .display-card {
-    border: 1px solid #dcdcdc;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-/* ボタンのスタイル */
-#generate-btn, #resume-btn, #next-tournament-btn {
-    background-color: #0A2463; /* 濃い紺色 */
-    border-bottom: 4px solid #06163b;
-    text-transform: uppercase;
-    transition: all 0.1s ease-in-out;
-}
-#generate-btn:hover, #resume-btn:hover, #next-tournament-btn:hover {
-    transform: translateY(-2px);
-    border-bottom-width: 6px;
-}
-
-#reset-btn {
-    background-color: #BA312C; /* ボールの縫い目のような赤 */
-    border-bottom: 4px solid #8c2521;
-}
-
-/* ニュース記事の見出し */
-#news-articles h3 {
-    color: #00421B; /* グラウンドのような濃い緑 */
-}
-
-/* 記事モーダルのタイトル */
-#modal-title {
-    color: #0A2463;
-}
-
-/* 勝利ボタンをボールのアイコンに (絵文字使用版) */
-.win-btn {
-    font-size: 1.2em;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-.win-btn::before {
-    content: '⚾';
-}
-.win-btn {
-    color: transparent; /* 元の文字を消す */
-}
  </style>
 </head>
 <body class="p-4 md:p-8">
