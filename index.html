@@ -661,14 +661,18 @@ function showTeamStatusModal(teamName) {
     const bestEl = document.getElementById('status-modal-best');
     const historyEl = document.getElementById('status-modal-history');
     const traitsEl = document.getElementById('status-modal-traits');
+    // ↓↓↓ おそらく抜けていたのがこの一行です ↓↓↓
+    const coachEl = document.getElementById('status-modal-coach'); 
 
-    // データを設定
+    // チーム名を設定
     document.getElementById('status-modal-team-name').textContent = teamName;
+    
+    // 最高戦績を設定
     bestEl.textContent = teamRecord.best ? formatRecordToString(teamRecord.best) : 'まだありません';
 
-    // 直近の成績 (最大2件)
+    // 直近の成績を設定
     historyEl.innerHTML = '';
-    if (teamRecord.history.length > 0) {
+    if (teamRecord.history && teamRecord.history.length > 0) {
         teamRecord.history.slice(0, 2).forEach(rec => {
             const p = document.createElement('p');
             p.textContent = formatRecordToString(rec);
@@ -678,9 +682,9 @@ function showTeamStatusModal(teamName) {
         historyEl.innerHTML = '<p>まだありません</p>';
     }
 
-    // 称号
+    // 称号を設定
     traitsEl.innerHTML = '';
-    if (teamRecord.teamTraits.length > 0) {
+    if (teamRecord.teamTraits && teamRecord.teamTraits.length > 0) {
         teamRecord.teamTraits.forEach(traitId => {
             const trait = TITLES[traitId];
             if (trait) {
@@ -694,6 +698,16 @@ function showTeamStatusModal(teamName) {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
     
+    // 監督情報を設定
+    const teamMasterData = TEAM_DATA[teamName];
+    if (teamMasterData && teamMasterData.coach) {
+        const coach = teamMasterData.coach;
+        coachEl.textContent = `${coach.name} (${coach.experience} / ${coach.style})`;
+    } else {
+        coachEl.textContent = '情報なし';
+    }
+    
+    // モーダルを表示
     modal.classList.remove('hidden');
 }
     // --- Custom Alert/Confirm ---
