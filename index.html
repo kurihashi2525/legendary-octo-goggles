@@ -104,7 +104,20 @@
         .feud-match .team-slot { border: 2px solid #8b5cf6 !important; background-color: #f5f3ff; }
         .rivalry-match .team-slot.winner { background-color: #fecaca; }
         .feud-match .team-slot.winner { background-color: #ddd6fe; }
-    </style>
+   /* 詳細入力テーブル用のスタイル */
+        .details-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .details-table th, .details-table td { border: 1px solid #e5e7eb; padding: 4px; text-align: center; }
+        .details-table th { background-color: #f9fafb; }
+        .details-table input { width: 100%; border: none; text-align: center; background: transparent; font-size: 12px; }
+        .details-table input:focus { outline: 1px solid #3b82f6; }
+        .details-table .col-player { width: 120px; }
+        .details-table .col-inning { width: 50px; }
+        .details-table .col-stat { width: 60px; }
+        .details-table .col-number { width: 40px; }
+        .details-table select { width: 100%; border: none; background: transparent; font-size: 12px; }
+        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+        .add-row-btn:hover { background-color: #d1d5db; }
+ </style>
 </head>
 <body class="p-4 md:p-8">
 
@@ -223,12 +236,13 @@
         </div>
     </div>
 
-    <div id="details-modal" class="details-modal hidden">
-        <div class="details-modal-content">
-            <h3 class="text-xl font-bold mb-4 text-center">試合詳細入力</h3>
-            <div id="details-modal-body" class="space-y-6"></div>
-            <div class="mt-6 text-center">
-                <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">保存</button>
+    <div id="details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="details-modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+            <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">試合詳細入力</h3>
+            <div id="details-modal-body" class="overflow-y-auto space-y-6 flex-grow">
+                </div>
+            <div class="mt-6 text-center border-t pt-4">
+                <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">この内容で保存</button>
                 <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
             </div>
         </div>
@@ -1279,109 +1293,192 @@ function renderTournament(data) {
     }
 
     function checkBest8Decided(){} // checkTournamentProgressに統合
-// --- 試合詳細モーダル関連の関数 ---
-    
+// --- 試合詳細モーダル関連の関数（高機能版） ---
+
+    /**
+     * 新しい試合詳細モーダルを開き、各種テーブルを生成する
+     */
     function openDetailsModal(matchId) {
         currentMatchIdForDetails = matchId;
-        const match = tournamentState.matches[matchId];
+        const match = findMatchById(matchId);
+        if (!match) return;
+
         const detailsBody = document.getElementById('details-modal-body');
         
+        // 保存されたデータ、なければ初期データを準備
         const details = match.details || {
-            inningScore: { [match.team1]: Array(9).fill(''), [match.team2]: Array(9).fill('') },
-            batters: { [match.team1]: Array(9).fill({}), [match.team2]: Array(9).fill({}) },
-            pitchers: { [match.team1]: Array(3).fill({}), [match.team2]: Array(3).fill({}) },
+            inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') },
+            batting: { team1: [], team2: [] },
+            pitching: { team1: [], team2: [] }
         };
 
-        detailsBody.innerHTML = `
-            ${createInningScoreTable(match.team1, match.team2, details.inningScore)}
-            ${createStatsTable('batters', `打者成績: ${match.team1}`, details.batters[match.team1], ['選手名', '打数', '安打', '打点', '本塁打', '三振'], match.team1)}
-            ${createStatsTable('pitchers', `投手成績: ${match.team1}`, details.pitchers[match.team1], ['選手名', '投球回', '被安打', '奪三振', '与四球', '失点'], match.team1)}
-            <hr class="my-4">
-            ${createStatsTable('batters', `打者成績: ${match.team2}`, details.batters[match.team2], ['選手名', '打数', '安打', '打点', '本塁打', '三振'], match.team2)}
-            ${createStatsTable('pitchers', `投手成績: ${match.team2}`, details.pitchers[match.team2], ['選手名', '投球回', '被安打', '奪三振', '与四球', '失点'], match.team2)}
+        let html = `
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-bold mb-2">${match.team1} 打撃成績</h4>
+                    ${createPlayerBattingTable(match.team1, 'team1', details)}
+                </div>
+                <div>
+                    <h4 class="font-bold mb-2">${match.team2} 打撃成績</h4>
+                    ${createPlayerBattingTable(match.team2, 'team2', details)}
+                </div>
+                <div>
+                    <h4 class="font-bold mb-2">${match.team1} 投手成績</h4>
+                    ${createPitchingStatsTable('team1', details)}
+                </div>
+                <div>
+                    <h4 class="font-bold mb-2">${match.team2} 投手成績</h4>
+                    ${createPitchingStatsTable('team2', details)}
+                </div>
+            </div>
         `;
+        detailsBody.innerHTML = html;
         detailsModal.classList.remove('hidden');
     }
 
-    function createInningScoreTable(team1, team2, data) {
-        const innings = Array.from({length: 9}, (_, i) => i + 1);
+    /**
+     * 個人別打席結果のテーブルHTMLを生成する
+     */
+    function createPlayerBattingTable(teamName, teamKey, details) {
+        const battingData = details.batting[teamKey] || [];
+        const numInnings = details.inningScore[teamKey]?.length || 9;
+        let inningsHeader = '';
+        for (let i = 1; i <= numInnings; i++) {
+            inningsHeader += `<th class="col-inning">${i}</th>`;
+        }
+
+        let bodyRows = '';
+        for (let i = 0; i < 9; i++) { // 9番打者まで表示
+            const playerData = battingData[i] || { number: '', name: '', pos: '', results: [] };
+            let resultInputs = '';
+            for (let j = 0; j < numInnings; j++) {
+                resultInputs += `<td><input type="text" value="${playerData.results[j] || ''}" placeholder="-"></td>`;
+            }
+            bodyRows += `
+                <tr data-order="${i+1}">
+                    <td>${i+1}</td>
+                    <td><input type="text" class="col-number" value="${playerData.number || ''}"></td>
+                    <td><input type="text" value="${playerData.name || ''}"></td>
+                    <td><input type="text" class="w-12" value="${playerData.pos || ''}"></td>
+                    ${resultInputs}
+                </tr>
+            `;
+        }
+
         return `
-            <div>
-                <h4 class="font-bold mb-2">イニングスコア</h4>
-                <table class="stats-table" id="inning-score-table">
+            <div class="overflow-x-auto">
+                <table class="details-table" id="batting-table-${teamKey}">
                     <thead>
-                        <tr><th>チーム</th>${innings.map(i => `<th>${i}</th>`).join('')}<th>計</th></tr>
+                        <tr>
+                            <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th>
+                            ${inningsHeader}
+                            <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
+                        </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>${team1}</td>
-                            ${innings.map((_, i) => `<td><input type="number" value="${data[team1]?.[i] || ''}" data-team="${team1}" data-inning="${i}"></td>`).join('')}
-                            <td id="total-${team1}"></td>
-                        </tr>
-                        <tr>
-                            <td>${team2}</td>
-                            ${innings.map((_, i) => `<td><input type="number" value="${data[team2]?.[i] || ''}" data-team="${team2}" data-inning="${i}"></td>`).join('')}
-                            <td id="total-${team2}"></td>
-                        </tr>
-                    </tbody>
+                    <tbody>${bodyRows}</tbody>
                 </table>
+                <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
             </div>
         `;
     }
 
-    function createStatsTable(type, title, data, headers, teamName) {
-        let table = `
-            <div>
-                <h4 class="font-bold mb-2">${title}</h4>
-                <table class="stats-table" data-type="${type}" data-team="${teamName}">
-                    <thead>
-                        <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-                    </thead>
-                    <tbody>
-                        ${(data && data.length > 0 ? data : [{}]).map((playerData, rowIndex) => {
-                            let rowHtml = '<tr>';
-                            headers.forEach((h, colIndex) => {
-                                rowHtml += `<td><input type="text" value="${playerData[h] || ''}" data-row="${rowIndex}" data-col="${h}"></td>`;
-                            });
-                            rowHtml += '</tr>';
-                            return rowHtml;
-                        }).join('')}
-                    </tbody>
-                </table>
-                <button class="add-row-btn mt-2 text-sm bg-gray-200 px-2 py-1 rounded" data-type="${type}" data-team="${teamName}">＋選手を追加</button>
-            </div>`;
-        return table;
+    /**
+     * 投手成績のテーブルHTMLを生成する
+     */
+    function createPitchingStatsTable(teamKey, details) {
+        const pitchingData = details.pitching[teamKey] || [];
+        let bodyRows = pitchingData.map((player, index) => `
+            <tr data-pitcher-index="${index}">
+                <td>
+                    <select>
+                        <option value="" ${!player.result ? 'selected' : ''}>-</option>
+                        <option value="W" ${player.result === 'W' ? 'selected' : ''}>○</option>
+                        <option value="L" ${player.result === 'L' ? 'selected' : ''}>●</option>
+                        <option value="S" ${player.result === 'S' ? 'selected' : ''}>S</option>
+                        <option value="H" ${player.result === 'H' ? 'selected' : ''}>H</option>
+                    </select>
+                </td>
+                <td><input type="text" value="${player.name || ''}"></td>
+                <td><input type="text" value="${player.innings || ''}"></td>
+                <td><input type="number" value="${player.battersFaced || ''}"></td>
+                <td><input type="number" value="${player.pitches || ''}"></td>
+                <td><input type="number" value="${player.hits || ''}"></td>
+                <td><input type="number" value="${player.strikeouts || ''}"></td>
+                <td><input type="number" value="${player.walks || ''}"></td>
+                <td><input type="number" value="${player.runs || ''}"></td>
+                <td><input type="number" value="${player.earnedRuns || ''}"></td>
+            </tr>
+        `).join('');
+
+        return `
+            <table class="details-table" id="pitching-table-${teamKey}">
+                <thead>
+                    <tr>
+                        <th class="w-12">勝敗</th><th class="col-player">選手名</th><th class="col-stat">回数</th><th class="col-stat">打者</th><th class="col-stat">球数</th><th class="col-stat">被安打</th><th class="col-stat">奪三振</th><th class="col-stat">与四球</th><th class="col-stat">失点</th><th class="col-stat">自責点</th>
+                    </tr>
+                </thead>
+                <tbody>${bodyRows}</tbody>
+            </table>
+            <button class="add-row-btn" data-table-id="pitching-table-${teamKey}">+ 投手を追加</button>
+        `;
     }
-    
+
+    /**
+     * 詳細モーダルから入力されたデータを読み取り、stateに保存する
+     */
     function saveDetailedStats() {
         if (!currentMatchIdForDetails) return;
-        const match = tournamentState.matches[currentMatchIdForDetails];
-        const details = { inningScore: {}, batters: {}, pitchers: {} };
+        const match = findMatchById(currentMatchIdForDetails);
+        if (!match) return;
 
-        const inningTable = document.getElementById('inning-score-table');
-        details.inningScore[match.team1] = Array.from(inningTable.querySelectorAll(`input[data-team="${match.team1}"]`)).map(inp => inp.value);
-        details.inningScore[match.team2] = Array.from(inningTable.querySelectorAll(`input[data-team="${match.team2}"]`)).map(inp => inp.value);
+        const details = { batting: {}, pitching: {} };
+
+        for (const teamKey of ['team1', 'team2']) {
+            // 打撃成績の保存
+            details.batting[teamKey] = [];
+            const battingTable = document.getElementById(`batting-table-${teamKey}`);
+            battingTable.querySelectorAll('tbody tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const playerData = {
+                    order: row.dataset.order,
+                    number: inputs[0].value,
+                    name: inputs[1].value,
+                    pos: inputs[2].value,
+                    results: Array.from(inputs).slice(3).map(inp => inp.value)
+                };
+                if (playerData.name) { // 選手名が入力されている行のみ保存
+                    details.batting[teamKey].push(playerData);
+                }
+            });
+
+            // 投手成績の保存
+            details.pitching[teamKey] = [];
+            const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
+            pitchingTable.querySelectorAll('tbody tr').forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const select = row.querySelector('select');
+                const pitcherData = {
+                    result: select.value,
+                    name: inputs[0].value,
+                    innings: inputs[1].value,
+                    battersFaced: inputs[2].value,
+                    pitches: inputs[3].value,
+                    hits: inputs[4].value,
+                    strikeouts: inputs[5].value,
+                    walks: inputs[6].value,
+                    runs: inputs[7].value,
+                    earnedRuns: inputs[8].value,
+                };
+                if (pitcherData.name) { // 選手名が入力されている行のみ保存
+                    details.pitching[teamKey].push(pitcherData);
+                }
+            });
+        }
         
-        ['batters', 'pitchers'].forEach(type => {
-            details[type][match.team1] = parseStatsTable(document.querySelector(`table[data-type="${type}"][data-team="${match.team1}"]`));
-            details[type][match.team2] = parseStatsTable(document.querySelector(`table[data-type="${type}"][data-team="${match.team2}"]`));
-        });
-
         match.details = details;
         saveState();
         detailsModal.classList.add('hidden');
-    }
-
-    function parseStatsTable(tableEl) {
-        const headers = Array.from(tableEl.querySelectorAll('th')).map(th => th.textContent);
-        const rows = Array.from(tableEl.querySelectorAll('tbody tr'));
-        return rows.map(row => {
-            const rowData = {};
-            Array.from(row.querySelectorAll('input, select')).forEach((input, i) => {
-                rowData[headers[i]] = input.value;
-            });
-            return rowData;
-        }).filter(d => d['選手名'] && d['選手名'].trim() !== '');
+        alert('詳細を保存しました。');
     }
 /**
      * 【修正版】スキップ機能関連
