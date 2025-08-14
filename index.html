@@ -1745,49 +1745,81 @@ function renderTournament(data) {
             </table>
         `;
     }
+/**
+ * 新しい試合詳細モーダルを開き、各種テーブルを生成する（全ての機能を含む最終版）
+ */
 function openDetailsModal(matchId) {
-        currentMatchIdForDetails = matchId;
-        const match = findMatchById(matchId);
-        if (!match) return;
+    currentMatchIdForDetails = matchId;
+    const match = findMatchById(matchId);
+    if (!match) return;
 
-        const detailsBody = document.getElementById('details-modal-body');
-        
-        const details = match.details || {
-            inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') },
-            batting: { team1: [], team2: [] },
-            pitching: { team1: [], team2: [] }
-        };
+    const detailsBody = document.getElementById('details-modal-body');
+    
+    // detailsオブジェクトがない場合に備え、inningScoreも初期化
+    const details = match.details || {
+        inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') },
+        batting: { team1: [], team2: [] },
+        pitching: { team1: [], team2: [] }
+    };
+    if (!details.inningScore) {
+        details.inningScore = { team1: Array(9).fill(''), team2: Array(9).fill('') };
+    }
 
- // ★★★ ここからが新しい処理 ★★★
     // もし試合データが空で、かつチームの選手名簿(roster)が存在すれば、それを読み込む
     for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (details.batting[teamKey].length === 0 && teamRecord && teamRecord.roster) {
-            // rosterからresultsを除いた基本情報をdetailsにコピー
-            details.batting[teamKey] = teamRecord.roster.map(player => ({
-                ...player,
-                results: [] // 打席結果は空で初期化
-            }));
+            details.batting[teamKey] = teamRecord.roster.map(player => ({ ...player, results: [] }));
         }
     }
-    // ★★★ ここまでが新しい処理 ★★★
 
-        let html = `
-            <div>
+    // --- ここからがスコアボード作成の内部品です ---
+    const createInningScoreboard = () => {
+        let header = '';
+        const numInnings = details.inningScore?.team1?.length || 9;
+        for (let i = 1; i <= numInnings; i++) {
+            header += `<th class="w-10">${i}</th>`;
+        }
+        
+        // ▼ ご質問の createRow はこの中にあります ▼
+        const createRow = (teamKey, teamName) => {
+            let cells = '';
+            for (let i = 0; i < numInnings; i++) {
+                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
+            }
+            return `<tr>
+                        <th class="text-left pr-2">${teamName}</th>
+                        ${cells}
+                        <td class="total-score font-bold"></td>
+                    </tr>`;
+        };
+
+        return `
+            <div class="mb-6">
                 <h4 class="font-bold mb-2">イニングスコア</h4>
-                ${createInningScoreTable(match.team1, match.team2, details)}
+                <table class="details-table" id="inning-score-table">
+                    <thead>
+                        <tr>
+                            <th class="w-32">チーム</th>
+                            ${header}
+                            <th class="w-12">計</th>
+                            <th class="w-8"><button id="add-inning-score-btn" class="text-xs font-bold">+</button></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${createRow('team1', match.team1)}
+                        ${createRow('team2', match.team2)}
+                    </tbody>
+                </table>
             </div>
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div>
-                    <h4 class="font-bold mb-2">${match.team1} 打撃成績</h4>
-                    ${createPlayerBattingTable(match.team1, 'team1', details)}
-                </div>
-                <div>
-                    <h4 class="font-bold mb-2">${match.team2} 打撃成績</h4>
-                    ${createPlayerBattingTable(match.team2, 'team2', details)}
-                </div>
-                <div><div class="text-center my-4 border-t border-b py-2">
+        `;
+    };
+    // --- スコアボード作成の内部品ここまで ---
+
+    let html = `
+        ${createInningScoreboard()}
+        <div class="text-center my-4 border-t border-b py-2">
             <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 <span>先攻・後攻を入れ替え</span>
@@ -1795,19 +1827,29 @@ function openDetailsModal(matchId) {
         </div>
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div>
-
-                    <h4 class="font-bold mb-2">${match.team1} 投手成績</h4>
-                    ${createPitchingStatsTable('team1', details)}
-                </div>
-                <div>
-                    <h4 class="font-bold mb-2">${match.team2} 投手成績</h4>
-                    ${createPitchingStatsTable('team2', details)}
-                </div>
+                <h4 class="font-bold mb-2">${match.team1} 打撃成績</h4>
+                ${createPlayerBattingTable(match.team1, 'team1', details)}
             </div>
-        `;
-        detailsBody.innerHTML = html;
-        detailsModal.classList.remove('hidden');
-    }
+            <div>
+                <h4 class="font-bold mb-2">${match.team2} 打撃成績</h4>
+                ${createPlayerBattingTable(match.team2, 'team2', details)}
+            </div>
+            <div>
+                <h4 class="font-bold mb-2">${match.team1} 投手成績</h4>
+                ${createPitchingStatsTable('team1', details)}
+            </div>
+            <div>
+                <h4 class="font-bold mb-2">${match.team2} 投手成績</h4>
+                ${createPitchingStatsTable('team2', details)}
+            </div>
+        </div>
+    `;
+    detailsBody.innerHTML = html;
+    detailsModal.classList.remove('hidden');
+
+    // スコアの合計を計算して表示
+    updateTotalScores();
+}
 
     /**
      * 個人別打席結果のテーブルHTMLを生成する
