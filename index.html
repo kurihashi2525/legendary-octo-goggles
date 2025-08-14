@@ -8,6 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
+/* styleタグ内の分かりやすい場所に追加 */
+
+.clickable-team-name {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.clickable-team-name:hover {
+    color: #1d4ed8; /* blue-700 */
+}
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
         .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
         #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
@@ -285,6 +294,31 @@
             </div>
         </div>
     </div>
+
+<div id="team-status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 id="status-modal-team-name" class="text-2xl font-bold text-gray-800"></h3>
+            <button id="status-modal-close" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">最高戦績</h4>
+                <p id="status-modal-best" class="text-lg text-amber-600 font-bold"></p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">直近の成績</h4>
+                <div id="status-modal-history" class="space-y-1 text-gray-700"></div>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">称号</h4>
+                <div id="status-modal-traits" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
 <script type="module">
     // --- ライバル関係と称号の定義 ---
     const RIVALRIES = [
@@ -584,7 +618,67 @@
         if (rank <= 64) return "2回戦敗退";
         return "初戦敗退";
     }
+// --- Utility & State Functions --- などに追加
 
+/**
+ * 戦績レコードを読みやすい文字列に変換する
+ */
+function formatRecordToString(record) {
+    if (!record) return "データなし";
+    const year = record.year.toString().slice(-2);
+    const tournamentNameMap = { summer: '夏', autumn: '秋', spring: '春' };
+    const tournament = tournamentNameMap[record.tournament] || '';
+    const rank = getRankString(record.rank);
+    return `'${year} ${tournament}: ${rank}`;
+}
+
+/**
+ * チームステータスモーダルを表示する
+ */
+function showTeamStatusModal(teamName) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord) return;
+
+    // モーダルの要素を取得
+    const modal = document.getElementById('team-status-modal');
+    const bestEl = document.getElementById('status-modal-best');
+    const historyEl = document.getElementById('status-modal-history');
+    const traitsEl = document.getElementById('status-modal-traits');
+
+    // データを設定
+    document.getElementById('status-modal-team-name').textContent = teamName;
+    bestEl.textContent = teamRecord.best ? formatRecordToString(teamRecord.best) : 'まだありません';
+
+    // 直近の成績 (最大2件)
+    historyEl.innerHTML = '';
+    if (teamRecord.history.length > 0) {
+        teamRecord.history.slice(0, 2).forEach(rec => {
+            const p = document.createElement('p');
+            p.textContent = formatRecordToString(rec);
+            historyEl.appendChild(p);
+        });
+    } else {
+        historyEl.innerHTML = '<p>まだありません</p>';
+    }
+
+    // 称号
+    traitsEl.innerHTML = '';
+    if (teamRecord.teamTraits.length > 0) {
+        teamRecord.teamTraits.forEach(traitId => {
+            const trait = TITLES[traitId];
+            if (trait) {
+                const span = document.createElement('span');
+                span.className = 'bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full';
+                span.textContent = trait.name;
+                traitsEl.appendChild(span);
+            }
+        });
+    } else {
+        traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
+    }
+    
+    modal.classList.remove('hidden');
+}
     // --- Custom Alert/Confirm ---
     function showAlert(message) {
         alert(message);
@@ -825,7 +919,11 @@
                 INITIAL_TEAM_POOL.forEach(t => {
                     const historicalRank = historicalRanks.find(hr => hr.name === t);
                     tournamentState.teamRecords[t] = { 
-                        wins: 0, losses: 0, best: null, 
+                        // --- 変更ここから ---
+            best: null, // シミュレーション内での最高成績 (最初はなし)
+            history: [], // 大会ごとの戦績履歴
+            // --- 変更ここまで ---
+wins: 0, losses: 0, best: null, 
                         lastFinish: historicalRank ? historicalRank.rank : 64, 
                         previousRank: null,
                         teamTraits: [] // 称号リストを初期化
@@ -895,51 +993,70 @@
         }
     }
 
-    /**
-     * 大会終了時に、全チームの最終順位をteamRecordsに記録する
-     */
-    function updateTournamentFinishRecords() {
-        const { matches, teams } = tournamentState;
-        if (!teams || teams.length === 0) return;
+   /**
+ * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
+ */
+function updateTournamentFinishRecords() {
+    const { matches, teams } = tournamentState;
+    if (!teams || teams.length === 0) return;
 
-        const numTeams = teams.length;
-        const finalRound = Math.log2(numTeams);
+    const numTeams = teams.length;
+    const finalRound = Math.log2(numTeams);
 
-        const getRoundLosers = (round, side) => {
-            const losers = [];
-            const numMatches = (numTeams / 2) / Math.pow(2, round - 1);
-            for(let m = 1; m <= numMatches; m++) {
-                const match = matches[`${side}-R${round}-M${m}`];
-                if(match && match.winner) {
-                    const loser = match.winner === match.team1 ? match.team2 : match.team1;
-                    if(loser) losers.push(loser);
-                }
+    // 最終順位を決定する
+    const getRoundLosers = (round, side) => {
+        const losers = [];
+        const numMatches = (numTeams / 2) / Math.pow(2, round - 1);
+        for (let m = 1; m <= numMatches; m++) {
+            const match = matches[`${side}-R${round}-M${m}`];
+            if (match && match.winner) {
+                const loser = match.winner === match.team1 ? match.team2 : match.team1;
+                if (loser) losers.push(loser);
             }
-            return losers;
-        };
-        
-        const finalMatch = matches['F-R1-M1'];
-        if (finalMatch && finalMatch.winner) {
-            const winner = finalMatch.winner;
-            const runnerUp = finalMatch.winner === finalMatch.team1 ? finalMatch.team2 : finalMatch.team1;
-            if(tournamentState.teamRecords[winner]) tournamentState.teamRecords[winner].lastFinish = 1;
-            if(tournamentState.teamRecords[runnerUp]) tournamentState.teamRecords[runnerUp].lastFinish = 2;
         }
+        return losers;
+    };
 
-        for(let r = finalRound - 1; r >= 1; r--){
-            const finishRank = Math.pow(2, finalRound - r + 1);
-            getRoundLosers(r, 'L').concat(getRoundLosers(r, 'R')).forEach(t => { 
-                if(t && tournamentState.teamRecords[t]) tournamentState.teamRecords[t].lastFinish = finishRank; 
-            });
-        }
-        
-        Object.keys(tournamentState.teamRecords).forEach(team => {
-            const record = tournamentState.teamRecords[team];
-            if (record.best === null || record.lastFinish < record.best) {
-                record.best = record.lastFinish;
-            }
+    const finalMatch = matches['F-R1-M1'];
+    if (finalMatch && finalMatch.winner) {
+        const winner = finalMatch.winner;
+        const runnerUp = finalMatch.winner === finalMatch.team1 ? finalMatch.team2 : finalMatch.team1;
+        if (tournamentState.teamRecords[winner]) tournamentState.teamRecords[winner].lastFinish = 1;
+        if (tournamentState.teamRecords[runnerUp]) tournamentState.teamRecords[runnerUp].lastFinish = 2;
+    }
+
+    // 準決勝以前の敗退順位を記録
+    for (let r = finalRound - 1; r >= 1; r--) {
+        const finishRank = Math.pow(2, finalRound - r + 1);
+        getRoundLosers(r, 'L').concat(getRoundLosers(r, 'R')).forEach(t => {
+            if (t && tournamentState.teamRecords[t]) tournamentState.teamRecords[t].lastFinish = finishRank;
         });
     }
+
+    // ★★★ ここからが戦績履歴と最高成績の更新処理 ★★★
+    Object.keys(tournamentState.teamRecords).forEach(team => {
+        const record = tournamentState.teamRecords[team];
+        if(!record.lastFinish) return; // 試合に参加していない場合はスキップ
+
+        // 今回の大会結果オブジェクトを作成
+        const newHistoryRecord = {
+            year: tournamentState.tournamentYear,
+            tournament: tournamentState.currentTournament,
+            rank: record.lastFinish
+        };
+
+        // 履歴の先頭に追加 (新しいものが常に一番上に来るように)
+        if (!record.history) record.history = [];
+        record.history.unshift(newHistoryRecord);
+
+        // 最高成績を更新
+        // (bestが未設定か、今回の成績の方が良い(rankの数字が小さい)場合に更新)
+        if (!record.best || newHistoryRecord.rank < record.best.rank) {
+            record.best = newHistoryRecord;
+        }
+    });
+    // ★★★ ここまで ★★★
+}
 
     /**
      * 現在のトーナメント状態に基づいてUI全体を再描画する
@@ -1155,7 +1272,7 @@ function renderTournament(data) {
 
         const content = `
             <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
-                <span class="team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}">
+                 <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
                     ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
                     ${isSeed1 ? 'S ' : ''}${team1 || '---'}
                 </span>
@@ -1163,7 +1280,7 @@ function renderTournament(data) {
                 <button class="win-btn">▶</button>
             </div>
             <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
-                <span class="team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}">
+                <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}">
                     ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
                     ${isSeed2 ? 'S ' : ''}${team2 || '---'}
                 </span>
@@ -3846,7 +3963,16 @@ document.body.addEventListener('click', async (e) => {
             <td></td>
         `;
     }
-    else if (e.target.matches('.add-row-btn')) {
+   // ★★★ このブロックをここに追加 ★★★
+    else if (e.target.matches('.clickable-team-name')) {
+        const teamName = e.target.dataset.teamName;
+        // teamNameが存在し、空っぽでないことを確認
+        if(teamName && teamName !== 'null' && teamName !== '') {
+            showTeamStatusModal(teamName);
+        }
+    }
+    // ★★★ ここまで追加 ★★★
+ else if (e.target.matches('.add-row-btn')) {
         e.preventDefault();
         const tableId = e.target.dataset.tableId;
         const table = document.getElementById(tableId).querySelector('tbody');
@@ -3916,6 +4042,9 @@ document.body.addEventListener('click', async (e) => {
     document.getElementById('details-close').addEventListener('click', () => detailsModal.classList.add('hidden'));
     saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
     newspaperCloseBtn.addEventListener('click', () => newspaperModal.classList.add('hidden'));
+document.getElementById('status-modal-close').addEventListener('click', () => {
+    document.getElementById('team-status-modal').classList.add('hidden');
+});
 
     saveTabBtn.addEventListener('click', () => {
         saveTabBtn.classList.add('border-blue-500'); saveTabBtn.classList.remove('text-gray-500');
