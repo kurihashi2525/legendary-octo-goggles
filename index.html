@@ -4069,11 +4069,9 @@ startMainTournamentBtn.addEventListener('click', async () => {
         generateSummaryBtn.textContent = 'ベスト8ハイライト記事を生成';
     });
 
-/**
- * 【修正版】クリックイベントの処理
- */
 document.body.addEventListener('click', async (e) => {
-    // 勝利ボタン
+
+    // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
         const teamSlot = e.target.closest('.team-slot');
         const matchEl = e.target.closest('[data-match-id]');
@@ -4091,16 +4089,7 @@ document.body.addEventListener('click', async (e) => {
             return;
         }
 
-        let dbMatch;
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-             const [region, bracketId] = matchId.split('-');
-             const regionData = tournamentState.autumnData.regions[region];
-             if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
-             else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
-             else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
-        } else {
-            dbMatch = tournamentState.matches[matchId];
-        }
+        let dbMatch = findMatchById(matchId);
         if (dbMatch) {
             dbMatch.score1 = score1El.value;
             dbMatch.score2 = score2El.value;
@@ -4110,18 +4099,19 @@ document.body.addEventListener('click', async (e) => {
         await processMatchWin(matchId, winnerName);
     }
 
-    // 詳細入力ボタン
+    // --- 試合詳細入力ボタン ---
     else if (e.target.matches('.details-btn')) {
         openDetailsModal(e.target.dataset.matchId);
     }
 
-    // 詳細モーダル内のボタン処理
+    // --- 【詳細モーダル内】イニング追加ボタン ---
     else if (e.target.matches('.add-inning-btn')) {
         e.preventDefault();
         const teamKey = e.target.dataset.teamKey;
         const table = document.getElementById(`batting-table-${teamKey}`);
+        if (!table) return;
         const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 4;
+        const newInningNum = headerRow.children.length - 4; // #,選手,守備,+,計 ボタンを除外
         const newTh = document.createElement('th');
         newTh.className = 'col-inning';
         newTh.textContent = newInningNum;
@@ -4133,22 +4123,27 @@ document.body.addEventListener('click', async (e) => {
             row.appendChild(newTd);
         });
     }
+    
+    // --- 【詳細モーダル内】交代選手追加ボタン ---
     else if (e.target.matches('.add-substitute-btn')) {
         e.preventDefault();
         const teamKey = e.target.dataset.teamKey;
         const table = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
-        const order = prompt("何番打者の交代選手を追加しますか？（例：3）");
-        if (!order || isNaN(order) || order < 1 || order > 9) return;
+        const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
+        if (!orderInput || isNaN(orderInput)) return;
+        const order = parseInt(orderInput);
+        if (order < 1) return;
 
-        const targetRow = Array.from(table.querySelectorAll('tr')).find(r => r.dataset.order.startsWith(order) && !r.dataset.order.includes('-sub'));
-        if (!targetRow) return;
+        // 交代元の打順の行を探す
+        const targetRow = Array.from(table.querySelectorAll('tr')).find(r => parseInt(r.cells[0].textContent) === order);
+        if (!targetRow) {
+            alert(order + '番打者が見つかりません。');
+            return;
+        }
 
-        const newRow = table.insertRow(targetRow.rowIndex);
-        const subCount = table.querySelectorAll(`tr[data-order^="${order}-sub"]`).length + 1;
-        newRow.dataset.order = `${order}-sub-${subCount}`;
-
+        const newRow = table.insertRow(targetRow.rowIndex + 1);
+        const numInnings = table.parentElement.querySelector('thead tr').children.length - 5;
         let resultInputs = '';
-        const numInnings = table.querySelector('thead tr').children.length - 5;
         for (let j = 0; j < numInnings; j++) {
             resultInputs += `<td><input type="text" placeholder="-"></td>`;
         }
@@ -4158,29 +4153,79 @@ document.body.addEventListener('click', async (e) => {
             <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
             <td><input type="text" class="w-12" placeholder="守備"></td>
             ${resultInputs}
-            <td></td>
         `;
     }
-   // ★★★ このブロックをここに追加 ★★★
-    else if (e.target.matches('.clickable-team-name')) {
-        const teamName = e.target.dataset.teamName;
-        // teamNameが存在し、空っぽでないことを確認
-        if(teamName && teamName !== 'null' && teamName !== '') {
-            showTeamStatusModal(teamName);
-        }
-    }
-    // ★★★ ここまで追加 ★★★
- else if (e.target.matches('.add-row-btn')) {
+
+    // --- 【詳細モーダル内】投手追加ボタン ---
+    else if (e.target.matches('.add-row-btn')) {
         e.preventDefault();
         const tableId = e.target.dataset.tableId;
         const table = document.getElementById(tableId).querySelector('tbody');
         const newRow = table.insertRow();
         newRow.innerHTML = `
             <td><select><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
-            <td><input type="text"></td><td><input type="text"></td><td><input type="number"></td><td><input type="number"></td>
-            <td><input type="number"></td><td><input type="number"></td><td><input type="number"></td>
-            <td><input type="number"></td><td><input type="number"></td>
+            <td><input type="text" value=""></td>
+            <td><input type="text" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
+            <td><input type="number" value=""></td>
         `;
+    }
+    
+    // --- チーム名クリック（ステータス表示） ---
+    else if (e.target.matches('.clickable-team-name')) {
+        const teamName = e.target.dataset.teamName;
+        if(teamName && teamName !== 'null' && teamName !== '') {
+            showTeamStatusModal(teamName);
+        }
+    }
+
+    // --- 記事表示ボタン（通常記事の「本文」） ---
+    else if (e.target.matches('.news-article-btn')) {
+        const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
+        if (article && article.body) {
+            document.getElementById('modal-title').textContent = article.title;
+            document.getElementById('modal-body').textContent = article.body;
+            document.getElementById('modal-meta').innerHTML = `<p>${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>`;
+            newsModal.classList.remove('hidden');
+            newsModal.classList.add('flex');
+        } else {
+            alert('記事の本文データを取得できませんでした。');
+        }
+    }
+
+    // --- 記事表示ボタン（新聞の「新聞を読む」） ---
+    else if (e.target.matches('.newspaper-view-btn')) {
+        const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
+        if (article.isNewspaper && article.newspaperData) {
+            renderNewspaperModal(article.newspaperData);
+            newspaperModal.classList.remove('hidden');
+        }
+    }
+
+    // --- AI記事の再生成ボタン ---
+    else if (e.target.matches('.retry-btn')) {
+        const btn = e.target;
+        const errorId = btn.dataset.errorId;
+        const articleIndex = tournamentState.news.findIndex(n => n.errorId === errorId);
+        if (articleIndex === -1) return;
+
+        btn.textContent = '生成中...';
+        btn.disabled = true;
+
+        const errorContext = tournamentState.news[articleIndex].context;
+        const newArticle = await generateNewsArticle(
+            errorContext.winnerName, errorContext.loserName,
+            errorContext.dbMatch, errorContext.matchId
+        );
+
+        tournamentState.news[articleIndex] = newArticle;
+        saveState();
+        renderNews(tournamentState.news);
     }
 });
     
