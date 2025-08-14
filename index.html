@@ -609,6 +609,15 @@
     }
 
     function getRankString(rank) {
+ // ★★★ このifブロックを関数の先頭に追加 ★★★
+    if (rank <= -1) {
+        for (const key in KOSHIEN_RESULTS) {
+            if (KOSHIEN_RESULTS[key].rank === rank) {
+                return KOSHIEN_RESULTS[key].label;
+            }
+        }
+    }
+    // ★★★ ここまで追加 ★★★
         if (rank === 1) return "優勝";
         if (rank === 2) return "準優勝";
         if (rank <= 4) return "ベスト4";
@@ -629,7 +638,10 @@ function formatRecordToString(record) {
     const tournamentNameMap = { summer: '夏', autumn: '秋', spring: '春' };
     const tournament = tournamentNameMap[record.tournament] || '';
     const rank = getRankString(record.rank);
-    return `'${year} ${tournament}: ${rank}`;
+    // ★★★ 以下の行を変更 ★★★
+    const prefix = record.rank < 0 ? '' : '県大会'; // 甲子園成績の場合は「県大会」をつけない
+    return `'${year} ${tournament}: ${prefix}${rank}`;
+    // ★★★ ここまで変更 ★★★
 }
 
 /**
@@ -713,6 +725,67 @@ function showTeamStatusModal(teamName) {
         });
     }
 
+// --- Utility & State Functions --- などに追加
+
+// 甲子園での成績を定義（数字が小さいほど上位）
+const KOSHIEN_RESULTS = {
+    CHAMPION:       { rank: -1, label: '全国優勝' },
+    RUNNER_UP:    { rank: -2, label: '全国準優勝' },
+    BEST_4:         { rank: -4, label: '甲子園ベスト4' },
+    BEST_8:         { rank: -8, label: '甲子園ベスト8' },
+    BEST_16:        { rank: -16, label: '甲子園3回戦敗退' }, // ベスト16
+    ROUND_2:        { rank: -32, label: '甲子園2回戦敗退' },
+    ROUND_1:        { rank: -64, label: '甲子園初戦敗退' },
+};
+
+// チームのA～Eランクごとの、甲子園での成績確率（ウェイト方式）
+const KOSHIEN_PROBABILITIES = {
+    'A': [
+        { result: 'CHAMPION', weight: 20 }, { result: 'RUNNER_UP', weight: 25 },
+        { result: 'BEST_4', weight: 25 },   { result: 'BEST_8', weight: 15 },
+        { result: 'BEST_16', weight: 10 },  { result: 'ROUND_2', weight: 4 },
+        { result: 'ROUND_1', weight: 1 }
+    ],
+    'B': [
+        { result: 'CHAMPION', weight: 5 },  { result: 'RUNNER_UP', weight: 10 },
+        { result: 'BEST_4', weight: 20 },   { result: 'BEST_8', weight: 30 },
+        { result: 'BEST_16', weight: 20 },  { result: 'ROUND_2', weight: 10 },
+        { result: 'ROUND_1', weight: 5 }
+    ],
+    'C': [
+        { result: 'CHAMPION', weight: 1 },  { result: 'RUNNER_UP', weight: 3 },
+        { result: 'BEST_4', weight: 8 },    { result: 'BEST_8', weight: 20 },
+        { result: 'BEST_16', weight: 30 },  { result: 'ROUND_2', weight: 28 },
+        { result: 'ROUND_1', weight: 10 }
+    ],
+    'D': [
+        { result: 'BEST_8', weight: 5 },    { result: 'BEST_16', weight: 15 },
+        { result: 'ROUND_2', weight: 40 },  { result: 'ROUND_1', weight: 40 }
+    ],
+    'E': [
+        { result: 'BEST_16', weight: 5 },   { result: 'ROUND_2', weight: 25 },
+        { result: 'ROUND_1', weight: 70 }
+    ],
+};
+
+/**
+ * チームランクに基づき、甲子園での成績を確率で決定する
+ * @param {string} teamRank - 'A'から'E'までのチームランク
+ * @returns {string} - KOSHIEN_RESULTSのキー ('CHAMPION', 'BEST_8'など)
+ */
+function simulateKoshien(teamRank) {
+    const probabilities = KOSHIEN_PROBABILITIES[teamRank] || KOSHIEN_PROBABILITIES['E'];
+    const totalWeight = probabilities.reduce((sum, p) => sum + p.weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (const prob of probabilities) {
+        if (random < prob.weight) {
+            return prob.result;
+        }
+        random -= prob.weight;
+    }
+    return 'ROUND_1'; // フォールバック
+}
     /**
      * 試合IDを元に、stateオブジェクトの深い階層から試合オブジェクトを検索して返す
      */
@@ -881,6 +954,39 @@ function showTeamStatusModal(teamName) {
         };
 
         await setupSpringRegionalQualifiers(); // ステージ1（地区予選）を開始
+
+ // ★★★ 春の甲子園シミュレーションここから ★★★
+    if (tournamentState.senbatsuTeams && tournamentState.senbatsuTeams.length > 0) {
+        for (const teamName of tournamentState.senbatsuTeams) {
+            const teamRecord = tournamentState.teamRecords[teamName];
+            const teamRank = calculateRank(teamName, tournamentState);
+            const koshienResultKey = simulateKoshien(teamRank);
+            const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
+            
+            // 選抜の結果を特別なプロパティとして記録（春の県大会成績とは別）
+            teamRecord.senbatsuResult = koshienResult;
+
+            // 履歴と自己ベストは更新する
+            const newHistoryRecord = {
+                year: tournamentState.tournamentYear,
+                tournament: 'spring', // 春の大会の一部として記録
+                rank: koshienResult.rank
+            };
+            if (!teamRecord.history) teamRecord.history = [];
+            teamRecord.history.unshift(newHistoryRecord);
+            if (!teamRecord.best || newHistoryRecord.rank < teamRecord.best.rank) {
+                teamRecord.best = newHistoryRecord;
+            }
+
+            // 選抜の結果を知らせる記事を生成
+            const article = await generateKoshienSummaryArticle(teamName, koshienResult.label, 'spring');
+            if(article) tournamentState.news.push(article);
+        }
+        renderNews(tournamentState.news);
+    }
+    tournamentState.senbatsuTeams = []; // 使い終わったのでクリア
+    // ★★★ 春の甲子園シミュレーションここまで ★★★
+
         return;
     }
 
@@ -3526,6 +3632,52 @@ ${teamHistoryPromptPart}
         }
         return null;
     }
+/**
+ * AIに甲子園（または東海大会）の結果を総括する記事を生成させる
+ */
+async function generateKoshienSummaryArticle(teamName, resultLabel, type) {
+    let context, titleInstruction;
+
+    if (type === 'summer') {
+        context = `夏の甲子園、全国の頂点を目指した${teamName}の戦いが終わりました。`;
+        titleInstruction = `「${teamName}、聖地での戦いの軌跡」のような、夏の終わりを感じさせる感動的なタイトルにしてください。`;
+    } else if (type === 'spring') {
+        context = `選抜高校野球大会に出場した${teamName}の最終結果が確定しました。`;
+        titleInstruction = `「${teamName}、春の聖地に爪痕」のように、来たる夏への期待を感じさせるタイトルにしてください。`;
+    } else { // tokai
+        context = `秋季東海大会で、静岡県代表の${teamName}が見事な戦いを見せました。`;
+        titleInstruction = `「${teamName}、センバツ当確！」のように、速報らしく、喜びが伝わるタイトルにしてください。`;
+    }
+
+    const prompt = `あなたは、情熱的な高校野球専門のAI記者です。
+以下の情報に基づき、読者の心を打つような総括記事を生成してください。
+
+### 大会結果
+- チーム: ${teamName}
+- 最終成績: ${resultLabel}
+- 文脈: ${context}
+
+### 執筆指示
+- ${titleInstruction}
+- チームのこれまでの努力や、県大会での戦いぶりを称え、今回の結果が持つ意味をドラマチックに描写してください。
+- 最後に、選手たちへの賛辞や、今後のチームへの期待を述べて締めくくってください。
+
+### 出力形式
+JSON形式で出力してください: {"title": "記事のタイトル", "body": "記事の本文"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (article) return { ...article, timestamp: Date.now() };
+        }
+        throw new Error("AIからの応答が予期した形式ではありません。");
+    } catch (error) {
+        console.error("AI甲子園記事の生成に失敗しました:", error);
+        return { title: "記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true };
+    }
+}
 // --- Match Processing & Event Listeners ---
 
     /**
@@ -3685,6 +3837,53 @@ else if (tournamentState.currentTournament === 'autumn' && tournamentState.autum
                  }
              } else {
                  updateTournamentFinishRecords();
+ // ★★★ 夏の甲子園シミュレーションここから ★★★
+        if (tournamentState.currentTournament === 'summer') {
+            const winnerRecord = tournamentState.teamRecords[winnerName];
+            const winnerRank = calculateRank(winnerName, tournamentState);
+            const koshienResultKey = simulateKoshien(winnerRank);
+            const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
+
+            // 最終成績を甲子園の結果で上書き
+            winnerRecord.lastFinish = koshienResult.rank;
+            
+            // 履歴と自己ベストも更新
+            const newHistoryRecord = {
+                year: tournamentState.tournamentYear,
+                tournament: 'summer',
+                rank: koshienResult.rank
+            };
+            winnerRecord.history.unshift(newHistoryRecord);
+            if (!winnerRecord.best || newHistoryRecord.rank < winnerRecord.best.rank) {
+                winnerRecord.best = newHistoryRecord;
+            }
+            
+            // 甲子園の結果を知らせる記事を生成
+            const article = await generateKoshienSummaryArticle(winnerName, koshienResult.label, 'summer');
+            if(article) tournamentState.news.push(article);
+            
+            // 画面を再描画して最終結果を反映
+            renderNews(tournamentState.news);
+        }
+        // ★★★ 夏の甲子園シミュレーションここまで ★★★
+
+        // ★★★ 春の甲子園（東海大会）ルートここから ★★★
+        if (tournamentState.currentTournament === 'autumn') {
+            tournamentState.senbatsuTeams = []; // 春の選抜出場校リストを初期化
+            const finalists = [winnerName, loserName];
+
+            for (const teamName of finalists) {
+                const teamRank = calculateRank(teamName, tournamentState);
+                // 70%の確率で東海大会を突破したと仮定するシンプルな抽選
+                if (Math.random() < 0.70) { 
+                    tournamentState.senbatsuTeams.push(teamName);
+                    const article = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai');
+                    if(article) tournamentState.news.push(article);
+                }
+            }
+            renderNews(tournamentState.news);
+        }
+        // ★★★ 春の甲子園（東海大会）ルートここまで ★★★
              }
         }
 
