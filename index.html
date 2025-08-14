@@ -1049,7 +1049,8 @@ function renderTournament(data) {
         
         const isMainBracketMatch = matchId.includes('-R');
         const roundStr = isMainBracketMatch ? matchId.split('-')[1] : '';
-        const showDetailsButton = !t1Empty && !t2Empty && (roundStr === 'R5' || matchId.startsWith('F-'));
+        // 修正後のコード（全ての試合で表示）
+        const showDetailsButton = !t1Empty && !t2Empty;
         const isSeed1 = seeds.includes(team1);
         const isSeed2 = seeds.includes(team2);
 
