@@ -332,7 +332,7 @@
         REPECHAGE_KING: { id: 'repechage_king', name: '不屈の敗者復活組', desc: '敗者復活戦から這い上がってきた実績があり、非常に粘り強い。' },
         WALL_OF_TOKYO: { id: 'wall_of_tokyo', name: '西東京の壁', desc: '西東京地区に立ちはだかる絶対的強者。' } // 例
     };
-
+const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
     // --- DOM Elements ---
     const setupEl = document.getElementById('setup');
     const tournamentDisplayEl = document.getElementById('tournament-display');
@@ -871,7 +871,7 @@ function simulateKoshien(teamRank) {
      * @param {string} nextTournamentType - 'summer', 'autumn', 'spring'のいずれか
      */
     async function createNewTournament(isNext = false, nextTournamentType = 'summer') {
-        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+        
         setupEl.classList.add('hidden');
         tournamentDisplayEl.classList.remove('hidden');
 
@@ -1170,8 +1170,7 @@ function updateTournamentFinishRecords() {
      */
 // 【修正対象1】
 function renderTournament(data) {
-    const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
-    let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
+        let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
 
     mainBracketWrapper.classList.add('hidden');
     autumnRegionalContainer.classList.add('hidden');
@@ -2872,7 +2871,7 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
      */
     async function generateBbsComments(winnerName, loserName, dbMatch, matchId) {
         // ... generateNewsArticleと同様のコンテキスト分析を行う ...
-        const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+        
         let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
         
         const winnerData = TEAM_DATA[winnerName];
