@@ -1398,7 +1398,55 @@ function renderTournament(data) {
    /**
      * 【修正版】新しい試合詳細モーダルを開き、各種テーブルを生成する
      */
-    function openDetailsModal(matchId) {
+    /**
+     * イニングスコアのテーブルHTMLを生成する
+     */
+    function createInningScoreTable(team1Name, team2Name, details) {
+        const inningData = details.inningScore;
+        const numInnings = inningData.team1?.length || 9;
+        let header = '';
+        for (let i = 1; i <= numInnings; i++) {
+            header += `<th class="col-inning">${i}</th>`;
+        }
+
+        let team1Inputs = '';
+        for (let i = 0; i < numInnings; i++) {
+            team1Inputs += `<td><input type="number" data-team-key="team1" value="${inningData.team1[i] || ''}"></td>`;
+        }
+        
+        let team2Inputs = '';
+        for (let i = 0; i < numInnings; i++) {
+            team2Inputs += `<td><input type="number" data-team-key="team2" value="${inningData.team2[i] || ''}"></td>`;
+        }
+
+        return `
+            <table class="details-table" id="inning-score-table">
+                <thead>
+                    <tr>
+                        <th class="col-player">チーム</th>
+                        ${header}
+                        <th class="w-10"><button class="add-inning-btn text-xs">＋回</button></th>
+                        <th class="col-stat">計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${team1Name}</td>
+                        ${team1Inputs}
+                        <td></td>
+                        <td id="total-team1"></td>
+                    </tr>
+                    <tr>
+                        <td>${team2Name}</td>
+                        ${team2Inputs}
+                        <td></td>
+                        <td id="total-team2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    }
+function openDetailsModal(matchId) {
         currentMatchIdForDetails = matchId;
         const match = findMatchById(matchId);
         if (!match) return;
