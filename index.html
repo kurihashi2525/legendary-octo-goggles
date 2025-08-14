@@ -619,7 +619,49 @@
         });
     }
 
-    // --- Team Rank Calculation ---
+    /**
+     * 試合IDを元に、stateオブジェクトの深い階層から試合オブジェクトを検索して返す
+     */
+    function findMatchById(matchId) {
+        // 通常のトーナメント表（夏季・春季・秋季県大会）を検索
+        if (tournamentState.matches && tournamentState.matches[matchId]) {
+            return tournamentState.matches[matchId];
+        }
+
+        // 秋季大会の地区予選・順位決定戦を検索
+        if (tournamentState.autumnData) {
+            for (const region of ['東部', '中部', '西部']) {
+                const regionData = tournamentState.autumnData.regions[region];
+                if (!regionData) continue;
+                if (regionData.blocks) {
+                    for (const block of regionData.blocks) {
+                        if (block.matches[matchId]) return block.matches[matchId];
+                    }
+                }
+                if (regionData.champBracket && regionData.champBracket.matches[matchId]) {
+                    return regionData.champBracket.matches[matchId];
+                }
+                if (regionData.repechageBracket && regionData.repechageBracket.matches[matchId]) {
+                    return regionData.repechageBracket.matches[matchId];
+                }
+            }
+        }
+        
+        // 春季大会の地区予選を検索
+        if (tournamentState.springData) {
+             for (const region of ['東部', '中部', '西部', '伊豆']) {
+                 const regionData = tournamentState.springData.regions[region];
+                 if (regionData && regionData.blocks) {
+                     for (const block of regionData.blocks) {
+                         if (block.matches[matchId]) return block.matches[matchId];
+                     }
+                 }
+             }
+        }
+
+        return null; // どこにも見つからなかった場合
+    }
+// --- Team Rank Calculation ---
     function calculateRank(teamName, state) {
         if (!teamName) return ''; 
 
