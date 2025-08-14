@@ -650,30 +650,47 @@ function formatRecordToString(record) {
 }
 
 /**
- * 詳細入力モーダル内のチームデータを入れ替える
+ * 詳細入力モーダル内のチームデータ、またはチーム名自体を入れ替える
  * @param {string} matchId - 対象の試合ID
  */
 function swapTeamDetails(matchId) {
     const match = findMatchById(matchId);
-    if (!match || !match.details) {
-        alert('詳細データが入力されていないため、入れ替えできません。');
-        return;
+    if (!match) return;
+
+    // 1. チーム名と、トーナメント表に表示されているスコアを入れ替える
+    const tempTeam = match.team1;
+    match.team1 = match.team2;
+    match.team2 = tempTeam;
+
+    const tempScore = match.score1;
+    match.score1 = match.score2;
+    match.score2 = tempScore;
+
+    // 2. もし詳細データが入力済みなら、その中身も入れ替える
+    if (match.details) {
+        // 打撃データを入れ替え
+        const tempBatting = match.details.batting.team1;
+        match.details.batting.team1 = match.details.batting.team2;
+        match.details.batting.team2 = tempBatting;
+
+        // 投手データを入れ替え
+        const tempPitching = match.details.pitching.team1;
+        match.details.pitching.team1 = match.details.pitching.team2;
+        match.details.pitching.team2 = tempPitching;
+        
+        // イニングスコアを入れ替え
+        if (match.details.inningScore) {
+            const tempInningScore = match.details.inningScore.team1;
+            match.details.inningScore.team1 = match.details.inningScore.team2;
+            match.details.inningScore.team2 = tempInningScore;
+        }
     }
 
-    // 打撃データを一時的に保管して入れ替え
-    const tempBatting = match.details.batting.team1;
-    match.details.batting.team1 = match.details.batting.team2;
-    match.details.batting.team2 = tempBatting;
-
-    // 投手データを一時的に保管して入れ替え
-    const tempPitching = match.details.pitching.team1;
-    match.details.pitching.team1 = match.details.pitching.team2;
-    match.details.pitching.team2 = tempPitching;
-
-    // モーダルを再描画して変更を反映
-    openDetailsModal(matchId);
+    // 3. 変更を保存し、画面を更新する
+    saveState();
+    renderTournament(tournamentState); // トーナメント表も更新
+    openDetailsModal(matchId); // モーダルを再描画して変更を反映
 }
-
 /**
  * チームステータスモーダルを表示する
  */
