@@ -713,6 +713,42 @@
             await setupAutumnRegionalBlocks(); // ステージ1（地区ブロック予選）を開始
             return;
         }
+// createNewTournament 関数内
+
+    // ... 既存の if (nextTournamentType === 'autumn') { ... } ブロックの後ろに挿入 ...
+
+    // --- NEW: 春季大会の開始処理 ---
+    else if (nextTournamentType === 'spring') {
+        tournamentState.currentTournament = 'spring';
+        tournamentState.autumnPhase = null; // 春なので秋のフェーズはクリア
+        if(isNext) tournamentState.tournamentYear++;
+
+        // 秋季大会の結果からシード校と予選参加校を決定
+        const allRankedTeams = Object.keys(tournamentState.teamRecords)
+            .map(name => ({ name, rank: tournamentState.teamRecords[name].lastFinish }))
+            .sort((a, b) => a.rank - b.rank);
+
+        const seedTeams = allRankedTeams.slice(0, 8).map(t => t.name);
+        const qualifierTeams = allRankedTeams.slice(8).map(t => t.name);
+
+        tournamentState.springPhase = 'regional_qualifiers'; // 春季大会の最初のステージを設定
+        tournamentState.springData = { // 春季大会専用のデータストアを初期化
+            seedTeams,
+            qualifierTeams,
+            regions: {
+                '東部': { blocks: [], repechageBracket: null, finalReps: [] },
+                '中部': { blocks: [], repechageBracket: null, finalReps: [] },
+                '西部': { blocks: [], repechageBracket: null, finalReps: [] },
+                '伊豆': { izuBracket: null, finalReps: [] }
+            },
+            allMatches: {} // 予選の全試合をここに集約
+        };
+
+        await setupSpringRegionalQualifiers(); // ステージ1（地区予選）を開始
+        return;
+    }
+
+   
         
         // --- 夏季・春季大会の開始 ---
         else {
@@ -876,7 +912,28 @@ function renderTournament(data) {
     autumnRegionalContainer.classList.add('hidden');
     autumnRankingContainer.classList.add('hidden');
     
-    if (data.currentTournament === 'autumn') {
+// ★★★ 春季大会ロジック開始 ★★★
+    if (data.currentTournament === 'spring') {
+        switch(data.springPhase) {
+            case 'regional_qualifiers':
+                tournamentNameString = '春季大会 地区予選';
+                autumnRegionalContainer.classList.remove('hidden'); // 秋のコンテナを流用
+                renderSpringRegionalQualifiers();
+                break;
+            case 'main_round1':
+                tournamentNameString = '春季大会 県大会1回戦';
+                mainBracketWrapper.classList.remove('hidden');
+                renderMainBracket(data);
+                break;
+            case 'main_round2_onwards':
+                tournamentNameString = '春季大会 県大会'; // シンプルに
+                mainBracketWrapper.classList.remove('hidden');
+                renderMainBracket(data);
+                break;
+        }
+    } 
+    // ★★★ 春季大会ロジック終了 ★★★
+        else if (data.currentTournament === 'autumn') {   
         switch(data.autumnPhase) {
             case 'regional_blocks': 
                 tournamentNameString = '秋季大会 地区ブロック予選';
@@ -1978,6 +2035,316 @@ async function setupAutumnMainTournament() {
             startMainTournamentBtn.classList.add('hidden');
         }
     }
+// --- NEW Spring Tournament System ---
+
+/**
+ * [春季大会 ステージ1] 地区予選を開始する
+ */
+async function setupSpringRegionalQualifiers() {
+    tournamentState.springPhase = 'regional_qualifiers';
+    const { qualifierTeams } = tournamentState.springData;
+
+    const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+    qualifierTeams.forEach(teamName => {
+        const region = TEAM_DATA[teamName]?.region;
+        if (region && teamsByRegion[region]) {
+            teamsByRegion[region].push(teamName);
+        }
+    });
+    
+    // 東部・中部・西部地区の予選設定
+    for (const region of ['東部', '中部', '西部']) {
+        let regionalTeams = shuffleArray(teamsByRegion[region]);
+        const blockCount = 4;
+        const regionBlocks = [];
+        
+        for (let i = 0; i < blockCount; i++) {
+            const blockTeams = regionalTeams.splice(0, Math.ceil(regionalTeams.length / (blockCount - i)));
+            if(blockTeams.length === 0) continue;
+            
+            const blockId = `${region}-SB${i+1}`; // Spring Block
+            const blockMatches = {};
+            
+            // 4チームまたは5チームのトーナメントを生成
+            if (blockTeams.length <= 4) { // 4チーム以下
+                const semi1Id = `${blockId}-R1-M1`;
+                const semi2Id = `${blockId}-R1-M2`;
+                const finalId = `${blockId}-R2-M1`;
+                Object.assign(blockMatches, {
+                    [semi1Id]: { id: semi1Id, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
+                    [semi2Id]: { id: semi2Id, team1: blockTeams[2], team2: blockTeams[3] || null, winner: null, score1: '', score2: '', summary: '' },
+                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
+                });
+            } else { // 5チーム
+                 const playInMatchId = `${blockId}-R0-M1`;
+                 const semi1Id = `${blockId}-R1-M1`;
+                 const semi2Id = `${blockId}-R1-M2`;
+                 const finalId = `${blockId}-R2-M1`;
+                 Object.assign(blockMatches, {
+                    [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
+                    [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '', summary: '' },
+                    [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '', summary: '' },
+                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
+                 });
+            }
+            regionBlocks.push({ id: blockId, teams: blockTeams, matches: blockMatches });
+            Object.assign(tournamentState.springData.allMatches, blockMatches);
+        }
+        tournamentState.springData.regions[region].blocks = regionBlocks;
+
+        // 第5代表決定トーナメントの器を準備
+        const repBracketId = `${region}-SREP`;
+        tournamentState.springData.regions[region].repechageBracket = {
+            id: repBracketId,
+            teams: [], // ブロック準優勝校がここに入る
+            matches: {
+                [`${repBracketId}-R1-M1`]: { id: `${repBracketId}-R1-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' },
+                [`${repBracketId}-R1-M2`]: { id: `${repBracketId}-R1-M2`, team1: null, team2: null, winner: null, score1: '', score2: '' },
+                [`${repBracketId}-R2-M1`]: { id: `${repBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' }
+            }
+        };
+        Object.assign(tournamentState.springData.allMatches, tournamentState.springData.regions[region].repechageBracket.matches);
+    }
+    
+    // 伊豆地区の予選設定 (4チームトーナメント)
+    const izuTeams = teamsByRegion['伊豆'];
+    const izuBracketId = '伊豆-SIZU';
+    const izuBracket = {
+        id: izuBracketId,
+        teams: izuTeams,
+        matches: {
+            [`${izuBracketId}-R1-M1`]: { id: `${izuBracketId}-R1-M1`, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
+            [`${izuBracketId}-R1-M2`]: { id: `${izuBracketId}-R1-M2`, team1: izuTeams[2], team2: izuTeams[3], winner: null, score1: '', score2: '' },
+            [`${izuBracketId}-R2-M1`]: { id: `${izuBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' }
+        }
+    };
+    tournamentState.springData.regions['伊豆'].izuBracket = izuBracket;
+    Object.assign(tournamentState.springData.allMatches, izuBracket.matches);
+
+    renderTournament(tournamentState);
+    saveState();
+}
+
+/**
+ * [春季大会 ステージ1 UI] 地区予選を描画する
+ */
+function renderSpringRegionalQualifiers() {
+    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">春季大会 地区予選</h2>`;
+    html += '<div class="space-y-8">';
+
+    // 東部・中部・西部
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.springData.regions[region];
+        if (!regionData.blocks) continue;
+
+        html += `
+            <div class="p-4 border-2 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-green-700">${region}地区 (5枠)</h3>
+                <h4 class="font-bold text-center text-lg mb-2">代表決定ブロック</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    ${regionData.blocks.map(block => `
+                        <div class="p-3 border rounded-lg bg-gray-50">
+                            <h4 class="font-bold text-center mb-2">ブロック ${block.id.split('-')[1].slice(1)}</h4>
+                            ${block.teams.length <= 4 ? create4TeamBlockHTML(block) : create5TeamBlockHTML(block)}
+                        </div>
+                    `).join('')}
+                </div>
+                <h4 class="font-bold text-center text-lg mb-2">第5代表決定トーナメント</h4>
+                <div class="flex justify-center">
+                   ${create4TeamBlockHTML(regionData.repechageBracket, true)}
+                </div>
+            </div>
+        `;
+    }
+
+    // 伊豆
+    const izuData = tournamentState.springData.regions['伊豆'];
+    if (izuData.izuBracket) {
+        html += `
+            <div class="p-4 border-2 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-green-700">伊豆地区 (1枠)</h3>
+                <div class="flex justify-center">
+                    ${create4TeamBlockHTML(izuData.izuBracket)}
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    autumnRegionalContainer.innerHTML = html; // 秋のコンテナを流用
+    checkSpringQualifiersComplete();
+}
+
+/**
+ * 4チーム構成のブロックトーナメントHTMLを生成する
+ */
+function create4TeamBlockHTML(blockData, isRepechage = false) {
+    if (!blockData || !blockData.matches) return '<div></div>';
+    const { id, matches } = blockData;
+    const semi1 = matches[`${id}-R1-M1`];
+    const semi2 = matches[`${id}-R1-M2`];
+    const final = matches[`${id}-R2-M1`];
+    if (!semi1 || !semi2 || !final) return '<div></div>';
+
+    // 試合の進行状況を更新
+    final.team1 = semi1.winner;
+    final.team2 = semi2.winner;
+
+    const placeholder = isRepechage ? 'ブロック準優勝校' : '---';
+
+    return `
+        <div class="flex items-center justify-center space-x-2 text-xs">
+            <div class="space-y-4 w-40">
+                ${createMatchHTML(semi1.id, semi1.team1 || placeholder, semi1.team2 || placeholder, semi1, [])}
+                ${createMatchHTML(semi2.id, semi2.team1 || placeholder, semi2.team2 || placeholder, semi2, [])}
+            </div>
+            <div class="w-40">
+                ${createMatchHTML(final.id, final.team1, final.team2, final, [])}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 春季地区予選がすべて終了したかチェックする
+ */
+function checkSpringQualifiersComplete() {
+    let allFinished = true;
+    for (const match of Object.values(tournamentState.springData.allMatches)) {
+        // チームがセットされていて、まだ勝者が決まっていない試合があるか
+        if (match.team1 && match.team2 && !match.winner) {
+            allFinished = false;
+            break;
+        }
+    }
+
+    if (allFinished) {
+        autumnControls.classList.remove('hidden');
+        startMainTournamentBtn.classList.remove('hidden'); // 県大会へ進むボタン
+        startRankingPlayoffsBtn.classList.add('hidden');
+    } else {
+        autumnControls.classList.add('hidden');
+        startMainTournamentBtn.classList.add('hidden');
+    }
+}/**
+ * [春季大会 ステージ2-1] 県大会本戦1回戦を開始する
+ */
+async function setupSpringMainTournament_Round1() {
+    tournamentState.springPhase = 'main_round1';
+    
+    // 各地区の代表校をfinalRepsから集計
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.springData.regions[region];
+        // ブロック優勝校
+        regionData.blocks.forEach(block => {
+            const finalMatch = block.matches[`${block.id}-R2-M1`] || block.matches[`${block.id}-R1-M1`]; // 2,3チームブロック対応
+            if(finalMatch && finalMatch.winner) regionData.finalReps.push(finalMatch.winner);
+        });
+        // 第5代表
+        const repFinal = regionData.repechageBracket.matches[`${regionData.repechageBracket.id}-R2-M1`];
+        if (repFinal.winner) regionData.finalReps.push(repFinal.winner);
+    }
+    const izuFinal = tournamentState.springData.regions['伊豆'].izuBracket.matches[`伊豆-SIZU-R2-M1`];
+    if (izuFinal.winner) tournamentState.springData.regions['伊豆'].finalReps.push(izuFinal.winner);
+
+    const qualifiedTeams = Object.values(tournamentState.springData.regions).flatMap(r => r.finalReps);
+    
+    // 予選敗退チームの成績を記録
+    tournamentState.springData.qualifierTeams.forEach(team => {
+        if (!qualifiedTeams.includes(team)) {
+            tournamentState.teamRecords[team].lastFinish = 64; // 予選敗退
+        }
+    });
+
+    tournamentState.teams = shuffleArray(qualifiedTeams); // 予選突破16校で1回戦
+    tournamentState.matches = {};
+    tournamentState.is16team = true; // 16チームトーナメントとして描画
+    tournamentState.seeds = []; // 1回戦はシードなし
+
+    const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
+        return acc;
+    }, []);
+
+    round1Setup.forEach((match, index) => {
+        const side = index < 4 ? 'L' : 'R';
+        const matchNum = index < 4 ? index + 1 : index - 3;
+        const matchId = `${side}-R1-M${matchNum}`;
+        tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+    });
+
+    renderTournament(tournamentState);
+    saveState();
+    
+    // 展望記事などを生成...
+    newsContainer.innerHTML = `<div class="loader">AI記者が県大会1回戦の展望記事を執筆中...</div>`;
+    const previewArticle = await generateNewsArticle(null, null, null, 'preview');
+    if(previewArticle) tournamentState.news.unshift(previewArticle);
+    renderNews(tournamentState.news);
+    saveState();
+}
+
+/**
+ * [春季大会 ステージ2-2] 県大会本戦2回戦を開始する
+ */
+async function setupSpringMainTournament_Round2() {
+    tournamentState.springPhase = 'main_round2_onwards';
+    
+    const round1Winners = [];
+    Object.values(tournamentState.matches).forEach(match => {
+        if(match.id.includes('-R1-') && match.winner) {
+            round1Winners.push(match.winner);
+        }
+    });
+
+    const seedTeams = tournamentState.springData.seedTeams;
+    const shuffledSeeds = shuffleArray(seedTeams);
+    const shuffledWinners = shuffleArray(round1Winners);
+
+    // 2回戦の組み合わせを作成 (シード vs 1回戦勝者)
+    let newTeamsForRound2 = [];
+    for (let i = 0; i < 8; i++) {
+        newTeamsForRound2.push(shuffledSeeds[i]);
+        newTeamsForRound2.push(shuffledWinners[i]);
+    }
+    newTeamsForRound2 = shuffleArray(newTeamsForRound2); // 組み合わせをシャッフル
+
+    tournamentState.teams = newTeamsForRound2;
+    tournamentState.matches = {};
+    tournamentState.is16team = true;
+    tournamentState.seeds = seedTeams; // 2回戦からシード校として表示
+
+    const round2Setup = tournamentState.teams.reduce((acc, team, i) => {
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
+        return acc;
+    }, []);
+
+    // R1として試合IDを生成するが、これは大会の「2回戦」にあたる
+    round2Setup.forEach((match, index) => {
+        const side = index < 4 ? 'L' : 'R';
+        const matchNum = index < 4 ? index + 1 : index - 3;
+        const matchId = `${side}-R1-M${matchNum}`;
+        tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+    });
+    
+    // 敗退チームの成績を記録
+    Object.values(tournamentState.teamRecords).forEach(record => {
+        if (record.lastFinish > 16 && record.lastFinish <=32) record.lastFinish = 32; // 1回戦敗退はベスト32扱い
+    });
+    
+    renderTournament(tournamentState);
+    saveState();
+
+    // 2回戦の展望記事を生成
+    newsContainer.innerHTML = `<div class="loader">AI記者が県大会2回戦の展望記事を執筆中...</div>`;
+    const previewArticle = await generateNewsArticle(null, null, null, 'preview');
+    if(previewArticle) tournamentState.news.unshift(previewArticle);
+    renderNews(tournamentState.news);
+    saveState();
+}
+
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
     /**
@@ -2962,16 +3329,22 @@ ${teamHistoryPromptPart}
         let dbMatch;
         let loserName;
 
-        // 試合データを特定
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-            const [region, bracketId] = matchId.split('-');
-            const regionData = tournamentState.autumnData.regions[region];
-            if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
-            else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
-            else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
-        } else {
-            dbMatch = tournamentState.matches[matchId];
-        }
+       // 試合データを特定 (春季大会対応)
+    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+        // 春季予選の場合、専用のデータストアから試合情報を取得
+        dbMatch = tournamentState.springData.allMatches[matchId];
+    }
+    else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+        // 秋季大会の予選の場合、専用のデータストアから試合情報を取得
+        const [region, bracketId] = matchId.split('-');
+        const regionData = tournamentState.autumnData.regions[region];
+        if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
+        else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
+        else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
+    } else {
+        // 上記以外（夏季大会、春・秋の県大会本戦）の場合
+        dbMatch = tournamentState.matches[matchId];
+    }
 
         if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
         
@@ -2992,7 +3365,48 @@ ${teamHistoryPromptPart}
         bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
 
         // ★★★ ここからが修正箇所 ★★★
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+         if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+        const [region, bracketType, roundStr, matchStr] = matchId.split('-');
+        
+        // (A) ブロック内での進行処理
+        if (bracketType.startsWith('SB')) { // マッチIDが 'SB' (Spring Block) で始まる場合
+            const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
+            
+            // (A-1) 準決勝の勝者を決勝へ進める
+            if (matchId.includes('-R1-')) {
+                 const finalMatch = block.matches[Object.keys(block.matches).find(k => k.includes('-R2-'))];
+                 if(finalMatch){
+                    if(matchId.endsWith('M1')) finalMatch.team1 = winnerName;
+                    else finalMatch.team2 = winnerName;
+                 }
+            }
+            // (A-2) 決勝戦の結果を処理する
+            else { 
+                const repBracket = tournamentState.springData.regions[region].repechageBracket;
+                const repTeams = repBracket.teams;
+                repTeams.push(loserName);
+                if (repTeams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
+                if (repTeams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
+                if (repTeams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
+                if (repTeams.length === 4) repBracket.matches[`${repBracket.id}-R1-M2`].team2 = loserName;
+            }
+        }
+        // (B) 第5代表決定トーナメントの進行処理
+        else if (bracketType.startsWith('SREP')) {
+            const repBracket = tournamentState.springData.regions[region].repechageBracket;
+            const finalMatch = repBracket.matches[`${repBracket.id}-R2-M1`];
+            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
+            if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
+        }
+        // (C) 伊豆地区の進行処理
+        else if (bracketType.startsWith('SIZU')) {
+            const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
+            const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
+            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
+            if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
+        }
+    }
+else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
             const [region, bracketId, roundStr, matchStr] = matchId.split('-');
             const roundNum = parseInt(roundStr.slice(1));
             const matchNum = parseInt(matchStr.slice(1));
@@ -3064,6 +3478,31 @@ ${teamHistoryPromptPart}
         }
 
         renderTournament(tournamentState);
+// ★★★ 春季県大会1回戦終了時の処理を追加 ★★★
+// 現在が「春季大会」かつ「本戦1回戦フェーズ」の場合のみ、このチェックを実行します。
+if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
+    
+    // 1回戦の試合（IDに '-R1-' を含むもの）をすべて取得します。
+    const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
+    
+    // 1回戦が8試合あり、かつ、そのすべての試合で勝者が決まっているか？
+    const allRound1Finished = round1Matches.length === 8 && round1Matches.every(m => m.winner);
+    
+    // もし全試合が終了していたら...
+    if (allRound1Finished) {
+        // ユーザーに進行を確認するメッセージを表示します。
+        const confirmed = await showConfirm("1回戦がすべて終了しました。シード校が登場する2回戦に進みますか？");
+        if (confirmed) {
+            // 「はい」が押されたら、2回戦をセットアップする関数を呼び出します。
+            await setupSpringMainTournament_Round2();
+            
+            // 重要：2回戦のセットアップが完了したら、この後のAI記事生成などをスキップするため、ここですぐに関数の処理を終了します。
+            // （記事は setupSpringMainTournament_Round2 の中で生成されるため）
+            return; 
+        }
+    }
+}
+// ★★★ ここまで追加 ★★★
         // ★★★ ここまでが修正箇所 ★★★
 
         const [article, newComments] = await Promise.all([
@@ -3178,10 +3617,20 @@ ${teamHistoryPromptPart}
          if(confirmed) setupAutumnRankingTournaments();
     });
     
-    startMainTournamentBtn.addEventListener('click', async () => {
+    // startMainTournamentBtn のイベントリスナー内
+
+startMainTournamentBtn.addEventListener('click', async () => {
+    // ★★★ 春季大会用の分岐を追加 ★★★
+    if (tournamentState.currentTournament === 'spring') {
         const confirmed = await showConfirm("全代表校が決定しました。県大会本戦に進みますか？");
-        if(confirmed) setupAutumnMainTournament();
-    });
+        if (confirmed) setupSpringMainTournament_Round1();
+    } 
+    // ★★★ ここまで追加 ★★★
+    else { // 秋季大会の既存ロジック
+        const confirmed = await showConfirm("全代表校が決定しました。県大会本戦に進みますか？");
+        if (confirmed) setupAutumnMainTournament();
+    }
+});
 
     skipR1Btn.addEventListener('click', async () => {
         const confirmed = await showConfirm("1回戦を自動で進行しますか？");
