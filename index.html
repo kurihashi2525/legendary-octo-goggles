@@ -1775,18 +1775,17 @@ function openDetailsModal(matchId) {
     }
 
     // --- ここからがスコアボード作成の内部品です ---
-    const createInningScoreboard = () => {
-        let header = '';
-        const numInnings = details.inningScore?.team1?.length || 9;
+    // ★★★ inningScoreの参照方法を修正 ★★★
+        const numInnings = (details.inningScore.team1 && details.inningScore.team1.length > 0) ? details.inningScore.team1.length : 9;
+
         for (let i = 1; i <= numInnings; i++) {
             header += `<th class="w-10">${i}</th>`;
         }
         
-        // ▼ ご質問の createRow はこの中にあります ▼
         const createRow = (teamKey, teamName) => {
             let cells = '';
             for (let i = 0; i < numInnings; i++) {
-                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
+                // ★★★ inningScoreの参照方法を修正 ★★★                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
             }
             return `<tr>
                         <th class="text-left pr-2">${teamName}</th>
@@ -1974,16 +1973,23 @@ function openDetailsModal(matchId) {
             });
 
             // 投手成績の保存
-            details.pitching[teamKey] = [];
-            const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
-            pitchingTable.querySelectorAll('tbody tr').forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                const select = row.querySelector('select');
-                const pitcherData = {
+               for (const teamKey of ['team1', 'team2']) {
+        details.pitching[teamKey] = [];
+        const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
+        pitchingTable.querySelectorAll('tbody tr').forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const select = row.querySelector('select');
+            const pitcherData = {
                     result: select.value,
                     name: inputs[0].value,
                     innings: inputs[1].value,
-                    // ... 他の投手データも同様に保存
+                    battersFaced: inputs[2].value,
+                pitches: inputs[3].value,
+                hits: inputs[4].value,
+                strikeouts: inputs[5].value,
+                walks: inputs[6].value,
+                runs: inputs[7].value,
+                earnedRuns: inputs[8].value,
                 };
                 if (pitcherData.name) {
                     details.pitching[teamKey].push(pitcherData);
