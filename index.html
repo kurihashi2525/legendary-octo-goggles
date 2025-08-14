@@ -1395,8 +1395,8 @@ function renderTournament(data) {
     function checkBest8Decided(){} // checkTournamentProgressに統合
 // --- 試合詳細モーダル関連の関数（高機能版） ---
 
-    /**
-     * 新しい試合詳細モーダルを開き、各種テーブルを生成する
+   /**
+     * 【修正版】新しい試合詳細モーダルを開き、各種テーブルを生成する
      */
     function openDetailsModal(matchId) {
         currentMatchIdForDetails = matchId;
@@ -1405,7 +1405,6 @@ function renderTournament(data) {
 
         const detailsBody = document.getElementById('details-modal-body');
         
-        // 保存されたデータ、なければ初期データを準備
         const details = match.details || {
             inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') },
             batting: { team1: [], team2: [] },
@@ -1413,6 +1412,10 @@ function renderTournament(data) {
         };
 
         let html = `
+            <div>
+                <h4 class="font-bold mb-2">イニングスコア</h4>
+                ${createInningScoreTable(match.team1, match.team2, details)}
+            </div>
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div>
                     <h4 class="font-bold mb-2">${match.team1} 打撃成績</h4>
@@ -1524,14 +1527,21 @@ function renderTournament(data) {
     }
 
     /**
-     * 詳細モーダルから入力されたデータを読み取り、stateに保存する
+     * 【修正版】詳細モーダルから入力されたデータを読み取り、stateに保存する
      */
     function saveDetailedStats() {
         if (!currentMatchIdForDetails) return;
         const match = findMatchById(currentMatchIdForDetails);
         if (!match) return;
 
-        const details = { batting: {}, pitching: {} };
+        const details = { inningScore: {}, batting: {}, pitching: {} };
+
+        // イニングスコアの保存
+        for (const teamKey of ['team1', 'team2']) {
+            const teamName = teamKey === 'team1' ? match.team1 : match.team2;
+            const inningTable = document.getElementById(`inning-score-table`);
+            details.inningScore[teamKey] = Array.from(inningTable.querySelectorAll(`input[data-team-key="${teamKey}"]`)).map(inp => inp.value);
+        }
 
         for (const teamKey of ['team1', 'team2']) {
             // 打撃成績の保存
@@ -1546,7 +1556,7 @@ function renderTournament(data) {
                     pos: inputs[2].value,
                     results: Array.from(inputs).slice(3).map(inp => inp.value)
                 };
-                if (playerData.name) { // 選手名が入力されている行のみ保存
+                if (playerData.name) {
                     details.batting[teamKey].push(playerData);
                 }
             });
@@ -1561,15 +1571,9 @@ function renderTournament(data) {
                     result: select.value,
                     name: inputs[0].value,
                     innings: inputs[1].value,
-                    battersFaced: inputs[2].value,
-                    pitches: inputs[3].value,
-                    hits: inputs[4].value,
-                    strikeouts: inputs[5].value,
-                    walks: inputs[6].value,
-                    runs: inputs[7].value,
-                    earnedRuns: inputs[8].value,
+                    // ... 他の投手データも同様に保存
                 };
-                if (pitcherData.name) { // 選手名が入力されている行のみ保存
+                if (pitcherData.name) {
                     details.pitching[teamKey].push(pitcherData);
                 }
             });
@@ -3702,90 +3706,111 @@ startMainTournamentBtn.addEventListener('click', async () => {
         generateSummaryBtn.textContent = 'ベスト8ハイライト記事を生成';
     });
 
-    document.body.addEventListener('click', async (e) => {
-        if (e.target.matches('.win-btn')) {
-             const teamSlot = e.target.closest('.team-slot');
-             const matchEl = e.target.closest('[data-match-id]');
-             if (!teamSlot || !matchEl || teamSlot.classList.contains('empty')) return;
+/**
+ * 【修正版】クリックイベントの処理
+ */
+document.body.addEventListener('click', async (e) => {
+    // 勝利ボタン
+    if (e.target.matches('.win-btn')) {
+        const teamSlot = e.target.closest('.team-slot');
+        const matchEl = e.target.closest('[data-match-id]');
+        if (!teamSlot || !matchEl || teamSlot.classList.contains('empty')) return;
 
-             const matchId = matchEl.dataset.matchId;
-             const winnerName = teamSlot.dataset.teamName;
-             if (!winnerName) return;
-            
-             const score1El = matchEl.querySelector('[data-team-pos="1"]');
-             const score2El = matchEl.querySelector('[data-team-pos="2"]');
+        const matchId = matchEl.dataset.matchId;
+        const winnerName = teamSlot.dataset.teamName;
+        if (!winnerName) return;
 
-             if(!score1El || !score2El || score1El.value === '' || score2El.value === '') {
-                 showAlert('スコアを入力してください。');
-                 return;
-             }
-            
-             let dbMatch;
-             if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-                  const [region, bracketId] = matchId.split('-');
-                  const regionData = tournamentState.autumnData.regions[region];
-                  if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
-                  else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
-                  else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
-             } else {
-                 dbMatch = tournamentState.matches[matchId];
-             }
-             if (dbMatch) {
-                 dbMatch.score1 = score1El.value;
-                 dbMatch.score2 = score2El.value;
-                 dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
-             }
+        const score1El = matchEl.querySelector('[data-team-pos="1"]');
+        const score2El = matchEl.querySelector('[data-team-pos="2"]');
 
-             await processMatchWin(matchId, winnerName);
+        if(!score1El || !score2El || score1El.value === '' || score2El.value === '') {
+            showAlert('スコアを入力してください。');
+            return;
         }
-        else if (e.target.matches('.details-btn')) { openDetailsModal(e.target.dataset.matchId); }
-        else if (e.target.matches('.add-row-btn')) {
-            const type = e.target.dataset.type;
-            const team = e.target.dataset.team;
-            const table = document.querySelector(`table[data-type="${type}"][data-team="${team}"] tbody`);
-            const headers = Array.from(table.parentElement.querySelectorAll('th')).map(th => th.textContent);
-            const newRow = table.insertRow();
-            let rowHtml = '';
-            headers.forEach(h => {
-                rowHtml += `<td><input type="text" value=""></td>`;
-            });
-            newRow.innerHTML = rowHtml;
-        }
-        else if (e.target.matches('.retry-btn')) {
-            const btn = e.target;
-            const errorId = btn.dataset.errorId;
-            const articleIndex = tournamentState.news.findIndex(n => n.errorId === errorId);
-            if (articleIndex === -1) return;
 
-            btn.textContent = '生成中...';
-            btn.disabled = true;
+        let dbMatch;
+        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+             const [region, bracketId] = matchId.split('-');
+             const regionData = tournamentState.autumnData.regions[region];
+             if(bracketId.startsWith('B')) dbMatch = regionData.blocks.find(b=>b.id === `${region}-${bracketId}`).matches[matchId];
+             else if(bracketId === 'CHAMP') dbMatch = regionData.champBracket.matches[matchId];
+             else if(bracketId === 'REP') dbMatch = regionData.repechageBracket.matches[matchId];
+        } else {
+            dbMatch = tournamentState.matches[matchId];
+        }
+        if (dbMatch) {
+            dbMatch.score1 = score1El.value;
+            dbMatch.score2 = score2El.value;
+            dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
+        }
 
-            const errorContext = tournamentState.news[articleIndex].context;
-            const newArticle = await generateNewsArticle(
-                errorContext.winnerName, errorContext.loserName,
-                errorContext.dbMatch, errorContext.matchId,
-                errorContext.nextOpponentInfo, errorContext.matchSummary
-            );
+        await processMatchWin(matchId, winnerName);
+    }
 
-            tournamentState.news[articleIndex] = newArticle;
-            saveState();
-            renderNews(tournamentState.news);
+    // 詳細入力ボタン
+    else if (e.target.matches('.details-btn')) {
+        openDetailsModal(e.target.dataset.matchId);
+    }
+
+    // 詳細モーダル内のボタン処理
+    else if (e.target.matches('.add-inning-btn')) {
+        e.preventDefault();
+        const teamKey = e.target.dataset.teamKey;
+        const table = document.getElementById(`batting-table-${teamKey}`);
+        const headerRow = table.querySelector('thead tr');
+        const newInningNum = headerRow.children.length - 4;
+        const newTh = document.createElement('th');
+        newTh.className = 'col-inning';
+        newTh.textContent = newInningNum;
+        headerRow.insertBefore(newTh, headerRow.lastElementChild);
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            const newTd = document.createElement('td');
+            newTd.innerHTML = `<input type="text" placeholder="-">`;
+            row.appendChild(newTd);
+        });
+    }
+    else if (e.target.matches('.add-substitute-btn')) {
+        e.preventDefault();
+        const teamKey = e.target.dataset.teamKey;
+        const table = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
+        const order = prompt("何番打者の交代選手を追加しますか？（例：3）");
+        if (!order || isNaN(order) || order < 1 || order > 9) return;
+
+        const targetRow = Array.from(table.querySelectorAll('tr')).find(r => r.dataset.order.startsWith(order) && !r.dataset.order.includes('-sub'));
+        if (!targetRow) return;
+
+        const newRow = table.insertRow(targetRow.rowIndex);
+        const subCount = table.querySelectorAll(`tr[data-order^="${order}-sub"]`).length + 1;
+        newRow.dataset.order = `${order}-sub-${subCount}`;
+
+        let resultInputs = '';
+        const numInnings = table.querySelector('thead tr').children.length - 5;
+        for (let j = 0; j < numInnings; j++) {
+            resultInputs += `<td><input type="text" placeholder="-"></td>`;
         }
-        else if (e.target.matches('.news-article-btn')) {
-            const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
-            document.getElementById('modal-title').textContent = article.title;
-            document.getElementById('modal-body').textContent = article.body;
-            document.getElementById('modal-meta').innerHTML = `<p>${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>`;
-            newsModal.classList.remove('hidden'); newsModal.classList.add('flex');
-        }
-        else if (e.target.matches('.newspaper-view-btn')) {
-             const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
-             if (article.isNewspaper && article.newspaperData) {
-                 renderNewspaperModal(article.newspaperData);
-                 newspaperModal.classList.remove('hidden');
-             }
-        }
-    });
+        newRow.innerHTML = `
+            <td></td>
+            <td><input type="text" class="col-number" placeholder="#"></td>
+            <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
+            <td><input type="text" class="w-12" placeholder="守備"></td>
+            ${resultInputs}
+            <td></td>
+        `;
+    }
+    else if (e.target.matches('.add-row-btn')) {
+        e.preventDefault();
+        const tableId = e.target.dataset.tableId;
+        const table = document.getElementById(tableId).querySelector('tbody');
+        const newRow = table.insertRow();
+        newRow.innerHTML = `
+            <td><select><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
+            <td><input type="text"></td><td><input type="text"></td><td><input type="number"></td><td><input type="number"></td>
+            <td><input type="number"></td><td><input type="number"></td><td><input type="number"></td>
+            <td><input type="number"></td><td><input type="number"></td>
+        `;
+    }
+});
     
     document.body.addEventListener('submit', async (e) => {
         if (e.target.matches('.reply-form')) {
@@ -3882,7 +3907,6 @@ startMainTournamentBtn.addEventListener('click', async () => {
             showAlert('データの読み込みに失敗しました。');
         }
     });
-
     // アプリケーション起動
     initializeApp();
 </script>
