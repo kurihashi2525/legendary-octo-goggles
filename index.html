@@ -4482,7 +4482,7 @@ document.body.addEventListener('click', async (e) => {
         const table = document.getElementById(`batting-table-${teamKey}`);
         if (!table) return;
         const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 3; // #,選手,守備,+,計 ボタンを除外
+        const newInningNum = headerRow.children.length - 4; // #,選手,守備,+,計 ボタンを除外
         const newTh = document.createElement('th');
         newTh.className = 'col-inning';
         newTh.textContent = newInningNum;
@@ -4560,7 +4560,7 @@ document.body.addEventListener('click', async (e) => {
         const table = document.getElementById('inning-score-table');
         if (!table) return;
         const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 3; // チーム,計,+を除く
+        const newInningNum = headerRow.children.length - 2; // チーム,計,+を除く
         const newTh = document.createElement('th');
         newTh.textContent = newInningNum;
         headerRow.insertBefore(newTh, headerRow.children[headerRow.children.length - 2]);
