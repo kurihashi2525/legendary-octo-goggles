@@ -2800,23 +2800,35 @@ async function setupSpringMainTournament_Round2() {
         }
 
         const prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-以下の試合結果とチーム情報に基づき、読者の心を掴むようなドラマチックなニュース記事を生成してください。
+以下の詳細な情報に基づき、試合後の監督や選手のコメントを自然に本文中に含んだ、最高の記事を生成してください。
+
 ### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})${winnerPrevRankStr} ${winnerTitles ? `【称号: ${winnerTitles}】` : ''}
 - 敗北チーム: ${loserName} (${loserRankDesc})${loserPrevRankStr} ${loserTitles ? `【称号: ${loserTitles}】` : ''}
 - スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
-- 達成記録: ${roundAchievement || 'なし'}
-- シード権への影響: ${seedingImplication || '特になし'}
 - ユーザーによる試合の決め手: ${dbMatch.summary || 'なし'}
+- この試合での達成記録: ${roundAchievement || 'なし'}
+- 次の大会への影響: ${seedingImplication || '特になし'}
 ${specialNarrativeContext}
-### 執筆のポイント
-- **【最重要】**: もし「物語のハイライト」がある場合、そのテーマを記事全体の中心に据えてください。
-- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」を記事に盛り込み、物語に深みを与えてください。
-- **下克上の強調**: 格下のチームが格上を破った場合は、その衝撃を大きく報じてください。
-### 出力形式
-JSON形式で出力してください: {"title": "記事のタイトル", "body": "記事の本文"}`;
 
+### 監督情報
+- 勝利監督: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.experience} / ${winnerCoach.style})` : '情報なし'}
+- 敗北監督: ${loserCoach ? `${loserCoach.name} (${loserCoach.experience} / ${loserCoach.style})` : '情報なし'}
+
+### 執筆指示：記事本文
+- **【最重要】**: もし「物語のハイライト」(${specialNarrativeContext})が提供されている場合、そのテーマを記事全体の中心に据えてください。
+- **インタビューコメント**: 記事の本文中に、試合後の監督や選手のコメントを自然な形で含めてください。コメントは試合内容（接戦、下克上など）や監督の性格、チームの状況を反映させてください。（例：「試合後、勝利した〇〇監督は「選手たちがよくやってくれた」と安堵の表情を見せた。」）
+- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」、監督の経歴などを記事に盛り込み、物語に深みを与えてください。
+- **下克上の強調**: 格下のチームが格上を破った場合は、その衝撃を大きく報じてください。
+- **試合の重要性**: 「達成記録」や「次の大会への影響」を考慮し、この一勝が持つ意味を伝えてください。
+
+### 出力形式
+必ず以下のJSON形式で出力してください。
+{
+    "title": "記事のタイトル",
+    "body": "記事の本文（コメントを含む。改行は\\nを使用）"
+}`;
         try {
             const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
             const result = await response.json();
