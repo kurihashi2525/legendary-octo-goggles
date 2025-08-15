@@ -1946,14 +1946,19 @@ function openDetailsModal(matchId) {
         const match = findMatchById(currentMatchIdForDetails);
         if (!match) return;
 
-        const details = { inningScore: {}, batting: {}, pitching: {} };
-
-        // イニングスコアの保存
-        for (const teamKey of ['team1', 'team2']) {
-            const teamName = teamKey === 'team1' ? match.team1 : match.team2;
-            const inningTable = document.getElementById(`inning-score-table`);
-            details.inningScore[teamKey] = Array.from(inningTable.querySelectorAll(`input[data-team-key="${teamKey}"]`)).map(inp => inp.value);
+        const details = { inningScore: { team1: [], team2: [] }, batting: {}, pitching: {} };
+        const scoreTable = document.getElementById('inning-score-table');
+    if (scoreTable) {
+        const rows = scoreTable.querySelectorAll('tbody tr');
+        // 1行目の入力欄をteam1のスコアとして保存
+        if (rows[0]) {
+            details.inningScore.team1 = Array.from(rows[0].querySelectorAll('input')).map(input => input.value);
         }
+        // 2行目の入力欄をteam2のスコアとして保存
+        if (rows[1]) {
+            details.inningScore.team2 = Array.from(rows[1].querySelectorAll('input')).map(input => input.value);
+        }
+    }
 
         for (const teamKey of ['team1', 'team2']) {
             // 打撃成績の保存
