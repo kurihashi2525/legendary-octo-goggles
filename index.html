@@ -1851,10 +1851,11 @@ function openDetailsModal(matchId) {
     updateTotalScores();
 }
 
-    /**
-     * 個人別打席結果のテーブルHTMLを生成する
-     */
-    function createPlayerBattingTable(teamName, teamKey, details) {
+    // ★★★ この関数を丸ごと置き換えてください ★★★
+/**
+ * 個人別打席結果のテーブルHTMLを生成する（交代選手表示バグ修正・最終版）
+ */
+function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
 
@@ -1865,17 +1866,13 @@ function openDetailsModal(matchId) {
 
     let bodyRows = '';
 
-    // --- ここからが修正箇所 ---
-    // 1. まず、スタメン選手（9人分）の行を先に作成する
+    // 1. スタメン選手（9人分）の行を先に作成
     for (let i = 1; i <= 9; i++) {
-        // 保存されたデータから、該当する打順の選手を探す
         let starterData = battingData.find(p => p.order && parseInt(p.order) === i);
-        // もしデータがなければ、空の行を用意する
         if (!starterData) {
             starterData = { order: i, number: '', name: '', pos: '', results: [] };
         }
 
-        // スタメン選手の行HTMLを作成
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
             resultInputs += `<td><input type="text" value="${starterData.results[j] || ''}" placeholder="-"></td>`;
@@ -1883,14 +1880,14 @@ function openDetailsModal(matchId) {
         bodyRows += `
             <tr data-order="${starterData.order}">
                 <td>${i}</td>
-                <td><input type="text" class="col-number" value="${starterData.number || ''}"></td>
+                <td><input type="text" class="player-number" value="${starterData.number || ''}"></td>
                 <td><input type="text" class="player-name" value="${starterData.name || ''}"></td>
-                <td><input type="text" class="w-12" value="${starterData.pos || ''}"></td>
+                <td><input type="text" class="player-pos" value="${starterData.pos || ''}"></td>
                 ${resultInputs}
             </tr>
         `;
 
-        // 2. 次に、そのスタメン選手に対する交代選手がいたら、すぐ下に追加する
+        // 2. そのスタメン選手に対する交代選手がいたら、すぐ下に追加
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
             let subResultInputs = '';
@@ -1900,15 +1897,14 @@ function openDetailsModal(matchId) {
             bodyRows += `
                 <tr data-order="${subData.order}">
                     <td></td>
-                    <td><input type="text" class="col-number" value="${subData.number || ''}"></td>
+                    <td><input type="text" class="player-number" value="${subData.number || ''}"></td>
                     <td class="pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td>
-                    <td><input type="text" class="w-12" value="${subData.pos || ''}"></td>
+                    <td><input type="text" class="player-pos" value="${subData.pos || ''}"></td>
                     ${subResultInputs}
                 </tr>
             `;
         });
     }
-    // --- ここまでが修正箇所 ---
 
     return `
         <div class="overflow-x-auto">
@@ -1993,18 +1989,19 @@ function saveDetailedStats() {
 
     // 打撃・投手成績の読み取り
     for (const teamKey of ['team1', 'team2']) {
-        // 打撃成績
+        // --- 打撃成績の読み取り ---
         details.batting[teamKey] = [];
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         battingTable.querySelectorAll('tbody tr').forEach(row => {
-            const inputs = row.querySelectorAll('input');
-            if (inputs[1] && inputs[1].value.trim() !== '') {
+            const nameInput = row.querySelector('.player-name');
+            // 選手名が入力されている行のみを処理
+            if (nameInput && nameInput.value.trim() !== '') {
                 const playerData = {
                     order: row.dataset.order,
-                    number: inputs[0].value,
-                    name: inputs[1].value,
-                    pos: inputs[2].value,
-                    results: Array.from(inputs).slice(3).map(inp => inp.value)
+                    number: row.querySelector('.player-number').value,
+                    name: nameInput.value,
+                    pos: row.querySelector('.player-pos').value,
+                    results: Array.from(row.querySelectorAll('td input[type="text"]:not(.player-name)')).map(inp => inp.value)
                 };
                 details.batting[teamKey].push(playerData);
             }
@@ -4522,7 +4519,7 @@ document.body.addEventListener('click', async (e) => {
         });
     }
     
-    // ★★★ このブロックを丸ごと置き換えてください ★★★
+   // ★★★ このブロックを丸ごと置き換えてください ★★★
 // --- 【詳細モーダル内】交代選手追加ボタン ---
 else if (e.target.matches('.add-substitute-btn')) {
     e.preventDefault();
@@ -4534,14 +4531,12 @@ else if (e.target.matches('.add-substitute-btn')) {
     if (!orderInput || isNaN(orderInput)) return;
     const order = parseInt(orderInput);
 
-    // 交代元の打順の行と、その行が何番目にあるかを探す
     const allBodyRows = Array.from(tableBody.querySelectorAll('tr'));
     let targetRowIndex = -1;
 
     for (let i = allBodyRows.length - 1; i >= 0; i--) {
-        const rowOrderCell = allBodyRows[i].cells[0];
-        // 1列目が空欄でなく、数字が一致するかを確認
-        if (rowOrderCell && rowOrderCell.textContent.trim() !== '' && parseInt(rowOrderCell.textContent) === order) {
+        const rowOrder = allBodyRows[i].dataset.order;
+        if (rowOrder && parseInt(rowOrder) === order) {
             targetRowIndex = i;
             break;
         }
@@ -4552,11 +4547,11 @@ else if (e.target.matches('.add-substitute-btn')) {
         return;
     }
 
-    // 正しい位置（ターゲットの行の直後）に新しい行を挿入
     const newRow = tableBody.insertRow(targetRowIndex + 1);
+    const subCount = tableBody.querySelectorAll(`tr[data-order^="${order}-sub"]`).length + 1;
+    newRow.dataset.order = `${order}-sub-${subCount}`;
     
-    // ★★★ resultInputsをここで正しく定義 ★★★
-    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 5; // #,選手,守備,イニング追加ボタン,合計を除外
+    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 5;
     let resultInputs = '';
     for (let j = 0; j < numInnings; j++) {
         resultInputs += `<td><input type="text" placeholder="-"></td>`;
@@ -4564,9 +4559,9 @@ else if (e.target.matches('.add-substitute-btn')) {
     
     newRow.innerHTML = `
         <td></td>
-        <td><input type="text" class="col-number" placeholder="#"></td>
-        <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
-        <td><input type="text" class="w-12" placeholder="守備"></td>
+        <td><input type="text" class="player-number" placeholder="#"></td>
+        <td class="pl-4"><input type="text" class="player-name" placeholder="交代選手名"></td>
+        <td><input type="text" class="player-pos" placeholder="守備"></td>
         ${resultInputs}
     `;
 }
