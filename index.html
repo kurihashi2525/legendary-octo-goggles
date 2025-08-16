@@ -1993,15 +1993,21 @@ function saveDetailedStats() {
         details.batting[teamKey] = [];
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         battingTable.querySelectorAll('tbody tr').forEach(row => {
+            const numberInput = row.querySelector('.player-number');
             const nameInput = row.querySelector('.player-name');
-            // 選手名が入力されている行のみを処理
+            const posInput = row.querySelector('.player-pos');
+
             if (nameInput && nameInput.value.trim() !== '') {
+                // イニング結果の入力欄だけを正確に取得
+                const resultInputs = Array.from(row.querySelectorAll('td input[type="text"]'))
+                    .filter(input => !input.classList.contains('player-number') && !input.classList.contains('player-name') && !input.classList.contains('player-pos'));
+
                 const playerData = {
                     order: row.dataset.order,
-                    number: row.querySelector('.player-number').value,
+                    number: numberInput ? numberInput.value : '',
                     name: nameInput.value,
-                    pos: row.querySelector('.player-pos').value,
-                    results: Array.from(row.querySelectorAll('td input[type="text"]:not(.player-name)')).map(inp => inp.value)
+                    pos: posInput ? posInput.value : '',
+                    results: resultInputs.map(inp => inp.value)
                 };
                 details.batting[teamKey].push(playerData);
             }
