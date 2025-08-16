@@ -1864,28 +1864,51 @@ function openDetailsModal(matchId) {
     }
 
     let bodyRows = '';
-    const maxPlayers = Math.max(9, battingData.length);
-    for (let i = 0; i < maxPlayers; i++) {
-        const playerData = battingData[i] || { number: '', name: '', pos: '', results: [] };
+
+    // --- ここからが修正箇所 ---
+    // 1. まず、スタメン選手（9人分）の行を先に作成する
+    for (let i = 1; i <= 9; i++) {
+        // 保存されたデータから、該当する打順の選手を探す
+        let starterData = battingData.find(p => p.order && parseInt(p.order) === i);
+        // もしデータがなければ、空の行を用意する
+        if (!starterData) {
+            starterData = { order: i, number: '', name: '', pos: '', results: [] };
+        }
+
+        // スタメン選手の行HTMLを作成
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
-            resultInputs += `<td><input type="text" value="${playerData.results[j] || ''}" placeholder="-"></td>`;
+            resultInputs += `<td><input type="text" value="${starterData.results[j] || ''}" placeholder="-"></td>`;
         }
-        
-        const isSubstitute = playerData.order && playerData.order.toString().includes('-sub');
-        const orderDisplay = isSubstitute ? '' : (i + 1);
-        const nameClass = isSubstitute ? 'pl-4' : '';
-
         bodyRows += `
-            <tr data-order="${playerData.order || (i + 1)}">
-                <td>${orderDisplay}</td>
-                <td><input type="text" class="col-number" value="${playerData.number || ''}"></td>
-                <td class="${nameClass}"><input type="text" value="${playerData.name || ''}"></td>
-                <td><input type="text" class="w-12" value="${playerData.pos || ''}"></td>
+            <tr data-order="${starterData.order}">
+                <td>${i}</td>
+                <td><input type="text" class="col-number" value="${starterData.number || ''}"></td>
+                <td><input type="text" class="player-name" value="${starterData.name || ''}"></td>
+                <td><input type="text" class="w-12" value="${starterData.pos || ''}"></td>
                 ${resultInputs}
             </tr>
         `;
+
+        // 2. 次に、そのスタメン選手に対する交代選手がいたら、すぐ下に追加する
+        const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
+        substitutes.forEach(subData => {
+            let subResultInputs = '';
+            for (let j = 0; j < numInnings; j++) {
+                subResultInputs += `<td><input type="text" value="${subData.results[j] || ''}" placeholder="-"></td>`;
+            }
+            bodyRows += `
+                <tr data-order="${subData.order}">
+                    <td></td>
+                    <td><input type="text" class="col-number" value="${subData.number || ''}"></td>
+                    <td class="pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td>
+                    <td><input type="text" class="w-12" value="${subData.pos || ''}"></td>
+                    ${subResultInputs}
+                </tr>
+            `;
+        });
     }
+    // --- ここまでが修正箇所 ---
 
     return `
         <div class="overflow-x-auto">
