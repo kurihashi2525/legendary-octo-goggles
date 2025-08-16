@@ -1962,18 +1962,19 @@ function openDetailsModal(matchId) {
 
         for (const teamKey of ['team1', 'team2']) {
             // 打撃成績の保存
-            details.batting[teamKey] = [];
+             details.batting[teamKey] = [];
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         battingTable.querySelectorAll('tbody tr').forEach(row => {
             const nameInput = row.querySelector('.player-name');
-            // 選手名が入力されている行のみを処理の対象とする
-            if (nameInput && nameInput.value) {
+            if (nameInput && nameInput.value) { // 選手名が入力されている行のみを処理
                 const playerData = {
-                    order: row.dataset.order, // data-order属性をそのまま保存
+                    order: row.dataset.order,
                     number: row.querySelector('.player-number').value,
                     name: nameInput.value,
                     pos: row.querySelector('.player-pos').value,
-                    results: Array.from(row.querySelectorAll('td input[type="text"]')).map(inp => inp.value)
+                    // ★★★ ここがバグの修正箇所 ★★★
+                    // 「選手名以外の」テキスト入力欄だけをresultsとして取得する
+                    results: Array.from(row.querySelectorAll('td input[type="text"]:not(.player-name)')).map(inp => inp.value)
                 };
                 details.batting[teamKey].push(playerData);
             }
