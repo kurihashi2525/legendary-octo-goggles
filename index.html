@@ -2017,25 +2017,35 @@ function openDetailsModal(matchId) {
             teamRecord.playerStats = { batting: {}, pitching: {} };
         }
 
-        // 打撃成績の集計
+       // ★★★ ここから打撃成績の集計ロジックを修正 ★★★
         details.batting[teamKey].forEach(player => {
             if (!player.name) return;
-            // 選手個人の成績データがなければ初期化
             if (!teamRecord.playerStats.batting[player.name]) {
                 teamRecord.playerStats.batting[player.name] = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
             }
             const stats = teamRecord.playerStats.batting[player.name];
-            player.results.forEach(res => {
-                if (!res || res.trim() === '') return;
-                stats.pa++; // 打席数
-                if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++; // 打数                if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++; // 安打
-                if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++; // 本塁打
-                const rbiMatch = res.match(/(\d+)点/);
-                if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
-                else if (res.includes('点')) stats.rbi += 1;
+
+            // 各イニングの結果をループ
+            player.results.forEach(inningResultString => {
+                if (!inningResultString || inningResultString.trim() === '') return;
+
+                // 文字列を「、」で区切り、イニング内の各打席結果を配列にする
+                const atBatsInInning = inningResultString.split('、').map(s => s.trim());
+
+                // イニング内の各打席をループして集計
+                atBatsInInning.forEach(res => {
+                    if (!res) return;
+                    stats.pa++; // 打席数
+                    if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++; // 打数
+                    if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++; // 安打
+                    if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++; // 本塁打
+                    const rbiMatch = res.match(/(\d+)点/);
+                    if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
+                    else if (res.includes('点')) stats.rbi += 1;
+                });
             });
         });
-
+        // ★★★ ここまで修正 ★★★
         // 投手成績の集計
         details.pitching[teamKey].forEach(pitcher => {
             if (!pitcher.name) return;
