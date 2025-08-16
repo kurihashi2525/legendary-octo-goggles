@@ -1970,32 +1970,34 @@ function openDetailsModal(matchId) {
     /**
      * 【修正版】詳細モーダルから入力されたデータを読み取り、stateに保存する
      */
-    function saveDetailedStats() {
-        if (!currentMatchIdForDetails) return;
-        const match = findMatchById(currentMatchIdForDetails);
-        if (!match) return;
+    // ★★★ この完成版コードで丸ごと置き換えてください ★★★
+/**
+ * 詳細モーダルから入力されたデータを保存し、選手個人の大会通算成績を更新する
+ * (最終版)
+ */
+function saveDetailedStats() {
+    if (!currentMatchIdForDetails) return;
+    const match = findMatchById(currentMatchIdForDetails);
+    if (!match) return;
 
-        const details = { inningScore: { team1: [], team2: [] }, batting: {}, pitching: {} };
-        const scoreTable = document.getElementById('inning-score-table');
+    // --- ステップ1: モーダルから入力された「今試合の」データを読み取る ---
+    const details = { inningScore: { team1: [], team2: [] }, batting: {}, pitching: {} };
+    
+    // イニングスコアの読み取り
+    const scoreTable = document.getElementById('inning-score-table');
     if (scoreTable) {
         const rows = scoreTable.querySelectorAll('tbody tr');
-        // 1行目の入力欄をteam1のスコアとして保存
-        if (rows[0]) {
-            details.inningScore.team1 = Array.from(rows[0].querySelectorAll('input')).map(input => input.value);
-        }
-        // 2行目の入力欄をteam2のスコアとして保存
-        if (rows[1]) {
-            details.inningScore.team2 = Array.from(rows[1].querySelectorAll('input')).map(input => input.value);
-        }
+        if (rows[0]) details.inningScore.team1 = Array.from(rows[0].querySelectorAll('input')).map(input => input.value);
+        if (rows[1]) details.inningScore.team2 = Array.from(rows[1].querySelectorAll('input')).map(input => input.value);
     }
 
-        for (const teamKey of ['team1', 'team2']) {
-            // 打撃成績の保存
-              details.batting[teamKey] = [];
+    // 打撃・投手成績の読み取り
+    for (const teamKey of ['team1', 'team2']) {
+        // 打撃成績
+        details.batting[teamKey] = [];
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         battingTable.querySelectorAll('tbody tr').forEach(row => {
             const inputs = row.querySelectorAll('input');
-            // 選手名が入力されている行のみを処理
             if (inputs[1] && inputs[1].value.trim() !== '') {
                 const playerData = {
                     order: row.dataset.order,
@@ -2006,75 +2008,59 @@ function openDetailsModal(matchId) {
                 };
                 details.batting[teamKey].push(playerData);
             }
-        });            // 投手成績の保存
-            details.pitching[teamKey] = [];
-            const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
-            pitchingTable.querySelectorAll('tbody tr').forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                const select = row.querySelector('select');
-                const pitcherData = {
-                    result: select.value,
-                    name: inputs[0].value,
-                    innings: inputs[1].value,
-                    battersFaced: inputs[2].value,
-                pitches: inputs[3].value,
-                hits: inputs[4].value,
-                strikeouts: inputs[5].value,
-                walks: inputs[6].value,
-                runs: inputs[7].value,
+        });
+        // 投手成績
+        details.pitching[teamKey] = [];
+        const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
+        pitchingTable.querySelectorAll('tbody tr').forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const select = row.querySelector('select');
+            const pitcherData = {
+                result: select.value, name: inputs[0].value, innings: inputs[1].value,
+                battersFaced: inputs[2].value, pitches: inputs[3].value, hits: inputs[4].value,
+                strikeouts: inputs[5].value, walks: inputs[6].value, runs: inputs[7].value,
                 earnedRuns: inputs[8].value,
-                    // ... 他の投手データも同様に保存
-                };
-                if (pitcherData.name) {
-                    details.pitching[teamKey].push(pitcherData);
-                }
-            });
-        }
-        
-        match.details = details;
+            };
+            if (pitcherData.name) {
+                details.pitching[teamKey].push(pitcherData);
+            }
+        });
+    }
+    
+    // 読み取った「今試合の」データを試合オブジェクトに保存
+    match.details = details;
 
-// ★★★ ここからが新しい処理 ★★★
-    // 2. 読み取ったデータを元に、大会通算成績を更新する
+    // --- ステップ2: 「今試合の」データを使って、「大会通算成績」と「選手名簿」を更新する ---
     for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
 
-        // チームの成績データがなければ初期化
+        // 大会通算成績(playerStats)の更新
         if (!teamRecord.playerStats) {
             teamRecord.playerStats = { batting: {}, pitching: {} };
         }
-
-       // ★★★ ここから打撃成績の集計ロジックを修正 ★★★
         details.batting[teamKey].forEach(player => {
             if (!player.name) return;
             if (!teamRecord.playerStats.batting[player.name]) {
                 teamRecord.playerStats.batting[player.name] = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
             }
             const stats = teamRecord.playerStats.batting[player.name];
-
-            // 各イニングの結果をループ
             player.results.forEach(inningResultString => {
                 if (!inningResultString || inningResultString.trim() === '') return;
-
-                // 文字列を「、」で区切り、イニング内の各打席結果を配列にする
                 const atBatsInInning = inningResultString.split('、').map(s => s.trim());
-
-                // イニング内の各打席をループして集計
                 atBatsInInning.forEach(res => {
                     if (!res) return;
-                    stats.pa++; // 打席数
-                    if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++; // 打数
-                    if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++; // 安打
-                    if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++; // 本塁打
+                    stats.pa++;
+                    if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++;
+                    if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++;
+                    if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++;
                     const rbiMatch = res.match(/(\d+)点/);
                     if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
                     else if (res.includes('点')) stats.rbi += 1;
                 });
             });
         });
-        // ★★★ ここまで修正 ★★★
-        // 投手成績の集計
         details.pitching[teamKey].forEach(pitcher => {
             if (!pitcher.name) return;
             if (!teamRecord.playerStats.pitching[pitcher.name]) {
@@ -2087,30 +2073,21 @@ function openDetailsModal(matchId) {
             stats.so += parseInt(pitcher.strikeouts) || 0;
             stats.er += parseInt(pitcher.earnedRuns) || 0;
         });
-    }
-// ★★★ ここからが新しい処理 ★★★
-    // 選手名簿(roster)を更新する
-    for (const teamKey of ['team1', 'team2']) {
-        const teamName = match[teamKey];
-        if (teamName && tournamentState.teamRecords[teamName]) {
-            const battingData = details.batting[teamKey];
-            if (battingData && battingData.length > 0) {
-                // 交代選手も含めた全選手情報を保存
-                tournamentState.teamRecords[teamName].roster = battingData.map(p => ({
-                    order: p.order,
-                    number: p.number,
-                    name: p.name,
-                    pos: p.pos
-                }));
-            }
+
+        // 選手名簿(roster)の更新
+        const battingData = details.batting[teamKey];
+        if (battingData && battingData.length > 0) {
+            teamRecord.roster = battingData.map(p => ({
+                order: p.order, number: p.number, name: p.name, pos: p.pos
+            }));
         }
     }
-    // ★★★ ここまで追加 ★★★
 
-        saveState();
-        detailsModal.classList.add('hidden');
-        alert('詳細を保存しました。');
-    }
+    // --- ステップ3: 最終処理 ---
+    saveState();
+    detailsModal.classList.add('hidden');
+    alert('詳細を保存しました。');
+}
 /**
      * 【修正版】スキップ機能関連
      */
