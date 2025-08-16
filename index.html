@@ -1855,48 +1855,54 @@ function openDetailsModal(matchId) {
      * 個人別打席結果のテーブルHTMLを生成する
      */
     function createPlayerBattingTable(teamName, teamKey, details) {
-        const battingData = details.batting[teamKey] || [];
-        const numInnings = details.inningScore[teamKey]?.length || 9;
-        let inningsHeader = '';
-        for (let i = 1; i <= numInnings; i++) {
-            inningsHeader += `<th class="col-inning">${i}</th>`;
-        }
+    const battingData = details.batting[teamKey] || [];
+    const numInnings = details.inningScore?.[teamKey]?.length || 9;
 
-        let bodyRows = '';
-        for (let i = 0; i < 9; i++) { // 9番打者まで表示
-            const playerData = battingData[i] || { number: '', name: '', pos: '', results: [] };
-            let resultInputs = '';
-            for (let j = 0; j < numInnings; j++) {
-                resultInputs += `<td><input type="text" value="${playerData.results[j] || ''}" placeholder="-"></td>`;
-            }
-            bodyRows += `
-                <tr data-order="${i+1}">
-                    <td>${i+1}</td>
-                    <td><input type="text" class="col-number" value="${playerData.number || ''}"></td>
-                    <td><input type="text" value="${playerData.name || ''}"></td>
-                    <td><input type="text" class="w-12" value="${playerData.pos || ''}"></td>
-                    ${resultInputs}
-                </tr>
-            `;
-        }
+    let inningsHeader = '';
+    for (let i = 1; i <= numInnings; i++) {
+        inningsHeader += `<th class="col-inning">${i}</th>`;
+    }
 
-        return `
-            <div class="overflow-x-auto">
-                <table class="details-table" id="batting-table-${teamKey}">
-                    <thead>
-                        <tr>
-                            <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th>
-                            ${inningsHeader}
-                            <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
-                        </tr>
-                    </thead>
-                    <tbody>${bodyRows}</tbody>
-                </table>
-                <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
-            </div>
+    let bodyRows = '';
+    const maxPlayers = Math.max(9, battingData.length);
+    for (let i = 0; i < maxPlayers; i++) {
+        const playerData = battingData[i] || { number: '', name: '', pos: '', results: [] };
+        let resultInputs = '';
+        for (let j = 0; j < numInnings; j++) {
+            resultInputs += `<td><input type="text" value="${playerData.results[j] || ''}" placeholder="-"></td>`;
+        }
+        
+        const isSubstitute = playerData.order && playerData.order.toString().includes('-sub');
+        const orderDisplay = isSubstitute ? '' : (i + 1);
+        const nameClass = isSubstitute ? 'pl-4' : '';
+
+        bodyRows += `
+            <tr data-order="${playerData.order || (i + 1)}">
+                <td>${orderDisplay}</td>
+                <td><input type="text" class="col-number" value="${playerData.number || ''}"></td>
+                <td class="${nameClass}"><input type="text" value="${playerData.name || ''}"></td>
+                <td><input type="text" class="w-12" value="${playerData.pos || ''}"></td>
+                ${resultInputs}
+            </tr>
         `;
     }
 
+    return `
+        <div class="overflow-x-auto">
+            <table class="details-table" id="batting-table-${teamKey}">
+                <thead>
+                    <tr>
+                        <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th>
+                        ${inningsHeader}
+                        <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
+                    </tr>
+                </thead>
+                <tbody>${bodyRows}</tbody>
+            </table>
+            <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
+        </div>
+    `;
+}
     /**
      * 投手成績のテーブルHTMLを生成する
      */
