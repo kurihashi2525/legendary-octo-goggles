@@ -2028,8 +2028,7 @@ function openDetailsModal(matchId) {
             player.results.forEach(res => {
                 if (!res || res.trim() === '') return;
                 stats.pa++; // 打席数
-                if (!res.includes('四球') && !res.includes('犠')) stats.ab++; // 打数
-                if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++; // 安打
+                if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++; // 打数                if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++; // 安打
                 if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++; // 本塁打
                 const rbiMatch = res.match(/(\d+)点/);
                 if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
@@ -4510,28 +4509,35 @@ document.body.addEventListener('click', async (e) => {
     
     // --- 【詳細モーダル内】交代選手追加ボタン ---
     else if (e.target.matches('.add-substitute-btn')) {
-        e.preventDefault();
-        const teamKey = e.target.dataset.teamKey;
-        const table = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
-        const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
-        if (!orderInput || isNaN(orderInput)) return;
-        const order = parseInt(orderInput);
-        if (order < 1) return;
+    e.preventDefault();
+    const teamKey = e.target.dataset.teamKey;
+    const tableBody = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
+    if (!tableBody) return;
 
-        // 交代元の打順の行を探す
-        const targetRow = Array.from(table.querySelectorAll('tr')).find(r => parseInt(r.cells[0].textContent) === order);
-        if (!targetRow) {
-            alert(order + '番打者が見つかりません。');
-            return;
-        }
+    const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
+    if (!orderInput || isNaN(orderInput)) return;
+    const order = parseInt(orderInput);
 
-        const newRow = table.insertRow(targetRow.rowIndex + 1);
-        const numInnings = table.parentElement.querySelector('thead tr').children.length - 5;
-        let resultInputs = '';
-        for (let j = 0; j < numInnings; j++) {
-            resultInputs += `<td><input type="text" placeholder="-"></td>`;
+    // 交代元の打順の行と、その行が何番目にあるかを探す
+    const allBodyRows = Array.from(tableBody.querySelectorAll('tr'));
+    let targetRowIndex = -1;
+
+    // 交代選手なども考慮し、指定された打順の最後の行を探す
+    for (let i = allBodyRows.length - 1; i >= 0; i--) {
+        const rowOrder = allBodyRows[i].cells[0].textContent;
+        if (rowOrder && parseInt(rowOrder) === order) {
+            targetRowIndex = i;
+            break;
         }
-        newRow.innerHTML = `
+    }
+
+    if (targetRowIndex === -1) {
+        alert(order + '番打者が見つかりません。');
+        return;
+    }
+
+    // 正しい位置（ターゲットの行の直後）に新しい行を挿入
+    const newRow = tableBody.insertRow(targetRowIndex + 1);        newRow.innerHTML = `
             <td></td>
             <td><input type="text" class="col-number" placeholder="#"></td>
             <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
