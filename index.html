@@ -4517,8 +4517,9 @@ document.body.addEventListener('click', async (e) => {
         });
     }
     
-    // --- 【詳細モーダル内】交代選手追加ボタン ---
-    else if (e.target.matches('.add-substitute-btn')) {
+    // ★★★ このブロックを丸ごと置き換えてください ★★★
+// --- 【詳細モーダル内】交代選手追加ボタン ---
+else if (e.target.matches('.add-substitute-btn')) {
     e.preventDefault();
     const teamKey = e.target.dataset.teamKey;
     const tableBody = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
@@ -4532,10 +4533,10 @@ document.body.addEventListener('click', async (e) => {
     const allBodyRows = Array.from(tableBody.querySelectorAll('tr'));
     let targetRowIndex = -1;
 
-    // 交代選手なども考慮し、指定された打順の最後の行を探す
     for (let i = allBodyRows.length - 1; i >= 0; i--) {
-        const rowOrder = allBodyRows[i].cells[0].textContent;
-        if (rowOrder && parseInt(rowOrder) === order) {
+        const rowOrderCell = allBodyRows[i].cells[0];
+        // 1列目が空欄でなく、数字が一致するかを確認
+        if (rowOrderCell && rowOrderCell.textContent.trim() !== '' && parseInt(rowOrderCell.textContent) === order) {
             targetRowIndex = i;
             break;
         }
@@ -4547,15 +4548,23 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // 正しい位置（ターゲットの行の直後）に新しい行を挿入
-    const newRow = tableBody.insertRow(targetRowIndex + 1);        newRow.innerHTML = `
-            <td></td>
-            <td><input type="text" class="col-number" placeholder="#"></td>
-            <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
-            <td><input type="text" class="w-12" placeholder="守備"></td>
-            ${resultInputs}
-        `;
+    const newRow = tableBody.insertRow(targetRowIndex + 1);
+    
+    // ★★★ resultInputsをここで正しく定義 ★★★
+    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 5; // #,選手,守備,イニング追加ボタン,合計を除外
+    let resultInputs = '';
+    for (let j = 0; j < numInnings; j++) {
+        resultInputs += `<td><input type="text" placeholder="-"></td>`;
     }
-
+    
+    newRow.innerHTML = `
+        <td></td>
+        <td><input type="text" class="col-number" placeholder="#"></td>
+        <td class="pl-4"><input type="text" placeholder="交代選手名"></td>
+        <td><input type="text" class="w-12" placeholder="守備"></td>
+        ${resultInputs}
+    `;
+}
     // --- 【詳細モーダル内】投手追加ボタン ---
     else if (e.target.matches('.add-row-btn')) {
         e.preventDefault();
