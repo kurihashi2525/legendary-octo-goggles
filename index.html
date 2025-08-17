@@ -1976,10 +1976,9 @@ function saveDetailedStats() {
     const match = findMatchById(currentMatchIdForDetails);
     if (!match) return;
 
-    // --- ステップ1: モーダルから入力された「今試合の」データを読み取る ---
     const details = { inningScore: { team1: [], team2: [] }, batting: {}, pitching: {} };
-    
-    // イニングスコアの読み取り
+
+    // 1. イニングスコアの読み取り
     const scoreTable = document.getElementById('inning-score-table');
     if (scoreTable) {
         const rows = scoreTable.querySelectorAll('tbody tr');
@@ -1987,27 +1986,22 @@ function saveDetailedStats() {
         if (rows[1]) details.inningScore.team2 = Array.from(rows[1].querySelectorAll('input')).map(input => input.value);
     }
 
-    // 打撃・投手成績の読み取り
+    // 2. 打撃・投手成績の読み取り
     for (const teamKey of ['team1', 'team2']) {
-        // --- 打撃成績の読み取り ---
+        // --- 打撃成績 ---
         details.batting[teamKey] = [];
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         battingTable.querySelectorAll('tbody tr').forEach(row => {
-            const numberInput = row.querySelector('.player-number');
-            const nameInput = row.querySelector('.player-name');
-            const posInput = row.querySelector('.player-pos');
-
-            if (nameInput && nameInput.value.trim() !== '') {
-                // イニング結果の入力欄だけを正確に取得
-                const resultInputs = Array.from(row.querySelectorAll('td input[type="text"]'))
-                    .filter(input => !input.classList.contains('player-number') && !input.classList.contains('player-name') && !input.classList.contains('player-pos'));
-
+            const inputs = row.querySelectorAll('input'); // 行にある全てのinput要素を取得
+            // 選手名(inputs[1])が入力されているかチェック
+            if (inputs.length > 1 && inputs[1].value.trim() !== '') {
                 const playerData = {
                     order: row.dataset.order,
-                    number: numberInput ? numberInput.value : '',
-                    name: nameInput.value,
-                    pos: posInput ? posInput.value : '',
-                    results: resultInputs.map(inp => inp.value)
+                    number: inputs[0].value,
+                    name: inputs[1].value,
+                    pos: inputs[2].value,
+                    // 最初の3つ（背番号,名前,守備）を除いた残りを打席結果とする
+                    results: Array.from(inputs).slice(3).map(inp => inp.value)
                 };
                 details.batting[teamKey].push(playerData);
             }
@@ -3016,10 +3010,18 @@ async function setupSpringMainTournament_Round2() {
                 case 6: roundAchievement = (tournamentState.currentTournament === '夏季大会') ? '甲子園出場決定！' : '優勝！'; break;
             }
         }
+// === 記事生成ロジック ここから ===
+
+    // AIへの指示書を入れるための変数を、if/elseの前に用意します
+    let prompt = '';
+
+    // ★★★ここからが大きな変更点★★★
+    // もし詳細な試合データがあれば...
+    if (dbMatch.details) {
+        // 【Aルート】これまで通りの詳細な分析を行います
 // ★★★ 詳細入力データからハイライトを作成する（最終進化版） ★★★
     let highlightsText = '';
-    if (dbMatch.details) {
-        const highlights = [];
+            const highlights = [];
         const winningTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         const losingTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
 
@@ -3178,6 +3180,26 @@ ${specialNarrativeContext}
     "title": "記事のタイトル",
     "body": "記事の本文（コメントを含む。改行は\\nを使用）"
 }`;
+ // もし詳細な試合データがなければ...
+    } else {
+        // 【Bルート】シンプルな情報だけで、簡単な指示書を新たに作成します
+        prompt = `あなたは、高校野球専門のAI記者です。
+以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
+
+### 試合情報
+- 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
+- 勝利チーム: ${winnerName}
+- 敗北チーム: ${loserName}
+- スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
+
+### 執筆指示
+- 試合結果を客観的に伝えてください。
+- どちらかのチームを極端に賛美したり、批判したりしないでください。
+- 想像で選手のコメントなどを入れず、事実に基づいた内容にしてください。
+- 記事のタイトルと本文をJSON形式で出力してください。
+`;
+    }
+    // ★★★ここまでが大きな変更点★★★
         try {
             const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
             const result = await response.json();
