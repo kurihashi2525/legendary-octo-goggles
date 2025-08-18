@@ -3488,67 +3488,70 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
     }
 
 /**
-     * AIに掲示板のコメントを生成させるメイン関数。
-     */
-    async function generateBbsComments(winnerName, loserName, dbMatch, matchId,winnerData,loserData) {
-        // ... generateNewsArticleと同様のコンテキスト分析を行う ...
-        
-        let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
-        
-        
-
-        const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
-        const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
-        const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-        const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-        let specialNarrativeContext = '';
-        
-        // 秋季大会の特別な文脈を生成
-        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
-            const roundNumMain = parseInt(matchId.split('-')[1].slice(1));
-            if (roundNumMain === 1) {
-                const winnerRank = calculateRank(winnerName, tournamentState);
-                if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
-                     specialNarrativeContext = `### 【掲示板の話題】\n衝撃的な事件だ！あの無名の公立「${winnerName}」が、県大会の初戦を勝ち、【来春のシード権を獲得】したぞ！この「ありえないレベルの快進撃」に対する、ファンたちのリアルな驚き、興奮、そして少しの嫉妬が入り混じったコメントを生成せよ。`;
-                }
-            }
-        }
-         // ▼▼▼ ここからが修正箇所 ▼▼▼
-
-    // 1. 最新の成績記録を tournamentState から取得
+ * AIに掲示板のコメントを生成させるメイン関数
+ * 詳細入力の有無でプロンプトを切り替えるA/Bルート対応の最終版
+ */
+async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData) {
+    
+    // --- 準備フェーズ ---
+    // Aルート・Bルート共通で使う変数をここで準備します
+    const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+    const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+    const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
+    const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
     const winnerRecord = tournamentState.teamRecords[winnerName];
     const loserRecord = tournamentState.teamRecords[loserName];
-
-    // 2. 「専属アナウンサー」関数を呼び出して、最新の紹介文を生成
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
+    let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
+    
+    // ▼▼▼ 省略されていた「特別な文脈」の生成ロジック ▼▼▼
+    let specialNarrativeContext = '';
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
+        if (matchId.includes('-R1-')) { // 県大会本戦の1回戦のみ
+            const winnerRank = calculateRank(winnerName, tournamentState);
+            if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
+                specialNarrativeContext = `### 【掲示板の話題】\n衝撃的な事件だ！あの無名の公立「${winnerName}」が、県大会の初戦を勝ち、【来春のシード権を獲得】したぞ！この「ありえないレベルの快進撃」に対する、ファンたちのリアルな驚き、興奮、そして少しの嫉妬が入り混じったコメントを生成せよ。`;
+            }
+        }
+    }
+    // ▲▲▲ ▲▲▲
 
-        const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-以下の試合結果と文脈について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+    let prompt = ''; // プロンプトを入れる空の箱を用意
+
+    // --- Aルート：詳細入力がある場合 ---
+    if (dbMatch.details) {
+        const highlightsText = createHighlightsText(dbMatch, winnerName);
+
+        prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 
 ### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
 - 勝利チーム: ${winnerName} (${winnerData.region}・${winnerData.type}・${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserData.region}・${loserData.type}・${loserRankDesc})
-- スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
+- スコア: ${winnerScore} - ${loserScore}
+
+### 試合の主なハイライト
+- ${highlightsText || 'データなし'}
 
 ### チームの背景
-- **${winnerName}**: ${winnerDynamicInfo} // ← 最新の紹介文に差し替え！
-- **${loserName}**: ${loserDynamicInfo} // ← 最新の紹介文に差し替え！
+- **${winnerName}**: ${winnerDynamicInfo}
+- **${loserName}**: ${loserDynamicInfo}
 
 ${specialNarrativeContext}
 
 ### あなたがなりきるべきキャラクターと指示
-- 熱狂的な勝者チームのOB
-- 上から目線の野球解説者
-- アンチ
-- ライバル校のファン
-- 単なる野球好き
+- **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。（例：「〇〇の逆転打、鳥肌立ったわ！」）
+- **上から目線の野球解説者**: 「試合のハイライト」で言及されているプレー（「先制打」「好リリーフ」など）について、玄人っぽく分析・評価してください。（例：「あの場面はまさに監督の采配が光ったな」）
+- **アンチ**: 「試合のハイライト」で活躍した相手チームの選手を「まぐれだ」と貶したり、チャンスで凡退した自チームの選手を厳しく批判してください。
+- **ライバル校のファン**: 「試合のハイライト」で活躍した選手を見て、「うちの〇〇の方が上だな」と比較したり、自チームとの対戦を想像してコメントしてください。
+- **単なる野球好き**: 「試合のハイライト」の中で最も印象的だったプレーについて、興奮気味に、または素直に感想を述べてください。（例：「9回裏の攻防、熱すぎだろ！」）
+
 - **指示:**
-  - **【最重要】**: もし「掲示板の話題」が指定されていれば、そのテーマに対する反応を最優先で生成してください。
-  - 前大会の成績やチームの称号（歴史）をファン目線で語ってください。
-  - 地区の視点（東部、中部、西部など）や、公立か私立かという点にも着目してください。
-  - 各キャラクターとして1つずつ、合計5つのコメントを生成してください。
+  - **【最重要】**: 「試合のハイライト」の具体的な出来事に必ず言及してください。
+  - もし「掲示板の話題」が指定されていれば、そのテーマを最優先で反応すること。
+  - 各キャラクターとして1つずつ、合計5つのコメントを生成すること。
 
 ### 出力形式
 必ず以下のJSON配列形式で出力してください。
@@ -3559,29 +3562,69 @@ ${specialNarrativeContext}
     {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
     {"personality": "野球好き", "comment": "（コメント本文）"}
 ]`;
-
-        try {
-            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-            const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]) {
-                const rawText = result.candidates[0].content.parts[0].text;
-                const commentsJson = parseJsonFromText(rawText);
-                if (Array.isArray(commentsJson)) {
-                    return commentsJson.map(c => ({
-                        id: crypto.randomUUID(),
-                        personality: c.personality,
-                        text: c.comment,
-                        timestamp: Date.now(),
-                        replies: []
-                    }));
-                }
-            }
-            throw new Error("AIからの応答が予期した形式ではありません。");
-        } catch (error) {
-            console.error("AI掲示板コメントの生成に失敗しました:", error);
-            return [];
-        }
     }
+    // --- Bルート：詳細入力がない場合 ---
+    else {
+        prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+
+### 試合情報
+- 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
+- 勝利チーム: ${winnerName} (${winnerData.region}・${winnerData.type}・${winnerRankDesc})
+- 敗北チーム: ${loserName} (${loserData.region}・${loserData.type}・${loserRankDesc})
+- スコア: ${winnerScore} - ${loserScore}
+
+### チームの背景
+- **${winnerName}**: ${winnerDynamicInfo}
+- **${loserName}**: ${loserDynamicInfo}
+
+${specialNarrativeContext}
+
+### あなたがなりきるべきキャラクターと指示
+- **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
+- **上から目線の野球解説者**: 試合結果だけを見て、チームのランクや前評判から順当な結果か、意外な結果かを分析してください。
+- **アンチ**: 負けたチームや、勝ったがスコアが僅差だったチームを批判してください。
+- **ライバル校のファン**: 試合結果を見て、自チームとの力関係を測るようなコメントをしてください。
+- **単なる野球好き**: 試合のスコアを見て、接戦だったか、一方的だったかなどの感想を述べてください。
+
+- **指示:**
+  - もし「掲示板の話題」が指定されていれば、そのテーマを最優先で反応すること。
+  - 各キャラクターとして1つずつ、合計5つのコメントを生成すること。
+
+### 出力形式
+必ず以下のJSON配列形式で出力してください。
+[
+    {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
+    {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
+    {"personality": "アンチ", "comment": "（コメント本文）"},
+    {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
+    {"personality": "野球好き", "comment": "（コメント本文）"}
+]`;
+    }
+
+    // --- AIへのリクエスト部分は共通 ---
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                }));
+            }
+        }
+        throw new Error("AIからの応答が予期した形式ではありません。");
+    } catch (error) {
+        console.error("AI掲示板コメントの生成に失敗しました:", error);
+        return [];
+    }
+}
 /**
      * AIに代矢東応援掲示板のコメントを生成させる
      */
@@ -4750,7 +4793,7 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
 
 const [article, newComments] = await Promise.all([
         generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData,highlightsText),
-        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData)
+        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText)
     ]);
 
     // 3. AIからの返答を画面に表示する
