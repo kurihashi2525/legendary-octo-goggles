@@ -3365,64 +3365,63 @@ const loserCoach = loserData.coach;
         });
     }
         highlightsText = [...new Set(highlights)].join(', ');
-    // ★★★ ここからが新しい処理 ★★★
-    // 両チームのスタメン変更点を分析
-    let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
-    const changes = [];
-    for (const teamName of [winnerName, loserName]) {
-        const teamRecord = tournamentState.teamRecords[teamName];
-        const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
-        const currentStarters = dbMatch.details?.batting?.[teamKey];
-        
-        if (teamRecord && teamRecord.previousStarters && currentStarters) {
-            const changedPlayers = [];
-            for (let i = 1; i <= 9; i++) {
-                const prev = teamRecord.previousStarters.find(p => parseInt(p.order) === i);
-                const curr = currentStarters.find(p => parseInt(p.order) === i);
-                if (prev && curr && prev.name !== curr.name) {
-                    changedPlayers.push(`${i}番（${curr.pos}）に${curr.name}を起用`);
+     // 2. スタメン変更を分析
+        let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
+        const changes = [];
+        for (const teamName of [winnerName, loserName]) {
+            const teamRecord = tournamentState.teamRecords[teamName];
+            const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
+            const currentStarters = dbMatch.details?.batting?.[teamKey];
+            
+            if (teamRecord && teamRecord.previousStarters && currentStarters) {
+                const changedPlayers = [];
+                for (let i = 1; i <= 9; i++) {
+                    const prev = teamRecord.previousStarters.find(p => parseInt(p.order) === i);
+                    const curr = currentStarters.find(p => parseInt(p.order) === i);
+                    if (prev && curr && prev.name !== curr.name) {
+                        changedPlayers.push(`${i}番(${curr.pos})に${curr.name}を起用`);
+                    }
                 }
-            }
-            if (changedPlayers.length > 0) {
-                changes.push(`${teamName}は${changedPlayers.join('、')}といった変更を加えた。`);
-            }
-        }
-    }
-    if (changes.length > 0) lineupChangesText = changes.join(' ');
-    // ★★★ ここまでが新しい処理 ★★★
-       // ★★★ ここからが新しい処理 ★★★
-    // 注目選手の大会通算成績を取得する
-    let playerStatsText = '';
-    const keyPlayers = [...new Set(highlightsText.match(/[\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ffー]+/g) || [])];
-    if (keyPlayers.length > 0) {
-        const statsInfo = [];
-        for (const playerName of keyPlayers) {
-            for (const teamName of [winnerName, loserName]) {
-                const teamRecord = tournamentState.teamRecords[teamName];
-                const battingStats = teamRecord?.playerStats?.batting[playerName];
-                const pitchingStats = teamRecord?.playerStats?.pitching[playerName];
-                if (battingStats) {
-                    statsInfo.push(`${playerName} (今大会: ${battingStats.ab}打数${battingStats.h}安打 ${battingStats.hr}本塁打 ${battingStats.rbi}打点)`);
-                }
-                if (pitchingStats) {
-                    statsInfo.push(`${playerName} (今大会: ${pitchingStats.w}勝${pitchingStats.l}敗 ${pitchingStats.ip}回 ${pitchingStats.so}奪三振)`);
+                if (changedPlayers.length > 0) {
+                    changes.push(`${teamName}は${changedPlayers.join('、')}といった変更を加えた。`);
                 }
             }
         }
-        playerStatsText = [...new Set(statsInfo)].join('、');
-    }
-    // ★★★ ここまでが新しい処理 ★★★ 
+        if (changes.length > 0) lineupChangesText = changes.join(' ');
 
-// Helper function to format the list of key players
-    const formatPlayers = (detailedData) => {
-        if (!detailedData?.players) return '情報なし';
-        return detailedData.players
-            .slice(0, 3) // Show up to 3 key players to keep the article concise
-            .map(p => `- **${p.name} (${p.year}年・${p.position})**: ${p.desc}`)
-            .join('\n');
-    };
+        // 3. 注目選手の大会通算成績を取得
+        let playerStatsText = '';
+        const keyPlayers = [...new Set(highlightsText.match(/[\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ffー]+/g) || [])];
+        if (keyPlayers.length > 0) {
+            const statsInfo = [];
+            for (const playerName of keyPlayers) {
+                for (const teamName of [winnerName, loserName]) {
+                    const teamRecord = tournamentState.teamRecords[teamName];
+                    if (teamRecord?.playerStats) {
+                        const battingStats = teamRecord.playerStats.batting[playerName];
+                        const pitchingStats = teamRecord.playerStats.pitching[playerName];
+                        if (battingStats) {
+                            statsInfo.push(`${playerName}(今大会: ${battingStats.ab}打数${battingStats.h}安打 ${battingStats.hr}本塁打 ${battingStats.rbi}打点)`);
+                        }
+                        if (pitchingStats) {
+                            statsInfo.push(`${playerName}(今大会: ${pitchingStats.w}勝${pitchingStats.l}敗 ${pitchingStats.ip}回 ${pitchingStats.so}奪三振)`);
+                        }
+                    }
+                }
+            }
+            playerStatsText = [...new Set(statsInfo)].join('、');
+        }
 
-
+        // 4. イニングスコアをテキスト形式に変換
+        let inningScoreText = '';
+        if (dbMatch.details?.inningScore) {
+            const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+            const loserKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
+            if (dbMatch.details.inningScore[winnerKey]?.length > 0) {
+                inningScoreText += `- ${winnerName}: ${dbMatch.details.inningScore[winnerKey].map(s => s || '0').join('-')}\n`;
+                inningScoreText += `- ${loserName}: ${dbMatch.details.inningScore[loserKey].map(s => s || '0').join('-')}`;
+            }
+        }
 
 // ▼▼▼ ここからが修正箇所 ▼▼▼
     // --- 準備フェーズ ---
@@ -3454,75 +3453,66 @@ const loserCoach = loserData.coach;
         }
     }
 
-const prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
-以下の詳細な情報に基づき、試合後の監督や選手のコメントを自然に本文中に含んだ、最高の記事を生成してください。
+prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
+あなたの唯一の仕事は、提供されたデータに基づいて、最高の日本の高校野球に関する記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 
-### 試合情報
-- 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
-- 勝利チーム: ${winnerName} (${winnerData.region}・${winnerData.type}・${winnerRankDesc})${winnerPrevRankStr} ${winnerTitles ? `【称号: ${winnerTitles}】` : ''}
-- 敗北チーム: ${loserName} (${loserData.region}・${loserData.type}・${loserRankDesc})${loserPrevRankStr} ${loserTitles ? `【称号: ${loserTitles}】` : ''}
-- スコア: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
-- ユーザーによる試合の決め手: ${dbMatch.summary || 'なし'}
-- この試合での達成記録: ${roundAchievement || 'なし'}
-- 次の大会への影響: ${seedingImplication || '特になし'}
-${specialNarrativeContext}
+---
+### **ステップ1：試合の基本情報を理解する**
 
-// ▼▼▼ 新しいセクションを追加 ▼▼▼
-### イニング別スコア
+- **大会**: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
+- **対戦カード**: ${winnerName} (${winnerRankDesc}) vs ${loserName} (${loserRankDesc})
+- **最終スコア**: ${winnerName} ${winnerScore} - ${loserScore} ${loserName}
+- **イニング別スコア**:
 ${inningScoreText || 'データなし'}
-// ▲▲▲ ▲▲▲
+- **試合のハイライト**: ${highlightsText || 'データなし'}
+- **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 
-### チームの背景
-- **${winnerName}**: ${winnerDynamicInfo} // ← ここを差し替え！
-- **${loserName}**: ${loserDynamicInfo} // ← ここを差し替え！
+---
+### **ステップ2：チームと選手の背景を理解する**
 
-// ▼▼▼ NEW SECTION FOR DETAILED DATA ▼▼▼
-### 注目選手とチーム戦術
-- **${winnerName}**:
-  - **チーム概要**: ${winnerDetailedData?.summary || '情報なし'}
+- **${winnerName}**: ${winnerDynamicInfo}
+  - **前大会の成績**: ${winnerPrevRankStr || 'データなし'}
+  - **称号**: ${winnerTitles || 'なし'}
+  - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.experience} / ${winnerCoach.style})` : '情報なし'}
   - **注目選手**:
-${formatPlayers(winnerDetailedData)}
-- **${loserName}**:
-  - **チーム概要**: ${loserDetailedData?.summary || '情報なし'}
+${formatPlayers(winnerDetailedData) || '特になし'}
+- **${loserName}**: ${loserDynamicInfo}
+  - **前大会の成績**: ${loserPrevRankStr || 'データなし'}
+  - **称号**: ${loserTitles || 'なし'}
+  - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.experience} / ${loserCoach.style})` : '情報なし'}
   - **注目選手**:
-${formatPlayers(loserDetailedData)}
-// ▲▲▲ END OF NEW SECTION ▲▲▲
+${formatPlayers(loserDetailedData) || '特になし'}
 
-// ★★★ 「試合のハイライト」という新しい情報を追加 ★★★
-### 試合のハイライト（詳細データより）
-- 試合のハイライト: ${highlightsText || 'データなし'}
-- 前試合からのスタメン変更: ${lineupChangesText}
+---
+### **ステップ3：試合の文脈（重要度）を理解する**
 
-### 監督情報
-- 勝利監督: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.experience} / ${winnerCoach.style})` : '情報なし'}
-- 敗北監督: ${loserCoach ? `${loserCoach.name} (${loserCoach.experience} / ${loserCoach.style})` : '情報なし'}
+- **この試合での達成記録**: ${roundAchievement || 'なし'}
+- **次の大会への影響**: ${seedingImplication || '特になし'}
+- **特別な物語**: ${specialNarrativeContext || '特になし'}
 
-### 執筆指示：記事本文
-- **【重要】**: あなたの役割は高校野球の記者です。**野球以外の話題（例えばプログラミングの解説など）は絶対に含めないでください。**
-- **【最重要】**: もし「物語のハイライト」(${specialNarrativeContext})が提供されている場合、そのテーマを記事全体の中心に据えてください。
-- **試合展開の描写**: 「イニング別スコア」を元に、試合が序盤に決まったのか、中盤の攻防だったのか、終盤に動いたのかなど、リアルな試合展開を描写してください。最終スコアだけを見て想像で書かないでください。
-- **インタビューコメント**: 記事の本文中に、試合後の監督や選手のコメントを自然な形で含めてください。コメントは試合内容（接戦、下克上、など）や監督の性格、チームの状況を反映させてください。（例：「試合後、勝利した〇〇監督は「選手たちがよくやってくれた」と安堵の表情を見せた。」）
-- **インタビューコメントの深化**: 監督や選手のコメントに、注目選手がいる場合はその選手の名前やチームの背景を反映させてください。（例：敗戦監督「相手エースの**姫川**君に完全に抑え込まれてしまった。夏に向けて彼の対策を練り直す必要がある」）
+---
+### **ステップ4：記事を執筆する**
 
-- **力関係を反映したコメント**: チームの格付け（Aランク、Cランクなど）に大きな差がある場合、その力関係をインタビューコメントに反映させてください。
-    - **格下のチームが善戦した場合**: 負けた側の監督や選手が、相手の強さを認めつつも自分たちの健闘を称えるコメントを生成してください。（例：敗戦監督「強豪の〇〇さん相手に選手たちはよく食らいついてくれた。先制できたのは大きな自信になる」）
-    - **格上のチームが苦戦した場合**: 勝った側の監督が、相手の健闘を称えつつも、課題が残ったという趣旨のコメントを生成してください。（例：勝利監督「相手チームの気迫に序盤は押されてしまった。勝ちはしたが、気を引き締め直す必要がある」）
-- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」、監督の経歴、各チームの「背景情報などを記事に盛り込み、物語に深みを与えてください。
-- **下克上の強調**: 格下のチームが格上を破った場合は、その衝撃を大きく報じてください。
-- **試合の重要性**: 「達成記録」や「次の大会への影響」を考慮し、この一勝が持つ意味を伝えてください。
-- **背番号の活用**: 「試合のハイライト」に選手の背番号が記載されている場合、「背番号1のエース〇〇」や「主将で4番の△△（背番号5）」のように、記事の中で効果的に使用してリアリティを高めてください。
-- **スタメン分析**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れてください。
-- **攻防の駆け引き**: 「ピンチを抑える好投」や「チャンスで凡退」といったハイライトがあれば、それらを試合の流れを決定づけた重要なプレーとして描写してください。
-- **【物語性の深化】**: その選手の「今大会通算成績」に触れ、その活躍が今大会でどういう意味を持つのかを描写してください。（例：「これで今大会3本塁打の〇〇」「初戦の好投に続き、今試合でも試合を作った△△」）
-- **監督の視点**: 「スタメン変更」の采配がどう試合に影響したかに触れ、監督のコメントを記事に含めてください。
-- **選手の視点**: 活躍した選手や、悔しい思いをした選手の、試合内容に沿ったリアルなコメントを本文に含めてください。
-- **【タイブレークの描写】**: もし「試合の決め手」に「タイブレーク」という言葉が含まれていたら、ノーアウト1,2塁から始まる特別な状況の緊張感、プレッシャー、そしてそれを乗り越えたドラマを必ず記事に含めてください。
+上記のステップ1～3の情報をすべて統合し、以下の指示に厳密に従って最高の記事を生成してください。
 
-### 出力形式
-必ず以下のJSON形式で出力してください。
+- **物語の中心**: もしステップ3の「特別な物語」があれば、それを記事全体の中心に据えること。
+- **試合展開の描写**: 「イニング別スコア」と「試合のハイライト」を元に、試合が序盤に決まったのか、終盤にもつれたのかなど、リアルな試合展開を描写すること。想像で書かないこと。
+- **背景と文脈の活用**:
+  - 各チームの背景情報、前大会の成績、称号、監督の経歴を記事に盛り込み、物語に深みを与えること。
+  - 格下のチームが格上を破った場合は、その衝撃を大きく報じること。
+  - 「達成記録」や「次の大会への影響」を考慮し、この一勝が持つ意味を伝えること。
+- **インタビューコメントの生成**:
+  - 試合後の両チームの監督や選手のコメントを、試合内容（接戦、下克上など）や監督の性格を反映させて、自然な形で本文に含めること。
+  - コメントには、注目選手の名前や、チームの力関係（格上/格下）に対する言及を含めると、よりリアルになる。
+- **【タイブレークの描写】**: もし「試合の決め手」に「タイブレーク」という言葉が含まれていたら、その緊張感を必ず記事に含めること。
+
+---
+### **ステップ5：出力形式**
+
+【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {
-    "title": "記事のタイトル",
-    "body": "記事の本文（コメントを含む。改行は\\nを使用）"
+    "title": "（ここに記事のタイトル）",
+    "body": "（ここに記事の本文）"
 }`;
  // もし詳細な試合データがなければ...
     } else {
@@ -5126,7 +5116,7 @@ document.body.addEventListener('click', async (e) => {
         const table = document.getElementById(`batting-table-${teamKey}`);
         if (!table) return;
         const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 4; // #,選手,守備,+,計 ボタンを除外
+        const newInningNum = headerRow.children.length - 6; // 打順,#,選手,守備,出場,+ボタンを除外
         const newTh = document.createElement('th');
         newTh.className = 'col-inning';
         newTh.textContent = newInningNum;
