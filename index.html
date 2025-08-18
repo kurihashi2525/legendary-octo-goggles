@@ -4076,84 +4076,38 @@ ${resultsText}
     /**
      * AIに掲示板の返信を生成させる
      */
-    async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context, teamHistoryData, teamPathData, teamNextOpponentData) {
-        const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
-        const parentComment = findCommentById(commentSource, parentCommentId);
-        if (!parentComment) return null;
+   async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
+    // AIへの指示を、受け取った発言に返事するだけの非常にシンプルなものにする
+    const prompt = `あなたは匿名掲示板のキャラクター「${aiPersona}」です。
+ユーザーが今、「${userReplyText}」と発言しました。
+この発言に対して、あなたのキャラクターとして自然な、短い返信を一つだけ生成してください。
 
-        const userReplyObject = {
-            id: 'temp_user_reply',
-            personality: 'あなた',
-            text: userReplyText,
-            replies: []
-        };
-
-        parentComment.replies.push(userReplyObject);
-        const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
-        parentComment.replies.pop();
-
-        const teamHistoryPromptPart = Object.keys(teamHistoryData).length > 0
-            ? `### 関連チームの公式プロフィール（過去の歴史・前評判）\n${Object.entries(teamHistoryData).map(([name, data]) => `- **${name}**: 最高成績「${data.best}」、情報「${data.info}」`).join('\n')}`
-            : '';
-        
-        const teamPathPromptPart = Object.keys(teamPathData).length > 0
-            ? `### 今大会の勝ち上がり状況（現在の事実）\n${Object.entries(teamPathData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
-            : '';
-            
-        const teamNextOpponentPromptPart = Object.keys(teamNextOpponentData).length > 0
-            ? `### 各チームの次の対戦予定（道筋）\n${Object.entries(teamNextOpponentData).map(([name, path]) => `- **${name}**: ${path}`).join('\n')}`
-            : '';
-
-        const prompt = `あなたは、匿名掲示板のキャラクター「${aiPersona}」です。あなたは今、他のユーザーと高校野球について会話しています。
----
-### これまでの会話の流れ
-${conversationHistory}
----
-あなたのタスクは、この会話の流れにおける**最後の発言**「${userReplyText}」に対して、あなたのキャラクターとして、最も自然で的を射た返信をすることです。
-返信を作成するにあたり、以下のあなたの「知識（補足情報）」を活用してください。
-### あなたの知識（補足情報）
-- **現在の大会状況:** ${context.tournamentSummary}
-${teamPathPromptPart}
-${teamNextOpponentPromptPart}
-${teamHistoryPromptPart}
----
-### あなたへの指示（思考プロセス）
-あなたの思考は、以下のステップに厳密に従ってください。
-1.  **文脈を特定せよ（最重要）:**
-    まず「これまでの会話の流れ」を熟読し、今何が話題の中心になっているかを把握せよ。特に、最後の発言にある「そのチーム」「その2校」のような代名詞が、会話の中で具体的にどのチームを指しているのかを絶対に間違えるな。
-2.  **相手の発言の意図を理解せよ:**
-    文脈を踏まえ、「相手の最後の発言」が何を尋ね、何を主張しているのかを正確に理解せよ。
-3.  **応答を構築せよ:**
-    * あなたの返信は、必ずステップ2で理解した相手の発言への**直接的な応答**から始めよ。
-    * 続けて、その応答の**根拠**として、「あなたの知識」の中から**関連する情報だけを**選び出し、キャラクターらしい自然な言葉で説明せよ。
-    * **禁止事項:** 相手が話していない、無関係なチームや試合の情報を一方的に解説してはならない。
-4.  **最終チェック:**
-    完成した返信が、相手との自然な会話のキャッチボールになっているか確認せよ。
 ### 出力形式
-必ず以下のJSON形式で出力してください。他のテキストは含めないでください。
+必ず以下のJSON形式で、返信コメントのみを出力してください。
 {"comment": "（あなたの返信本文）"}`;
-        try {
-            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-            const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]) {
-                const rawText = result.candidates[0].content.parts[0].text;
-                const replyJson = parseJsonFromText(rawText);
-                if (replyJson && replyJson.comment) {
-                    return {
-                        id: crypto.randomUUID(),
-                        personality: aiPersona,
-                        text: replyJson.comment,
-                        timestamp: Date.now(),
-                        replies: []
-                    };
-                }
+    
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const replyJson = parseJsonFromText(rawText);
+            if (replyJson && replyJson.comment) {
+                return {
+                    id: crypto.randomUUID(),
+                    personality: aiPersona,
+                    text: replyJson.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                };
             }
-            throw new Error("AIからの応答が予期した形式ではありません。");
-        } catch (error) {
-            console.error("AI返信コメントの生成に失敗しました:", error);
-            return null;
         }
+        throw new Error("AIの応答形式が不正です。");
+    } catch (error) {
+        console.error("AI返信コメントの生成に失敗しました:", error);
+        return null;
     }
+}
 /**
      * AIからの応答テキストからJSONオブジェクトを安全に抽出する
      */
@@ -5156,6 +5110,15 @@ else if (e.target.matches('.add-substitute-btn')) {
         }
     }
 
+ // --- 掲示板の「返信する」ボタン ---
+    else if (e.target.matches('.reply-btn')) {
+        e.preventDefault();
+        const commentId = e.target.dataset.commentId;
+        const formContainer = document.getElementById(`reply-form-container-${commentId}`);
+        if (formContainer) {
+            formContainer.classList.toggle('hidden');
+        }
+    }
     // --- AI記事の再生成ボタン ---
     else if (e.target.matches('.retry-btn')) {
         const btn = e.target;
@@ -5178,33 +5141,52 @@ else if (e.target.matches('.add-substitute-btn')) {
     }
 });
     
-    document.body.addEventListener('submit', async (e) => {
-        if (e.target.matches('.reply-form')) {
-            e.preventDefault();
-            const form = e.target;
-            const parentCommentId = form.dataset.commentId;
-            const bbsType = form.dataset.bbsType;
-            const textarea = form.querySelector('textarea');
-            const userReplyText = textarea.value;
-            if (!userReplyText.trim()) return;
+    if (e.target.matches('.reply-form')) {
+        e.preventDefault();
+        const form = e.target;
+        const parentCommentId = form.dataset.commentId;
+        const bbsType = form.dataset.bbsType;
+        const textarea = form.querySelector('textarea');
+        const userReplyText = textarea.value;
 
-            const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
-            const parentComment = findCommentById(commentSource, parentCommentId);
-            if (!parentComment) return;
+        if (!userReplyText.trim()) return;
 
-            const userComment = {
-                id: crypto.randomUUID(), personality: 'あなた', text: userReplyText,
-                timestamp: Date.now(), replies: []
-            };
-            parentComment.replies.push(userComment);
-            
+        // ユーザーにフィードバックするためのローダーを表示
+        form.innerHTML = `<div class="loader text-xs">AIが返信を考えています...</div>`;
+
+        // --- AIに必要な情報を集める ---
+        const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+        const parentComment = findCommentById(commentSource, parentCommentId);
+        const aiPersona = parentComment.personality; // 親コメントと同じキャラクターとして返信
+
+        // 今は簡略化した文脈情報を作成（後で拡張可能）
+        const context = {
+            tournamentSummary: getTournamentStatusSummary()
+        };
+        
+        // --- AIを呼び出して返信を取得 ---
+        const aiReply = await generateBbsReply(
+            parentCommentId,
+            userReplyText,
+            bbsType,
+            aiPersona,
+            context,
+            {}, {}, {} // 古い情報収集機能は使わないため、一旦空のオブジェクトを渡す
+        );
+
+        if (aiReply) {
+            parentComment.replies.push(aiReply);
+            // 正しい掲示板セクションを再描画
             if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
             else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
             saveState();
-            textarea.value = '';
-            form.closest('[id^="reply-form-container-"]').classList.add('hidden');
+        } else {
+            // AIが失敗した場合、フォームを元に戻す
+            form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
+                            <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
+            alert("AIが返信を生成できませんでした。");
         }
-    });
+    }
 
 
 
