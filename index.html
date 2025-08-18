@@ -3282,6 +3282,30 @@ ${notablePlayersText}
     if (dbMatch.details) {
         const { highlightsText, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
 
+// 2. Analyze Starting Lineup Changes (YOUR ORIGINAL CODE)
+        let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
+        const changes = [];
+        for (const teamName of [winnerName, loserName]) {
+            const teamRecord = tournamentState.teamRecords[teamName];
+            const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
+            const currentStarters = dbMatch.details?.batting?.[teamKey];
+            if (teamRecord && teamRecord.previousStarters && currentStarters) {
+                const changedPlayers = [];
+                for (let i = 1; i <= 9; i++) {
+                    const prev = teamRecord.previousStarters.find(p => parseInt(p.order) === i);
+                    const curr = currentStarters.find(p => parseInt(p.order) === i);
+                    if (prev && curr && prev.name !== curr.name) {
+                        changedPlayers.push(`${i}番(${curr.pos})に${curr.name}を起用`);
+                    }
+                }
+                if (changedPlayers.length > 0) {
+                    changes.push(`${teamName}は${changedPlayers.join('、')}といった変更を加えた。`);
+                }
+            }
+        }
+        if (changes.length > 0) lineupChangesText = changes.join(' ');
+
+
         let keyPlayersPromptSection = '情報なし';
         if (keyPlayerNames.length > 0) {
             keyPlayersPromptSection = keyPlayerNames.map(playerName => {
@@ -3316,6 +3340,7 @@ ${notablePlayersText}
 - **イニング別スコア**:
 ${inningScoreText || 'データなし'}
 - **試合のハイライト**: ${highlightsText}
+- **前試合からのスタメン変更**: ${lineupChangesText}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ---
 ### **ステップ2：チームと選手の背景を理解する**
