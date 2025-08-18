@@ -2966,7 +2966,15 @@ async function setupSpringMainTournament_Round2() {
  * @returns {string} - 生成された最新の紹介文
  */
 function generateDynamicTeamInfo(teamName, teamData, teamRecord) {
-    // teamData.info が基本の紹介文となる
+// ▼▼▼ この安全装置が、今後のあなたを助けます ▼▼▼
+    if (!teamData) {
+        // コンソールに、どのチーム名で失敗したかを出力
+        console.error(`TEAM_DATAにチーム「${teamName}」が見つかりません。名前のタイプミスがないか確認してください。`);
+        // 記事にはエラーメッセージを表示
+        return `${teamName}のチーム情報が見つかりませんでした。`;
+    }
+    // ▲▲▲ ▲▲▲    
+// teamData.info が基本の紹介文となる
     const baseInfo = teamData.info || `${teamName}の情報は不明です。`;
 
     // チームの成績記録がまだない（＝1年目の途中など）場合は、基本情報だけを返す
