@@ -3567,32 +3567,31 @@ ${specialNarrativeContext}
         }
     }
 
-    /**
+   /**
  * AIに組み合わせ決定時の掲示板の反応を生成させる
- * ★★★ 夏と秋で指示内容を切り替える改良版 ★★★
+ * ★★★ 春・夏・秋の大会進行度に応じて指示を切り替える完成版 ★★★
  */
 async function generateBracketReactionComments(state) {
     const { teams, seeds } = state;
-    if(teams.length < 16) return []; 
+    // チーム数が少ない場合はコメントを生成しない
+    if (teams.length < 8) return []; 
 
-    // ▼▼▼ 変更点1: 変数を2つ用意する ▼▼▼
     let analysis = ''; // 組み合わせ分析を入れる変数
     let commentDirections = ''; // AIへの指示を入れる変数
 
-    // 現在が秋季県大会本戦の場合
+    // --- 1. 秋季大会の処理 ---
     if (state.currentTournament === 'autumn' && state.autumnPhase === 'main') {
         const pots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
         state.teams.forEach(team => {
             for (const region of ['東部', '中部', '西部', '伊豆']) {
                 const rep = state.autumnData.regions[region].finalReps.find(r => r.team === team);
-                if(rep) {
+                if (rep) {
                     pots[rep.rank].push(`${team}(${region}${rep.rank}位)`);
                     break;
                 }
             }
         });
         
-        // 秋季大会用の「組み合わせ分析」を作成
         analysis = `秋季県大会の組み合わせが決定！
 - ポット1(地区1位): ${pots[1].join(', ')}
 - ポット2(地区2位): ${pots[2].join(', ')}
@@ -3600,39 +3599,32 @@ async function generateBracketReactionComments(state) {
 - ポット4(地区4位): ${pots[4].join(', ')}
 - ポット5(敗者復活): ${pots[5].join(', ')}`;
 
-        // ▼▼▼ 秋季大会用の「コメントの方向性」を作成 ▼▼▼
         commentDirections = `
 - 「地区1位と敗者復活組がいきなり当たるのか！」「地区間のレベル差が試されるな」といったポット制や地区対決に関する反応。
 - ポット1の強豪校がどこに入るか、そのブロックの他のチームへの同情。
 - 自分の応援するチームがどのポットから、どのブロックに入ったかに対する一喜一憂。`;
 
-  // 2. 春季大会の処理 (★ここを大幅にアップグレード★)
-    else if (state.currentTournament === 'spring') {
+    // --- 2. 春季大会の処理 ---
+    } else if (state.currentTournament === 'spring') {
         
-        // ▼▼▼ 春季大会のフェーズに応じて処理を分岐 ▼▼▼
-
-        // --- A. 地区予選の組み合わせ決定時 ---
+        // --- 2A. 地区予選 ---
         if (state.springPhase === 'regional_qualifiers') {
             analysis = `春季地区予選の組み合わせが決定！県大会本戦への出場権16枠をかけた戦いが始まる。`;
-            // ここに夏大会と同様のブロック分析を追加しても良いでしょう
-            
             commentDirections = `
 - 「うちの地区、激戦区すぎだろ…」「県大会出るの大変だな」といった、地区予選の厳しさに関するコメント。
 - シード校以外の有力校がどの地区にいるかについての言及。「〇〇と△△が同じ地区とかマジかよ」など。
 - 無名校にとってはチャンスであることへの期待や感想。`;
-        }
-        // --- B. 県大会1回戦（予選突破校のみ）の組み合わせ決定時 ---
+        } 
+        // --- 2B. 県大会1回戦 ---
         else if (state.springPhase === 'main_round1') {
             analysis = `春季県大会1回戦、予選を勝ち上がった16校の組み合わせが決定！シード校への挑戦権を掴むのはどこだ。`;
-            
             commentDirections = `
 - 「予選突破組同士の潰し合いか、面白いな」「ここ勝てばシード校とやれるのか」といった、1回戦ならではの反応。
 - 地区予選を勝ち上がってきた勢いのあるチームへの注目。「予選で〇〇を倒した△△、どこまで行くか楽しみ」など。
 - どのチームがシード校を脅かす存在になりそうかという予想。`;
-        }
-        // --- C. 県大会2回戦（シード校登場）の組み合わせ決定時 ---
+        } 
+        // --- 2C. 県大会2回戦 (シード校登場) ---
         else if (state.springPhase === 'main_round2') {
-            // 夏大会のブロック分析ロジックを再利用
             const numBlocks = Math.ceil(teams.length / 16);
             let blockAnalyses = [];
             for(let i=0; i<numBlocks; i++){
@@ -3644,42 +3636,33 @@ async function generateBracketReactionComments(state) {
                 blockAnalyses.push(`- ${blockName}ブロック: 有力校 ${strongTeams.length}チーム (${strongTeams.join(', ')})`);
             }
             analysis = `春季県大会2回戦、シード校と予選突破校の組み合わせが決定！\n${blockAnalyses.join('\n')}`;
-
             commentDirections = `
 - 「シード校 vs 予選突破組」という構図への期待感。「〇〇（シード校）といきなり当たるとかクジ運なさすぎだろ」など。
 - 有力校が固まった「死のブロック」への反応。「Aブロック、事実上の決勝戦じゃねえか」など。
 - シード校が順当に勝つか、予選を勝ち上がったチームが「ジャイキリ」を起こすかという予想。`;
         }
-        
-        
-// 夏季大会の場合
-    } else {
-        const numBlocks = Math.ceil(teams.length / 16); // ブロック数を計算
-        let blockAnalyses = []; // 各ブロックの分析結果を一時的に保存
 
+    // --- 3. 夏季大会 (および上記以外のケース) の処理 ---
+    } else {
+        const numBlocks = Math.ceil(teams.length / 16);
+        let blockAnalyses = [];
         for(let i=0; i<numBlocks; i++){
             const blockName = String.fromCharCode(65+i);
             const blockTeams = teams.slice(i*16, (i+1)*16);
-            if(blockTeams.length === 0) continue; // チームがいないブロックはスキップ
-
+            if(blockTeams.length === 0) continue;
             const isStrong = (team) => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園');
             const strongTeams = blockTeams.filter(isStrong);
-            
-            // ブロックごとの分析結果を追加
             blockAnalyses.push(`- ${blockName}ブロック: 有力校 ${strongTeams.length}チーム (${strongTeams.join(', ')})`);
         }
-        // 夏大会用の「組み合わせ分析」を作成
-        analysis = `夏の大会、組み合わせが決定！\n${blockAnalyses.join('\n')}`;
-
-        // ▼▼▼ 夏大会用の「コメントの方向性」を作成 ▼▼▼
+        analysis = `夏の選手権、組み合わせが決定！\n${blockAnalyses.join('\n')}`;
         commentDirections = `
 - 「ここのブロックやばすぎる」「死のブロックだな」といった、有力校が固まったブロックへの反応。
-- 「ここのブロックは楽勝だな」「〇〇は決勝までフリーパスかよ」といった、有力校が少ないブロックへの反応。
+- 「〇〇は決勝までフリーパスかよ」といった、有力校が少ないブロックへの反応。
 - 自分の応援するチームが厳しいブロックに入ったことへの絶望や、楽なブロックに入ったことへの期待。
-- シード校が順当に勝ち上がるか、波乱は起きるかといったトーナメント全体への展望。`;
+- 3年生最後の夏、という文脈でのドラマへの期待。`;
     }
 
-    // ▼▼▼ 変更点2: 完成した変数を使ってプロンプトを組み立てる ▼▼▼
+    // --- プロンプトの組み立て ---
     const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下のトーナメントの組み合わせ分析を読んで、ファンらしいリアルな短いコメントを5～7個生成してください。
 
@@ -3697,7 +3680,7 @@ ${commentDirections}
   {"personality": "悲観的なファン", "comment": "（コメント本文）"}
 ]`;
 
-    // --- AIへのリクエスト部分は変更なし ---
+    // --- AIへのリクエストと結果の処理 ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
