@@ -2901,7 +2901,7 @@ async function setupSpringMainTournament_Round2() {
    /**
      * 【最終修正版】AI記者にニュース記事を執筆させるメイン関数。
      */
-    async function generateNewsArticle(winnerName, loserName, dbMatch, matchId) {
+    async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerDetailedData, loserDetailedData) {
         // 展望記事を生成する場合の処理
         if (matchId === 'preview') {
             let prompt;
@@ -3140,6 +3140,16 @@ const loserCoach = loserData.coach;
         playerStatsText = [...new Set(statsInfo)].join('、');
     }
     // ★★★ ここまでが新しい処理 ★★★ 
+
+// Helper function to format the list of key players
+    const formatPlayers = (detailedData) => {
+        if (!detailedData?.players) return '情報なし';
+        return detailedData.players
+            .slice(0, 3) // Show up to 3 key players to keep the article concise
+            .map(p => `- **${p.name} (${p.year}年・${p.position})**: ${p.desc}`)
+            .join('\n');
+    };
+
 prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
 以下の詳細な情報に基づき、試合後の監督や選手のコメントを自然に本文中に含んだ、最高の記事を生成してください。
 
@@ -3157,6 +3167,18 @@ ${specialNarrativeContext}
 - **${winnerName}**: ${winnerData.info}
 - **${loserName}**: ${loserData.info}
 
+// ▼▼▼ NEW SECTION FOR DETAILED DATA ▼▼▼
+### 注目選手とチーム戦術
+- **${winnerName}**:
+  - **チーム概要**: ${winnerDetailedData?.summary || '情報なし'}
+  - **注目選手**:
+${formatPlayers(winnerDetailedData)}
+- **${loserName}**:
+  - **チーム概要**: ${loserDetailedData?.summary || '情報なし'}
+  - **注目選手**:
+${formatPlayers(loserDetailedData)}
+// ▲▲▲ END OF NEW SECTION ▲▲▲
+
 // ★★★ 「試合のハイライト」という新しい情報を追加 ★★★
 ### 試合のハイライト（詳細データより）
 - 試合のハイライト: ${highlightsText || 'データなし'}
@@ -3172,7 +3194,7 @@ ${specialNarrativeContext}
 - **力関係を反映したコメント**: チームの格付け（Aランク、Cランクなど）に大きな差がある場合、その力関係をインタビューコメントに反映させてください。
     - **格下のチームが善戦した場合**: 負けた側の監督や選手が、相手の強さを認めつつも自分たちの健闘を称えるコメントを生成してください。（例：敗戦監督「強豪の〇〇さん相手に選手たちはよく食らいついてくれた。先制できたのは大きな自信になる」）
     - **格上のチームが苦戦した場合**: 勝った側の監督が、相手の健闘を称えつつも、課題が残ったという趣旨のコメントを生成してください。（例：勝利監督「相手チームの気迫に序盤は押されてしまった。勝ちはしたが、気を引き締め直す必要がある」）
-- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」、監督の経歴などを記事に盛り込み、物語に深みを与えてください。
+- **歴史と文脈の反映**: 各チームの「前大会の成績」や「称号」、監督の経歴、各チームの「背景情報などを記事に盛り込み、物語に深みを与えてください。
 - **下克上の強調**: 格下のチームが格上を破った場合は、その衝撃を大きく報じてください。
 - **試合の重要性**: 「達成記録」や「次の大会への影響」を考慮し、この一勝が持つ意味を伝えてください。
 - **背番号の活用**: 「試合のハイライト」に選手の背番号が記載されている場合、「背番号1のエース〇〇」や「主将で4番の△△（背番号5）」のように、記事の中で効果的に使用してリアリティを高めてください。
@@ -3303,8 +3325,7 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
         
         let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
         
-        const winnerData = TEAM_DATA[winnerName];
-        const loserData = TEAM_DATA[loserName];
+        
 
         const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
         const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
@@ -4349,16 +4370,26 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
 // ★★★ ここまで追加 ★★★
         // ★★★ ここまでが修正箇所 ★★★
 
-        const [article, newComments] = await Promise.all([
-            generateNewsArticle(winnerName, loserName, dbMatch, matchId),
-            generateBbsComments(winnerName, loserName, dbMatch, matchId)
-        ]);
+        // ▼▼▼ ここからが変更箇所 ▼▼▼
 
-        if (article) tournamentState.news.push(article);
-        if (newComments?.length) tournamentState.bbsComments.push(...newComments);
+        // 1. AIが必要とするチームの情報をすべて取得する
+    const winnerData = TEAM_DATA[winnerName];
+    const loserData = TEAM_DATA[loserName];
+    const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
+    const loserDetailedData = DETAILED_TEAM_DATA[loserName];
 
-        renderNews(tournamentState.news);
-        renderBbsComments(tournamentState.bbsComments);
+    // 2. 取得したすべての情報を、各AI関数に引数として渡す
+    const [article, newComments] = await Promise.all([
+        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData),
+        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData)
+    ]);
+
+    // 3. AIからの返答を画面に表示する
+    if (article) tournamentState.news.push(article);
+    if (newComments?.length) tournamentState.bbsComments.push(...newComments);
+
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments);
 // ★★★ このブロックを関数の最後に追加 ★★★
     // 試合のスタメン情報を記録する
     if (dbMatch.details && dbMatch.details.batting) {
