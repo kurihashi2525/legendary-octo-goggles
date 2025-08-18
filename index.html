@@ -4508,9 +4508,9 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 }
 // --- Match Processing & Event Listeners ---
 
-    /**
- * 試合の詳細データから、得点シーンと交代選手の活躍をまとめたハイライト文を生成する
- * (ユーザー提供の高機能版 ＋ 交代選手分析)
+   /**
+ * 試合の詳細データから、得点、交代、投手の活躍を総合的にまとめたハイライト文を生成する
+ * (全ての修正を適用した最終版)
  */
 function createHighlightsText(dbMatch, winnerName) {
     if (!dbMatch.details) return 'データなし';
@@ -4520,12 +4520,11 @@ function createHighlightsText(dbMatch, winnerName) {
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     const losingTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
 
+    // --- 1. イニングごとの詳細な分析 ---
     let scores = { team1: 0, team2: 0 };
     let hasScored = false;
     let isReversed = false;
     const numInnings = dbMatch.details.inningScore?.team1?.length || 9;
-
-    // --- 1. イニングごとの詳細な分析 ---
     for (let i = 0; i < numInnings; i++) {
         let inningScore = { team1: 0, team2: 0 };
         for (const teamKey of ['team1', 'team2']) {
@@ -4534,14 +4533,12 @@ function createHighlightsText(dbMatch, winnerName) {
                 const result = player.results?.[i];
                 if (!result) return;
                 const playerInfo = `${player.name}(${player.number || ' '})`;
-                
                 if (result.includes('点') || result.toLowerCase().includes('hr') || result.includes('本')) {
                     const prevScores = { ...scores };
                     const scoreMatch = result.match(/(\d+)点/);
                     const addedScore = scoreMatch ? parseInt(scoreMatch[1]) : 1;
                     scores[teamKey] += addedScore;
                     inningScore[teamKey] += addedScore;
-                    
                     let playDescription = '';
                     if (!hasScored) {
                         playDescription = `${playerInfo} (${i+1}回 先制打)`;
@@ -4553,16 +4550,14 @@ function createHighlightsText(dbMatch, winnerName) {
                         playDescription = `${playerInfo} (${i+1}回 追加点)`;
                     }
                     highlights.push(result.toLowerCase().includes('hr') || result.includes('本') ? playDescription.replace('打', '本塁打') : playDescription);
-                }
-                else if (result.includes('併殺') || result.includes('ゲッツー') || result.includes('三振') || result.includes('ゴロ') || result.includes('フライ')) {
+                } else if (result.includes('併殺') || result.includes('ゲッツー') || result.includes('三振') || result.includes('ゴロ') || result.includes('フライ')) {
                     const pitcherTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
                     const pitcher = dbMatch.details.pitching?.[pitcherTeamKey]?.find(p => p.innings && parseFloat(p.innings) >= i + 1);
                     const isClutchSituation = (i >= 6 && Math.abs(scores.team1 - scores.team2) <= 2) || inningScore[teamKey] > 0;
                     if (pitcher && isClutchSituation) {
                         highlights.push(`${pitcher.name}(${i+1}回 ピンチを抑える好投)`);
                     }
-                }
-                else if (result.includes('凡退') || result.includes('三振') || result.includes('併殺')) {
+                } else if (result.includes('凡退') || result.includes('三振') || result.includes('併殺')) {
                     const isLosingClutch = (i >= 6 && scores[teamKey] < scores[teamKey === 'team1' ? 'team2' : 'team1'] && Math.abs(scores.team1 - scores.team2) <= 2);
                     if (isLosingClutch) {
                         highlights.push(`${playerInfo} (${i+1}回 チャンスで凡退)`);
@@ -4576,7 +4571,6 @@ function createHighlightsText(dbMatch, winnerName) {
     for (const teamKey of ['team1', 'team2']) {
         const teamBatting = dbMatch.details.batting?.[teamKey] || [];
         const substitutes = teamBatting.filter(p => p.sub_type);
-        
         substitutes.forEach(subPlayer => {
             if (subPlayer.results.some(r => r && (r.includes('安') || r.includes('本') || r.includes('二') || r.includes('三')))) {
                 const subDescription = getSubstitutionDescription(subPlayer);
@@ -4584,7 +4578,8 @@ function createHighlightsText(dbMatch, winnerName) {
             }
         });
     }
-// --- 3. 投手成績の分析 (★ここをアップグレード★) ---
+
+    // --- 3. 投手成績の分析 ---
     for (const teamKey of ['team1', 'team2']) {
         const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
 
@@ -4594,7 +4589,6 @@ function createHighlightsText(dbMatch, winnerName) {
             const innings = parseFloat(pitcher.innings) || 0;
             const runs = parseInt(pitcher.runs) || 0;
             const strikeouts = parseInt(pitcher.strikeouts) || 0;
-
             if (pitcher.result === 'W' && runs === 0 && innings >= 7) {
                 highlights.push(`${pitcher.name}が圧巻の投球で完封勝利を飾った`);
             } else if (strikeouts >= 10) {
@@ -4602,16 +4596,12 @@ function createHighlightsText(dbMatch, winnerName) {
             }
         });
         
-        // ★★★ ここからが新しいロジック ★★★
         // 3B. 先発投手が6回以上投げたかを評価
         if (pitchingData.length > 0) {
-            const startingPitcher = pitchingData[0]; // 配列の最初の投手を先発とみなす
+            const startingPitcher = pitchingData[0];
             const starterInnings = parseFloat(startingPitcher.innings) || 0;
-
             if (starterInnings >= 6) {
-                // すでに完封や奪三振で言及されていないかチェック
                 const isAlreadyMentioned = highlights.some(h => h.includes(startingPitcher.name));
-                
                 if (!isAlreadyMentioned) {
                     let description = `先発の${startingPitcher.name}が${starterInnings}回を力投した`;
                     if (startingPitcher.result === 'W') {
@@ -4619,28 +4609,23 @@ function createHighlightsText(dbMatch, winnerName) {
                     }
                     highlights.push(description);
                 }
-    // ★★★ ここからが救援投手評価の新しいロジック ★★★
-        // 3C. 救援投手の活躍を評価 (2番手以降の投手をチェック)
+            } // ← ★★★ ここに } を追加しました ★★★
+        }
+        
+        // 3C. 救援投手の活躍を評価
         if (pitchingData.length > 1) {
-            const reliefPitchers = pitchingData.slice(1); // 2番手以降の投手リスト
-
+            const reliefPitchers = pitchingData.slice(1);
             reliefPitchers.forEach(pitcher => {
                 if (!pitcher.name) return;
                 const innings = parseFloat(pitcher.innings) || 0;
                 const earnedRuns = parseInt(pitcher.earnedRuns) || 0;
-
-                // すでに他のハイライトで言及済みかチェック
                 const isAlreadyMentioned = highlights.some(h => h.includes(pitcher.name));
-                if (isAlreadyMentioned) return; // 言及済みならスキップ
+                if (isAlreadyMentioned) return;
 
                 let description = '';
-
-                // セーブを記録した場合
                 if (pitcher.result === 'S') {
                     description = `抑えの${pitcher.name}が試合を締め、セーブを記録した`;
-                }
-                // ホールドを記録、または2イニング以上を無失点で抑えた場合
-                else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) {
+                } else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) {
                     description = `${pitcher.name}が${innings}回を無失点に抑える好リリーフを見せた`;
                 }
                 
@@ -4649,13 +4634,11 @@ function createHighlightsText(dbMatch, winnerName) {
                 }
             });
         }
-        // ★★★ 新しいロジックはここまで ★★★
     }
 
     if (highlights.length === 0) return '特に大きな動きはなし';
     return [...new Set(highlights)].join('、');
 }
-
 /**
      * 試合の勝者を処理する中心的関数。
      * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
