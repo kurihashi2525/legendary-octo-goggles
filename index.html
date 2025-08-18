@@ -2119,12 +2119,16 @@ function saveDetailedStats() {
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
         const battingData = details.batting[teamKey];
-        if (battingData && battingData.length > 0) {
-            // 名簿には全出場選手の情報（交代形式も含む）を保存
-            teamRecord.roster = battingData.map(p => ({
-                order: p.order, number: p.number, name: p.name, pos: p.pos, sub_type: p.sub_type
-            }));
-        }
+        if (battingData && battingData.length > 0) {
+            teamRecord.roster = battingData
+                // ▼▼▼ この一行を追加 ▼▼▼
+                .filter(p => p.order && !p.order.toString().includes('sub')) // "sub"を含む交代選手を除外
+                // ▲▲▲ ▲▲▲
+                .map(p => ({
+                    order: p.order, number: p.number, name: p.name, pos: p.pos 
+                    // rosterにはsub_typeは不要なので削除
+                }));
+        }
     }
 
     // --- 4. 最終処理 ---
@@ -4968,42 +4972,54 @@ else if (e.target.matches('.add-substitute-btn')) {
     if (!tableBody) return;
 
     const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
-    if (!orderInput || isNaN(orderInput)) return;
+    if (!orderInput || isNaN(orderInput) || orderInput < 1 || orderInput > 9) {
+        // Added more robust validation
+        alert("1から9の正しい打順を入力してください。");
+        return;
+    }
     const order = parseInt(orderInput);
 
-    const allBodyRows = Array.from(tableBody.querySelectorAll('tr'));
-    let targetRowIndex = -1;
-
-    for (let i = allBodyRows.length - 1; i >= 0; i--) {
-        const rowOrder = allBodyRows[i].dataset.order;
-        if (rowOrder && parseInt(rowOrder) === order) {
-            targetRowIndex = i;
-            break;
-        }
-    }
-
-    if (targetRowIndex === -1) {
+    // Find the last row for this batting order (could be the starter or another sub)
+    const allOrderRows = Array.from(tableBody.querySelectorAll(`tr[data-order^="${order}"]`));
+    if (allOrderRows.length === 0) {
         alert(order + '番打者が見つかりません。');
         return;
     }
+    const targetRow = allOrderRows[allOrderRows.length - 1];
 
-    const newRow = tableBody.insertRow(targetRowIndex + 1);
-    const subCount = tableBody.querySelectorAll(`tr[data-order^="${order}-sub"]`).length + 1;
+    // Create a new row element to insert
+    const newRow = document.createElement('tr');
+    const subCount = allOrderRows.filter(row => row.dataset.order.includes('sub')).length + 1;
     newRow.dataset.order = `${order}-sub-${subCount}`;
     
-    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 5;
+    // Determine the number of inning columns from the table header
+    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 6; // Now 6 columns before innings
     let resultInputs = '';
     for (let j = 0; j < numInnings; j++) {
         resultInputs += `<td><input type="text" placeholder="-"></td>`;
     }
     
+    // ▼▼▼ This is the main part to fix ▼▼▼
+    // Build the new row's HTML, including the <select> dropdown
     newRow.innerHTML = `
         <td></td>
         <td><input type="text" class="player-number" placeholder="#"></td>
         <td class="pl-4"><input type="text" class="player-name" placeholder="交代選手名"></td>
         <td><input type="text" class="player-pos" placeholder="守備"></td>
+        <td>
+            <select class="sub-type-select w-full">
+                <option value="" selected>-</option>
+                <option value="PH">代打</option>
+                <option value="PR">代走</option>
+                <option value="DEF">守備</option>
+            </select>
+        </td>
         ${resultInputs}
     `;
+    // ▲▲▲ ▲▲▲
+
+    // Insert the new row after the target row
+    targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
 }
     // --- 【詳細モーダル内】投手追加ボタン ---
     else if (e.target.matches('.add-row-btn')) {
