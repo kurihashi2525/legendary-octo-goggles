@@ -3060,7 +3060,7 @@ function getSubstitutionDescription(player) {
 }
 
 /**
- * AI記者にニュース記事を執筆させるメイン関数（省略なしの最終完成版）
+ * AI記者にニュース記事を執筆させるメイン関数（AI脱線防止策を施した最終完成版）
  * 展望記事と、試合で活躍した全選手に対応した試合後記事を生成する
  */
 async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData) {
@@ -3086,24 +3086,19 @@ async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winn
                 matchups.push(`- ${teams[i]} vs ${teams[i+1]}`);
             }
 
-            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて、最高の日本の高校野球に関する記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
+            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 間もなく開幕する「${tournamentYear}年度 秋季大会 県大会本戦」の展望記事を作成してください。
-
 ### 大会のポイント
 - 秋季大会は新チームで挑む最初の県大会であり、来春のセンバツ出場を占う重要な大会です。
 - 地区予選を勝ち上がった順位に応じてポット分けされ、1回戦は同地区対決が避けられるなど、独特の組み合わせが特徴です。
-
 ### 県大会出場校一覧 (地区順位順)
 ${repText}
-
 ### 県大会1回戦の組み合わせ
 ${matchups.join('\n')}
-
 ### 執筆指示
 - 最も厳しいブロック、いわゆる「死のブロック」はどこか指摘してください。
 - 地区1位校と下位ポットの強豪校が当たる、注目の1回戦カードをいくつか挙げてください。
 - 地区間のレベル差や、新チームの仕上がりについて分析的な視点で記述してください。
-
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
@@ -3126,30 +3121,23 @@ ${matchups.join('\n')}
                 });
             }
 
-            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて、最高の日本の高校野球に関する記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
+            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
-
 ### 大会の見どころ
 - 今大会は、秋季大会ベスト8の強豪【シード校】と、厳しい地区予選を勝ち抜いた【予選突破校】が覇を競います。
 - 1回戦は予選突破校同士が対戦し、勝ち上がったチームが2回戦でシード校に挑むという、下剋上も期待される注目の形式です。
-
 ### シード校 (2回戦から登場)
 ${seeds.join(', ')}
-
 ### 地区予選突破校 (1回戦から登場)
 ${qualifierWinners.join(', ')}
-
 ### 1回戦の注目カード
 ${round1Matchups.slice(0, 4).join('\n')}
-
 ${notablePlayersText}
-
 ### 執筆指示
 - 予選突破校の中から、シード校を脅かす存在となりそうな「ダークホース」を2～3校挙げてください。
-- どのシード校が最も厳しいブロックに入ったか（2回戦で強い予選突破校と当たるか）、逆に最も楽なブロックはどこかを分析してください。
+- どのシード校が最も厳しいブロックに入ったか、逆に最も楽なブロックはどこかを分析してください。
 - 記事の本文で「注目選手」に言及し、彼らの活躍が大会の鍵を握ることを示唆してください。
 - 夏の大会を占う重要な大会として、各チームの仕上がり具合を分析する視点で記述してください。
-
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
@@ -3186,27 +3174,21 @@ ${notablePlayersText}
                 });
             }
 
-            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて、最高の日本の高校野球に関する記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
+            prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
-
 ### 大会の見どころ
 - 3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。
 - 春の大会の結果などからシード校が決定されていますが、ノーシードの実力校も多く、波乱が予想されます。
-
 ### シード校
 ${seeds.join(', ')}
-
 ### 各ブロックの有力校
 ${blockAnalysis}
-
 ${notablePlayersText}
-
 ### 執筆指示
 - 最も厳しいブロック、いわゆる「死のブロック」はどこか指摘し、その理由を分析してください。
 - 有力校が少ない「恵まれたブロック」に入ったチームにも言及してください。
 - 「注目選手」を記事に登場させ、彼らが大会の鍵を握る存在であることを示唆してください。
 - ノーシードの実力校の中から、大会の「ダークホース」となりそうなチームを挙げてみてください。
-
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
@@ -3294,46 +3276,24 @@ ${notablePlayersText}
         else if (roundNum === 1) roundAchievement = '初戦突破';
     }
     
-    const { highlightsText, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-
-    let keyPlayersPromptSection = '情報なし';
-    if (keyPlayerNames.length > 0) {
-        keyPlayersPromptSection = keyPlayerNames.map(playerName => {
-            const teamForPlayer = (winnerData.roster?.some(p => p.name === playerName) || winnerName === playerName) ? winnerName : loserName;
-            const detailedInfo = DETAILED_TEAM_DATA[teamForPlayer]?.players.find(p => p.name === playerName);
-            if (detailedInfo) {
-                return `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}`;
-            } else {
-                return `- **${playerName}**`;
-            }
-        }).join('\n');
-    }
-
     let prompt = '';
 
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
-        let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
-        const changes = [];
-        for (const teamName of [winnerName, loserName]) {
-            const teamRecord = tournamentState.teamRecords[teamName];
-            const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
-            const currentStarters = dbMatch.details?.batting?.[teamKey];
-            if (teamRecord && teamRecord.previousStarters && currentStarters) {
-                const changedPlayers = [];
-                for (let i = 1; i <= 9; i++) {
-                    const prev = teamRecord.previousStarters.find(p => parseInt(p.order) === i);
-                    const curr = currentStarters.find(p => parseInt(p.order) === i);
-                    if (prev && curr && prev.name !== curr.name) {
-                        changedPlayers.push(`${i}番(${curr.pos})に${curr.name}を起用`);
-                    }
+        const { highlightsText, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+
+        let keyPlayersPromptSection = '情報なし';
+        if (keyPlayerNames.length > 0) {
+            keyPlayersPromptSection = keyPlayerNames.map(playerName => {
+                const teamForPlayer = (winnerData.roster?.some(p => p.name === playerName) || winnerName === playerName) ? winnerName : loserName;
+                const detailedInfo = DETAILED_TEAM_DATA[teamForPlayer]?.players.find(p => p.name === playerName);
+                if (detailedInfo) {
+                    return `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}`;
+                } else {
+                    return `- **${playerName}**`;
                 }
-                if (changedPlayers.length > 0) {
-                    changes.push(`${teamName}は${changedPlayers.join('、')}といった変更を加えた。`);
-                }
-            }
+            }).join('\n');
         }
-        if (changes.length > 0) lineupChangesText = changes.join(' ');
 
         let inningScoreText = '';
         if (dbMatch.details?.inningScore) {
@@ -3356,7 +3316,6 @@ ${notablePlayersText}
 - **イニング別スコア**:
 ${inningScoreText || 'データなし'}
 - **試合のハイライト**: ${highlightsText}
-- **スタメン変更**: ${lineupChangesText}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ---
 ### **ステップ2：チームと選手の背景を理解する**
@@ -3376,8 +3335,9 @@ ${keyPlayersPromptSection}
 ---
 ### **ステップ4：記事を執筆する**
 上記のステップ1～3の情報をすべて統合し、以下の指示に厳密に従って最高の記事を生成してください。
-- **物語の中心**: もしステップ3の「特別な物語」があれば、それを記事全体の中心に据えること。
-- **事実の厳守**: 勝敗、スコア、先攻/後攻を絶対に間違えないこと。サヨナラ勝ちは後攻チームにしか起こらない。
+- **【最優先事項】**: もし「ユーザーによる試合の決め手」に具体的な記述があれば、それを記事全体のテーマとして最も重視すること。
+- **物語の中心**: もし「特別な物語」があれば、それを記事の中心に据えること。
+- **事実の厳守**: 勝敗、スコア、先攻/後攻を絶対に間違えないこと。サヨナラ勝ちは後攻チームにしか起こりません。
 - **試合展開の描写**: 「イニング別スコア」と「試合のハイライト」を元に、リアルな試合展開を描写すること。
 - **背景と文脈の活用**: 各チームの背景情報、称号、監督の経歴を記事に盛り込み、物語に深みを与えること。
 - **インタビューコメントの生成**: 試合後の両チーム監督のコメントを、試合内容や監督の性格を反映させて自然に含めること。
@@ -3405,6 +3365,7 @@ ${keyPlayersPromptSection}
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
 ### 執筆指示
+- もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
 - 事実の厳守: 勝敗や先攻・後攻の情報を間違えないでください。
 - 試合結果を客観的に伝えてください。
 - 想像で選手のコメントなどを入れず、事実に基づいた内容にしてください。
@@ -3432,7 +3393,7 @@ ${keyPlayersPromptSection}
             context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, summary: dbMatch.summary }
         };
     }
-}    
+}
 /**
      * AIにスキップしたラウンドのダイジェスト記事を生成させる
      */
