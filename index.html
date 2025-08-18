@@ -3440,6 +3440,20 @@ const loserCoach = loserData.coach;
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
 
+// --- イニングスコアをAIが読みやすいテキスト形式に変換する ---
+    let inningScoreText = '';
+    if (dbMatch.details?.inningScore) {
+        // 勝者と敗者のteamKeyを特定
+        const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+        const loserKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
+        
+        // inningscoreが空の配列でないことを確認
+        if (dbMatch.details.inningScore[winnerKey]?.length > 0) {
+            inningScoreText += `- ${winnerName}: ${dbMatch.details.inningScore[winnerKey].map(s => s || '0').join('-')}\n`;
+            inningScoreText += `- ${loserName}: ${dbMatch.details.inningScore[loserKey].map(s => s || '0').join('-')}`;
+        }
+    }
+
 const prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。
 以下の詳細な情報に基づき、試合後の監督や選手のコメントを自然に本文中に含んだ、最高の記事を生成してください。
 
