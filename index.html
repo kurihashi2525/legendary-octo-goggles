@@ -4074,18 +4074,73 @@ ${resultsText}
     }
 
     /**
-     * AIに掲示板の返信を生成させる
-     */
-   async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
-    // AIへの指示を、受け取った発言に返事するだけの非常にシンプルなものにする
-    const prompt = `あなたは匿名掲示板のキャラクター「${aiPersona}」です。
-ユーザーが今、「${userReplyText}」と発言しました。
-この発言に対して、あなたのキャラクターとして自然な、短い返信を一つだけ生成してください。
+ * AIに掲示板の返信を生成させる（最終版）
+ * 最新のデータ構造と、脱線防止を強化したプロンプトを使用する
+ */
+async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
+    const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
+    const parentComment = findCommentById(commentSource, parentCommentId);
+    if (!parentComment) return null;
 
-### 出力形式
-必ず以下のJSON形式で、返信コメントのみを出力してください。
+    // --- 1. AIに渡すための「文脈」を収集する ---
+    // 一時的なオブジェクトを使って、現在の会話履歴を正確に再現
+    const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
+    parentComment.replies.push(userReplyObject);
+    const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
+    parentComment.replies.pop(); // 一時的なオブジェクトを削除
+
+    // 会話の中で言及されているチームをすべて洗い出す
+    const mentionedTeams = new Set();
+    conversationHistory.split('\n').forEach(line => {
+        INITIAL_TEAM_POOL.forEach(team => {
+            if (line.includes(team)) {
+                mentionedTeams.add(team);
+            }
+        });
+    });
+
+    // --- 2. AIに与える「知識」の部分を作成する ---
+    let teamInfoPromptPart = '';
+    if (mentionedTeams.size > 0) {
+        teamInfoPromptPart = '### 関連チームの背景情報\n';
+        mentionedTeams.forEach(teamName => {
+            const teamData = TEAM_DATA[teamName];
+            const teamRecord = tournamentState.teamRecords[teamName];
+            // 最新のチーム紹介文を生成する「専属アナウンサー」関数を活用
+            const dynamicInfo = generateDynamicTeamInfo(teamName, teamData, teamRecord);
+            teamInfoPromptPart += `- **${teamName}**: ${dynamicInfo}\n`;
+        });
+    }
+
+    // --- 3. 最終的なプロンプトを組み立てる ---
+    const prompt = `あなたは、匿名掲示板のキャラクター「${aiPersona}」です。あなたは今、他のユーザーと日本の高校野球について会話しています。
+あなたの唯一の仕事は、会話の流れとあなたの知識に基づき、キャラクターになりきって自然な返信をすることです。野球以外の話題には絶対に触れないでください。
+---
+### **ステップ1：現在の会話状況を理解する**
+- **これまでの会話の流れ**:
+${conversationHistory}
+- **あなたのキャラクター**: ${aiPersona}
+- **現在の大会状況**: ${context.tournamentSummary}
+
+---
+### **ステップ2：関連情報を思い出す**
+${teamInfoPromptPart}
+
+---
+### **ステップ3：返信する**
+上記のステップ1と2の情報を元に、会話の最後の発言「${userReplyText}」に対して、あなたのキャラクターとして最も自然で的を射た返信を生成してください。
+
+- **指示**:
+  - 必ず相手の発言に直接応答することから始めること。
+  - 応答の根拠として、ステップ2の「関連情報」を自然な形で会話に含めること。
+  - 相手が話していない無関係なチームや試合の情報を一方的に解説しないこと。
+
+---
+### **ステップ4：出力形式**
+【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {"comment": "（あなたの返信本文）"}`;
     
+    // --- 4. AIを呼び出し、結果を処理する ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -5145,7 +5200,7 @@ else if (e.target.matches('.add-substitute-btn')) {
 //  2.「送信」イベントを処理するリスナー (新設)
 // ==========================================================
 document.body.addEventListener('submit', async (e) => {
-    // --- 掲示板の「返信フォーム」が送信された場合 ---
+    // --- When the BBS reply form is submitted ---
     if (e.target.matches('.reply-form')) {
         e.preventDefault();
         const form = e.target;
@@ -5154,31 +5209,52 @@ document.body.addEventListener('submit', async (e) => {
         const textarea = form.querySelector('textarea');
         const userReplyText = textarea.value;
 
-        // この return は submit リスナーの内側なので、全く問題ありません
-        if (!userReplyText.trim()) return; 
+        if (!userReplyText.trim()) return;
 
+        // --- Add a loader to give feedback ---
         form.innerHTML = `<div class="loader text-xs">AIが返信を考えています...</div>`;
-        
+
+        // --- Gather all necessary context for the AI ---
         const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
         const parentComment = findCommentById(commentSource, parentCommentId);
-        const aiPersona = parentComment.personality;
-        const context = { tournamentSummary: getTournamentStatusSummary() };
+        const aiPersona = parentComment.personality; // Reply as the same character
+
+        // This is a simplified context for now; can be expanded later
+        const context = {
+            tournamentSummary: getTournamentStatusSummary()
+        };
         
-        const aiReply = await generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context);
+        // --- Call the AI to get a reply ---
+        const aiReply = await generateBbsReply(
+            parentCommentId,
+            userReplyText,
+            bbsType,
+            aiPersona,
+            context
+        );
 
         if (aiReply) {
-            parentComment.replies.push(aiReply);
+            // Find the parent comment again in the current state to add the reply
+            const freshParentComment = findCommentById(commentSource, parentCommentId);
+            if (freshParentComment) {
+                 if (!freshParentComment.replies) {
+                    freshParentComment.replies = [];
+                }
+                freshParentComment.replies.push(aiReply);
+            }
+           
+            // Re-render the correct comment section
             if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
             else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
             saveState();
         } else {
+            // Restore the form if the AI fails
             form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
                             <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
             alert("AIが返信を生成できませんでした。");
         }
     }
 });
-
 
     document.body.addEventListener('input', (e) => {
         if (e.target.matches('.match-summary-input')) {
