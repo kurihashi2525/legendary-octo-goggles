@@ -2973,47 +2973,150 @@ function generateDynamicTeamInfo(teamName, teamData, teamRecord) {
      */
     async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerDetailedData, loserDetailedData) {
         // 展望記事を生成する場合の処理
-        if (matchId === 'preview') {
-            let prompt;
-            const { tournamentYear, seeds, teams, currentTournament, is16team, autumnData } = tournamentState;
-            const tournamentName = tournamentNameMap[currentTournament] || '大会';
+    if (matchId === 'preview') {
+        let prompt;
+        const { tournamentYear, seeds, teams, matches, currentTournament, is16team, autumnData } = tournamentState;
+        const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
-            if (is16team) { // 秋季県大会
-                const reps = autumnData;
-                const repText = Object.entries(reps.regions).map(([region, data]) => {
-                    if (!data.finalReps || data.finalReps.length === 0) return null;
-                    if (region === '伊豆') return `- ${region} (1校): ${data.finalReps[0].team}`;
-                    const repNames = data.finalReps.sort((a,b) => a.rank - b.rank).map(r => `${r.team}(${r.rank}位)`);
-                    return `- ${region} (${data.finalReps.length}校): ${repNames.join(', ')}`;
-                }).filter(Boolean).join('\n');
-                
-                const matchups = [];
-                for(let i=0; i<teams.length; i+=2) {
-                    matchups.push(`- ${teams[i]} vs ${teams[i+1]}`);
-                }
-                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 秋季大会 県大会本戦」の展望記事を作成してください...\n\n### 県大会出場校一覧 (地区順位順)\n${repText}\n\n### 県大会1回戦の組み合わせ\n${matchups.join('\n')}`;
-            } else { // 夏季・春季大会
-                const blockA_teams = teams.slice(0, 32);
-                const blockB_teams = teams.slice(32, 64);
-                const findPromisingSchools = (teamList) => teamList.filter(team => seeds.includes(team) || TEAM_DATA[team].popularity);
-                const blockAnalysis = `- Aブロック: ${findPromisingSchools(blockA_teams).join(', ')}\n- Bブロック: ${findPromisingSchools(blockB_teams).join(', ')}`;
-                prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください...\n\n### シード校\n${seeds.join(', ')}\n\n### 各ブロックの有力校\n${blockAnalysis}`;
+        // --- 1. 秋季大会の展望記事 ---
+        if (is16team) { 
+            const reps = autumnData;
+            const repText = Object.entries(reps.regions).map(([region, data]) => {
+                if (!data.finalReps || data.finalReps.length === 0) return null;
+                if (region === '伊豆') return `- ${region} (1校): ${data.finalReps[0].team}`;
+                const repNames = data.finalReps.sort((a,b) => a.rank - b.rank).map(r => `${r.team}(${r.rank}位)`);
+                return `- ${region} (${data.finalReps.length}校): ${repNames.join(', ')}`;
+            }).filter(Boolean).join('\n');
+            
+            const matchups = [];
+            for(let i=0; i<teams.length; i+=2) {
+                matchups.push(`- ${teams[i]} vs ${teams[i+1]}`);
+            }
+            prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 秋季大会 県大会本戦」の展望記事を作成してください。
+
+### 大会のポイント
+- 秋季大会は新チームで挑む最初の県大会であり、来春のセンバツ出場を占う重要な大会です。
+- 地区予選を勝ち上がった順位に応じてポット分けされ、1回戦は同地区対決が避けられるなど、独特の組み合わせが特徴です。
+
+### 県大会出場校一覧 (地区順位順)
+${repText}
+
+### 県大会1回戦の組み合わせ
+${matchups.join('\n')}
+
+### 執筆指示
+- 最も厳しいブロック、いわゆる「死のブロック」はどこか指摘してください。
+- 地区1位校と下位ポットの強豪校が当たる、注目の1回戦カードをいくつか挙げてください。
+- 地区間のレベル差や、新チームの仕上がりについて分析的な視点で記述してください。`;
+
+        // --- 2. 春季大会の展望記事 ---
+        } else if (currentTournament === 'spring') {
+            const qualifierWinners = teams.filter(team => !seeds.includes(team));
+            const round1Matchups = Object.values(matches)
+                .filter(match => match.id.includes('-R1-'))
+                .map(match => `- ${match.team1} vs ${match.team2}`);
+
+            const allPromisingSchools = [...seeds, ...qualifierWinners];
+            let notablePlayersText = '';
+            const notablePlayers = allPromisingSchools.filter(team => DETAILED_TEAM_DATA[team]);
+            if (notablePlayers.length > 0) {
+                notablePlayersText += '### 今大会の注目選手\n';
+                notablePlayers.forEach(team => {
+                    const players = DETAILED_TEAM_DATA[team].players.slice(0, 2);
+                    notablePlayersText += `- **${team}**: ${players.map(p => `${p.name}(${p.year}年)`).join(', ')}\n`;
+                });
             }
 
-            try {
-                const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt + '\n\n### 出力形式\n以下のJSON形式で出力してください。\n{"title": "記事のタイトル", "body": "記事の本文"}' }] }] });
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
-                    if (article) return { ...article, timestamp: Date.now() };
-                }
-                throw new Error("AI preview response format error.");
-            } catch (error) {
-                console.error("AI preview article generation failed:", error);
-                return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
+            prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
+
+### 大会の見どころ
+- 今大会は、秋季大会ベスト8の強豪【シード校】と、厳しい地区予選を勝ち抜いた【予選突破校】が覇を競います。
+- 1回戦は予選突破校同士が対戦し、勝ち上がったチームが2回戦でシード校に挑むという、下剋上も期待される注目の形式です。
+
+### シード校 (2回戦から登場)
+${seeds.join(', ')}
+
+### 地区予選突破校 (1回戦から登場)
+${qualifierWinners.join(', ')}
+
+### 1回戦の注目カード
+${round1Matchups.slice(0, 4).join('\n')}
+
+${notablePlayersText}
+
+### 執筆指示
+- 予選突破校の中から、シード校を脅かす存在となりそうな「ダークホース」を2～3校挙げてください。
+- どのシード校が最も厳しいブロックに入ったか（2回戦で強い予選突破校と当たるか）、逆に最も楽なブロックはどこかを分析してください。
+- 記事の本文で「注目選手」に言及し、彼らの活躍が大会の鍵を握ることを示唆してください。
+- 夏の大会を占う重要な大会として、各チームの仕上がり具合を分析する視点で記述してください。`;
+
+        // --- 3. 夏季大会の展望記事 ---
+        } else { 
+            const isPromising = (teamName) => {
+                const rank = calculateRank(teamName, tournamentState);
+                return ['A', 'B'].includes(rank) || seeds.includes(teamName) || TEAM_DATA[teamName].popularity;
+            };
+
+            const blockAnalyses = [];
+            const numBlocks = 4;
+            const blockSize = 16;
+            for (let i = 0; i < numBlocks; i++) {
+                const blockName = String.fromCharCode(65 + i);
+                const start = i * blockSize;
+                const end = (i + 1) * blockSize;
+                const blockTeams = teams.slice(start, end);
+                if (blockTeams.length === 0) continue;
+                const promisingInBlock = blockTeams.filter(isPromising);
+                blockAnalyses.push(`- ${blockName}ブロック (${blockTeams.length}校): ${promisingInBlock.join(', ')}`);
             }
+            const blockAnalysis = blockAnalyses.join('\n');
+            
+            let notablePlayersText = '';
+            const promisingSchools = teams.filter(isPromising);
+            const notablePlayers = promisingSchools.filter(team => DETAILED_TEAM_DATA[team]);
+            if (notablePlayers.length > 0) {
+                notablePlayersText += '### 今大会の注目選手\n';
+                notablePlayers.forEach(team => {
+                    const players = DETAILED_TEAM_DATA[team].players.slice(0, 2);
+                    notablePlayersText += `- **${team}**: ${players.map(p => `${p.name}(${p.year}年)`).join(', ')}\n`;
+                });
+            }
+
+            prompt = `あなたは、情熱的で経験豊富な高校野球専門のAI記者です。間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
+
+### 大会の見どころ
+- 3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。
+- 春の大会の結果などからシード校が決定されていますが、ノーシードの実力校も多く、波乱が予想されます。
+
+### シード校
+${seeds.join(', ')}
+
+### 各ブロックの有力校
+${blockAnalysis}
+
+${notablePlayersText}
+
+### 執筆指示
+- 最も厳しいブロック、いわゆる「死のブロック」はどこか指摘し、その理由を分析してください。
+- 有力校が少ない「恵まれたブロック」に入ったチームにも言及してください。
+- 「注目選手」を記事に登場させ、彼らが大会の鍵を握る存在であることを示唆してください。
+- ノーシードの実力校の中から、大会の「ダークホース」となりそうなチームを挙げてみてください。`;
         }
 
+        // --- AIへのリクエストと結果の処理 ---
+        try {
+            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt + '\n\n### 出力形式\n以下のJSON形式で出力してください。\n{"title": "記事のタイトル", "body": "記事の本文"}' }] }] });
+            const result = await response.json();
+            if (result.candidates?.[0]?.content?.parts?.[0]) {
+                const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+                if (article) return { ...article, timestamp: Date.now() };
+            }
+            throw new Error("AI preview response format error.");
+        } catch (error) {
+            console.error("AI preview article generation failed:", error);
+            return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
+        }
+    }
         // --- 以下は試合結果の記事生成ロジック ---
         const winnerData = TEAM_DATA[winnerName];
         // ... (ここから下の部分は変更ありませんが、関数の全体を置き換えてください)
