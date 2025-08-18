@@ -5141,6 +5141,11 @@ else if (e.target.matches('.add-substitute-btn')) {
     }
 });
     
+   // ==========================================================
+//  2.「送信」イベントを処理するリスナー (新設)
+// ==========================================================
+document.body.addEventListener('submit', async (e) => {
+    // --- 掲示板の「返信フォーム」が送信された場合 ---
     if (e.target.matches('.reply-form')) {
         e.preventDefault();
         const form = e.target;
@@ -5149,45 +5154,30 @@ else if (e.target.matches('.add-substitute-btn')) {
         const textarea = form.querySelector('textarea');
         const userReplyText = textarea.value;
 
-        if (!userReplyText.trim()) return;
+        // この return は submit リスナーの内側なので、全く問題ありません
+        if (!userReplyText.trim()) return; 
 
-        // ユーザーにフィードバックするためのローダーを表示
         form.innerHTML = `<div class="loader text-xs">AIが返信を考えています...</div>`;
-
-        // --- AIに必要な情報を集める ---
+        
         const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
         const parentComment = findCommentById(commentSource, parentCommentId);
-        const aiPersona = parentComment.personality; // 親コメントと同じキャラクターとして返信
-
-        // 今は簡略化した文脈情報を作成（後で拡張可能）
-        const context = {
-            tournamentSummary: getTournamentStatusSummary()
-        };
+        const aiPersona = parentComment.personality;
+        const context = { tournamentSummary: getTournamentStatusSummary() };
         
-        // --- AIを呼び出して返信を取得 ---
-        const aiReply = await generateBbsReply(
-            parentCommentId,
-            userReplyText,
-            bbsType,
-            aiPersona,
-            context,
-            {}, {}, {} // 古い情報収集機能は使わないため、一旦空のオブジェクトを渡す
-        );
+        const aiReply = await generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context);
 
         if (aiReply) {
             parentComment.replies.push(aiReply);
-            // 正しい掲示板セクションを再描画
             if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
             else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
             saveState();
         } else {
-            // AIが失敗した場合、フォームを元に戻す
             form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
                             <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
             alert("AIが返信を生成できませんでした。");
         }
     }
-
+});
 
 
     document.body.addEventListener('input', (e) => {
