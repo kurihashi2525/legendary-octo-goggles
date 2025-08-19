@@ -4793,13 +4793,15 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
     const loserDetailedData = DETAILED_TEAM_DATA[loserName];
 
     // 2. 取得したすべての情報を、各AI関数に引数として渡す
-    const highlightsText = createHighlightsText(dbMatch, winnerName);
+  const highlightsData = createHighlightsText(dbMatch, winnerName);
+    const highlightsText = highlightsData.highlightsText; // 文章だけを取り出す
+    const keyPlayerNames = highlightsData.keyPlayerNames; // 選手リストも取り出す (将来の機能拡張用)
 
-const [article, newComments] = await Promise.all([
-        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData,highlightsText),
+// 2. 取得したすべての情報を、各AI関数に引数として渡す
+    const [article, newComments] = await Promise.all([
+        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames),
         generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText)
     ]);
-
     // 3. AIからの返答を画面に表示する
     if (article) tournamentState.news.push(article);
     if (newComments?.length) tournamentState.bbsComments.push(...newComments);
