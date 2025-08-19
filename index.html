@@ -905,12 +905,21 @@ function simulateKoshien(teamRank) {
     }
 // --- Team Rank Calculation ---
     function calculateRank(teamName, state) {
-        if (!teamName) return ''; 
+    if (!teamName) return ''; 
 
-        const teamData = TEAM_DATA[teamName];
-        let score = 0;
+    const teamData = TEAM_DATA[teamName];
+    
+    // ▼▼▼ この安全装置を追加 ▼▼▼
+    if (!teamData) {
+        // もしTEAM_DATAにチームが見つからなければ、エラーを起こさずに
+        // デフォルトのEランクを返して、この関数の処理を終了する
+        return 'E'; 
+    }
+    // ▲▲▲ ▲▲▲
 
-        score += teamData.deviation;
+    // この行は、上記のチェックのおかげで安全に実行される
+    let score = 0;
+    score += teamData.deviation;
 
         if (teamData.best.includes('優勝')) score += 25;
         else if (teamData.best.includes('準優勝')) score += 20;
@@ -3044,8 +3053,7 @@ function getSubstitutionDescription(player) {
  * AI記者にニュース記事を執筆させるメイン関数（AI脱線防止策を施した最終完成版）
  * 展望記事と、試合で活躍した全選手に対応した試合後記事を生成する
  */
-async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData) {
-    
+async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames) {    
     // --- 1. 大会展望記事の生成ロジック ---
     if (matchId === 'preview') {
         let prompt;
@@ -3187,6 +3195,7 @@ ${notablePlayersText}
             console.error("AI preview article generation failed:", error);
             return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
         }
+return;
     }
 
     // --- 2. 試合後記事の生成ロジック ---
@@ -3445,7 +3454,7 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
  * AIに掲示板のコメントを生成させるメイン関数
  * 詳細入力の有無でプロンプトを切り替えるA/Bルート対応の最終版
  */
-async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData) {
+async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText) {
     
     // --- 準備フェーズ ---
     // Aルート・Bルート共通で使う変数をここで準備します
@@ -4377,13 +4386,13 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 }
 // --- Match Processing & Event Listeners ---
 
-  /**
- * 試合の詳細データからハイライト文を生成し、活躍選手リストも返す
- * (チーム名を明記し、AIの誤認を防ぐ、省略なしの最終完成版)
+ /**
+ * 試合の詳細データからハイライトの「配列」を生成し、活躍選手リストも返す
+ * (アプローチを変更した最終版)
  */
 function createHighlightsText(dbMatch, winnerName) {
     if (!dbMatch.details) {
-        return { highlightsText: 'データなし', keyPlayerNames: [] };
+        return { highlights: ['データなし'], keyPlayerNames: [] };
     }
 
     const highlights = [];
@@ -4476,7 +4485,6 @@ function createHighlightsText(dbMatch, winnerName) {
             const strikeouts = parseInt(pitcher.strikeouts) || 0;
             const earnedRuns = parseInt(pitcher.earnedRuns);
 
-            // 3A. 例外的な大活躍
             if (pitcher.result === 'W' && runs === 0 && innings >= 7) {
                 highlights.push(`${teamName}のエース${pitcher.name}が圧巻の投球で完封勝利`);
                 keyPlayerNames.add(pitcher.name);
@@ -4485,7 +4493,6 @@ function createHighlightsText(dbMatch, winnerName) {
                 keyPlayerNames.add(pitcher.name);
             }
 
-            // 3B. 先発投手が6回以上投げたか
             if (index === 0 && innings >= 6) {
                 if (!highlights.some(h => h.includes(pitcher.name))) {
                     let description = `先発の${pitcher.name}が${innings}回を力投`;
@@ -4496,7 +4503,6 @@ function createHighlightsText(dbMatch, winnerName) {
                     keyPlayerNames.add(pitcher.name);
                 }
             }
-            // 3C. 救援投手の活躍
             else if (index > 0) { 
                 if (!highlights.some(h => h.includes(pitcher.name))) {
                     let description = '';
@@ -4514,10 +4520,14 @@ function createHighlightsText(dbMatch, winnerName) {
         });
     }
 
-    const highlightsText = highlights.length > 0 ? [...new Set(highlights)].join('、');
-    return { highlightsText, keyPlayerNames: Array.from(keyPlayerNames) };
+    if (highlights.length === 0) {
+        highlights.push('特に大きな動きはなし');
+    }
+    
+    // 文字列に結合せず、ハイライトの配列と選手名の配列をそのまま返す
+    return { highlights: [...new Set(highlights)], keyPlayerNames: Array.from(keyPlayerNames) };
 }
-/**
+    /**
      * 試合の勝者を処理する中心的関数。
      * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
      */
@@ -4762,8 +4772,11 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
     const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
     const loserDetailedData = DETAILED_TEAM_DATA[loserName];
 
-    // 2. 試合のハイライト文と、活躍した選手リストを一度に取得する（分割代入を使用）
-    const { highlightsText, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+     // 1. createHighlightsTextから「ハイライトの配列」と「選手名リスト」を受け取る
+    const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+
+    // 2. 受け取った「ハイライトの配列」を、ここで最終的な文字列に変換する
+    const highlightsText = highlights.join('、');
 
     // 3. 取得した全ての情報を、各AI関数に引数として渡して、並行して実行させる
     const [article, newComments] = await Promise.all([
