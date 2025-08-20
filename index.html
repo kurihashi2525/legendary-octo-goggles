@@ -295,6 +295,26 @@
         </div>
     </div>
 
+<div id="review-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記事の最終確認・編集</h3>
+        <div class="overflow-y-auto space-y-4 flex-grow">
+            <div>
+                <label for="review-title" class="block text-sm font-medium text-gray-700">タイトル</label>
+                <input type="text" id="review-title" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="review-body" class="block text-sm font-medium text-gray-700">本文</label>
+                <textarea id="review-body" rows="15" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 whitespace-pre-wrap"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 text-center border-t pt-4">
+            <button id="review-save-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">この記事で確定</button>
+            <button id="review-cancel-btn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">キャンセル</button>
+        </div>
+    </div>
+</div>
+
 <div id="team-status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -3270,9 +3290,46 @@ return;
 
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
-        const { highlightsText, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+        
+        // --- 準備フェーズ ---
 
-// 2. Analyze Starting Lineup Changes (YOUR ORIGINAL CODE)
+        // 1. createHighlightsTextから「事実リストの配列」と「選手名リスト」を受け取る
+        const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+
+        // 2. 「事実リストの配列」を、AIが読みやすいテキスト形式に変換する
+        const factListText = highlights.map(fact => {
+            let text = `- `;
+            if (fact.inning) text += `${fact.inning}回 `;
+            if (fact.team) text += `${fact.team} `;
+            if (fact.player) text += `${fact.player} `;
+            text += `: ${fact.description}`;
+            return text;
+        }).join('\n');
+        
+        // 3. 選手名リストを元に、選手をチーム分けして、プロンプト用の「注目選手」セクションを作成する
+        const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+        const winnerPlayersInGame = new Set(
+            (dbMatch.details.batting?.[winnerKey] || []).map(p => p.name)
+            .concat((dbMatch.details.pitching?.[winnerKey] || []).map(p => p.name))
+        );
+        const winnerKeyPlayers = keyPlayerNames.filter(name => winnerPlayersInGame.has(name));
+        const loserKeyPlayers = keyPlayerNames.filter(name => !winnerPlayersInGame.has(name));
+
+        const formatPlayerList = (playerNames, teamName, detailedTeamData) => {
+            if (playerNames.length === 0) return '特になし';
+            return playerNames.map(playerName => {
+                const detailedInfo = detailedTeamData?.players.find(p => p.name === playerName);
+                if (detailedInfo) {
+                    return `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}`;
+                } else {
+                    return `- **${playerName}**`;
+                }
+            }).join('\n');
+        };
+        const winnerPlayersPrompt = formatPlayerList(winnerKeyPlayers, winnerName, winnerDetailedData);
+        const loserPlayersPrompt = formatPlayerList(loserKeyPlayers, loserName, loserDetailedData);
+
+        // 4. スタメン変更を分析する (省略なし)
         let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
         const changes = [];
         for (const teamName of [winnerName, loserName]) {
@@ -3294,21 +3351,8 @@ return;
             }
         }
         if (changes.length > 0) lineupChangesText = changes.join(' ');
-
-
-        let keyPlayersPromptSection = '情報なし';
-        if (keyPlayerNames.length > 0) {
-            keyPlayersPromptSection = keyPlayerNames.map(playerName => {
-                const teamForPlayer = (winnerData.roster?.some(p => p.name === playerName) || winnerName === playerName) ? winnerName : loserName;
-                const detailedInfo = DETAILED_TEAM_DATA[teamForPlayer]?.players.find(p => p.name === playerName);
-                if (detailedInfo) {
-                    return `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}`;
-                } else {
-                    return `- **${playerName}**`;
-                }
-            }).join('\n');
-        }
-
+        
+        // 5. イニングスコアをテキスト形式に変換
         let inningScoreText = '';
         if (dbMatch.details?.inningScore) {
             const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
@@ -3319,51 +3363,48 @@ return;
             }
         }
         
-        prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
+        // --- プロンプト作成フェーズ ---
+        prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
+あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 ---
 ### **ステップ1：試合の基本情報を理解する**
-- **大会**: ${currentTournamentName}
-- **対戦カード**: ${winnerName} vs ${loserName}
-- **先攻**: ${battingFirstTeam} / **後攻**: ${battingSecondTeam}
-- **勝者**: ${winnerName}
-- **最終スコア**: ${winnerScore} - ${loserScore}
-- **イニング別スコア**:
+- 大会: ${currentTournamentName}
+- 対戦カード: ${winnerName} vs ${loserName}
+- 勝者: ${winnerName}
+- 最終スコア: ${winnerScore} - ${loserScore}
+- イニング別スコア:
 ${inningScoreText || 'データなし'}
-- **試合のハイライト**: ${highlightsText}
-- **前試合からのスタメン変更**: ${lineupChangesText}
-- **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
+- 事実リスト（試合の主な出来事）:
+${factListText}
+- 前試合からのスタメン変更: ${lineupChangesText}
+- ユーザーによる試合の決め手: ${dbMatch.summary || 'なし'}
 ---
 ### **ステップ2：チームと選手の背景を理解する**
 - **${winnerName}**: ${winnerDynamicInfo}
-  - **称号**: ${winnerTitles || 'なし'}
-  - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
+  - 監督: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
 - **${loserName}**: ${loserDynamicInfo}
-  - **称号**: ${loserTitles || 'なし'}
-  - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
+  - 監督: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
 - **この試合の注目選手**:
-${keyPlayersPromptSection}
+  - **【勝利チーム：${winnerName}】**
+${winnerPlayersPrompt}
+  - **【敗北チーム：${loserName}】**
+${loserPlayersPrompt}
 ---
-### **ステップ3：試合の文脈（重要度）を理解する**
-- **この試合での達成記録**: ${roundAchievement || 'なし'}
-- **次の大会への影響**: ${seedingImplication || 'なし'}
-- **特別な物語**: ${specialNarrativeContext || 'なし'}
+### **ステップ3：記事を執筆する**
+上記の情報を元に、以下の指示に厳密に従って最高の記事を生成してください。
+- **【最重要】**: 記事に書く試合の出来事は、必ずステップ1の「事実リスト」に基づいていること。リストにない出来事を創作してはならない。
+- **事実の厳守**: 勝敗、スコア、そして各選手がどちらのチームに所属しているかを絶対に間違えないこと。
+- **物語の中心**: 「この試合の注目選手」リストにいる選手たちの活躍を中心に記事を構成すること。
+- **監督の采配**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
+- **インタビューコメント**: 試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
 ---
-### **ステップ4：記事を執筆する**
-上記のステップ1～3の情報をすべて統合し、以下の指示に厳密に従って最高の記事を生成してください。
-- **【最優先事項】**: もし「ユーザーによる試合の決め手」に具体的な記述があれば、それを記事全体のテーマとして最も重視すること。
-- **物語の中心**: もし「特別な物語」があれば、それを記事の中心に据えること。
-- **事実の厳守**: 勝敗、スコア、先攻/後攻を絶対に間違えないこと。サヨナラ勝ちは後攻チームにしか起こりません。
-- **試合展開の描写**: 「イニング別スコア」と「試合のハイライト」を元に、リアルな試合展開を描写すること。
-- **背景と文脈の活用**: 各チームの背景情報、称号、監督の経歴を記事に盛り込み、物語に深みを与えること。
-- **インタビューコメントの生成**: 試合後の両チーム監督のコメントを、試合内容や監督の性格を反映させて自然に含めること。
----
-### **ステップ5：出力形式**
-【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
+### **ステップ4：出力形式**
+【最重要】必ず以下のJSON形式"のみ"で出力すること。
 {
     "title": "（ここに記事のタイトル）",
     "body": "（ここに記事の本文）"
 }`;
-    } 
+    }
     // --- 詳細データがない場合 (Bルート) ---
     else {
         prompt = `あなたは、高校野球専門のAI記者です。
@@ -3451,13 +3492,11 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
     }
 
 /**
- * AIに掲示板のコメントを生成させるメイン関数
- * 詳細入力の有無でプロンプトを切り替えるA/Bルート対応の最終版
+ * AIに掲示板のコメントを生成させるメイン関数（AIの暴走を抑制した最終版）
  */
 async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText) {
     
     // --- 準備フェーズ ---
-    // Aルート・Bルート共通で使う変数をここで準備します
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
@@ -3467,27 +3506,20 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winn
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
     let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
-    
-    // ▼▼▼ 省略されていた「特別な文脈」の生成ロジック ▼▼▼
     let specialNarrativeContext = '';
-    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
-        if (matchId.includes('-R1-')) { // 県大会本戦の1回戦のみ
-            const winnerRank = calculateRank(winnerName, tournamentState);
-            if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
-                specialNarrativeContext = `### 【掲示板の話題】\n衝撃的な事件だ！あの無名の公立「${winnerName}」が、県大会の初戦を勝ち、【来春のシード権を獲得】したぞ！この「ありえないレベルの快進撃」に対する、ファンたちのリアルな驚き、興奮、そして少しの嫉妬が入り混じったコメントを生成せよ。`;
-            }
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main' && matchId.includes('-R1-')) {
+        const winnerRank = calculateRank(winnerName, tournamentState);
+        if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
+            specialNarrativeContext = `### 【掲示板の話題】\n衝撃！無名の公立「${winnerName}」が県大会初戦を勝ち、【来春のシード権獲得】だ！この快進撃に驚きと嫉妬のコメントを生成せよ。`;
         }
     }
-    // ▲▲▲ ▲▲▲
 
-    let prompt = ''; // プロンプトを入れる空の箱を用意
+    let prompt = '';
 
     // --- Aルート：詳細入力がある場合 ---
     if (dbMatch.details) {
-        const highlightsText = createHighlightsText(dbMatch, winnerName);
-
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+以下の【試合の主なハイライト】で提供される情報に**厳密に基づいて**、それ以外の架空の試合展開（例: 本塁打, 逆転打, スクイズなど）を**一切創作せず**、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 
 ### 試合情報
 - 大会: ${tournamentState.tournamentYear}年度 ${currentTournamentName}
@@ -3505,14 +3537,14 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winn
 ${specialNarrativeContext}
 
 ### あなたがなりきるべきキャラクターと指示
-- **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。（例：「〇〇の逆転打、鳥肌立ったわ！」）
-- **上から目線の野球解説者**: 「試合のハイライト」で言及されているプレー（「先制打」「好リリーフ」など）について、玄人っぽく分析・評価してください。（例：「あの場面はまさに監督の采配が光ったな」）
-- **アンチ**: 「試合のハイライト」で活躍した相手チームの選手を「まぐれだ」と貶したり、チャンスで凡退した自チームの選手を厳しく批判してください。
-- **ライバル校のファン**: 「試合のハイライト」で活躍した選手を見て、「うちの〇〇の方が上だな」と比較したり、自チームとの対戦を想像してコメントしてください。
-- **単なる野球好き**: 「試合のハイライト」の中で最も印象的だったプレーについて、興奮気味に、または素直に感想を述べてください。（例：「9回裏の攻防、熱すぎだろ！」）
+- **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
+- **上から目線の野球解説者**: 「試合のハイライト」で言及されているプレーについて、玄人っぽく分析・評価してください。
+- **アンチ**: 「試合のハイライト」で活躍した相手チームの選手を「まぐれだ」と貶したり、凡退した選手を批判してください。
+- **ライバル校のファン**: 「試合のハイライト」で活躍した選手を見て、「うちの〇〇の方が上だな」と比較してください。
+- **単なる野球好き**: 「試合のハイライト」の中で最も印象的だったプレーについて、興奮気味に感想を述べてください。
 
 - **指示:**
-  - **【最重要】**: 「試合のハイライト」の具体的な出来事に必ず言及してください。
+  - **【最重要】**: あなたがコメントで言及する試合の出来事は、必ず【試合の主なハイライト】に書かれている内容のみとしてください。
   - もし「掲示板の話題」が指定されていれば、そのテーマを最優先で反応すること。
   - 各キャラクターとして1つずつ、合計5つのコメントを生成すること。
 
@@ -3522,7 +3554,7 @@ ${specialNarrativeContext}
     {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
     {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
     {"personality": "アンチ", "comment": "（コメント本文）"},
-    {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
+    {"personality": "ライバル校のファン", "comment": "（コメント本文）"},
     {"personality": "野球好き", "comment": "（コメント本文）"}
 ]`;
     }
@@ -3560,7 +3592,7 @@ ${specialNarrativeContext}
     {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"},
     {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
     {"personality": "アンチ", "comment": "（コメント本文）"},
-    {"personality": "ライバル校ファン", "comment": "（コメント本文）"},
+    {"personality": "ライバル校のファン", "comment": "（コメント本文）"},
     {"personality": "野球好き", "comment": "（コメント本文）"}
 ]`;
     }
@@ -4386,16 +4418,15 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 }
 // --- Match Processing & Event Listeners ---
 
- /**
- * 試合の詳細データからハイライトの「配列」を生成し、活躍選手リストも返す
- * (アプローチを変更した最終版)
+/**
+ * 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す最終版
  */
 function createHighlightsText(dbMatch, winnerName) {
     if (!dbMatch.details) {
-        return { highlights: ['データなし'], keyPlayerNames: [] };
+        return { highlights: [], keyPlayerNames: [] };
     }
 
-    const highlights = [];
+    const highlights = []; // ここに「事実オブジェクト」が入ります
     const keyPlayerNames = new Set(); 
 
     const winningTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
@@ -4422,19 +4453,35 @@ function createHighlightsText(dbMatch, winnerName) {
                 if (result.includes('点') || result.toLowerCase().includes('hr') || result.includes('本')) {
                     const prevScores = { ...scores };
                     const scoreMatch = result.match(/(\d+)点/);
-                    const addedScore = scoreMatch ? parseInt(scoreMatch[1]) : 1;
+                    const addedScore = scoreMatch ? parseInt(scoreMatch[1]) : (result.includes('本') || result.toLowerCase().includes('hr') ? 1 : (result.includes('点') ? 1 : 0) );
                     scores[teamKey] += addedScore;
                     inningScore[teamKey] += addedScore;
                     
-                    let playDescription = '';
-                    if (!hasScored) {
-                        playDescription = `${teamName}の${playerInfo}が${i+1}回に先制の一打`; hasScored = true;
-                    } else if (teamKey === winningTeamKey && prevScores[winningTeamKey] < scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && scores[winningTeamKey] > scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && !isReversed) {
-                        playDescription = `${teamName}の${playerInfo}が${i+1}回に逆転打`; isReversed = true;
-                    } else {
-                        playDescription = `${teamName}の${playerInfo}が${i+1}回に追加点`;
+                    let eventType = '追加点';
+                    if (!hasScored) { eventType = '先制'; hasScored = true; }
+                    else if (teamKey === winningTeamKey && prevScores[winningTeamKey] < scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && scores[winningTeamKey] > scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && !isReversed) {
+                        eventType = '逆転'; isReversed = true;
                     }
-                    highlights.push(playDescription);
+
+                    let hitType = '';
+                    if (result.includes('本') || result.toLowerCase().includes('hr')) hitType = '本塁打';
+                    else if (result.includes('三')) hitType = '三塁打';
+                    else if (result.includes('二')) hitType = '二塁打';
+                    else if (result.includes('安')) hitType = '安打';
+                    else if (result.includes('犠飛')) hitType = '犠飛';
+                    else if (result.includes('ゴロ') || result.includes('野選')) hitType = '内野ゴロ';
+                    else if (result.includes('失')) hitType = 'エラー';
+                    else hitType = '適時打';
+
+                    // ▼▼▼ ここでオブジェクトを作成してpush ▼▼▼
+                    highlights.push({
+                        type: 'score',
+                        inning: i + 1,
+                        team: teamName,
+                        player: player.name,
+                        order: player.order,
+                        description: `${eventType}となる${addedScore > 1 ? addedScore + '点' : ''}${hitType}`
+                    });
                     keyPlayerNames.add(player.name);
                 } 
                 else if (result.includes('併殺') || result.includes('ゲッツー') || result.includes('三振') || result.includes('ゴロ') || result.includes('フライ')) {
@@ -4443,15 +4490,28 @@ function createHighlightsText(dbMatch, winnerName) {
                     const pitcher = dbMatch.details.pitching?.[pitcherTeamKey]?.find(p => p.innings && parseFloat(p.innings) >= i + 1);
                     const isClutchSituation = (i >= 6 && Math.abs(scores.team1 - scores.team2) <= 2) || inningScore[teamKey] > 0;
                     if (pitcher && pitcher.name && isClutchSituation) {
-                        const highlightText = `${pitcherTeamName}の${pitcher.name}が${i+1}回にピンチを抑える好投`;
-                        if (!highlights.includes(highlightText)) highlights.push(highlightText);
+                        // ▼▼▼ ここでオブジェクトを作成してpush ▼▼▼
+                        highlights.push({
+                            type: 'defense',
+                            inning: i + 1,
+                            team: pitcherTeamName,
+                            player: pitcher.name,
+                            description: `ピンチを抑える好投`
+                        });
                         keyPlayerNames.add(pitcher.name);
                     }
                 } 
                 else if (result.includes('凡退') || result.includes('三振') || result.includes('併殺')) {
                     const isLosingClutch = (i >= 6 && scores[teamKey] < scores[dbMatch.team1 === teamKey ? 'team2' : 'team1'] && Math.abs(scores.team1 - scores.team2) <= 2);
                     if (isLosingClutch) {
-                        highlights.push(`${teamName}の${playerInfo}が${i+1}回にチャンスで凡退`);
+                        // ▼▼▼ ここでオブジェクトを作成してpush ▼▼▼
+                        highlights.push({
+                            type: 'offense_fail',
+                            inning: i + 1,
+                            team: teamName,
+                            player: player.name,
+                            description: `チャンスで凡退`
+                        });
                     }
                 }
             });
@@ -4466,7 +4526,13 @@ function createHighlightsText(dbMatch, winnerName) {
         substitutes.forEach(subPlayer => {
             if (subPlayer.results.some(r => r && (r.includes('安') || r.includes('本') || r.includes('二') || r.includes('三')))) {
                 const subDescription = getSubstitutionDescription(subPlayer);
-                highlights.push(`${teamName}の${subPlayer.name}が${subDescription}し安打を放った`);
+                // ▼▼▼ ここでオブジェクトを作成してpush ▼▼▼
+                highlights.push({
+                    type: 'substitute_hit',
+                    team: teamName,
+                    player: subPlayer.name,
+                    description: `${subDescription}し安打を放った`
+                });
                 keyPlayerNames.add(subPlayer.name);
             }
         });
@@ -4486,33 +4552,28 @@ function createHighlightsText(dbMatch, winnerName) {
             const earnedRuns = parseInt(pitcher.earnedRuns);
 
             if (pitcher.result === 'W' && runs === 0 && innings >= 7) {
-                highlights.push(`${teamName}のエース${pitcher.name}が圧巻の投球で完封勝利`);
+                highlights.push({ type: 'pitching_feat', team: teamName, player: pitcher.name, description: '圧巻の投球で完封勝利' });
                 keyPlayerNames.add(pitcher.name);
             } else if (strikeouts >= 10) {
-                highlights.push(`${teamName}の${pitcher.name}が${strikeouts}奪三振の快投`);
+                highlights.push({ type: 'pitching_feat', team: teamName, player: pitcher.name, description: `${strikeouts}奪三振の快投` });
                 keyPlayerNames.add(pitcher.name);
             }
 
             if (index === 0 && innings >= 6) {
-                if (!highlights.some(h => h.includes(pitcher.name))) {
-                    let description = `先発の${pitcher.name}が${innings}回を力投`;
-                    if (pitcher.result === 'W') {
-                        description = `${teamName}の先発${pitcher.name}が${innings}回を粘投し勝利に貢献`;
-                    }
-                    highlights.push(description);
+                if (!highlights.some(h => h.player === pitcher.name)) {
+                    let desc = `先発として${innings}回を力投`;
+                    if (pitcher.result === 'W') desc = `先発として${innings}回を粘投し勝利に貢献`;
+                    highlights.push({ type: 'pitching_workhorse', team: teamName, player: pitcher.name, description: desc });
                     keyPlayerNames.add(pitcher.name);
                 }
             }
             else if (index > 0) { 
-                if (!highlights.some(h => h.includes(pitcher.name))) {
-                    let description = '';
-                    if (pitcher.result === 'S') {
-                        description = `${teamName}の抑え${pitcher.name}が試合を締めセーブを記録`;
-                    } else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) {
-                        description = `${teamName}の${pitcher.name}が${innings}回を無失点に抑える好リリーフ`;
-                    }
-                    if (description) {
-                        highlights.push(description);
+                if (!highlights.some(h => h.player === pitcher.name)) {
+                    let desc = '';
+                    if (pitcher.result === 'S') desc = '抑えとして試合を締めセーブを記録';
+                    else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) desc = `${innings}回を無失点に抑える好リリーフ`;
+                    if (desc) {
+                        highlights.push({ type: 'pitching_relief', team: teamName, player: pitcher.name, description: desc });
                         keyPlayerNames.add(pitcher.name);
                     }
                 }
@@ -4521,13 +4582,63 @@ function createHighlightsText(dbMatch, winnerName) {
     }
 
     if (highlights.length === 0) {
-        highlights.push('特に大きな動きはなし');
+        highlights.push({ type: 'info', description: '特に大きな動きはなし' });
     }
     
-    // 文字列に結合せず、ハイライトの配列と選手名の配列をそのまま返す
-    return { highlights: [...new Set(highlights)], keyPlayerNames: Array.from(keyPlayerNames) };
+    return { highlights: highlights, keyPlayerNames: Array.from(keyPlayerNames) };
 }
-    /**
+    
+/**
+ * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
+ * @param {object} article - AI記者が生成した記事オブジェクト
+ * @param {Array} facts - createHighlightsTextから生成された元の事実オブジェクトの配列
+ * @returns {boolean} - 矛盾がなければtrue、あればfalseを返す
+ */
+async function factCheckArticle(article, facts) {
+    // AIが読みやすいように、事実リストをテキストに変換
+    const factListText = facts.map(fact => {
+        let text = `- `;
+        if (fact.inning) text += `${fact.inning}回 `;
+        if (fact.team) text += `${fact.team} `;
+        if (fact.player) text += `${fact.player} `;
+        text += `: ${fact.description}`;
+        return text;
+    }).join('\n');
+
+    const prompt = `あなたは、非常に厳格で注意深い「事実確認（ファクトチェッカー）」です。
+以下の【事実リスト】と【AI記者が書いた記事】を比較し、記事の内容が事実に忠実かどうかを判定してください。
+
+### 事実リスト
+${factListText}
+
+### AI記者が書いた記事
+**タイトル:** ${article.title}
+**本文:** ${article.body.replace(/\\n/g, '\n')}
+
+### あなたの仕事
+記事が、事実リストの内容と**完全に一致**しているか？選手名、チーム名、イニング、プレー内容などの重要な情報に**一切の矛盾がない**か？
+あなたの答えは、以下のいずれか一つだけにしてください。
+- **はい** (矛盾がない場合)
+- **いいえ** (一つでも矛盾がある場合)
+
+説明や理由は一切不要です。「はい」か「いいえ」の二文字だけで回答してください。`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const aiResponse = result.candidates[0].content.parts[0].text.trim();
+            console.log("事実確認AIの応答:", aiResponse); // デバッグ用にコンソールに応答を表示
+            return aiResponse.includes('はい'); // 応答に「はい」が含まれていればtrue
+        }
+        return false; // よく分からない応答の場合は、安全のためfalse（矛盾あり）と判断
+    } catch (error) {
+        console.error("事実確認AIの呼び出しに失敗しました:", error);
+        return false; // エラー時も安全のためfalseと判断
+    }
+}
+
+/**
      * 試合の勝者を処理する中心的関数。
      * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
      */
@@ -4766,54 +4877,105 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
 
       // --- AIコンテンツ生成のためのデータ準備 ---
 
-    // 1. チームの基本情報と詳細情報を取得する
+    // --- AIコンテンツ生成のためのデータ準備 ---
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
     const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
     const loserDetailedData = DETAILED_TEAM_DATA[loserName];
-
-     // 1. createHighlightsTextから「ハイライトの配列」と「選手名リスト」を受け取る
+    
+    // createHighlightsTextから「事実リストの配列」と「選手名リスト」を受け取る
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-
-    // 2. 受け取った「ハイライトの配列」を、ここで最終的な文字列に変換する
+    // 掲示板や記事で使うための、通常のハイライト文章も作成しておく
     const highlightsText = highlights.join('、');
 
-    // 3. 取得した全ての情報を、各AI関数に引数として渡して、並行して実行させる
+    // --- AIコンテンツ生成の実行 ---
     const [article, newComments] = await Promise.all([
-        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames),
-        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText)
+        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames), // 記事生成には「事実リストの配列」を渡す
+        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText) // 掲示板には従来の文章を渡す
     ]);
 
-    // 4. AIからの返答を画面に表示する
-    if (article) tournamentState.news.push(article);
-    if (newComments?.length) tournamentState.bbsComments.push(...newComments);
+    // --- 結果の処理 ---
 
-    renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments);
-// ★★★ このブロックを関数の最後に追加 ★★★
+    // 掲示板コメントは先に表示・保存
+    if (newComments?.length) {
+        tournamentState.bbsComments.push(...newComments);
+        renderBbsComments(tournamentState.bbsComments);
+    }
+    
+    // ▼▼▼ ここからが「事実確認」の新しいロジック ▼▼▼
+    if (article) {
+        // ユーザーに「事実確認中」であることを知らせるメッセージを表示
+        newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認（ファクトチェック）を実行中...</div>`;
+
+        // 事実確認AIを呼び出し、記事と元の「事実リスト」を比較させる
+        const isVerified = await factCheckArticle(article, highlights);
+
+        if (isVerified) {
+            // 確認が取れたら（矛盾なし）、レビューモーダルを表示
+            showArticleReviewModal(article);
+        } else {
+            // もし矛盾が見つかったら、エラーとして表示し、再生成を促す
+            const errorArticle = {
+                title: "記事生成エラー（事実矛盾の可能性）",
+                body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。内容を確認し、再生成を試みてください。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: matchId, 
+                context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData }
+            };
+            tournamentState.news.push(errorArticle);
+            renderNews(tournamentState.news);
+        }
+    } else {
+        // そもそも記事生成に失敗した場合は、ニュース欄を更新
+        renderNews(tournamentState.news);
+    }
+    // ▲▲▲ ▲▲▲
+
     // 試合のスタメン情報を記録する
     if (dbMatch.details && dbMatch.details.batting) {
-        // 勝者チームのスタメンを記録
         const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
             tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey]
-                .filter(p => p.order && !p.order.includes('sub')) // 交代選手を除外
+                .filter(p => p.order && !p.order.includes('sub'))
                 .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
         }
-        // 敗者チームのスタメンを記録
-        const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
         const loserTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[loserName] && dbMatch.details.batting[loserTeamKey]) {
             tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey]
-                .filter(p => p.order && !p.order.includes('sub')) // 交代選手を除外
+                .filter(p => p.order && !p.order.includes('sub'))
                 .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
         }
     }
-    // ★★★ ここまで追加 ★★★
 
-        saveState();
-    }
-    /**
+    saveState();   
+
+} 
+// --- 編集モーダル用のグローバル変数 ---
+let articleForReview = null; // レビュー中の記事データを一時的に保持する
+
+/**
+ * AIが生成した記事を確認・編集するためのモーダルを表示する
+ * @param {object} article - AIが生成した記事オブジェクト
+ */
+function showArticleReviewModal(article) {
+    articleForReview = article; // 記事データを一時保存
+
+    document.getElementById('review-title').value = article.title;
+    document.getElementById('review-body').value = article.body.replace(/\\n/g, '\n');
+    
+    document.getElementById('review-modal').classList.remove('hidden');
+}
+
+/**
+ * 編集モーダルを閉じる
+ */
+function closeReviewModal() {
+    articleForReview = null;
+    document.getElementById('review-modal').classList.add('hidden');
+}
+
+ /**
      * アプリケーションの初期化処理
      */
     /**
@@ -5239,7 +5401,28 @@ document.body.addEventListener('submit', async (e) => {
     }
 });
 
-    document.body.addEventListener('input', (e) => {
+    // --- 編集モーダルの「この記事で確定」ボタン ---
+    document.getElementById('review-save-btn').addEventListener('click', () => {
+        if (articleForReview) {
+            // テキストボックスの現在の内容で記事データを更新
+            articleForReview.title = document.getElementById('review-title').value;
+            articleForReview.body = document.getElementById('review-body').value.replace(/\n/g, '\\n');
+            
+            // 更新した記事をニュースリストに追加
+            tournamentState.news.push(articleForReview);
+            renderNews(tournamentState.news);
+            saveState();
+            
+            closeReviewModal();
+        }
+    });
+
+    // --- 編集モーダルの「キャンセル」ボタン ---
+    document.getElementById('review-cancel-btn').addEventListener('click', () => {
+        closeReviewModal();
+    });
+
+document.body.addEventListener('input', (e) => {
         if (e.target.matches('.match-summary-input')) {
             const matchId = e.target.dataset.matchId;
             let match;
