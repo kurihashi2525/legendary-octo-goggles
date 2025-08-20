@@ -4846,26 +4846,30 @@ if (tournamentState.currentTournament === 'spring' && tournamentState.springPhas
         }
         // --- ここまで診断コード ---
 
-        const savedStateJSON = localStorage.getItem('tournamentState');
-        if (savedStateJSON) {
-            try {
-                const lastState = JSON.parse(savedStateJSON);
-                if (lastState && lastState.tournamentYear) {
-                    const confirmed = await showConfirm("前回の続きから再開しますか？\n（「いいえ」で最初から、または「合い言葉」で再開）");
-                    if (confirmed) {
-                        tournamentState = lastState;
-                        setupEl.classList.add('hidden');
-                        tournamentDisplayEl.classList.remove('hidden');
-                        renderTournament(tournamentState);
-                        return; 
-                    }
-                }
-            } catch (e) {
-                console.error("保存されたデータの読み込みに失敗:", e);
-                localStorage.removeItem('tournamentState'); 
-            }
-        }
         
+    const savedStateJSON = localStorage.getItem('tournamentState');
+    if (savedStateJSON) {
+        try {
+            const lastState = JSON.parse(savedStateJSON);
+            if (lastState && lastState.tournamentYear) {
+                const confirmed = await showConfirm("前回の続きから再開しますか？\n（「いいえ」で最初から、または「合い言葉」で再開）");
+                
+                if (confirmed) { // 「はい」が押された場合
+                    tournamentState = lastState;
+                    setupEl.classList.add('hidden');
+                    tournamentDisplayEl.classList.remove('hidden');
+                    renderTournament(tournamentState);
+                    return; 
+                } else { // ▼▼▼ 「いいえ」が押された場合の処理を追加 ▼▼▼
+                    // 古いセーブデータを完全に消去する
+                    localStorage.removeItem('tournamentState');
+                }
+            }
+        } catch (e) {
+            console.error("保存されたデータの読み込みに失敗:", e);
+            localStorage.removeItem('tournamentState'); 
+        }
+    }        
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
 　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
