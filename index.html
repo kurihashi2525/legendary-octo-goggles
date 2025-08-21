@@ -3573,21 +3573,21 @@ ${specialNarrativeContext}
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const rawText = result.candidates[0].content.parts[0].text;
-            const commentsJson = parseJsonFromText(rawText);
-            if (Array.isArray(commentsJson)) {
-                return commentsJson.map(c => ({
-                    id: crypto.randomUUID(),
-                    personality: c.personality,
-                    text: c.comment,
-                    timestamp: Date.now(),
-                    replies: []
-                }));
+            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            
+            // ▼▼▼ このチェックを強化 ▼▼▼
+            // articleが存在し、かつ、title と body の両方が存在する場合のみ成功とみなす
+            if (article && article.title && article.body) {
+                const isNewspaperWorthy = (dbMatch && dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
+                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
+                return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
             }
+            // ▲▲▲ ▲▲▲
         }
-        throw new Error("AIからの応答が予期した形式ではありません。");
+        // チェックを通過しなかった場合は、ここでエラーを投げる
+        throw new Error("AIからの応答が、タイトルと本文を含む正しい形式ではありません。");
     } catch (error) {
-        console.error("AI掲示板コメントの生成に失敗しました:", error);
+        console.error("AI記事の生成に失敗しました:", error);
         return [];
     }
 }
