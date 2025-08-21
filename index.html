@@ -1546,15 +1546,33 @@ function renderTournament(data) {
     }
 
     function renderBbsComments(comments) {
-        if (!comments || comments.length === 0) {
-            bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
-            return;
-        }
-        bbsCommentsContainer.innerHTML = '';
-        comments.slice().reverse().forEach(comment => {
-            renderCommentThread(comment, bbsCommentsContainer, 'general');
-        });
+    if (!comments || comments.length === 0) {
+        bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
+        return;
     }
+    bbsCommentsContainer.innerHTML = '';
+    
+    comments.slice().reverse().forEach((comment, index) => {
+        // ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
+        // Check if the comment object is an error message
+        if (comment.error) {
+            const errorEl = document.createElement('div');
+            errorEl.className = 'article-error'; // Reuse the article error style
+            // The original index is needed for the retry function
+            const originalIndex = comments.length - 1 - index;
+            errorEl.innerHTML = `
+                <span>${comment.title}</span>
+                <button class="retry-bbs-btn" data-index="${originalIndex}">再生成</button>
+            `;
+            bbsCommentsContainer.appendChild(errorEl);
+        } 
+        // ▲▲▲ ▲▲▲
+        else {
+            // If it's a normal comment, render it as before
+            renderCommentThread(comment, bbsCommentsContainer, 'general');
+        }
+    });
+}
 
     function renderDaiyaBbsComments(comments) {
         if (!comments || comments.length === 0) {
@@ -4825,16 +4843,31 @@ async function processMatchWin(matchId, winnerName) {
     }).join('、');
     // ▲▲▲ ▲▲▲
 
+    // --- AIコンテンツ生成の実行 ---
     const [article, newComments] = await Promise.all([
         generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames),
         generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText)
     ]);
 
-    if (newComments?.length) {
+    // --- 結果の処理 ---
+
+    // まず、掲示板コメントを処理する
+    if (newComments && newComments.length > 0) {
+        // 新しいコメントをstateに追加する
         tournamentState.bbsComments.push(...newComments);
-        renderBbsComments(tournamentState.bbsComments);
+    } else if (dbMatch.winner) { // 試合が終わったのにコメントが生成されなかった場合
+        // 再生成ボタン付きのエラーメッセージをstateに追加する
+        tournamentState.bbsComments.push({
+            id: `error-${matchId}`,
+            error: true,
+            title: `掲示板コメント生成エラー`,
+            context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText }
+        });
     }
-    
+    // stateを更新してから、必ず一度画面を描画する
+    renderBbsComments(tournamentState.bbsComments);
+
+    // 次に、記事を処理する
     if (article) {
         newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認を実行中...</div>`;
         const isVerified = await factCheckArticle(article, highlights);
@@ -4842,8 +4875,11 @@ async function processMatchWin(matchId, winnerName) {
             showArticleReviewModal(article);
         } else {
             const errorArticle = {
-                title: "記事生成エラー（事実矛盾の可能性）", body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
-                timestamp: Date.now(), error: true, errorId: matchId, 
+                title: "記事生成エラー（事実矛盾の可能性）",
+                body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: matchId, 
                 context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData }
             };
             tournamentState.news.push(errorArticle);
@@ -4852,8 +4888,8 @@ async function processMatchWin(matchId, winnerName) {
     } else {
         renderNews(tournamentState.news);
     }
-    
-    // --- 5. 最終的なデータ保存 ---
+
+    // 試合のスタメン情報を記録する
     if (dbMatch.details && dbMatch.details.batting) {
         const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
@@ -5265,6 +5301,35 @@ else if (e.target.matches('.add-substitute-btn')) {
         saveState();
         renderNews(tournamentState.news);
     }
+
+// ▼▼▼ ADD THE NEW BLOCK HERE ▼▼▼
+    // --- BBS Comment Retry Button ---
+    else if (e.target.matches('.retry-bbs-btn')) {
+        const btn = e.target;
+        const index = parseInt(btn.dataset.index, 10);
+        const errorComment = tournamentState.bbsComments[index];
+        if (!errorComment || !errorComment.context) return;
+
+        btn.textContent = '生成中...';
+        btn.disabled = true;
+
+        const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText } = errorComment.context;
+        
+        const newComments = await generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
+
+        if (newComments && newComments.length > 0) {
+            tournamentState.bbsComments.splice(index, 1, ...newComments);
+        } else {
+            btn.textContent = '再生成';
+            btn.disabled = false;
+            alert('再生成に失敗しました。');
+        }
+        
+        renderBbsComments(tournamentState.bbsComments);
+        saveState();
+    }
+    // ▲▲▲ ▲▲▲
+
 });
     
    // ==========================================================
