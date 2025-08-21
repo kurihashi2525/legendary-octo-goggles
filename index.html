@@ -220,6 +220,14 @@
              </div>
              <div id="bbs-section" class="display-card">
                  <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
+<div class="mb-4 p-4 border rounded-lg bg-white">
+    <form id="main-comment-form">
+        <textarea id="main-comment-textarea" class="w-full p-2 border rounded" rows="2" placeholder="コメントを書き込む... (例: 今日の姫川はレベチだったわ！)" required></textarea>
+        <div class="text-right mt-2">
+            <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">投稿する</button>
+        </div>
+    </form>
+</div>
                  <div id="bbs-comments" class="space-y-3">
                      <p class="text-gray-500 text-center">まだ反応はありません。</p>
                  </div>
@@ -3890,7 +3898,61 @@ ${commentDirections}
         return [];
     }
 }
-    /**
+    
+/**
+ * Takes a user's comment and generates multiple AI fan replies to it.
+ */
+async function generateMultipleReplies(userCommentText) {
+    const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+今、「あなた」という名前のユーザーが、以下のコメントを投稿しました。
+
+**ユーザーのコメント:** 「${userCommentText}」
+
+このコメントに対して、以下の4人のキャラクターになりきって、それぞれ自然な返信をしてください。
+
+### 返信するキャラクター
+- 熱狂的なファン
+- 上から目線の解説者
+- アンチ
+- ライバル校のファン
+
+### 指示
+- ユーザーのコメント内容に直接言及し、会話が噛み合うようにしてください。
+- 各キャラクターの個性を強く反映した、リアルな返信を生成してください。
+
+### 出力形式
+必ず以下のJSON配列形式で出力してください。
+[
+    {"personality": "熱狂的なファン", "comment": "（コメント本文）"},
+    {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
+    {"personality": "アンチ", "comment": "（コメント本文）"},
+    {"personality": "ライバル校ファン", "comment": "（コメント本文）"}
+]`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                }));
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI multi-reply generation failed:", error);
+        return [];
+    }
+}
+
+/**
      * AIにナムコグループからのお知らせを生成させる
      */
     async function generateNamcoNews(state, type, matchData = null) {
@@ -5739,7 +5801,46 @@ document.body.addEventListener('submit', async (e) => {
     }
 });
 
-    // --- 編集モーダルの「この記事で確定」ボタン ---
+// --- When the main comment form is submitted ---
+    else if (e.target.matches('#main-comment-form')) {
+        e.preventDefault();
+        const textarea = document.getElementById('main-comment-textarea');
+        const userCommentText = textarea.value;
+        if (!userCommentText.trim()) return;
+
+        // Temporarily disable the form
+        textarea.disabled = true;
+        e.target.querySelector('button').disabled = true;
+        e.target.querySelector('button').textContent = 'AIが返信中...';
+
+        // Create the user's comment object
+        const userComment = {
+            id: crypto.randomUUID(),
+            personality: 'あなた',
+            text: userCommentText,
+            timestamp: Date.now(),
+            replies: []
+        };
+        
+        // Call the AI to get the replies
+        const aiReplies = await generateMultipleReplies(userCommentText);
+        
+        // Add the AI replies to the user's comment
+        userComment.replies = aiReplies;
+
+        // Add the entire new thread to the main comments list and re-render
+        tournamentState.bbsComments.push(userComment);
+        renderBbsComments(tournamentState.bbsComments);
+        saveState();
+
+        // Reset the form
+        textarea.value = '';
+        textarea.disabled = false;
+        e.target.querySelector('button').disabled = false;
+        e.target.querySelector('button').textContent = '投稿する';
+    }    
+
+// --- 編集モーダルの「この記事で確定」ボタン ---
     document.getElementById('review-save-btn').addEventListener('click', () => {
         if (articleForReview) {
             // テキストボックスの現在の内容で記事データを更新
