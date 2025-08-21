@@ -3587,26 +3587,37 @@ ${specialNarrativeContext}
 [ {"personality": "熱狂的な${winnerName}OB", "comment": "（コメント本文）"}, {"personality": "上から目線の解説者", "comment": "（コメント本文）"}, {"personality": "アンチ", "comment": "（コメント本文）"}, {"personality": "ライバル校ファン", "comment": "（コメント本文）"}, {"personality": "野球好き", "comment": "（コメント本文）"} ]`;
     }
 
+     // --- AIへのリクエストと結果の処理 (★ここを修正★) ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
             
-            // ▼▼▼ このチェックを強化 ▼▼▼
-            // articleが存在し、かつ、title と body の両方が存在する場合のみ成功とみなす
-            if (article && article.title && article.body) {
-                const isNewspaperWorthy = (dbMatch && dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
-                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
-                return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
+            // ▼▼▼ チェックを「配列かどうか」に修正 ▼▼▼
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                }));
             }
             // ▲▲▲ ▲▲▲
         }
         // チェックを通過しなかった場合は、ここでエラーを投げる
-        throw new Error("AIからの応答が、タイトルと本文を含む正しい形式ではありません。");
+        throw new Error("AIからの応答が、正しい配列形式ではありません。");
     } catch (error) {
-        console.error("AI記事の生成に失敗しました:", error);
-        return [];
+        console.error("AI掲示板コメントの生成に失敗しました:", error);
+        // エラー時は、再生成ボタンで使えるように空配列ではなくエラーオブジェクトを返す
+        return [{
+            id: `error-${matchId}-bbs`,
+            error: true,
+            title: `掲示板コメント生成エラー`,
+            context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText }
+        }];
     }
 }
 /**
