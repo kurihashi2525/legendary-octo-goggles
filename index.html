@@ -5600,6 +5600,20 @@ else if (e.target.matches('.add-substitute-btn')) {
         }
     }
 
+ // ▼▼▼ 抜け落ちていたのは、このブロックです ▼▼▼
+    // --- 掲示板の「返信する」ボタン ---
+    const replyBtn = e.target.closest('.reply-btn');
+    if (replyBtn) {
+        e.preventDefault();
+        const commentId = replyBtn.dataset.commentId;
+        const formContainer = document.getElementById(`reply-form-container-${commentId}`);
+        if (formContainer) {
+            formContainer.classList.toggle('hidden');
+        }
+        return;
+    }
+    // ▲▲▲ ▲▲▲
+
 // --- AI記事の再生成ボタン ---
     else if (e.target.matches('.retry-btn')) {
         const btn = e.target;
