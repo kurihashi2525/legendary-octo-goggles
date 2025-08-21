@@ -1973,22 +1973,33 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     }
 
     // --- テーブル全体のHTMLを組み立てて返す ---
-    return `
-        <div class="overflow-x-auto">
-            <table class="details-table" id="batting-table-${teamKey}">
-                <thead>
-                    <tr>
-                        <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th><th class="w-16">出場</th>
-                        ${inningsHeader}
-                        <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
-                    </tr>
-                </thead>
-                <tbody>${bodyRows}</tbody>
-            </table>
-            <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
-        </div>
-    `;
-}
+    return `
+        <div class="overflow-x-auto">
+            <table class="details-table" id="batting-table-${teamKey}">
+                <thead>
+                    <tr>
+                        <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th><th class="w-16">出場</th>
+                        ${inningsHeader}
+                        <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
+                    </tr>
+                </thead>
+                <tbody>${bodyRows}</tbody>
+                
+                                <tfoot>
+                    <tr>
+                        <td colspan="5" class="text-right font-semibold pr-2 border-t-2">この回の主な出来事:</td>
+                        <td colspan="${numInnings + 1}" class="border-t-2">
+                            <input type="text" class="inning-events-input w-full text-left px-2"
+                                   data-team-key="${teamKey}"
+                                   placeholder="例：鈴木 盗塁、佐藤 盗塁死 など">
+                        </td>
+                    </tr>
+                </tfoot>
+                            </table>
+            <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
+        </div>
+    `;
+ }
     /**
      * 投手成績のテーブルHTMLを生成する
      */
@@ -2119,6 +2130,14 @@ function saveDetailedStats() {
                     });
                 }
             });
+        // ▼▼▼ このブロックが新しく追加されます ▼▼▼
+            // 「この回の主な出来事」入力欄の内容を読み取る
+            const eventsInput = battingTable.querySelector('.inning-events-input');
+            if (eventsInput) {
+                if (!details.inningEvents) details.inningEvents = {};
+                details.inningEvents[teamKey] = eventsInput.value;
+            }
+            // ▲▲▲ ここまで ▲▲▲
         }
 
         // 投手成績の処理
@@ -4647,6 +4666,52 @@ function createHighlightsText(dbMatch, winnerName) {
                     description: `エースの${acePlayer.name}を温存する采配を見せた`
                 });
                 // この采配は監督の功績なので、選手をキープレイヤーとして追加する必要はない
+            }
+        }
+    }
+
+ // --- 4. イニング全体の「主な出来事」を分析 (★ここが新しいロジック★) ---
+    for (const teamKey of ['team1', 'team2']) {
+        const teamName = dbMatch[teamKey];
+        // inningEventsは試合全体で一つのテキストとして保存されていると仮定
+        const eventsText = dbMatch.details.inningEvents?.[teamKey]; 
+        
+        if (!eventsText) continue;
+
+        // 「、」で区切られた複数のイベントに対応
+        const eventParts = eventsText.split('、').map(s => s.trim());
+        for (const event of eventParts) {
+            const parts = event.split(' ');
+            if (parts.length < 2) continue;
+
+            const playerName = parts[0];
+            const play = parts[1];
+
+            if (play === '盗塁' || play === '盗塁成功') {
+                highlights.push({
+                    type: 'baserunning_success',
+                    team: teamName,
+                    player: playerName,
+                    description: `俊足を生かして盗塁を成功させた`
+                });
+                keyPlayerNames.add(playerName);
+            }
+            else if (play === '盗塁死' || play === '盗塁失敗') {
+                const opponentTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
+                const opponentBatting = dbMatch.details.batting?.[opponentTeamKey] || [];
+                const opponentCatcher = opponentBatting.find(p => p.pos === '捕');
+
+                let description = `痛恨の盗塁失敗でチャンスを逸した`;
+                if (opponentCatcher && opponentCatcher.name) {
+                    description = `${opponentCatcher.name}捕手の好送球がチャンスの芽を摘んだ`;
+                    keyPlayerNames.add(opponentCatcher.name);
+                }
+                highlights.push({
+                    type: 'baserunning_out',
+                    team: teamName,
+                    player: playerName,
+                    description: description
+                });
             }
         }
     }
