@@ -148,8 +148,12 @@
                  <button id="generate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 shadow-md w-full md:w-auto">
                      新しいトーナメントを開始
                  </button>
+　　　　　　　　<button id="help-btn" class="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-600 shadow-md mt-4 w-full md:w-auto">
+    遊び方
+</button>
              </div>
         </div>
+
 
         <div id="tournament-display" class="hidden">
             <div id="autumn-regional-blocks-container" class="display-card hidden"></div>
@@ -311,6 +315,47 @@
         <div class="mt-6 text-center border-t pt-4">
             <button id="review-save-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">この記事で確定</button>
             <button id="review-cancel-btn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<div id="help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 遊び方説明書</h3>
+        <div class="overflow-y-auto space-y-6 flex-grow pr-4">
+            
+            <h4 class="font-bold text-lg text-blue-700">基本的な遊び方</h4>
+            <ol class="list-decimal list-inside space-y-2 text-sm">
+                <li><strong>トーナメント開始:</strong> 「新しいトーナメントを開始」ボタンを押すと、64チームがランダムに配置されたトーナメントが始まります。</li>
+                <li><strong>スコア入力:</strong> 各試合のチーム名の横にあるボックスに、最終スコアを入力します。</li>
+                <li><strong>勝者決定:</strong> スコアを入力したら、勝った方のチームの青い「▶」ボタンを押します。</li>
+                <li><strong>AIによる自動生成:</strong> 勝者が決まると、AIが自動で「ニュース記事」と「掲示板の反応」を生成し始めます。（「執筆中...」と表示されます）</li>
+                <li><strong>繰り返し:</strong> 全ての試合でこれを繰り返し、優勝チームを決定してください。「セーブ」ボタンでいつでも進行状況を「合い言葉」として保存できます。</li>
+            </ol>
+
+            <h4 class="font-bold text-lg text-green-700">発展：より深い物語を創るには</h4>
+            <p class="text-sm">
+                このシミュレーターの真の楽しさは、AIに詳細な試合データを与えることで、よりドラマチックな物語を生成させることにあります。
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-sm">
+                <li><strong>詳細入力:</strong> スコア入力だけでなく、「詳細入力」ボタンから各選手の成績を入力することで、AIがその試合で「誰が」活躍したかを認識します。</li>
+                <li><strong>イニングスコア:</strong> イニングごとのスコアを入力すると、AIは試合が「序盤に決まったのか」「終盤に逆転したのか」を理解し、試合展開をリアルに描写します。コールドゲームにも対応しています。</li>
+                <li><strong>選手交代:</strong> 交代選手を追加し、「出場」欄で「代打」「代走」「守備」などを選ぶと、AIは監督の采配の意図を記事に反映します。</li>
+                <li><strong>試合の決め手:</strong> トーナメント表のテキストエリアに「9回裏、エースの気迫の3者連続三振」のように「決め手」を入力すると、AIはその出来事を記事の**最優先テーマ**として扱います。</li>
+            </ul>
+
+            <h4 class="font-bold text-lg text-red-700">エラーの原因となりやすい行動</h4>
+            <p class="text-sm">
+                このシミュレーターは非常に複雑なため、特定の状況でエラーが起きることがあります。以下にご注意ください。
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-sm">
+                <li><strong>最重要：`TEAM_DATA`の変更後:</strong> あなたがコード内の`TEAM_DATA`（チームのマスターリスト）を編集（例：チーム名変更、チームの追加/削除）した場合は、**必ず「リセット」ボタンで古いセーブデータを完全に消去してから**「新しいトーナメントを開始」してください。これを怠ると、古いセーブデータと新しいコードの間で矛盾が生じ、エラーの原因となります。</li>
+                <li><strong>不完全なデータ入力:</strong> 詳細入力で、片方のチームの打撃成績を完全に空欄にすると、AIが情報を補完しようとして、ありえない試合展開（例：登板していない投手がリリーフする）を創作してしまうことがあります。完封負けのチームでも、各打席に「`-`」や「凡退」と入力することをお勧めします。</li>
+            </ul>
+
+        </div>
+        <div class="mt-6 text-center border-t pt-4">
+            <button id="help-modal-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
         </div>
     </div>
 </div>
@@ -5235,7 +5280,19 @@ function closeReviewModal() {
     document.getElementById('review-modal').classList.add('hidden');
 }
 
- /**
+// --- 遊び方説明書モーダルのイベントリスナー ---
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const helpModalClose = document.getElementById('help-modal-close');
+
+    helpBtn.addEventListener('click', () => {
+        helpModal.classList.remove('hidden');
+    });
+    helpModalClose.addEventListener('click', () => {
+        helpModal.classList.add('hidden');
+    }); 
+
+/**
      * アプリケーションの初期化処理
      */
     /**
