@@ -3247,6 +3247,8 @@ return;
     const loserRecord = tournamentState.teamRecords[loserName];
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
+　　const winnerJourney = getCurrentTournamentPerformance(winnerName);
+    const loserJourney = getCurrentTournamentPerformance(loserName);
     const winnerCoach = winnerData.coach;
     const loserCoach = loserData.coach;
     const battingFirstTeam = dbMatch.team1;
@@ -3397,10 +3399,12 @@ ${factListText}
 ### **参考情報：チームと選手のプロフィール**
 以下は、記事をより豊かにするための参考情報です。事実リストと矛盾しない範囲でのみ使用してください。
 - **${winnerName}**: ${winnerDynamicInfo}
+- **今大会の軌跡**: ${winnerJourney}
   - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
   - **主な選手プロフィール**:
 ${formatPlayerList(winnerKeyPlayers, winnerName, winnerDetailedData)}
 - **${loserName}**: ${loserDynamicInfo}
+ - **今大会の軌跡**: ${loserJourney}
   - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
   - **主な選手プロフィール**:
 ${formatPlayerList(loserKeyPlayers, loserName, loserDetailedData)}
@@ -3413,6 +3417,7 @@ ${formatPlayerList(loserKeyPlayers, loserName, loserDetailedData)}
 4.  **【厳重注意】**: 「参考情報」に書かれている選手の前評判（例：「リードオフマン」）と、「事実リスト」に書かれている実際の打順や結果が異なる場合は、**必ず「事実リスト」を優先**してください。
 - **監督の采配**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
 - **インタビューコメント**: 試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
+ **物語の連続性**: 「今大会の軌跡」情報を参考に、「1回戦で好投した投手が今日も先発」といった、これまでの戦いと繋がりのある物語を描写すること。初戦の場合やデータのない場合は別に無理に書く必要はない。
 ---
 ### **ステップ4：出力形式**
 【最重要】必ず以下のJSON形式"のみ"で出力すること。
@@ -4445,6 +4450,31 @@ function createHighlightsText(dbMatch, winnerName) {
             const teamBatting = dbMatch.details.batting?.[teamKey] || [];
             
             teamBatting.forEach(player => {
+　　　　　　　　if (!player.name) return;
+
+// ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
+                // In the first inning (i === 0), check the starters
+                if (i === 0 && player.order && !player.order.includes('sub')) {
+                    const playerNumber = parseInt(player.number);
+                    const playerOrder = parseInt(player.order);
+                    const teamRecord = tournamentState.teamRecords[teamName];
+                    
+                    const gamesPlayed = teamRecord?.playerStats?.batting[player.name]?.games || 0;
+
+                    // Condition: First game, double-digit number, and key batting order (1,3,4,5)
+                    if (gamesPlayed === 0 && playerNumber >= 10 && [1, 3, 4, 5].includes(playerOrder)) {
+                        highlights.push({
+                            type: 'surprise_starter',
+                            inning: 1,
+                            team: teamName,
+                            player: player.name,
+                            description: `背番号${playerNumber}の${player.name}が${playerOrder}番に大抜擢された`
+                        });
+                        keyPlayerNames.add(player.name);
+                    }
+                }
+                // ▲▲▲ ▲▲▲
+
                 const result = player.results?.[i];
                 if (!result || !player.name) return;
                 
@@ -4587,7 +4617,110 @@ function createHighlightsText(dbMatch, winnerName) {
     
     return { highlights: highlights, keyPlayerNames: Array.from(keyPlayerNames) };
 }
+    /**
+ * 特定チームの、今大会におけるここまでの戦績を要約する
+ * @param {string} teamName - チーム名
+ * @returns {string} - AIプロンプト用の要約テキスト
+ */
+/**
+ * 特定チームの、今大会におけるここまでの戦績を要約する
+ * (★本塁打や猛打賞も記憶する最終版)
+ */
+/**
+ * 特定チームの、今大会におけるここまでの戦績を要約する
+ * (★選手の打率を評価し「好調・不調」を記憶する最終版)
+ */
+function getCurrentTournamentPerformance(teamName) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord) return "今大会初戦。";
+
+    const path = [];
+    const keyPerformances = new Set(); 
+
+    // --- 勝ち上がりの道のりを記録 ---
+    for (const matchId in tournamentState.matches) {
+        const match = tournamentState.matches[matchId];
+        if (match.winner === teamName) {
+            const opponent = match.team1 === teamName ? match.team2 : team_name2;
+            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
+            path.push(`${roundNum}回戦 vs ${opponent}`);
+        }
+    }
+
+    // --- ▼▼▼ ここからが個人の活躍を多角的に分析するロジック ▼▼▼ ---
+    const playerBattingStats = teamRecord.playerStats?.batting || {};
+    for (const playerName in playerBattingStats) {
+        const stats = playerBattingStats[playerName];
+        
+        // --- 打率に基づく「好調・不調」の評価 ---
+        // 一定数以上の打数がある選手のみを評価対象とする（例：5打数以上）
+        if (stats.ab >= 5) {
+            const battingAverage = stats.h / stats.ab;
+            if (battingAverage >= 0.4) {
+                keyPerformances.add(`${playerName}が打率4割超えと絶好調`);
+            } else if (battingAverage <= 0.2) {
+                keyPerformances.add(`${playerName}が打率2割以下と不振`);
+            }
+        }
+    }
+
+    // --- 試合ごとのハイライト（本塁打、猛打賞など）の評価 ---
+    for (const matchId in tournamentState.matches) {
+        const match = tournamentState.matches[matchId];
+        if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+            if (match.details) {
+                const teamKey = match.team1 === teamName ? 'team1' : 'team2';
+                const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
+                
+                // 投手の好投
+                const pitchers = match.details.pitching?.[teamKey] || [];
+                pitchers.forEach(p => {
+                    if (p.name && p.result === 'W' && parseFloat(p.innings) >= 6) {
+                        keyPerformances.add(`${p.name}が${roundNum}回戦で好投`);
+                    }
+                });
+
+                // 打者の活躍
+                const batters = match.details.batting?.[teamKey] || [];
+                batters.forEach(p => {
+                    if (!p.name || !p.results) return;
+                    let hitCount = 0;
+                    p.results.forEach(inningResult => {
+                        if (!inningResult) return;
+                        const atBats = inningResult.split('、');
+                        atBats.forEach(res => {
+                            if (res.includes('本') || res.toLowerCase().includes('hr')) {
+                                keyPerformances.add(`${p.name}が${roundNum}回戦で本塁打`);
+                            }
+                            if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) {
+                                hitCount++;
+                            }
+                        });
+                    });
+                    if (hitCount >= 3) {
+                        keyPerformances.add(`${p.name}が${roundNum}回戦で猛打賞`);
+                    }
+                });
+            }
+        }
+    }
+    // --- ▲▲▲ 分析ロジックここまで ▲▲▲ ---
     
+    let summary = "";
+    if (path.length > 0) {
+        summary += `ここまでの勝ち上がり: ${path.join(' → ')}。`;
+    } else {
+        return "今大会初戦。";
+    }
+
+    if (keyPerformances.size > 0) {
+        summary += `今大会の主な活躍: ${Array.from(keyPerformances).join('、')}。`;
+    }
+
+    return summary;
+}
+
+
 /**
  * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
  * @param {object} article - AI記者が生成した記事オブジェクト
