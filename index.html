@@ -4630,49 +4630,34 @@ function createHighlightsText(dbMatch, winnerName) {
  * 特定チームの、今大会におけるここまでの戦績を要約する
  * (★選手の打率を評価し「好調・不調」を記憶する最終版)
  */
+/**
+ * Creates a summary of a team's performance in the current tournament.
+ * (Corrected to fix the 'team_name2' typo)
+ */
 function getCurrentTournamentPerformance(teamName) {
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return "今大会初戦。";
 
     const path = [];
-    const keyPerformances = new Set(); 
+    const keyPerformances = new Set();
 
-    // --- 勝ち上がりの道のりを記録 ---
     for (const matchId in tournamentState.matches) {
         const match = tournamentState.matches[matchId];
-        if (match.winner === teamName) {
-            const opponent = match.team1 === teamName ? match.team2 : team_name2;
-            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
-            path.push(`${roundNum}回戦 vs ${opponent}`);
-        }
-    }
-
-    // --- ▼▼▼ ここからが個人の活躍を多角的に分析するロジック ▼▼▼ ---
-    const playerBattingStats = teamRecord.playerStats?.batting || {};
-    for (const playerName in playerBattingStats) {
-        const stats = playerBattingStats[playerName];
         
-        // --- 打率に基づく「好調・不調」の評価 ---
-        // 一定数以上の打数がある選手のみを評価対象とする（例：5打数以上）
-        if (stats.ab >= 5) {
-            const battingAverage = stats.h / stats.ab;
-            if (battingAverage >= 0.4) {
-                keyPerformances.add(`${playerName}が打率4割超えと絶好調`);
-            } else if (battingAverage <= 0.2) {
-                keyPerformances.add(`${playerName}が打率2割以下と不振`);
-            }
-        }
-    }
-
-    // --- 試合ごとのハイライト（本塁打、猛打賞など）の評価 ---
-    for (const matchId in tournamentState.matches) {
-        const match = tournamentState.matches[matchId];
         if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+            // ▼▼▼ THIS IS THE CORRECTED LINE ▼▼▼
+            const opponent = match.team1 === teamName ? match.team2 : match.team1;
+            // ▲▲▲ ▲▲▲
+            
+            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
+            
+            if (match.winner === teamName) {
+                path.push(`${roundNum}回戦 vs ${opponent}`);
+            }
+
             if (match.details) {
                 const teamKey = match.team1 === teamName ? 'team1' : 'team2';
-                const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
                 
-                // 投手の好投
                 const pitchers = match.details.pitching?.[teamKey] || [];
                 pitchers.forEach(p => {
                     if (p.name && p.result === 'W' && parseFloat(p.innings) >= 6) {
@@ -4680,7 +4665,6 @@ function getCurrentTournamentPerformance(teamName) {
                     }
                 });
 
-                // 打者の活躍
                 const batters = match.details.batting?.[teamKey] || [];
                 batters.forEach(p => {
                     if (!p.name || !p.results) return;
@@ -4704,7 +4688,6 @@ function getCurrentTournamentPerformance(teamName) {
             }
         }
     }
-    // --- ▲▲▲ 分析ロジックここまで ▲▲▲ ---
     
     let summary = "";
     if (path.length > 0) {
@@ -4717,9 +4700,22 @@ function getCurrentTournamentPerformance(teamName) {
         summary += `今大会の主な活躍: ${Array.from(keyPerformances).join('、')}。`;
     }
 
+    // Also include batting average analysis
+    const playerBattingStats = teamRecord.playerStats?.batting || {};
+    for (const playerName in playerBattingStats) {
+        const stats = playerBattingStats[playerName];
+        if (stats.ab >= 5) {
+            const battingAverage = stats.h / stats.ab;
+            if (battingAverage >= 0.4) {
+                keyPerformances.add(`${playerName}が打率4割超えと絶好調`);
+            } else if (battingAverage <= 0.2) {
+                keyPerformances.add(`${playerName}が打率2割以下と不振`);
+            }
+        }
+    }
+
     return summary;
 }
-
 
 /**
  * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
