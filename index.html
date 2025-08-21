@@ -5745,7 +5745,8 @@ else if (e.target.matches('.add-substitute-btn')) {
 //  2.「送信」イベントを処理するリスナー (新設)
 // ==========================================================
 document.body.addEventListener('submit', async (e) => {
-    // --- When the BBS reply form is submitted ---
+    
+    // --- 掲示板の「返信フォーム」が送信された場合 ---
     if (e.target.matches('.reply-form')) {
         e.preventDefault();
         const form = e.target;
@@ -5756,64 +5757,42 @@ document.body.addEventListener('submit', async (e) => {
 
         if (!userReplyText.trim()) return;
 
-        // --- Add a loader to give feedback ---
         form.innerHTML = `<div class="loader text-xs">AIが返信を考えています...</div>`;
-
-        // --- Gather all necessary context for the AI ---
+        
         const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
         const parentComment = findCommentById(commentSource, parentCommentId);
-        const aiPersona = parentComment.personality; // Reply as the same character
-
-        // This is a simplified context for now; can be expanded later
-        const context = {
-            tournamentSummary: getTournamentStatusSummary()
-        };
+        const aiPersona = parentComment.personality;
+        const context = { tournamentSummary: getTournamentStatusSummary() };
         
-        // --- Call the AI to get a reply ---
-        const aiReply = await generateBbsReply(
-            parentCommentId,
-            userReplyText,
-            bbsType,
-            aiPersona,
-            context
-        );
+        const aiReply = await generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context);
 
         if (aiReply) {
-            // Find the parent comment again in the current state to add the reply
             const freshParentComment = findCommentById(commentSource, parentCommentId);
             if (freshParentComment) {
-                 if (!freshParentComment.replies) {
+                if (!freshParentComment.replies) {
                     freshParentComment.replies = [];
                 }
                 freshParentComment.replies.push(aiReply);
             }
-           
-            // Re-render the correct comment section
             if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
             else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
             saveState();
         } else {
-            // Restore the form if the AI fails
-            form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
-                            <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
+            form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea><button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
             alert("AIが返信を生成できませんでした。");
         }
-    }
-});
-
-// --- When the main comment form is submitted ---
+    } 
+    // --- メインのコメント投稿フォームが送信された場合 ---
     else if (e.target.matches('#main-comment-form')) {
         e.preventDefault();
         const textarea = document.getElementById('main-comment-textarea');
         const userCommentText = textarea.value;
         if (!userCommentText.trim()) return;
 
-        // Temporarily disable the form
         textarea.disabled = true;
         e.target.querySelector('button').disabled = true;
         e.target.querySelector('button').textContent = 'AIが返信中...';
 
-        // Create the user's comment object
         const userComment = {
             id: crypto.randomUUID(),
             personality: 'あなた',
@@ -5822,23 +5801,20 @@ document.body.addEventListener('submit', async (e) => {
             replies: []
         };
         
-        // Call the AI to get the replies
         const aiReplies = await generateMultipleReplies(userCommentText);
-        
-        // Add the AI replies to the user's comment
         userComment.replies = aiReplies;
 
-        // Add the entire new thread to the main comments list and re-render
         tournamentState.bbsComments.push(userComment);
         renderBbsComments(tournamentState.bbsComments);
         saveState();
 
-        // Reset the form
         textarea.value = '';
         textarea.disabled = false;
         e.target.querySelector('button').disabled = false;
         e.target.querySelector('button').textContent = '投稿する';
-    }    
+    }
+
+}); // ★★★ 閉じカッコ } の正しい位置はここです ★★★
 
 // --- 編集モーダルの「この記事で確定」ボタン ---
     document.getElementById('review-save-btn').addEventListener('click', () => {
