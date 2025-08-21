@@ -3525,6 +3525,7 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winn
 - 勝利チーム: ${winnerName} (${winnerData.region}・${winnerData.type}・${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserData.region}・${loserData.type}・${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+- **ユーザーが語る試合の決め手**: ${dbMatch.summary || '特になし'}
 ### 試合の主なハイライト
 - ${highlightsText || 'データなし'}
 ### チームの背景
@@ -3551,6 +3552,7 @@ ${specialNarrativeContext}
 - 勝利チーム: ${winnerName} (${winnerData.region}・${winnerData.type}・${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserData.region}・${loserData.type}・${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+- **ユーザーが語る試合の決め手**: ${dbMatch.summary || '特になし'}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
