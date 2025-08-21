@@ -4581,10 +4581,10 @@ function createHighlightsText(dbMatch, winnerName) {
 
         pitchingData.forEach((pitcher, index) => {
             if (!pitcher.name) return;
-            const innings = parseFloat(pitcher.innings) || 0;
-            const runs = parseInt(pitcher.runs);
-            const strikeouts = parseInt(pitcher.strikeouts) || 0;
-            const earnedRuns = parseInt(pitcher.earnedRuns);
+            const innings = parseFloat(pitcher.innings || 0);
+            const runs = parseInt(pitcher.runs || 0);
+            const strikeouts = parseInt(pitcher.strikeouts || 0);
+            const earnedRuns = parseInt(pitcher.earnedRuns || 0);
 
             if (pitcher.result === 'W' && runs === 0 && innings >= 7) {
                 highlights.push({ type: 'pitching_feat', team: teamName, player: pitcher.name, description: '圧巻の投球で完封勝利' });
@@ -4596,19 +4596,24 @@ function createHighlightsText(dbMatch, winnerName) {
 
             if (index === 0 && innings >= 6) {
                 if (!highlights.some(h => h.player === pitcher.name)) {
-                    let desc = `先発として${innings}回を力投`;
-                    if (pitcher.result === 'W') desc = `先発として${innings}回を粘投し勝利に貢献`;
-                    highlights.push({ type: 'pitching_workhorse', team: teamName, player: pitcher.name, description: desc });
+                    let description = `先発として${innings}回を力投`;
+                    if (pitcher.result === 'W') {
+                        description = `先発として${innings}回を粘投し勝利に貢献`;
+                    }
+                    highlights.push({ type: 'pitching_workhorse', team: teamName, player: pitcher.name, description: description });
                     keyPlayerNames.add(pitcher.name);
                 }
             }
             else if (index > 0) { 
                 if (!highlights.some(h => h.player === pitcher.name)) {
-                    let desc = '';
-                    if (pitcher.result === 'S') desc = '抑えとして試合を締めセーブを記録';
-                    else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) desc = `${innings}回を無失点に抑える好リリーフ`;
-                    if (desc) {
-                        highlights.push({ type: 'pitching_relief', team: teamName, player: pitcher.name, description: desc });
+                    let description = '';
+                    if (pitcher.result === 'S') {
+                        description = `抑えとして試合を締めセーブを記録`;
+                    } else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) {
+                        description = `${innings}回を無失点に抑える好リリーフ`;
+                    }
+                    if (description) {
+                        highlights.push({ type: 'pitching_relief', team: teamName, player: pitcher.name, description: description });
                         keyPlayerNames.add(pitcher.name);
                     }
                 }
