@@ -4808,8 +4808,20 @@ async function processMatchWin(matchId, winnerName) {
     // --- 4. AIコンテンツ生成と結果処理（改善版） ---
     const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
     const loserDetailedData = DETAILED_TEAM_DATA[loserName];
+    // 1. createHighlightsTextから「事実リストの配列」と「選手名リスト」を受け取る
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-    const highlightsText = highlights.join('、');
+
+    // ▼▼▼ ここが今回の重要な修正点 ▼▼▼
+    // 2. 「事実リストの配列」を、掲示板AIが読める「自然な文章」に変換する
+    const highlightsText = highlights.map(fact => {
+        let text = '';
+        if (fact.inning) text += `${fact.inning}回 `;
+        if (fact.team) text += `${fact.team} `;
+        if (fact.player) text += `${fact.player} `;
+        text += `: ${fact.description}`;
+        return text;
+    }).join('、');
+    // ▲▲▲ ▲▲▲
 
     const [article, newComments] = await Promise.all([
         generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames),
