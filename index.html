@@ -4444,6 +4444,70 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 // --- Match Processing & Event Listeners ---
 
 /**
+ * 延長イニングを全ての関連テーブルに追加する
+ */
+function addExtraInning() {
+    // --- 1. イニングスコアのテーブルを更新 ---
+    const scoreTable = document.getElementById('inning-score-table');
+    if (scoreTable) {
+        const headerRow = scoreTable.querySelector('thead tr');
+        // 現在の最終イニング番号を取得し、1を足す
+        const lastInningHeader = headerRow.children[headerRow.children.length - 3];
+        const newInningNum = parseInt(lastInningHeader.textContent) + 1;
+
+        // 新しいヘッダーを追加
+        const newTh = document.createElement('th');
+        newTh.className = 'w-10';
+        newTh.textContent = newInningNum;
+        headerRow.insertBefore(newTh, headerRow.children[headerRow.children.length - 2]);
+
+        // 各チームの行に新しい入力欄を追加
+        scoreTable.querySelectorAll('tbody tr').forEach(row => {
+            const newTd = document.createElement('td');
+            newTd.innerHTML = `<input type="text" value="">`;
+            row.insertBefore(newTd, row.children[row.children.length - 1]);
+        });
+    }
+
+    // --- 2. 両チームの打撃成績テーブルを更新 ---
+    for (const teamKey of ['team1', 'team2']) {
+        const battingTable = document.getElementById(`batting-table-${teamKey}`);
+        if (!battingTable) continue;
+
+        // ヘッダーを更新
+        const headerRow = battingTable.querySelector('thead tr');
+        const lastInningHeader = headerRow.lastElementChild.previousElementSibling;
+        const newInningNum = parseInt(lastInningHeader.textContent) + 1;
+        const newTh = document.createElement('th');
+        newTh.className = 'col-inning';
+        newTh.textContent = newInningNum;
+        headerRow.insertBefore(newTh, headerRow.lastElementChild);
+
+        // 全ての選手行（スタメン・交代）に新しい入力欄を追加
+        battingTable.querySelectorAll('tbody tr').forEach(row => {
+            const newTd = document.createElement('td');
+            newTd.innerHTML = `<input type="text" placeholder="-">`;
+            row.appendChild(newTd);
+        });
+
+        // イニング出来事入力欄のcolspanを更新し、新しい入力欄を追加
+        const tfoot = battingTable.querySelector('tfoot');
+        if (tfoot) {
+            const targetCell = tfoot.querySelector('td[colspan]');
+            const currentNumInnings = parseInt(targetCell.getAttribute('colspan')) - 1;
+            targetCell.setAttribute('colspan', currentNumInnings + 2);
+
+            const newEventTd = document.createElement('td');
+            newEventTd.className = 'border-t-2';
+            newEventTd.innerHTML = `<input type="text" class="inning-events-input w-full text-left px-1 text-xs" data-team-key="${teamKey}" data-inning-index="${newInningNum - 1}" placeholder="例: 鈴木 盗塁">`;
+            
+            const eventRow = tfoot.querySelector('tr');
+            eventRow.insertBefore(newEventTd, eventRow.lastElementChild);
+        }
+    }
+}
+
+/**
  * 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す最終版
  */
 function createHighlightsText(dbMatch, winnerName) {
@@ -5354,23 +5418,10 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 【詳細モーダル内】イニング追加ボタン ---
-    else if (e.target.matches('.add-inning-btn')) {
+ // --- 【詳細モーダル内】イニング追加ボタン（全てのテーブルに共通） ---
+    else if (e.target.matches('.add-inning-btn') || e.target.matches('#add-inning-score-btn')) {
         e.preventDefault();
-        const teamKey = e.target.dataset.teamKey;
-        const table = document.getElementById(`batting-table-${teamKey}`);
-        if (!table) return;
-        const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 6; // 打順,#,選手,守備,出場,+ボタンを除外
-        const newTh = document.createElement('th');
-        newTh.className = 'col-inning';
-        newTh.textContent = newInningNum;
-        headerRow.insertBefore(newTh, headerRow.lastElementChild);
-
-        table.querySelectorAll('tbody tr').forEach(row => {
-            const newTd = document.createElement('td');
-            newTd.innerHTML = `<input type="text" placeholder="-">`;
-            row.appendChild(newTd);
-        });
+        addExtraInning(); // 新しい司令塔関数を呼び出すだけ
     }
     
    // ★★★ このブロックを丸ごと置き換えてください ★★★
@@ -5459,21 +5510,7 @@ else if (e.target.matches('.add-substitute-btn')) {
 
     // ★★★ ここまで追加 ★★★
  // ★★★ ここが「+」ボタンの処理です ★★★
-    else if (e.target.matches('#add-inning-score-btn')) {
-        e.preventDefault();
-        const table = document.getElementById('inning-score-table');
-        if (!table) return;
-        const headerRow = table.querySelector('thead tr');
-        const newInningNum = headerRow.children.length - 2; // チーム,計,+を除く
-        const newTh = document.createElement('th');
-        newTh.textContent = newInningNum;
-        headerRow.insertBefore(newTh, headerRow.children[headerRow.children.length - 2]);
-        table.querySelectorAll('tbody tr').forEach(row => {
-            const newTd = document.createElement('td');
-            newTd.innerHTML = `<input type="text" value="">`;
-            row.insertBefore(newTd, row.lastElementChild);
-        });
-    }
+   
     
     // --- チーム名クリック（ステータス表示） ---
     else if (e.target.matches('.clickable-team-name')) {
