@@ -5231,16 +5231,7 @@ else if (e.target.matches('.add-substitute-btn')) {
         }
     }
 
- // --- 掲示板の「返信する」ボタン ---
-    else if (e.target.matches('.reply-btn')) {
-        e.preventDefault();
-        const commentId = e.target.dataset.commentId;
-        const formContainer = document.getElementById(`reply-form-container-${commentId}`);
-        if (formContainer) {
-            formContainer.classList.toggle('hidden');
-        }
-    }
-    // --- AI記事の再生成ボタン ---
+// --- AI記事の再生成ボタン ---
     else if (e.target.matches('.retry-btn')) {
         const btn = e.target;
         const errorId = btn.dataset.errorId;
@@ -5252,32 +5243,25 @@ else if (e.target.matches('.add-substitute-btn')) {
 
         const errorContext = tournamentState.news[articleIndex].context;
         
-        // ▼▼▼ This is the crucial fix ▼▼▼
-        // Re-gather all necessary data, just like in processMatchWin
-        const { winnerName, loserName, dbMatch, matchId } = errorContext;
-        const winnerData = TEAM_DATA[winnerName];
-        const loserData = TEAM_DATA[loserName];
-        const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
-        const loserDetailedData = DETAILED_TEAM_DATA[loserName];
+        const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = errorContext;
         const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-        const highlightsText = highlights.join('、');
         
-        // Call the function with the COMPLETE set of arguments
         const newArticle = await generateNewsArticle(
-            winnerName,
-            loserName,
-            dbMatch,
-            matchId,
-            winnerData,
-            loserData,
-            winnerDetailedData,
-            loserDetailedData,
-            highlights, // Pass the fact list array
-            keyPlayerNames
+            winnerName, loserName, dbMatch, matchId,
+            winnerData, loserData, winnerDetailedData, loserDetailedData,
+            highlights, keyPlayerNames
         );
+
+        // ▼▼▼ THIS IS THE CRITICAL FIX ▼▼▼
+        // After retrying, strictly check the result again
+        if (newArticle && newArticle.title && newArticle.body && !newArticle.error) {
+            tournamentState.news[articleIndex] = newArticle;
+        } else {
+            // If the retry also fails or returns incomplete data, keep it as an error
+            tournamentState.news[articleIndex].body = "再生成に失敗しました。AIの応答が不安定なようです。";
+        }
         // ▲▲▲ ▲▲▲
 
-        tournamentState.news[articleIndex] = newArticle;
         saveState();
         renderNews(tournamentState.news);
     }
