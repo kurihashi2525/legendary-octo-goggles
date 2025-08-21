@@ -3247,8 +3247,8 @@ return;
     const loserRecord = tournamentState.teamRecords[loserName];
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
-　　const winnerJourney = getCurrentTournamentPerformance(winnerName);
-    const loserJourney = getCurrentTournamentPerformance(loserName);
+　　const winnerJourney = getCurrentTournamentPerformance(winnerName, matchId);
+    const loserJourney = getCurrentTournamentPerformance(loserName, matchId);
     const winnerCoach = winnerData.coach;
     const loserCoach = loserData.coach;
     const battingFirstTeam = dbMatch.team1;
@@ -4452,29 +4452,40 @@ function createHighlightsText(dbMatch, winnerName) {
             teamBatting.forEach(player => {
 　　　　　　　　if (!player.name) return;
 
-// ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
-                // In the first inning (i === 0), check the starters
+// ▼▼▼ 「大抜擢」検知ロジックを拡張 ▼▼▼
                 if (i === 0 && player.order && !player.order.includes('sub')) {
                     const playerNumber = parseInt(player.number);
                     const playerOrder = parseInt(player.order);
                     const teamRecord = tournamentState.teamRecords[teamName];
                     
-                    const gamesPlayed = teamRecord?.playerStats?.batting[player.name]?.games || 0;
+                    const isKeyBattingOrder = [1, 3, 4, 5].includes(playerOrder);
+                    
+                    if (teamRecord && isKeyBattingOrder && playerNumber >= 10) {
+                        const isFirstGame = (teamRecord.wins || 0) === 0 && (teamRecord.losses || 0) === 0;
+                        
+                        let isSurpriseStarter = false;
+                        if (isFirstGame) {
+                            // チームの初戦なら、シンプルに抜擢と判断
+                            isSurpriseStarter = true;
+                        } else {
+                            // 2回戦以降なら、前の試合のスタメンにいたかチェック
+                            const wasPreviouslyStarter = teamRecord.previousStarters?.some(p => p.name === player.name);
+                            if (!wasPreviouslyStarter) {
+                                isSurpriseStarter = true;
+                            }
+                        }
 
-                    // Condition: First game, double-digit number, and key batting order (1,3,4,5)
-                    if (gamesPlayed === 0 && playerNumber >= 10 && [1, 3, 4, 5].includes(playerOrder)) {
-                        highlights.push({
-                            type: 'surprise_starter',
-                            inning: 1,
-                            team: teamName,
-                            player: player.name,
-                            description: `背番号${playerNumber}の${player.name}が${playerOrder}番に大抜擢された`
-                        });
-                        keyPlayerNames.add(player.name);
+                        if (isSurpriseStarter) {
+                            highlights.push({
+                                type: 'surprise_starter',
+                                inning: 1, team: teamName, player: player.name,
+                                description: `背番号${playerNumber}の${player.name}が${playerOrder}番に大抜擢された`
+                            });
+                            keyPlayerNames.add(player.name);
+                        }
                     }
                 }
-                // ▲▲▲ ▲▲▲
-
+                // ▲▲▲ 拡張ロジックここまで ▲▲▲
                 const result = player.results?.[i];
                 if (!result || !player.name) return;
                 
@@ -4611,7 +4622,36 @@ function createHighlightsText(dbMatch, winnerName) {
         });
     }
 
-    if (highlights.length === 0) {
+        // ▼▼▼ ここからが「エース温存」を検知する新しいロジック ▼▼▼
+    // --- 4. 戦略的な采配（エース温存）を分析 ---
+    for (const teamKey of ['team1', 'team2']) {
+        const teamName = dbMatch[teamKey];
+        const teamBattingData = dbMatch.details.batting?.[teamKey] || [];
+        if (teamBattingData.length === 0) continue;
+
+        // チームの選手リストから背番号1の選手（エース）を探す
+        const acePlayer = teamBattingData.find(p => p.number === '1');
+        
+        // エースが見つかった場合のみ処理を続ける
+        if (acePlayer && acePlayer.name) {
+            const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
+            // エースがこの試合で登板したかを確認
+            const didAcePitch = pitchingData.some(p => p.name === acePlayer.name);
+
+            // もしエースが登板していなければ、ハイライトとして記録
+            if (!didAcePitch) {
+                highlights.push({
+                    type: 'strategy',
+                    team: teamName,
+                    player: acePlayer.name,
+                    description: `エースの${acePlayer.name}を温存する采配を見せた`
+                });
+                // この采配は監督の功績なので、選手をキープレイヤーとして追加する必要はない
+            }
+        }
+    }
+
+if (highlights.length === 0) {
         highlights.push({ type: 'info', description: '特に大きな動きはなし' });
     }
     
@@ -4640,10 +4680,16 @@ function getCurrentTournamentPerformance(teamName) {
 
     const path = [];
     const keyPerformances = new Set();
+const currentTournamentMatchIds = Object.keys(tournamentState.matches);
 
-    for (const matchId in tournamentState.matches) {
+    for (const matchId of currentTournamentMatchIds) {
+        // ▼▼▼ この一行が重要です ▼▼▼
+        // もし今分析している試合が、記事を書こうとしている試合（現在処理中の試合）と同じなら、
+        // 過去の成績ではないので、分析対象から除外（スキップ）します。
+        if (matchId === currentMatchId) continue;
+        // ▲▲▲ ▲▲▲
+
         const match = tournamentState.matches[matchId];
-        
         if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
             // ▼▼▼ THIS IS THE CORRECTED LINE ▼▼▼
             const opponent = match.team1 === teamName ? match.team2 : match.team1;
