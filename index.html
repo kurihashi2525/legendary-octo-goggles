@@ -220,6 +220,14 @@
              </div>
              <div id="bbs-section" class="display-card">
                  <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">掲示板の反応</h2>
+<div class="mb-4 p-4 border rounded-lg bg-white">
+    <form id="main-comment-form">
+        <textarea id="main-comment-textarea" class="w-full p-2 border rounded" rows="2" placeholder="コメントを書き込む... (例: 今日の姫川はレベチだったわ！)" required></textarea>
+        <div class="text-right mt-2">
+            <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">投稿する</button>
+        </div>
+    </form>
+</div>
                  <div id="bbs-comments" class="space-y-3">
                      <p class="text-gray-500 text-center">まだ反応はありません。</p>
                  </div>
@@ -3890,7 +3898,61 @@ ${commentDirections}
         return [];
     }
 }
-    /**
+    
+/**
+ * Takes a user's comment and generates multiple AI fan replies to it.
+ */
+async function generateMultipleReplies(userCommentText) {
+    const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+今、「あなた」という名前のユーザーが、以下のコメントを投稿しました。
+
+**ユーザーのコメント:** 「${userCommentText}」
+
+このコメントに対して、以下の4人のキャラクターになりきって、それぞれ自然な返信をしてください。
+
+### 返信するキャラクター
+- 熱狂的なファン
+- 上から目線の解説者
+- アンチ
+- ライバル校のファン
+
+### 指示
+- ユーザーのコメント内容に直接言及し、会話が噛み合うようにしてください。
+- 各キャラクターの個性を強く反映した、リアルな返信を生成してください。
+
+### 出力形式
+必ず以下のJSON配列形式で出力してください。
+[
+    {"personality": "熱狂的なファン", "comment": "（コメント本文）"},
+    {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
+    {"personality": "アンチ", "comment": "（コメント本文）"},
+    {"personality": "ライバル校ファン", "comment": "（コメント本文）"}
+]`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now(),
+                    replies: []
+                }));
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI multi-reply generation failed:", error);
+        return [];
+    }
+}
+
+/**
      * AIにナムコグループからのお知らせを生成させる
      */
     async function generateNamcoNews(state, type, matchData = null) {
@@ -4836,7 +4898,7 @@ function createHighlightsText(dbMatch, winnerName) {
  * Creates a summary of a team's performance in the current tournament.
  * (Corrected to fix the 'team_name2' typo)
  */
-function getCurrentTournamentPerformance(teamName) {
+function getCurrentTournamentPerformance(teamName, currentMatchId) {
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return "今大会初戦。";
 
@@ -5683,7 +5745,8 @@ else if (e.target.matches('.add-substitute-btn')) {
 //  2.「送信」イベントを処理するリスナー (新設)
 // ==========================================================
 document.body.addEventListener('submit', async (e) => {
-    // --- When the BBS reply form is submitted ---
+    
+    // --- 掲示板の「返信フォーム」が送信された場合 ---
     if (e.target.matches('.reply-form')) {
         e.preventDefault();
         const form = e.target;
@@ -5694,52 +5757,66 @@ document.body.addEventListener('submit', async (e) => {
 
         if (!userReplyText.trim()) return;
 
-        // --- Add a loader to give feedback ---
         form.innerHTML = `<div class="loader text-xs">AIが返信を考えています...</div>`;
-
-        // --- Gather all necessary context for the AI ---
+        
         const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
         const parentComment = findCommentById(commentSource, parentCommentId);
-        const aiPersona = parentComment.personality; // Reply as the same character
-
-        // This is a simplified context for now; can be expanded later
-        const context = {
-            tournamentSummary: getTournamentStatusSummary()
-        };
+        const aiPersona = parentComment.personality;
+        const context = { tournamentSummary: getTournamentStatusSummary() };
         
-        // --- Call the AI to get a reply ---
-        const aiReply = await generateBbsReply(
-            parentCommentId,
-            userReplyText,
-            bbsType,
-            aiPersona,
-            context
-        );
+        const aiReply = await generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context);
 
         if (aiReply) {
-            // Find the parent comment again in the current state to add the reply
             const freshParentComment = findCommentById(commentSource, parentCommentId);
             if (freshParentComment) {
-                 if (!freshParentComment.replies) {
+                if (!freshParentComment.replies) {
                     freshParentComment.replies = [];
                 }
                 freshParentComment.replies.push(aiReply);
             }
-           
-            // Re-render the correct comment section
             if (bbsType === 'general') renderBbsComments(tournamentState.bbsComments);
             else renderDaiyaBbsComments(tournamentState.daiyaBbsComments);
             saveState();
         } else {
-            // Restore the form if the AI fails
-            form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea>
-                            <button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
+            form.innerHTML = `<textarea class="w-full p-2 border rounded text-sm" placeholder="返信を入力..." required></textarea><button type="submit" class="mt-1 bg-blue-500 text-white px-3 py-1 text-xs rounded hover:bg-blue-600">送信</button>`;
             alert("AIが返信を生成できませんでした。");
         }
-    }
-});
+    } 
+    // --- メインのコメント投稿フォームが送信された場合 ---
+    else if (e.target.matches('#main-comment-form')) {
+        e.preventDefault();
+        const textarea = document.getElementById('main-comment-textarea');
+        const userCommentText = textarea.value;
+        if (!userCommentText.trim()) return;
 
-    // --- 編集モーダルの「この記事で確定」ボタン ---
+        textarea.disabled = true;
+        e.target.querySelector('button').disabled = true;
+        e.target.querySelector('button').textContent = 'AIが返信中...';
+
+        const userComment = {
+            id: crypto.randomUUID(),
+            personality: 'あなた',
+            text: userCommentText,
+            timestamp: Date.now(),
+            replies: []
+        };
+        
+        const aiReplies = await generateMultipleReplies(userCommentText);
+        userComment.replies = aiReplies;
+
+        tournamentState.bbsComments.push(userComment);
+        renderBbsComments(tournamentState.bbsComments);
+        saveState();
+
+        textarea.value = '';
+        textarea.disabled = false;
+        e.target.querySelector('button').disabled = false;
+        e.target.querySelector('button').textContent = '投稿する';
+    }
+
+}); // ★★★ 閉じカッコ } の正しい位置はここです ★★★
+
+// --- 編集モーダルの「この記事で確定」ボタン ---
     document.getElementById('review-save-btn').addEventListener('click', () => {
         if (articleForReview) {
             // テキストボックスの現在の内容で記事データを更新
