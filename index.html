@@ -2027,7 +2027,18 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
 
-    let inningsHeader = '';
+   // --- プルダウンの選択肢を事前に生成 ---
+    let numberOptions = '<option value=""></option>';
+    for (let i = 1; i <= 20; i++) {
+        numberOptions += `<option value="${i}">${i}</option>`;
+    }
+
+    const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右']
+        .map(p => `<option value="${p}">${p}</option>`).join('');
+
+
+
+ let inningsHeader = '';
     for (let i = 1; i <= numInnings; i++) {
         inningsHeader += `<th class="col-inning">${i}</th>`;
     }
@@ -2042,6 +2053,11 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         if (!starterData) {
             starterData = { order: i, number: '', name: '', pos: '', results: [] };
         }
+
+ // ▼▼▼ ここがテキストボックスからプルダウンへの変更箇所です ▼▼▼
+        const starterNumberSelect = `<select class="player-number w-full">${numberOptions.replace(`value="${starterData.number}"`, `value="${starterData.number}" selected`)}</select>`;
+        const starterPosSelect = `<select class="player-pos w-full"><option value=""></option>${posOptions.replace(`value="${starterData.pos}"`, `value="${starterData.pos}" selected`)}</select>`;
+        // ▲▲▲ ▲▲▲
 
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
@@ -2067,6 +2083,12 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         // 2. そのスタメン選手に対する「交代選手」がいれば、すぐ下の行に追加
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
+
+// ▼▼▼ 交代選手も同様にプルダウンに変更 ▼▼▼
+            const subNumberSelect = `<select class="player-number w-full">${numberOptions.replace(`value="${subData.number}"`, `value="${subData.number}" selected`)}</select>`;
+            const subPosSelect = `<select class="player-pos w-full"><option value=""></option>${posOptions.replace(`value="${subData.pos}"`, `value="${subData.pos}" selected`)}</select>`;
+            // ▲▲▲ ▲▲▲
+
             let subResultInputs = '';
             for (let j = 0; j < numInnings; j++) {
                 subResultInputs += `<td><input type="text" value="${subData.results[j] || ''}" placeholder="-"></td>`;
@@ -2253,7 +2275,13 @@ function saveDetailedStats() {
                             if (!res) return;
                             stats.pa++;
                             if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++;
-                            if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) stats.h++;
+                            // ▼▼▼ ここが安打判定の修正箇所です ▼▼▼
+                            const isHitWord = res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三');
+                            const isOutWord = res.includes('ゴロ') || res.includes('飛') || res.includes('振') || res.includes('併殺') || res.includes('直');
+                            if (isHitWord && !isOutWord) {
+                                stats.h++;
+                            }
+                            // ▲▲▲ ▲▲▲
                             if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++;
                             const rbiMatch = res.match(/(\d+)点/);
                             if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
