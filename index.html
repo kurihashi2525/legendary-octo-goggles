@@ -328,38 +328,101 @@
 </div>
 
 <div id="help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 遊び方説明書</h3>
-        <div class="overflow-y-auto space-y-6 flex-grow pr-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 取扱説明書</h3>
+        <div class="overflow-y-auto space-y-6 flex-grow pr-4 text-gray-700">
             
-            <h4 class="font-bold text-lg text-blue-700">基本的な遊び方</h4>
-            <ol class="list-decimal list-inside space-y-2 text-sm">
-                <li><strong>トーナメント開始:</strong> 「新しいトーナメントを開始」ボタンを押すと、64チームがランダムに配置されたトーナメントが始まります。</li>
-                <li><strong>スコア入力:</strong> 各試合のチーム名の横にあるボックスに、最終スコアを入力します。</li>
-                <li><strong>勝者決定:</strong> スコアを入力したら、勝った方のチームの青い「▶」ボタンを押します。</li>
-                <li><strong>AIによる自動生成:</strong> 勝者が決まると、AIが自動で「ニュース記事」と「掲示板の反応」を生成し始めます。（「執筆中...」と表示されます）</li>
-                <li><strong>繰り返し:</strong> 全ての試合でこれを繰り返し、優勝チームを決定してください。「セーブ」ボタンでいつでも進行状況を「合い言葉」として保存できます。</li>
-            </ol>
+            <div>
+                <h4 class="font-bold text-lg text-blue-700 mb-2">はじめに：このゲームの目的</h4>
+                <p class="text-sm">
+                    このシミュレーターの目的は、単にトーナメントを勝ち進めることだけではありません。あなたの采配や入力した試合内容によって、AIが自動でリアルな「ニュース記事」や「掲示板の反応」を生成します。あなただけの、唯一無二の高校野球の物語を創り上げ、その歴史の目撃者となることが、このゲームの醍醐味です。
+                </p>
+            </div>
 
-            <h4 class="font-bold text-lg text-green-700">発展：より深い物語を創るには</h4>
-            <p class="text-sm">
-                このシミュレーターの真の楽しさは、AIに詳細な試合データを与えることで、よりドラマチックな物語を生成させることにあります。
-            </p>
-            <ul class="list-disc list-inside space-y-2 text-sm">
-                <li><strong>詳細入力:</strong> スコア入力だけでなく、「詳細入力」ボタンから各選手の成績を入力することで、AIがその試合で「誰が」活躍したかを認識します。</li>
-                <li><strong>イニングスコア:</strong> イニングごとのスコアを入力すると、AIは試合が「序盤に決まったのか」「終盤に逆転したのか」を理解し、試合展開をリアルに描写します。コールドゲームにも対応しています。</li>
-                <li><strong>選手交代:</strong> 交代選手を追加し、「出場」欄で「代打」「代走」「守備」などを選ぶと、AIは監督の采配の意図を記事に反映します。</li>
-                <li><strong>試合の決め手:</strong> トーナメント表のテキストエリアに「9回裏、エースの気迫の3者連続三振」のように「決め手」を入力すると、AIはその出来事を記事の**最優先テーマ**として扱います。</li>
-            </ul>
+            <div>
+                <h4 class="font-bold text-lg text-blue-700 mb-2">基本的な遊び方</h4>
+                <ol class="list-decimal list-inside space-y-2 text-sm">
+                    <li><strong>トーナメント開始:</strong> 「新しいトーナメントを開始」でゲームを始めます。最初の大会は夏の県大会です。</li>
+                    <li><strong>スコア入力:</strong> トーナメント表の試合カードに、半角数字で最終スコアを入力します。</li>
+                    <li><strong>勝者決定:</strong> スコアを入力したら、勝った方のチームの青い「▶」ボタンを押します。</li>
+                    <li><strong>AIコンテンツ生成:</strong> 勝者が決まると、AIが自動で「ニュース記事」と「掲示板の反応」を生成します。</li>
+                    <li><strong>繰り返し:</strong> 全ての試合でこれを繰り返し、優勝チームを決定してください。「セーブ」ボタンでいつでも進行状況を「合い言葉」として保存できます。</li>
+                </ol>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-lg text-orange-700 mb-2">一年間の流れと各大会のルール</h4>
+                <p class="text-sm mb-3">
+                    この世界では、夏の大会が終わると新チームによる秋季大会、そして春季大会へと時間が流れます。それぞれの大会には独自のルールと目的があります。
+                </p>
+                <div class="space-y-4">
+                    <div class="p-4 border rounded-lg bg-gray-50">
+                        <h5 class="font-semibold text-gray-800">夏の大会 (メインイベント)</h5>
+                        <p class="text-sm text-gray-600">3年生にとって最後の大会。64校による一発勝負のトーナメントで、優勝校は夏の甲子園に出場したとみなされ、AIがその全国での戦績をシミュレートします。</p>
+                    </div>
 
-            <h4 class="font-bold text-lg text-red-700">エラーの原因となりやすい行動</h4>
-            <p class="text-sm">
-                このシミュレーターは非常に複雑なため、特定の状況でエラーが起きることがあります。以下にご注意ください。
-            </p>
-            <ul class="list-disc list-inside space-y-2 text-sm">
-                <li><strong>最重要：`TEAM_DATA`の変更後:</strong> あなたがコード内の`TEAM_DATA`（チームのマスターリスト）を編集（例：チーム名変更、チームの追加/削除）した場合は、**必ず「リセット」ボタンで古いセーブデータを完全に消去してから**「新しいトーナメントを開始」してください。これを怠ると、古いセーブデータと新しいコードの間で矛盾が生じ、エラーの原因となります。</li>
-                <li><strong>不完全なデータ入力:</strong> 詳細入力で、片方のチームの打撃成績を完全に空欄にすると、AIが情報を補完しようとして、ありえない試合展開（例：登板していない投手がリリーフする）を創作してしまうことがあります。完封負けのチームでも、各打席に「`-`」や「凡退」と入力することをお勧めします。</li>
-            </ul>
+                    <div class="p-4 border rounded-lg bg-gray-50">
+                        <h5 class="font-semibold text-gray-800">秋の大会 (新チームの始まりと、春への道)</h5>
+                        <p class="text-sm text-gray-600 mb-3">1,2年生の新チームで挑む最初の公式戦。この大会の最終成績が、次の春季大会のシード権を決定します。</p>
+                        <pre class="text-xs bg-white p-3 rounded-md border overflow-x-auto">
+秋季大会の流れ (東部・中部・西部地区)
+----------------------------------------------------------------
+[各地区20チーム] → [4ブロックに分割 (各5チーム)] → [ブロック予選]
+                                |
+                                |
+              +-----------------+-----------------+
+              | (各ブロック優勝4チーム)           | (各ブロック準優勝4チーム)
+              ↓                                 ↓
+[上位校トーナメント (1位-4位決定)]     [敗者復活トーナメント (5位決定)]
+              |                                 |
+              +-----------------+-----------------+
+                                |
+                                ↓
+                      [各地区代表5チームが県大会へ] → [計16チームによる県大会本戦]
+
+伊豆地区 (4チーム)
+-------------------
+[予選なし] → [直接、県大会本戦へ (1チーム)]
+                        </pre>
+                    </div>
+
+                    <div class="p-4 border rounded-lg bg-gray-50">
+                        <h5 class="font-semibold text-gray-800">春の大会 (夏のシード権をかけた戦い)</h5>
+                        <p class="text-sm text-gray-600 mb-3">夏の大会の前哨戦。この大会の結果が、夏の大会のシード校を決定します。</p>
+                        <pre class="text-xs bg-white p-3 rounded-md border overflow-x-auto">
+春季大会の流れ
+----------------------------------------------------------------
+[秋季大会ベスト8 (シード校)] → [県大会2回戦から登場]
+                                               |
+                                               +--> [ベスト16による本戦]
+                                               |
+[それ以外の全チーム] → [地区予選] → [予選突破16チーム] → [県大会1回戦]
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-lg text-green-700 mb-2">【重要】詳細入力：あなただけの物語を創る</h4>
+                <p class="text-sm mb-3">
+                    このシミュレーターの真価は「詳細入力」にあります。スコアだけでなく、試合内容を細かく入力することで、AIが生成する物語の解像度が劇的に向上します。
+                </p>
+                <ul class="list-disc list-inside space-y-2 text-sm bg-green-50 p-4 rounded-lg">
+                    <li><strong>イニングスコア:</strong> 試合展開をAIに教えます。「初回に大量得点した試合」と「9回に逆転した試合」では、生成される記事の物語が全く異なります。</li>
+                    <li><strong>個人成績:</strong> その試合の「ヒーロー」をAIに教えます。ここで入力された選手が、記事やハイライトの中心人物となります。</li>
+                    <li><strong>選手交代（出場）:</strong> ドロップダウンから「代打」「代走」「守備」を選ぶことで、監督の采配の意図をAIが理解します。</li>
+                    <li><strong>この回の主な出来事:</strong> 打席結果には現れないプレー（例：盗塁、盗塁死）を入力します。「鈴木 盗塁、佐藤 盗塁死」のように入力してください。</li>
+                    <li><strong>試合の決め手:</strong> トーナメント表のテキストエリアです。ここに「エース〇〇、気迫の150球完投勝利」のように入力すると、AIは他のどの情報よりもこれを**最優先**し、記事全体のテーマにします。</li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-lg text-red-700 mb-2">トラブルシューティング</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm">
+                    <li><strong>エラーでクラッシュする場合:</strong> ほとんどの原因は、ブラウザに保存されている古いセーブデータと、最新のコードの間に矛盾が生じていることです。コード内の`TEAM_DATA`を編集した後は、**必ず「リセット」ボタンで古いセーブデータを完全に消去してから**「新しいトーナメントを開始」してください。</li>
+                    <li><strong>AIの記事がおかしい/事実と違う:</strong> AIに渡す情報が不足しているか、AIが稀に混乱している可能性があります。まずは「確認・編集」画面で手修正をお試しください。それでも改善しない場合は、詳細入力でより多くの情報（特に敗者チームの打撃成績など）を与えてみてください。</li>
+                </ul>
+            </div>
 
         </div>
         <div class="mt-6 text-center border-t pt-4">
