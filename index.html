@@ -3057,6 +3057,37 @@ async function setupSpringMainTournament_Round2() {
 
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
+/**
+ * Finds a specific team's final result in the tournament.
+ */
+function getTeamFateSummary(teamName) {
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+
+    for (const matchId in allMatches) {
+        const match = allMatches[matchId];
+        if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+            if (match.winner !== teamName) {
+                const opponent = match.winner;
+                const score1 = match.team1 === teamName ? match.score1 : match.score2;
+                const score2 = match.team1 === teamName ? match.score2 : match.score1;
+                const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 1;
+                return `${roundNum}回戦で${opponent}に${score1}-${score2}で敗退した。`;
+            }
+        }
+    }
+    
+    // Check if the team is still in the tournament
+    const isStillIn = Object.values(allMatches).some(match => !match.winner && (match.team1 === teamName || match.team2 === teamName));
+    if(isStillIn) {
+        return "まだ勝ち残っている。";
+    }
+
+    return "（今大会には出場していないか、情報がありません）";
+}
    
 /**
  * チームの紹介文を動的に生成する最終進化版。
@@ -3902,33 +3933,84 @@ ${commentDirections}
 /**
  * Takes a user's comment and generates multiple AI fan replies to it.
  */
+/**
+ * Generates multiple AI fan replies to a user's top-level comment,
+ * using the same advanced logic as the in-thread reply function.
+ */
+/**
+ * ユーザーのコメント一つに対して、複数のAIファンからの返信を一度に生成する
+ * (★チームの敗退状況も認識する最終版)
+ */
 async function generateMultipleReplies(userCommentText) {
+    const conversationHistory = `あなた: 「${userCommentText}」`;
+
+    // --- AIに与える「知識」の部分を作成（完全版） ---
+    const mentionedTeams = new Set();
+    INITIAL_TEAM_POOL.forEach(team => {
+        if (userCommentText.includes(team)) {
+            mentionedTeams.add(team);
+        }
+    });
+
+    let teamInfoPromptPart = '';
+    if (mentionedTeams.size > 0) {
+        teamInfoPromptPart = '### 関連チームの情報\n';
+        mentionedTeams.forEach(teamName => {
+            const teamData = TEAM_DATA[teamName];
+            const teamRecord = tournamentState.teamRecords[teamName];
+            
+            // ① チームの動的な背景情報を取得
+            const dynamicInfo = generateDynamicTeamInfo(teamName, teamData, teamRecord);
+            // ② チームの今大会での具体的な運命を取得
+            const fate = getTeamFateSummary(teamName);
+            
+            // ①と②を組み合わせて表示
+            teamInfoPromptPart += `- **${teamName}**: ${dynamicInfo} (今大会の状況: ${fate})\n`;
+
+            // ③ そのチームの主要選手の個人成績を取得
+            const detailedData = DETAILED_TEAM_DATA[teamName];
+            if (detailedData && detailedData.players) {
+                teamInfoPromptPart += `  - 主な選手の今大会成績:\n`;
+                detailedData.players.slice(0, 3).forEach(player => {
+                    const statsSummary = getPlayerTournamentStatsSummary(player.name, teamName);
+                    if (statsSummary) {
+                        teamInfoPromptPart += `    - ${statsSummary}\n`;
+                    }
+                });
+            }
+        });
+    }
+
+    // --- プロンプト作成 ---
     const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-今、「あなた」という名前のユーザーが、以下のコメントを投稿しました。
+ユーザー「あなた」が投稿した以下のコメントに対し、4人の異なるキャラクターとして返信してください。
 
-**ユーザーのコメント:** 「${userCommentText}」
+### **ステップ1：ユーザーの投稿と大会状況を理解する**
+- **ユーザーのコメント**: 「${userCommentText}」
+- **現在の大会状況**: ${getTournamentStatusSummary()}
 
-このコメントに対して、以下の4人のキャラクターになりきって、それぞれ自然な返信をしてください。
+---
+### **ステップ2：関連情報を思い出す**
+${teamInfoPromptPart}
 
-### 返信するキャラクター
-- 熱狂的なファン
-- 上から目線の解説者
-- アンチ
-- ライバル校のファン
+---
+### **ステップ3：4人のキャラクターとして返信する**
+上記の情報を元に、以下の4人のキャラクターになりきって、ユーザーのコメントに対する自然な返信を生成してください。
+- **返信するキャラクター**: 熱狂的なファン, 上から目線の解説者, アンチ, ライバル校のファン
+- **指示**:
+  - 各キャラクターの返信は、必ずユーザーのコメント内容に直接関連していること。
+  - **【重要】**: ステップ2の「関連チームの情報」（背景、敗退状況、選手成績など）を根拠として、具体的なデータに触れながら会話を盛り上げること。
 
-### 指示
-- ユーザーのコメント内容に直接言及し、会話が噛み合うようにしてください。
-- 各キャラクターの個性を強く反映した、リアルな返信を生成してください。
-
-### 出力形式
-必ず以下のJSON配列形式で出力してください。
+---### **ステップ4：出力形式**
+【最重要】必ず以下のJSON配列形式"のみ"で出力すること。
 [
     {"personality": "熱狂的なファン", "comment": "（コメント本文）"},
     {"personality": "上から目線の解説者", "comment": "（コメント本文）"},
     {"personality": "アンチ", "comment": "（コメント本文）"},
-    {"personality": "ライバル校ファン", "comment": "（コメント本文）"}
+    {"personality": "ライバル校のファン", "comment": "（コメント本文）"}
 ]`;
-
+    
+    // --- 4. Call AI and Process Response ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -4204,19 +4286,20 @@ ${resultsText}
  * AIに掲示板の返信を生成させる（最終版）
  * 最新のデータ構造と、脱線防止を強化したプロンプトを使用する
  */
+/**
+ * AIに掲示板の返信を生成させる（最新の環境に適合した最終版）
+ */
 async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPersona, context) {
     const commentSource = bbsType === 'general' ? tournamentState.bbsComments : tournamentState.daiyaBbsComments;
     const parentComment = findCommentById(commentSource, parentCommentId);
     if (!parentComment) return null;
 
     // --- 1. AIに渡すための「文脈」を収集する ---
-    // 一時的なオブジェクトを使って、現在の会話履歴を正確に再現
     const userReplyObject = { id: 'temp_user_reply', personality: 'あなた', text: userReplyText, replies: [] };
     parentComment.replies.push(userReplyObject);
     const conversationHistory = formatConversationHistory(commentSource, 'temp_user_reply');
-    parentComment.replies.pop(); // 一時的なオブジェクトを削除
+    parentComment.replies.pop();
 
-    // 会話の中で言及されているチームをすべて洗い出す
     const mentionedTeams = new Set();
     conversationHistory.split('\n').forEach(line => {
         INITIAL_TEAM_POOL.forEach(team => {
@@ -4233,13 +4316,13 @@ async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPerso
         mentionedTeams.forEach(teamName => {
             const teamData = TEAM_DATA[teamName];
             const teamRecord = tournamentState.teamRecords[teamName];
-            // 最新のチーム紹介文を生成する「専属アナウンサー」関数を活用
+            // ★最新のアナウンサー関数を活用
             const dynamicInfo = generateDynamicTeamInfo(teamName, teamData, teamRecord);
             teamInfoPromptPart += `- **${teamName}**: ${dynamicInfo}\n`;
         });
     }
 
-    // --- 3. 最終的なプロンプトを組み立てる ---
+    // --- 3. 最終的なプロンプトを組み立てる（★脱線防止策を適用） ---
     const prompt = `あなたは、匿名掲示板のキャラクター「${aiPersona}」です。あなたは今、他のユーザーと日本の高校野球について会話しています。
 あなたの唯一の仕事は、会話の流れとあなたの知識に基づき、キャラクターになりきって自然な返信をすることです。野球以外の話題には絶対に触れないでください。
 ---
@@ -4248,20 +4331,16 @@ async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPerso
 ${conversationHistory}
 - **あなたのキャラクター**: ${aiPersona}
 - **現在の大会状況**: ${context.tournamentSummary}
-
 ---
 ### **ステップ2：関連情報を思い出す**
 ${teamInfoPromptPart}
-
 ---
 ### **ステップ3：返信する**
 上記のステップ1と2の情報を元に、会話の最後の発言「${userReplyText}」に対して、あなたのキャラクターとして最も自然で的を射た返信を生成してください。
-
 - **指示**:
   - 必ず相手の発言に直接応答することから始めること。
   - 応答の根拠として、ステップ2の「関連情報」を自然な形で会話に含めること。
   - 相手が話していない無関係なチームや試合の情報を一方的に解説しないこと。
-
 ---
 ### **ステップ4：出力形式**
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
@@ -4359,91 +4438,95 @@ ${teamInfoPromptPart}
     }
     
     /**
-     * AIプロンプト用に、チームのこれまでの勝ち上がり履歴を生成する
-     */
-    function getTournamentPath(teamName, startingMatchId) {
-        if (!teamName) return "（不明）";
-        const path = [];
-        
-        const idParts = startingMatchId.split('-');
-        if (idParts.length < 3) return '（地区予選突破）';
+ * Generates a team's tournament path history, compatible with all tournament types.
+ */
+function getTournamentPath(teamName, startingMatchId) {
+    if (!teamName) return "（不明）";
+    const path = [];
+    
+    // Combine all matches from all tournaments into one list
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
 
-        const startSide = idParts[0];
-        const startRoundStr = idParts[1];
-        if (!startSide || !startRoundStr || !startRoundStr.startsWith('R')) return '（地区予選突破）';
+    // Determine the current round number to analyze up to that point
+    const idParts = startingMatchId.split('-');
+    if (idParts.length < 3) return '（地区予選突破）'; // Not a main tournament match
+    let currentRoundNum = parseInt(idParts[1].slice(1));
 
-        let startRoundNum = parseInt(startRoundStr.slice(1));
+    // Loop from the first round up to the current round
+    for (let r = 1; r < currentRoundNum; r++) {
+        // Find the match the team won in that round
+        const matchInRound = Object.values(allMatches).find(match =>
+            match.id && 
+            match.id.includes(`-R${r}-`) && // Belongs to the correct round
+            match.winner === teamName
+        );
 
-        for (let r = 1; r < startRoundNum; r++) {
-            const matchInRound = Object.values(tournamentState.matches).find(match =>
-                match.id && match.id.startsWith(`${startSide}-R${r}-`) && match.winner === teamName
-            );
-
-            if (matchInRound) {
-                const opponent = matchInRound.team1 === teamName ? matchInRound.team2 : matchInRound.team1;
-                const winnerScore = matchInRound.team1 === teamName ? matchInRound.score1 : matchInRound.score2;
-                const loserScore = matchInRound.team1 === teamName ? matchInRound.score2 : matchInRound.score1;
-                path.push(`${r}回戦 vs ${opponent} (${winnerScore}-${loserScore})`);
-            }
+        if (matchInRound) {
+            const opponent = matchInRound.team1 === teamName ? matchInRound.team2 : matchInRound.team1;
+            const winnerScore = matchInRound.team1 === teamName ? matchInRound.score1 : matchInRound.score2;
+            const loserScore = matchInRound.team1 === teamName ? matchInRound.score2 : matchInRound.score1;
+            path.push(`${r}回戦 vs ${opponent} (${winnerScore}-${loserScore})`);
         }
-        return path.length > 0 ? path.join(' → ') : '（今大会初戦）';
     }
 
+    return path.length > 0 ? path.join(' → ') : '（今大会初戦）';
+}
     /**
      * AIプロンプト用に、チームの次の対戦相手情報を生成する
      */
-    function getNextOpponentInfoForPrompt(teamName) {
-        let latestMatchId = null;
-        let maxRound = 0;
+    /**
+ * Generates the next opponent info, compatible with all tournament structures.
+ */
+function getNextOpponentInfoForPrompt(teamName) {
+    // Combine all matches from all tournaments into one list
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
 
-        for (const [id, match] of Object.entries(tournamentState.matches)) {
-            if (match.team1 === teamName || match.team2 === teamName) {
-                const roundNum = id.startsWith('F-') ? (tournamentState.is16team ? 4 : 6) : parseInt(id.split('-')[1].slice(1));
-                if (roundNum > maxRound) {
-                    maxRound = roundNum;
-                    latestMatchId = id;
-                }
+    let latestMatch = null;
+    let maxRound = -1;
+
+    // Find the most recent game this team played in
+    for (const matchId in allMatches) {
+        const match = allMatches[matchId];
+        if (match.team1 === teamName || match.team2 === teamName) {
+            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
+            if (roundNum > maxRound) {
+                maxRound = roundNum;
+                latestMatch = match;
             }
         }
-        
-        if (!latestMatchId) return "（まだ試合なし）";
-
-        const latestMatch = tournamentState.matches[latestMatchId];
-        if (latestMatch.winner !== teamName) return "（この試合で敗退）";
-        
-        const finalRound = Math.log2(tournamentState.teams.length);
-        if (maxRound === finalRound) return "（優勝）";
-
-        const [side, roundStr, matchStr] = latestMatchId.split('-');
-        const roundNum = parseInt(roundStr.slice(1));
-        const matchNum = parseInt(matchStr.slice(1));
-
-        if (roundNum === finalRound -1) { // 準決勝
-             const otherSide = side === 'L' ? 'R' : 'L';
-             const otherSemiFinalId = `${otherSide}-R${roundNum}-M1`;
-             const otherSemiFinal = tournamentState.matches[otherSemiFinalId];
-             if (otherSemiFinal && otherSemiFinal.winner) {
-                 return `決勝の相手は${otherSemiFinal.winner}です。`;
-             }
-        }
-
-        const nextRoundNum = roundNum + 1;
-        const nextMatchNum = Math.ceil(matchNum / 2);
-        const nextMatchId = `${side}-R${nextRoundNum}-M${nextMatchNum}`;
-        
-        const nextMatch = tournamentState.matches[nextMatchId];
-        const otherOpponent = (matchNum % 2 !== 0) ? nextMatch?.team2 : nextMatch?.team1;
-        if(otherOpponent) return `次の対戦相手は${otherOpponent}です。`;
-
-        const otherFeederMatchNum = (matchNum % 2 !== 0) ? matchNum + 1 : matchNum - 1;
-        const otherFeederMatchId = `${side}-R${roundNum}-M${otherFeederMatchNum}`;
-        const otherMatch = tournamentState.matches[otherFeederMatchId];
-        if(otherMatch && otherMatch.team1 && otherMatch.team2) {
-            return `次の対戦相手は、${otherMatch.team1} vs ${otherMatch.team2} の勝者です。`;
-        }
-        return "（次の対戦相手は未定）";
     }
 
+    if (!latestMatch) return "（まだ試合なし）";
+    if (latestMatch.winner !== teamName) return "（この試合で敗退）";
+    
+    // Find the next game this team is in
+    for (const matchId in allMatches) {
+        const match = allMatches[matchId];
+        
+        // Look for a future game where this team is slotted but the opponent is not yet decided
+        if ((match.team1 === teamName && !match.team2) || (match.team2 === teamName && !match.tran1)) {
+             return "（次の対戦相手は未定）";
+        }
+        
+        // Look for a future game where the opponent is known
+        if (match.team1 === teamName && match.team2 && !match.winner) {
+             return `次の対戦相手は${match.team2}です。`;
+        }
+        if (match.team2 === teamName && match.team1 && !match.winner) {
+            return `次の対戦相手は${match.team1}です。`;
+        }
+    }
+
+    return "（優勝、または次のステージへ）";
+}
     /**
      * AIプロンプト用に、掲示板の会話履歴をフォーマットする
      */
@@ -4985,6 +5068,38 @@ const currentTournamentMatchIds = Object.keys(tournamentState.matches);
     }
 
     return summary;
+}
+
+/**
+ * 選手の大会通算成績を、AIプロンプト用の短い文章に要約する
+ * @param {string} playerName - 選手名
+ * @param {string} teamName - チーム名
+ * @returns {string | null} - "姫川: 打率.500, 3本塁打, 10打点" のような要約文。成績がなければnull。
+ */
+function getPlayerTournamentStatsSummary(playerName, teamName) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord || !teamRecord.playerStats) return null;
+
+    const battingStats = teamRecord.playerStats.batting[playerName];
+    const pitchingStats = teamRecord.playerStats.pitching[playerName];
+    
+    let summaries = [];
+
+    if (battingStats && battingStats.ab > 0) {
+        const avg = (battingStats.h / battingStats.ab).toFixed(3);
+        summaries.push(`打率${avg}, ${battingStats.hr}本塁打, ${battingStats.rbi}打点`);
+    }
+
+    if (pitchingStats && pitchingStats.ip > 0) {
+        const era = pitchingStats.er > 0 ? ((pitchingStats.er * 9) / pitchingStats.ip).toFixed(2) : "0.00";
+        summaries.push(`${pitchingStats.w}勝${pitchingStats.l}敗, 防御率${era}, ${pitchingStats.so}奪三振`);
+    }
+
+    if (summaries.length > 0) {
+        return `${playerName}: ${summaries.join(' / ')}`;
+    }
+    
+    return null;
 }
 
 /**
