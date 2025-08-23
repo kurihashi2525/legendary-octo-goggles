@@ -814,15 +814,26 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
 /**
  * スコアボードの合計点を更新する
  */
+/**
+ * スコアボードの合計点を更新する（★行特定ロジックを修正した最終版）
+ */
 function updateTotalScores() {
     const table = document.getElementById('inning-score-table');
     if(!table) return;
+
     table.querySelectorAll('tbody tr').forEach(row => {
+        const teamNameCell = row.querySelector('th'); // <td>ではなく<th>を探す
+        if (!teamNameCell) return;
+
         const total = Array.from(row.querySelectorAll('input')).reduce((sum, input) => {
             const value = parseInt(input.value);
-            return isNaN(value) ? sum : sum + value; // 数字でない場合は無視
+            return isNaN(value) ? sum : sum + value;
         }, 0);
-        row.querySelector('.total-score').textContent = total;
+        
+        const totalCell = row.querySelector('.total-score');
+        if (totalCell) {
+            totalCell.textContent = total;
+        }
     });
 }
 /**
@@ -2200,87 +2211,72 @@ function saveDetailedStats() {
                     const numberSelect = row.querySelector('.player-number');
                     const posSelect = row.querySelector('.player-pos');
                     const subTypeSelect = row.querySelector('.sub-type-select');
-
-                    // ▼▼▼ ここからが新しいロジックです ▼▼▼
-                    // 各イニングの<td>から、3つのプルダウンを探す
+                    
                     const resultCells = Array.from(row.querySelectorAll('td')).filter(td => td.querySelector('.batting-result-container'));
                     const results = resultCells.map(cell => {
                         const resultType = cell.querySelector('.result-type').value;
                         const direction = cell.querySelector('.result-direction').value;
                         const rbi = cell.querySelector('.result-rbi').value;
-
-                        // 3つの値を、意味のある文字列に結合する (空の値は無視)
-                        // 例: "中" + "安" + "1点" → "中安1点"
                         return [direction, resultType, rbi].filter(Boolean).join('');
                     });
-                    // ▲▲▲ ▲▲▲
 
                     const playerData = {
-                        order: row.dataset.order,
-                        number: numberSelect.value, // selectから値を取得
-                        name: nameInput.value.trim(),
-                        pos: posSelect.value, // selectから値を取得
-                        sub_type: subTypeSelect ? subTypeSelect.value : null,
-                        results: results // ★ここに結合された文字列の配列が入る
+                        order: row.dataset.order, number: numberSelect.value, name: nameInput.value.trim(),
+                        pos: posSelect.value, sub_type: subTypeSelect ? subTypeSelect.value : null,
+                        results: results
                     };
                     details.batting[teamKey].push(playerData);
-
-                    // --- 通算成績の更新ロジック (変更なし) ---
+                     // --- ここからが通算成績と試合ごと成績の計算ロジック ---
                     const playerName = playerData.name;
                     if (!teamRecord.playerStats.batting[playerName]) {
                         teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
                     }
                     const stats = teamRecord.playerStats.batting[playerName];
+                    
                     if (!stats.lastGameId || stats.lastGameId !== currentMatchIdForDetails) {
                         stats.games = (stats.games || 0) + 1;
                         stats.lastGameId = currentMatchIdForDetails;
                     }
+                    
+                    let gameHitCount = 0;
                     playerData.results.forEach(inningResultString => {
                         if (!inningResultString || inningResultString.trim() === '') return;
                         const atBatsInInning = inningResultString.split('、').map(s => s.trim());
                         atBatsInInning.forEach(res => {
                             if (!res) return;
+                            
                             stats.pa++;
-                            if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) stats.ab++;
+                            if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) {
+                                stats.ab++;
+                            }
+                            
+                            // ▼▼▼ 安打判定ロジックを、以前修正した「賢い」バージョンに統一 ▼▼▼
                             const isHitWord = res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三');
                             const isOutWord = res.includes('ゴロ') || res.includes('飛') || res.includes('振') || res.includes('併殺') || res.includes('直');
+                            
                             if (isHitWord && !isOutWord) {
-                                stats.h++;
+                                stats.h++;   // 通算安打を+1
+                                gameHitCount++; // この試合の安打数も+1
                             }
-                            if (res.includes('本') || res.toLowerCase().includes('hr')) stats.hr++;
+                            // ▲▲▲ ▲▲▲
+
+                            if (res.includes('本') || res.toLowerCase().includes('hr')) {
+                                stats.hr++;
+                            }
                             const rbiMatch = res.match(/(\d+)点/);
-                            if (rbiMatch) stats.rbi += parseInt(rbiMatch[1]);
-                            else if (res.includes('点')) stats.rbi += 1;
+                            if (rbiMatch) {
+                                stats.rbi += parseInt(rbiMatch[1]);
+                            } else if (res.includes('点')) {
+                                stats.rbi += 1;
+                            }
                         });
                     });
+                    
+                    // 試合ごとの成績を保存
+                    if (!details.playerGameStats[teamKey]) details.playerGameStats[teamKey] = {};
+                    details.playerGameStats[teamKey][playerName] = { h: gameHitCount };
                 }
             });
-         // ▼▼▼ このブロックが新しいロジックです ▼▼▼
-            // イニングごとの全イベント入力欄を読み取り、配列として保存する
-            const eventsInputs = battingTable.querySelectorAll('.inning-events-input');
-            details.inningEvents[teamKey] = Array.from(eventsInputs).map(input => input.value);
-
-            // ▲▲▲ ▲▲▲
-        // ▼▼▼ このブロックが新しいロジックです ▼▼▼
-            // この試合の個人別安打数を計算して保存する
-            const battingData = details.batting[teamKey] || [];
-            battingData.forEach(player => {
-                if (!player.name) return;
-                let hitCount = 0;
-                player.results.forEach(inningResult => {
-                    if (!inningResult) return;
-                    const atBats = inningResult.split('、');
-                    atBats.forEach(res => {
-                        if (res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三')) {
-                            hitCount++;
-                        }
-                    });
-                });
-                // 計算結果をdetailsオブジェクトに保存
-                if (!details.playerGameStats[teamKey]) details.playerGameStats[teamKey] = {};
-                details.playerGameStats[teamKey][player.name] = { h: hitCount };
-            });
-            // ▲▲▲ ▲▲▲
         }
         // 投手成績の処理
         details.pitching[teamKey] = [];
