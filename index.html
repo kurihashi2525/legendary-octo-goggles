@@ -4869,18 +4869,51 @@ function createHighlightsText(dbMatch, winnerName) {
                     const result = player.results?.[i];
                     if (!result) continue;
                     
+                    // ▼▼▼ 抜け落ちていたのは、この打席結果を分析する部分です ▼▼▼
                     const atBats = result.split('、');
                     atBats.forEach(res => {
+                        if (!res) return;
+                        const playerInfo = `${player.name}(${player.order.includes('sub') ? '交代' : player.order + '番'})`;
+
                         if (res.includes('点') || res.toLowerCase().includes('hr') || res.includes('本')) {
-                            // (得点プレーの分析ロジック)
+                            const prevScores = { ...scores };
+                            const scoreMatch = res.match(/(\d+)点/);
+                            let addedScore = 0;
+                            if (scoreMatch) { addedScore = parseInt(scoreMatch[1]); }
+                            else if (res.includes('本') || res.toLowerCase().includes('hr')) { addedScore = 1; }
+                            else if (res.includes('点')) { addedScore = 1; }
+                            
+                            scores[teamKey] += addedScore;
+                            let eventType = '追加点';
+                            if (!hasScored) { eventType = '先制'; hasScored = true; }
+                            else if (teamKey === winningTeamKey && prevScores[winningTeamKey] < scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && scores[winningTeamKey] > scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && !isReversed) {
+                                eventType = '逆転'; isReversed = true;
+                            }
+                            let hitType = '';
+                            if (res.includes('本') || res.toLowerCase().includes('hr')) hitType = '本塁打';
+                            else if (res.includes('三')) hitType = '三塁打';
+                            else if (res.includes('二')) hitType = '二塁打';
+                            else if (res.includes('安')) hitType = '安打';
+                            else if (res.includes('犠飛')) hitType = '犠飛';
+                            else if (res.includes('ゴロ') || res.includes('野選')) hitType = '内野ゴロ';
+                            else if (res.includes('失')) hitType = 'エラー';
+                            else hitType = '適時打';
+                            const rbiText = addedScore > 1 ? `${addedScore}点` : '';
+                            const playDescription = `${eventType}となる${rbiText}${hitType}`;
+                            highlights.push({ type: 'score', inning: i + 1, team: teamName, player: player.name, order: player.order, description: playDescription });
+                            keyPlayerNames.add(player.name);
                         } 
-                        else if (res.includes('併殺') || res.includes('ゲッツー') || res.includes('三振') || res.includes('ゴロ') || res.includes('フライ')) {
-                            // (守備側の活躍の分析ロジック)
-                        } 
-                        else if (res.includes('凡退') || res.includes('三振') || res.includes('併殺')) {
-                            // (チャンスで凡退の分析ロジック)
+                        else if (res.includes('併殺') || res.includes('ゲッツー') || res.includes('三振') || res.includes('ゴロ') || res.includes('フライ') || res.includes('直')) {
+                            const pitcherTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
+                            const pitcherTeamName = dbMatch[pitcherTeamKey];
+                            const pitcher = dbMatch.details.pitching?.[pitcherTeamKey]?.[0];
+                            if (pitcher && pitcher.name) {
+                                highlights.push({ type: 'defense', inning: i + 1, team: pitcherTeamName, player: pitcher.name, description: `打者${player.name}を打ち取る` });
+                                keyPlayerNames.add(pitcher.name);
+                            }
                         }
                     });
+                    // ▲▲▲ ▲▲▲
                 }
             }
         }
