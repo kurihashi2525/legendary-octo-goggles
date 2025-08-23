@@ -815,25 +815,18 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
  * スコアボードの合計点を更新する
  */
 /**
- * スコアボードの合計点を更新する（★行特定ロジックを修正した最終版）
+/**
+ * スコアボードの合計点を更新する
  */
 function updateTotalScores() {
     const table = document.getElementById('inning-score-table');
     if(!table) return;
-
     table.querySelectorAll('tbody tr').forEach(row => {
-        const teamNameCell = row.querySelector('th'); // <td>ではなく<th>を探す
-        if (!teamNameCell) return;
-
         const total = Array.from(row.querySelectorAll('input')).reduce((sum, input) => {
             const value = parseInt(input.value);
-            return isNaN(value) ? sum : sum + value;
+            return isNaN(value) ? sum : sum + value; // 数字でない場合は無視
         }, 0);
-        
-        const totalCell = row.querySelector('.total-score');
-        if (totalCell) {
-            totalCell.textContent = total;
-        }
+        row.querySelector('.total-score').textContent = total;
     });
 }
 /**
