@@ -113,20 +113,50 @@
         .feud-match .team-slot { border: 2px solid #8b5cf6 !important; background-color: #f5f3ff; }
         .rivalry-match .team-slot.winner { background-color: #fecaca; }
         .feud-match .team-slot.winner { background-color: #ddd6fe; }
-   /* 詳細入力テーブル用のスタイル */
-        .details-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-        .details-table th, .details-table td { border: 1px solid #e5e7eb; padding: 4px; text-align: center; }
-        .details-table th { background-color: #f9fafb; }
-        .details-table input { width: 100%; border: none; text-align: center; background: transparent; font-size: 12px; }
-        .details-table input:focus { outline: 1px solid #3b82f6; }
-        .details-table .col-player { width: 120px; }
-        .details-table .col-inning { width: 50px; }
-        .details-table .col-stat { width: 60px; }
-        .details-table .col-number { width: 40px; }
-        .details-table select { width: 100%; border: none; background: transparent; font-size: 12px; }
-        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
-        .add-row-btn:hover { background-color: #d1d5db; }
- </style>
+    
+/* 詳細入力テーブル用のスタイル */
+/* 詳細入力テーブル用のスタイル（最終版） */
+.details-table { 
+    border-collapse: collapse; 
+    font-size: 12px; 
+    
+}
+/* ▼▼▼ この新しいルールを追加 ▼▼▼ */
+.details-table th {
+    white-space: nowrap; /* ヘッダーの文字が折り返さないようにする */
+}
+/* ▲▲▲ ▲▲▲ */
+.details-table td { 
+    border: 1px solid #e5e7eb; 
+    padding: 4px; 
+    text-align: center; 
+    vertical-align: middle; 
+}
+.details-table th { background-color: #f9fafb; font-weight: 600; }
+.details-table input, .details-table select { width: 100%; border: none; text-align: center; background: transparent; font-size: 12px; }
+.details-table input:focus, .details-table select:focus { outline: 1px solid #3b82f6; }
+
+/* ★列幅設定★ */
+/* イニングスコアテーブル */
+#inning-score-table { table-layout: auto; width: auto; } /* スコアボードは自動幅 */
+#inning-score-table .col-team { min-width: 120px; text-align: left; padding-left: 8px; }
+#inning-score-table .col-inning-score { width: 40px; }
+#inning-score-table .col-total { width: 50px; }
+#inning-score-table .col-add-inning { width: 40px; }
+
+/* 打撃成績テーブル */
+/* ★列幅設定（min-widthで最低幅を保証）★ */
+.batting-table .col-order { min-width: 40px; }
+.batting-table .col-number { min-width: 60px; }
+.batting-table .col-player { min-width: 120px; }
+.batting-table .col-pos { min-width: 100px; }
+.batting-table .col-sub-type { min-width: 80px; }
+.batting-table .col-inning { min-width: 300px; }  /* ←お好みの幅に調整してください */
+/* ▲▲▲ ▲▲▲ */
+        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+
+        .add-row-btn:hover { background-color: #d1d5db; }　
+　 </style>
 </head>
 <body class="p-4 md:p-8">
 
@@ -1874,55 +1904,56 @@ function renderTournament(data) {
     /**
      * イニングスコアのテーブルHTMLを生成する
      */
-    function createInningScoreTable(team1Name, team2Name, details) {
-        const inningData = details.inningScore;
-        const numInnings = inningData.team1?.length || 9;
-        let header = '';
-        for (let i = 1; i <= numInnings; i++) {
-            header += `<th class="col-inning">${i}</th>`;
-        }
-
-        let team1Inputs = '';
+    /**
+ * イニングスコアのテーブルHTMLを生成する（★列幅クラスを適用した最終版）
+ */
+/**
+ * イニングスコアのテーブルHTMLを生成する（★クラス名の食い違いを修正した最終版）
+ */
+// 【完成版】createInningScoreTable
+function createInningScoreTable(team1Name, team2Name, details) {
+    const inningData = details.inningScore;
+    const numInnings = (inningData.team1 && inningData.team1.length > 0) ? inningData.team1.length : 9;
+    let header = '';
+    for (let i = 1; i <= numInnings; i++) {
+        header += `<th class="col-inning-score">${i}</th>`;
+    }
+    const createRow = (teamKey, teamName) => {
+        let cells = '';
         for (let i = 0; i < numInnings; i++) {
-            team1Inputs += `<td><input type="number" data-team-key="team1" value="${inningData.team1[i] || ''}"></td>`;
+            cells += `<td class="col-inning-score"><input type="number" value="${inningData[teamKey]?.[i] || ''}"></td>`;
         }
-
-
-        
-        let team2Inputs = '';
-        for (let i = 0; i < numInnings; i++) {
-            team2Inputs += `<td><input type="number" data-team-key="team2" value="${inningData.team2[i] || ''}"></td>`;
-        }
-
-        return `
+        return `<tr>
+                    <td class="col-team">${teamName}</td>
+                    ${cells}
+                    <td class="total-score col-total"></td>
+                </tr>`;
+    };
+    return `
+        <div class="mb-6 overflow-x-auto">
+            <h4 class="font-bold mb-2">イニングスコア</h4>
             <table class="details-table" id="inning-score-table">
                 <thead>
                     <tr>
-                        <th class="col-player">チーム</th>
-                        ${header}
-                        <th class="w-10"><button class="add-inning-btn text-xs">＋回</button></th>
-                        <th class="col-stat">計</th>
+                        <th class="col-team">チーム</th>${header}<th class="col-total">計</th><th class="col-add-inning"><button id="add-inning-score-btn" class="text-xs font-bold">+</button></th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>${team1Name}</td>
-                        ${team1Inputs}
-                        <td></td>
-                        <td id="total-team1"></td>
-                    </tr>
-                    <tr>
-                        <td>${team2Name}</td>
-                        ${team2Inputs}
-                        <td></td>
-                        <td id="total-team2"></td>
-                    </tr>
-                </tbody>
+                <tbody>${createRow('team1', team1Name)}${createRow('team2', team2Name)}</tbody>
             </table>
-        `;
-    }
+        </div>`;
+}
 /**
  * 新しい試合詳細モーダルを開き、各種テーブルを生成する（全ての機能を含む最終版）
+ */
+/**
+ * 新しい試合詳細モーダルを開き、各種テーブルを生成する（★常時縦並びレイアウト対応版）
+ */
+// 【完成版】openDetailsModal
+/**
+ * Opens the detailed input modal with the corrected vertical layout.
+ */
+/**
+ * 新しい試合詳細モーダルを開き、各種テーブルを生成する（★レイアウト問題を完全修正した最終版）
  */
 function openDetailsModal(matchId) {
     currentMatchIdForDetails = matchId;
@@ -1930,104 +1961,56 @@ function openDetailsModal(matchId) {
     if (!match) return;
 
     const detailsBody = document.getElementById('details-modal-body');
-    
-    // detailsオブジェクトがない場合に備え、inningScoreも初期化
     const details = match.details || {
-        inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') },
-        batting: { team1: [], team2: [] },
-        pitching: { team1: [], team2: [] }
+        inningScore: { team1: Array(9).fill(''), team2: Array(9).fill('') }, batting: { team1: [], team2: [] },
+        pitching: { team1: [], team2: [] }, inningEvents: { team1: [], team2: [] }, positionChanges: []
     };
-    if (!details.inningScore) {
-        details.inningScore = { team1: Array(9).fill(''), team2: Array(9).fill('') };
+    if (!details.inningScore) details.inningScore = { team1: Array(9).fill(''), team2: Array(9).fill('') };
+    
+    if (details.batting.team1.length === 0 && tournamentState.teamRecords[match.team1]?.roster) {
+        details.batting.team1 = tournamentState.teamRecords[match.team1].roster.map(p => ({ ...p, results: [] }));
+    }
+    if (details.batting.team2.length === 0 && tournamentState.teamRecords[match.team2]?.roster) {
+        details.batting.team2 = tournamentState.teamRecords[match.team2].roster.map(p => ({ ...p, results: [] }));
     }
 
-    // もし試合データが空で、かつチームの選手名簿(roster)が存在すれば、それを読み込む
-    for (const teamKey of ['team1', 'team2']) {
-        const teamName = match[teamKey];
-        const teamRecord = tournamentState.teamRecords[teamName];
-        if (details.batting[teamKey].length === 0 && teamRecord && teamRecord.roster) {
-            details.batting[teamKey] = teamRecord.roster.map(player => ({ ...player, results: [] }));
-        }
-    }
+    detailsBody.innerHTML = `
+        <div class="space-y-4">
+            ${createInningScoreTable(match.team1, match.team2, details)}
+            
+            <div class="text-center py-2 border-t border-b">
+                <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+                    先攻・後攻を入れ替え
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <h4 class="font-bold text-lg">${match.team1} 打撃成績</h4>
+                <div class="overflow-x-auto border rounded-lg bg-white">
+                    ${createPlayerBattingTable(match.team1, 'team1', details)}
+                </div>
+                <h4 class="font-bold text-lg mt-4">${match.team2} 打撃成績</h4>
+                <div class="overflow-x-auto border rounded-lg bg-white">
+                    ${createPlayerBattingTable(match.team2, 'team2', details)}
+                </div>
+            </div>
 
-    // --- ここからがスコアボード作成の内部品です ---
-    const createInningScoreboard = () => {
-        let header = '';
-        const numInnings = (details.inningScore.team1 && details.inningScore.team1.length > 0) ? details.inningScore.team1.length : 9;
-        for (let i = 1; i <= numInnings; i++) {
-            header += `<th class="w-10">${i}</th>`;
-        }
-        
-        // ▼ ご質問の createRow はこの中にあります ▼
-        const createRow = (teamKey, teamName) => {
-            let cells = '';
-            for (let i = 0; i < numInnings; i++) {
-                cells += `<td><input type="text" value="${details.inningScore[teamKey]?.[i] || ''}"></td>`;
-            }
-            return `<tr>
-                        <th class="text-left pr-2">${teamName}</th>
-                        ${cells}
-                        <td class="total-score font-bold"></td>
-                    </tr>`;
-        };
-
-        return `
-            <div class="mb-6">
-                <h4 class="font-bold mb-2">イニングスコア</h4>
-                <table class="details-table" id="inning-score-table">
-                    <thead>
-                        <tr>
-                            <th class="w-32">チーム</th>
-                            ${header}
-                            <th class="w-12">計</th>
-                            <th class="w-8"><button id="add-inning-score-btn" class="text-xs font-bold">+</button></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${createRow('team1', match.team1)}
-                        ${createRow('team2', match.team2)}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    };
-    // --- スコアボード作成の内部品ここまで ---
-
-    let html = `
-        ${createInningScoreboard()}
-        <div class="text-center my-4 border-t border-b py-2">
-            <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                <span>先攻・後攻を入れ替え</span>
-            </button>
-        </div>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div>
-                <h4 class="font-bold mb-2">${match.team1} 打撃成績</h4>
-                ${createPlayerBattingTable(match.team1, 'team1', details)}
-            </div>
-            <div>
-                <h4 class="font-bold mb-2">${match.team2} 打撃成績</h4>
-                ${createPlayerBattingTable(match.team2, 'team2', details)}
-            </div>
-            <div>
-                <h4 class="font-bold mb-2">${match.team1} 投手成績</h4>
-                ${createPitchingStatsTable('team1', details)}
-            </div>
-            <div>
-                <h4 class="font-bold mb-2">${match.team2} 投手成績</h4>
-                ${createPitchingStatsTable('team2', details)}
+            <div class="space-y-4 mt-4">
+                <h4 class="font-bold text-lg">${match.team1} 投手成績</h4>
+                <div class="overflow-x-auto border rounded-lg bg-white">
+                     ${createPitchingStatsTable('team1', details)}
+                </div>
+                 <h4 class="font-bold text-lg mt-4">${match.team2} 投手成績</h4>
+                <div class="overflow-x-auto border rounded-lg bg-white">
+                     ${createPitchingStatsTable('team2', details)}
+                </div>
             </div>
         </div>
     `;
-    detailsBody.innerHTML = html;
+
     detailsModal.classList.remove('hidden');
-
-    // スコアの合計を計算して表示
     updateTotalScores();
-}
-
-    // ★★★ この関数を丸ごと置き換えてください ★★★
+}    // ★★★ この関数を丸ごと置き換えてください ★★★
 /**
  * 個人別打席結果のテーブルHTMLを生成する（交代選手表示バグ修正・最終版）
  */
@@ -2037,119 +2020,74 @@ function openDetailsModal(matchId) {
 /**
  * Creates the batting stats table, with all dropdowns correctly implemented.
  */
+/**
+ * 個人別打席結果のテーブルHTMLを生成する（★列幅クラスを適用した最終版）
+ */
+// 【完成版】createPlayerBattingTable
 function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
-
-    // --- プルダウンの選択肢を事前に生成 ---
     let numberOptions = '<option value=""></option>';
-    for (let i = 1; i <= 20; i++) {
-        numberOptions += `<option value="${i}">${i}</option>`;
-    }
-    const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右']
-        .map(p => `<option value="${p}">${p}</option>`).join('');
-    
+    for (let i = 1; i <= 20; i++) { numberOptions += `<option value="${i}">${i}</option>`; }
+    const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右'].map(p => `<option value="${p}">${p}</option>`).join('');
     let inningsHeader = '';
     for (let i = 1; i <= numInnings; i++) {
         inningsHeader += `<th class="col-inning">${i}</th>`;
     }
-
     let bodyRows = '';
-
-    // 1. スタメン選手（9人分）の行を生成
     for (let i = 1; i <= 9; i++) {
         let starterData = battingData.find(p => p.order && parseInt(p.order) === i);
-        if (!starterData) {
-            starterData = { order: i, number: '', name: '', pos: '', results: Array(numInnings).fill('') };
-        }
+        if (!starterData) { starterData = { order: i, number: '', name: '', pos: '', results: Array(numInnings).fill('') }; }
         if (!starterData.results) starterData.results = Array(numInnings).fill('');
-
-
         const starterNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${starterData.number}"`, `value="${starterData.number}" selected`)}</select>`;
         const starterPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${starterData.pos}"`, `value="${starterData.pos}" selected`)}</select>`;
-        
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
-            resultInputs += `<td>${createBattingResultDropdowns(starterData.results[j] || '')}</td>`;
+            resultInputs += `<td class="col-inning">${createBattingResultDropdowns(starterData.results[j] || '')}</td>`;
         }
-        
-        bodyRows += `
-            <tr data-order="${starterData.order}">
-                <td>${i}</td>
-                <td>${starterNumberSelect}</td>
-                <td><input type="text" class="player-name" value="${starterData.name || ''}"></td>
-                <td class="flex items-center justify-between">
-                    ${starterPosSelect}
-                    <button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${starterData.name || ''}" data-team-key="${teamKey}">変更</button>
-                </td>
-                <td></td>
-                ${resultInputs}
-            </tr>
-        `;
-
-        // 2. そのスタメン選手に対する「交代選手」がいれば、すぐ下の行に追加
+        bodyRows += `<tr data-order="${starterData.order}"><td class="col-order">${i}</td><td class="col-number">${starterNumberSelect}</td><td class="col-player"><input type="text" class="player-name" value="${starterData.name || ''}"></td><td class="col-pos flex items-center justify-between">${starterPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${starterData.name || ''}" data-team-key="${teamKey}">変更</button></td><td class="col-sub-type"></td>${resultInputs}</tr>`;
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
             const subNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${subData.number}"`, `value="${subData.number}" selected`)}</select>`;
             const subPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${subData.pos}"`, `value="${subData.pos}" selected`)}</select>`;
-            
             let subResultInputs = '';
             for (let j = 0; j < numInnings; j++) {
-                subResultInputs += `<td>${createBattingResultDropdowns(subData.results[j] || '')}</td>`;
+                subResultInputs += `<td class="col-inning">${createBattingResultDropdowns(subData.results[j] || '')}</td>`;
             }
-            
-            bodyRows += `
-                <tr data-order="${subData.order}">
-                    <td></td>
-                    <td>${subNumberSelect}</td>
-                    <td class="pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td>
-                    <td class="flex items-center justify-between">
-                        ${subPosSelect}
-                        <button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${subData.name || ''}" data-team-key="${teamKey}">変更</button>
-                    </td>
-                    <td>
-                        <select class="sub-type-select w-full">
-                            <option value="" ${!subData.sub_type ? 'selected' : ''}>-</option>
-                            <option value="PH" ${subData.sub_type === 'PH' ? 'selected' : ''}>代打</option>
-                            <option value="PR" ${subData.sub_type === 'PR' ? 'selected' : ''}>代走</option>
-                            <option value="DEF" ${subData.sub_type === 'DEF' ? 'selected' : ''}>守備</option>
-                            <option value="PITCHER" ${subData.sub_type === 'PITCHER' ? 'selected' : ''}>投手</option>
-                            </select>
-                    </td>
-                    ${subResultInputs}
-                </tr>
-            `;
+            bodyRows += `<tr data-order="${subData.order}"><td class="col-order"></td><td class="col-number">${subNumberSelect}</td><td class="col-player pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td><td class="col-pos flex items-center justify-between">${subPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${subData.name || ''}" data-team-key="${teamKey}">変更</button></td><td class="col-sub-type"><select class="sub-type-select w-full bg-transparent"><option value="" ${!subData.sub_type ? 'selected' : ''}>-</option><option value="PH" ${subData.sub_type === 'PH' ? 'selected' : ''}>代打</option><option value="PR" ${subData.sub_type === 'PR' ? 'selected' : ''}>代走</option><option value="DEF" ${subData.sub_type === 'DEF' ? 'selected' : ''}>守備</option><option value="PITCHER" ${subData.sub_type === 'PITCHER' ? 'selected' : ''}>投手</option></select></td>${subResultInputs}</tr>`;
         });
     }
-
     return `
-        <div class="overflow-x-auto">
-            <table class="details-table" id="batting-table-${teamKey}">
-                <thead>
-                    <tr>
-                        <th class="w-8">打順</th><th class="col-number">#</th><th class="col-player">選手名</th><th class="w-12">守備</th><th class="w-16">出場</th>
-                        ${inningsHeader}
-                        <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
-                    </tr>
-                </thead>
-                <tbody>${bodyRows}</tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="5" class="text-right font-semibold pr-2 border-t-2">この回の主な出来事:</td>
-                        ${Array.from({ length: numInnings }).map((_, i) => `
-                            <td class="border-t-2">
-                                <input type="text" class="inning-events-input w-full text-left px-1 text-xs"
-                                       data-team-key="${teamKey}" data-inning-index="${i}"
-                                       placeholder="例: 鈴木 盗塁">
-                            </td>
-                        `).join('')}
-                        <td class="border-t-2"></td>
-                    </tr>
-                </tfoot>
-            </table>
-            <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
-        </div>
+         <div class="overflow-x-auto border rounded-lg bg-white">
+<table class="details-table batting-table" id="batting-table-${teamKey}">
+            <thead>
+                <tr>
+                    <th class="col-order">打順</th>
+                    <th class="col-number">#</th>
+                    <th class="col-player">選手名</th>
+                    <th class="col-pos">守備</th>
+                    <th class="col-sub-type">出場</th>
+                    ${inningsHeader}
+                    <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
+                </tr>
+            </thead>
+            <tbody>${bodyRows}</tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-right font-semibold pr-2 border-t-2">この回の主な出来事:</td>
+                    ${Array.from({ length: numInnings }).map((_, i) => `
+                        <td class="border-t-2 col-inning">
+                            <input type="text" class="inning-events-input w-full text-left px-1 text-xs"
+                                   data-team-key="${teamKey}" data-inning-index="${i}"
+                                   placeholder="例: 鈴木 盗塁">
+                        </td>
+                    `).join('')}
+                    <td class="border-t-2"></td>
+                </tr>
+            </tfoot>
+        </table>
+        <button class="add-substitute-btn text-xs mt-2" data-team-key="${teamKey}">+ 交代選手を追加</button>
     `;
 }
     /**
@@ -2202,34 +2140,48 @@ function saveDetailedStats() {
     const match = findMatchById(currentMatchIdForDetails);
     if (!match) return;
 
-    // inningEventsを、空の配列を持つオブジェクトとして初期化
-    const details = { inningScore: { team1: [], team2: [] }, batting: {}, pitching: {}, positionChanges: [], inningEvents: { team1: [], team2: [] } ,playerGameStats: { team1: {}, team2: {} } };
+   // ▼▼▼ THIS IS THE FIX ▼▼▼
+    // Define scoreTable EARLIER, before it is needed.
     const scoreTable = document.getElementById('inning-score-table');
-
-    // --- 1. イニングスコアの読み取り (★ここが修正点★) ---
+    const details = { 
+        inningScore: { team1: [], team2: [] }, 
+        batting: {}, 
+        pitching: {}, 
+        inningEvents: { team1: [], team2: [] },
+        playerGameStats: { team1: {}, team2: {} },
+        positionChanges: []
+    };
+    // ▲▲▲ ▲▲▲
+    
+    // --- 1. Read Inning Scores ---
     if (scoreTable) {
         const rows = scoreTable.querySelectorAll('tbody tr');
         
-        // 行の位置ではなく、表示されているチーム名で、どちらがteam1の行かを探す
-        const team1Row = Array.from(rows).find(row => row.querySelector('th').textContent === match.team1);
-        const team2Row = Array.from(rows).find(row => row.querySelector('th').textContent === match.team2);
+        // ▼▼▼ THIS IS THE FIX ▼▼▼
+        // Correctly find the row by looking for the team name in the first <td>
+        const team1Row = Array.from(rows).find(row => row.querySelector('td:first-child')?.textContent.trim() === match.team1);
+        const team2Row = Array.from(rows).find(row => row.querySelector('td:first-child')?.textContent.trim() === match.team2);
+        // ▲▲▲ ▲▲▲
 
-        // 見つけた行から、それぞれのスコアを読み取る
         if (team1Row) {
-            details.inningScore.team1 = Array.from(team1Row.querySelectorAll('input[type="text"]')).map(input => input.value);
+            details.inningScore.team1 = Array.from(team1Row.querySelectorAll('input')).map(input => input.value);
         }
         if (team2Row) {
-            details.inningScore.team2 = Array.from(team2Row.querySelectorAll('input[type="text"]')).map(input => input.value);
+            details.inningScore.team2 = Array.from(team2Row.querySelectorAll('input')).map(input => input.value);
         }
     }
 
-    // 合計点を計算し、メインの試合オブジェクトに反映
-    const totalScore1 = details.inningScore.team1.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-    const totalScore2 = details.inningScore.team2.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-    match.score1 = totalScore1;
-    match.score2 = totalScore2;
+     // Calculate total scores
+
+    const totalScore1 = details.inningScore.team1.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+
+    const totalScore2 = details.inningScore.team2.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+
+    match.score1 = totalScore1;
+
+    match.score2 = totalScore2;   
     
-    // --- 2. 打撃・投手成績の読み取りと通算成績の更新 (変更なし) ---
+    // --- 2. 打撃・投手成績の読み取りと各種データ保存 ---
    for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
@@ -5899,6 +5851,7 @@ else if (e.target.matches('.add-substitute-btn')) {
                 <option value="PH">代打</option>
                 <option value="PR">代走</option>
                 <option value="DEF">守備</option>
+                <option value="PITCHER">投手</option>
             </select>
         </td>
         ${resultInputs}
