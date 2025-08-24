@@ -6,6 +6,8 @@
     <title>【最終実装版】AI記者付きトーナメント表</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
@@ -95,6 +97,9 @@
         .team-surviving::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10b981; margin-right: 8px; }
         .team-eliminated { color: #9ca3af; text-decoration: line-through; opacity: 0.7; }
         .team-eliminated::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #d1d5db; margin-right: 8px; }
+         .scorebook-font {
+            font-family: 'Yuji Syuku', serif;
+        }
         .newspaper-container { font-family: 'Noto Serif JP', serif; padding: 2rem; background-color: #fdfdf8; }
         .newspaper-early { filter: grayscale(100%); border: 2px solid #333; }
         .newspaper-late { border: 2px solid #a10e25; }
@@ -206,7 +211,7 @@
                 </button>
             </div>
 
-            <div id="region-map-section" class="display-card hidden">
+            <div id="region-map-section" class="display-card hidden scorebook-font">
                  <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">地区別 勝ち残り状況</h2>
                  <div id="region-map-container" class="w-full"></div>
             </div>
@@ -237,7 +242,7 @@
                     </div>
                 </div>
             </div>
-            <div id="main-bracket-wrapper" class="display-card">
+            <div id="main-bracket-wrapper" class="display-card scorebook-font">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">トーナメント表</h2>
                 <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-md text-sm">
                     <p><b>PCでの表示について:</b> トーナメント表の全体が表示されない場合は、表のエリア内でマウスのホイールを回しながら <b>Shiftキー</b> を押すか、表の下に表示されるスクロールバーを直接ドラッグすることで、左右にスクロールできます。</p>
