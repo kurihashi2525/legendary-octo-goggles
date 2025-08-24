@@ -12,6 +12,24 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* Quote of the Day Animation */
+@keyframes slide-in-out {
+    0% { opacity: 0; transform: translateY(20px); }
+    15% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-20px); }
+}
+.quote-container {
+    font-family: 'Yuji Syuku', serif;
+    font-size: 1.1rem;
+    color: #4b5563;
+    width: 300px; /* Adjust width as needed */
+    text-align: center;
+}
+.quote-text {
+    animation: slide-in-out 10s ease-in-out infinite;
+}
+
 /* Input field color-coding */
 .result-hit { background-color: #eff6ff !important; color: #1d4ed8; } /* Blue for hits */
 .result-out { background-color: #fee2e2 !important; color: #b91c1c; } /* Red for outs */
@@ -86,17 +104,58 @@
         .retry-btn:hover { background-color: #dc2626; }
         .namco-news-item { cursor: pointer; transition: background-color 0.2s; }
         .namco-news-tag { background-color: #f97316; color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; margin-left: 8px; }
-        .region-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .region-column { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
-        .region-header { padding: 12px 16px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb; }
-        .region-title { font-weight: 600; font-size: 1rem; color: #1f2937; }
-        .region-stats { font-size: 0.8rem; color: #4b5563; }
-        .region-team-list { list-style: none; padding: 8px 16px 16px 16px; margin: 0; }
-        .region-team { display: flex; align-items: center; padding: 6px 0; font-size: 0.9rem; transition: background-color 0.2s; }
-        .team-surviving { font-weight: 500; color: #1f2937; }
-        .team-surviving::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10b981; margin-right: 8px; }
-        .team-eliminated { color: #9ca3af; text-decoration: line-through; opacity: 0.7; }
-        .team-eliminated::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #d1d5db; margin-right: 8px; }
+        .region-map-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 16px; /* Space for the scrollbar */
+    gap: 16px;
+}
+.region-column { 
+    flex: 0 0 250px; /* Prevent cards from shrinking */
+    background-color: #ffffff; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+.region-header { 
+    padding: 12px 16px; 
+    background-color: #f9fafb; 
+    border-bottom: 1px solid #e5e7eb; 
+}
+.region-title { 
+    font-weight: 700; 
+    font-size: 1.1rem; 
+    color: #1f2937; 
+}
+.region-stats { 
+    font-size: 0.8rem; 
+    color: #4b5563; 
+    font-weight: 500;
+}
+.region-team-list { 
+    list-style: none; 
+    padding: 12px 16px; 
+    margin: 0;
+    flex-grow: 1; /* Allow list to fill space */
+}
+.region-team { 
+    padding: 6px 0; 
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+.region-team:last-child {
+    border-bottom: none;
+}
+.team-surviving { 
+    font-weight: 500; 
+    color: #1f2937; 
+}
+.team-eliminated { 
+    color: #9ca3af; 
+    text-decoration: line-through; 
+}
          .scorebook-font {
             font-family: 'Yuji Syuku', serif;
         }
@@ -504,6 +563,36 @@
     </div>
 </div>
 <script type="module">
+
+// Add this with your other constants at the top of the script
+const BASEBALL_QUOTES = [
+    "小さいことを重ねることが、とんでもないところに行くただひとつの道",
+    "野球は筋書きのないドラマだ",
+    "結果が出ないとき、決してあきらめない姿勢が、何かを生み出すきっかけをつくる",
+    "壁というのは、できる人にしかやってこない。超えられる可能性がある人にしかやってこない",
+    "全員野球"
+];
+
+/**
+ * Displays a random quote and cycles it.
+ */
+function displayRandomQuote() {
+    const quoteContainer = document.getElementById('quote-container');
+    if (!quoteContainer) return;
+
+    let currentIndex = 0;
+
+    const showNextQuote = () => {
+        // Use a <p> tag to easily apply the animation class
+        quoteContainer.innerHTML = `<p class="quote-text">${BASEBALL_QUOTES[currentIndex]}</p>`;
+        currentIndex = (currentIndex + 1) % BASEBALL_QUOTES.length;
+    };
+
+    // Show the first quote immediately, then cycle every 10 seconds
+    showNextQuote();
+    setInterval(showNextQuote, 10000); 
+}
+
 
 const BATTING_RESULTS = {
     hits: ['安', '二塁打', '三塁打', '本塁打'],
@@ -1824,66 +1913,91 @@ function renderTournament(data) {
         }
     }
 
-    function renderRegionMap(data) {
-        const regionMapSection = document.getElementById('region-map-section');
-        const finalMatch = data.matches['F-R1-M1'];
-        if ((!data.matches || Object.keys(data.matches).length === 0) && !finalMatch) {
-            regionMapSection.classList.add('hidden');
-            return;
-        }
-        regionMapSection.classList.remove('hidden');
+  /**
+ * 地区別の勝ち残り状況を、動的な名言表示付きの新しいレイアウトで描画する
+ */
+function renderRegionMap(data) {
+    const regionMapSection = document.getElementById('region-map-section');
+    const finalMatch = data.matches['F-R1-M1'];
+    if ((!data.matches || Object.keys(data.matches).length === 0) && !finalMatch) {
+        regionMapSection.classList.add('hidden');
+        return;
+    }
+    regionMapSection.classList.remove('hidden');
 
-        const container = document.getElementById('region-map-container');
-        const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
-        INITIAL_TEAM_POOL.forEach(teamName => {
-            const region = TEAM_DATA[teamName]?.region;
-            if (region && teamsByRegion[region]) {
-                teamsByRegion[region].push(teamName);
-            }
+    const container = document.getElementById('region-map-container');
+    const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+    INITIAL_TEAM_POOL.forEach(teamName => {
+        const region = TEAM_DATA[teamName]?.region;
+        if (region && teamsByRegion[region]) {
+            teamsByRegion[region].push(teamName);
+        }
+    });
+
+    const eliminatedTeams = new Set();
+    const allMatches = { ...data.matches, ...(data.autumnData?.allMatches || {}) };
+
+    Object.values(allMatches).filter(match => match.winner).forEach(match => {
+        const loser = match.team1 === match.winner ? match.team2 : match.team1;
+        if (loser) eliminatedTeams.add(loser);
+    });
+
+    if (finalMatch?.winner) {
+        const tournamentWinner = finalMatch.winner;
+        eliminatedTeams.forEach(team => {
+            if (team === tournamentWinner) eliminatedTeams.delete(team);
         });
-
-        const eliminatedTeams = new Set();
-        const allMatches = { ...data.matches, ...(data.autumnData?.allMatches || {}) };
-
-        Object.values(allMatches).filter(match => match.winner).forEach(match => {
-            const loser = match.team1 === match.winner ? match.team2 : match.team1;
-            if (loser) eliminatedTeams.add(loser);
-        });
-
-        if (finalMatch?.winner) {
-            const tournamentWinner = finalMatch.winner;
-            eliminatedTeams.forEach(team => {
-                if (team === tournamentWinner) eliminatedTeams.delete(team);
-            });
-        }
-        
-        let html = '<div class="region-map">';
-        for (const region in teamsByRegion) {
-            const teams = teamsByRegion[region];
-            if (teams.length === 0) continue;
-            
-            const survivingCount = teams.filter(team => !eliminatedTeams.has(team)).length;
-
-            html += `
-            <div class="region-column">
-                <div class="region-header">
-                    <h3 class="region-title">${region}地区</h3>
-                    <p class="region-stats">${survivingCount} / ${teams.length} チーム生存</p>
-                </div>
-                <ul class="region-team-list">
-                    ${teams.map(team => `
-                        <li class="region-team ${eliminatedTeams.has(team) ? 'team-eliminated' : 'team-surviving'}">
-                            ${team}
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-            `;
-        }
-        html += '</div>';
-        container.innerHTML = html;
     }
     
+    // ▼▼▼ ここからHTMLの構造を変更します ▼▼▼
+    let regionCardsHtml = '';
+    for (const region in teamsByRegion) {
+        const teams = teamsByRegion[region];
+        if (teams.length === 0) continue;
+        
+        const survivingCount = teams.filter(team => !eliminatedTeams.has(team)).length;
+
+        regionCardsHtml += `
+        <div class="region-column">
+            <div class="region-header">
+                <h3 class="region-title">${region}地区</h3>
+                <p class="region-stats">${survivingCount} / ${teams.length} チーム生存</p>
+            </div>
+            <ul class="region-team-list">
+                ${teams.sort((a, b) => {
+                    const aElim = eliminatedTeams.has(a);
+                    const bElim = eliminatedTeams.has(b);
+                    if (aElim === bElim) return a.localeCompare(b, 'ja');
+                    return aElim ? 1 : -1;
+                }).map(team => `
+                    <li class="region-team ${eliminatedTeams.has(team) ? 'team-eliminated' : 'team-surviving'}">
+                        ${team}
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+        `;
+    }
+
+    // 全体のHTMLコンテナを組み立てる
+    const fullHtml = `
+        <div class="flex">
+            <div class="region-map-scroll-container">
+                ${regionCardsHtml}
+            </div>
+            <div class="ml-8 flex-shrink-0 flex items-center justify-center">
+                <div id="quote-container" class="quote-container">
+                    </div>
+            </div>
+        </div>
+    `;
+    // ▲▲▲ ▲▲▲
+
+    container.innerHTML = fullHtml;
+    
+    // 名言のローテーションを開始する
+    displayRandomQuote();
+} 
     /**
      * スキップボタンの表示・非表示を制御する
      */
