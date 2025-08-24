@@ -2205,13 +2205,26 @@ function saveDetailedStats() {
                     const posSelect = row.querySelector('.player-pos');
                     const subTypeSelect = row.querySelector('.sub-type-select');
                     
+                     // ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
+                    // Find all the table cells that contain batting results
                     const resultCells = Array.from(row.querySelectorAll('td')).filter(td => td.querySelector('.batting-result-container'));
+                    
                     const results = resultCells.map(cell => {
-                        const resultType = cell.querySelector('.result-type').value;
-                        const direction = cell.querySelector('.result-direction').value;
-                        const rbi = cell.querySelector('.result-rbi').value;
-                        return [direction, resultType, rbi].filter(Boolean).join('');
+                        // Find ALL at-bat containers within this cell
+                        const atBatContainers = cell.querySelectorAll('.batting-result-container');
+                        
+                        const atBatResults = Array.from(atBatContainers).map(container => {
+                            const resultType = container.querySelector('.result-type').value;
+                            const direction = container.querySelector('.result-direction').value;
+                            const rbi = container.querySelector('.result-rbi').value;
+                            // Join the three dropdown values into one string, ignoring empty parts
+                            return [direction, resultType, rbi].filter(Boolean).join('');
+                        });
+
+                        // Join multiple at-bats in the same inning with '、'
+                        return atBatResults.filter(Boolean).join('、');
                     });
+                    // ▲▲▲ END OF NEW LOGIC ▲▲▲
 
                     const playerData = {
                         order: row.dataset.order, number: numberSelect.value, name: nameInput.value.trim(),
@@ -5121,19 +5134,22 @@ function createBattingResultDropdowns(currentResult = '') {
 
     // --- 3. 最終的なHTMLを組み立てる ---
     return `
-        <div class="flex gap-1 batting-result-container">
-            <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-type">
-                <option value="">-結果-</option>
-                ${resultOptions}
-            </select>
-            <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-direction">
-                <option value="">-方向-</option>
-                ${directionOptions}
-            </select>
-            <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-rbi">
-                <option value="">-打点-</option>
-                ${rbiOptions}
-            </select>
+        <div class="flex items-center gap-1 batting-result-container mb-1">
+            <div class="flex-grow flex gap-1">
+                <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-type">
+                    <option value="">-結果-</option>
+                    ${resultOptions}
+                </select>
+                <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-direction">
+                    <option value="">-方向-</option>
+                    ${directionOptions}
+                </select>
+                <select class="batting-result-part w-1/3 text-xs p-1 border rounded result-rbi">
+                    <option value="">-打点-</option>
+                    ${rbiOptions}
+                </select>
+            </div>
+            <button class="add-at-bat-btn text-xs bg-gray-200 px-1.5 py-0.5 rounded hover:bg-gray-300">+</button>
         </div>
     `;
 }
@@ -5824,7 +5840,16 @@ document.body.addEventListener('click', async (e) => {
         addExtraInning(); // 新しい司令塔関数を呼び出すだけ
     }
     
-   // ★★★ このブロックを丸ごと置き換えてください ★★★
+   // --- 【詳細モーダル内】同一イニングに打席を追加するボタン ---
+    else if (e.target.matches('.add-at-bat-btn')) {
+        e.preventDefault();
+        const container = e.target.parentElement;
+        // 新しいプルダウンメニューのセットを生成し、現在のセットの直後に追加する
+        const newDropdownsHTML = createBattingResultDropdowns();
+        container.insertAdjacentHTML('afterend', newDropdownsHTML);
+    }
+
+// ★★★ このブロックを丸ごと置き換えてください ★★★
 // --- 【詳細モーダル内】交代選手追加ボタン ---
 else if (e.target.matches('.add-substitute-btn')) {
     e.preventDefault();
