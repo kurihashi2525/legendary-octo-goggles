@@ -2208,22 +2208,18 @@ function saveDetailedStats() {
                      // ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
                     // Find all the table cells that contain batting results
                     const resultCells = Array.from(row.querySelectorAll('td')).filter(td => td.querySelector('.batting-result-container'));
-                    
-                    const results = resultCells.map(cell => {
-                        // Find ALL at-bat containers within this cell
-                        const atBatContainers = cell.querySelectorAll('.batting-result-container');
-                        
-                        const atBatResults = Array.from(atBatContainers).map(container => {
-                            const resultType = container.querySelector('.result-type').value;
-                            const direction = container.querySelector('.result-direction').value;
-                            const rbi = container.querySelector('.result-rbi').value;
-                            // Join the three dropdown values into one string, ignoring empty parts
-                            return [direction, resultType, rbi].filter(Boolean).join('');
-                        });
-
-                        // Join multiple at-bats in the same inning with '、'
-                        return atBatResults.filter(Boolean).join('、');
-                    });
+const results = resultCells.map(cell => {
+    // Find ALL at-bat containers within this cell
+    const atBatContainers = cell.querySelectorAll('.batting-result-container');
+    const atBatResults = Array.from(atBatContainers).map(container => {
+        const resultType = container.querySelector('.result-type').value;
+        const direction = container.querySelector('.result-direction').value;
+        const rbi = container.querySelector('.result-rbi').value;
+        return [direction, resultType, rbi].filter(Boolean).join('');
+    });
+    // Join multiple at-bats with '、'
+    return atBatResults.filter(Boolean).join('、');
+});
                     // ▲▲▲ END OF NEW LOGIC ▲▲▲
 
                     const playerData = {
@@ -5840,13 +5836,17 @@ document.body.addEventListener('click', async (e) => {
         addExtraInning(); // 新しい司令塔関数を呼び出すだけ
     }
     
-   // --- 【詳細モーダル内】同一イニングに打席を追加するボタン ---
+   // --- Add a second at-bat in the same inning ---
     else if (e.target.matches('.add-at-bat-btn')) {
         e.preventDefault();
-        const container = e.target.parentElement;
-        // 新しいプルダウンメニューのセットを生成し、現在のセットの直後に追加する
-        const newDropdownsHTML = createBattingResultDropdowns();
-        container.insertAdjacentHTML('afterend', newDropdownsHTML);
+        const container = e.target.closest('.batting-result-container');
+        const cell = e.target.closest('td'); // Find the parent table cell
+        
+        if (cell) {
+            // Create a new set of dropdowns and insert it INSIDE the cell
+            const newDropdownsHTML = createBattingResultDropdowns();
+            cell.insertAdjacentHTML('beforeend', newDropdownsHTML);
+        }
     }
 
 // ★★★ このブロックを丸ごと置き換えてください ★★★
