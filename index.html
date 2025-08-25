@@ -12,6 +12,40 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* 写実的な天候アニメーション用のスタイル */
+   /* 写実的な天候アニメーション用のスタイル（★調査モード★） */
+/* 背景画像 */
+.ballpark-background {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1; /* 階層1（一番奥） */
+    background-image: url('https://images.unsplash.com/photo-1593102221614-99ced1589325');
+    background-size: cover; background-position: center;
+    filter: blur(2px) brightness(0.7);
+    animation: subtle-breathing 20s ease-in-out infinite;
+}
+/* 土埃のアニメーション用コンテナ */
+#dust-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; /* クリックの邪魔をしない */
+    z-index: 2; /* 階層2（中間） */
+}
+/* メインコンテンツのコンテナ */
+#app-container {
+    position: relative; /* z-indexを有効にするため */
+    z-index: 3; /* 階層3（一番手前） */
+}
+@keyframes subtle-breathing {
+    0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); }
+}
+.dust-particle {
+    position: absolute; background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%; opacity: 0; animation: drift-up linear infinite;
+}
+@keyframes drift-up {
+    0% { transform: translateY(100vh) translateX(var(--x-start)); opacity: 0; }
+    10% { opacity: 1; } 90% { opacity: 1; }
+    100% { transform: translateY(-100px) translateX(var(--x-end)); opacity: 0; }
+}
 /* Input field color-coding */
 .result-hit { background-color: #eff6ff !important; color: #1d4ed8; } /* Blue for hits */
 .result-out { background-color: #fee2e2 !important; color: #b91c1c; } /* Red for outs */
@@ -24,8 +58,19 @@
 .clickable-team-name:hover {
     color: #1d4ed8; /* blue-700 */
 }
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
-        .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
+        body { 
+    font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+}
+.setup-card { 
+    background-color: transparent; /* 背景を透明に */
+    padding: 24px; 
+    border-radius: 12px; 
+    box-shadow: none; /* 影を削除 */
+    margin-bottom: 24px;
+}
+.display-card {
+    background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
+}
         #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
         .bracket-half { display: flex; }
         .bracket-half.right { flex-direction: row-reverse; }
@@ -214,8 +259,11 @@
 　 </style>
 </head>
 <body class="p-4 md:p-8">
-
+    <div class="ballpark-background"></div>
+    <div id="dust-container"></div>
     <div id="app-container" class="max-w-full mx-auto">
+        
+
         <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-800">AI記者付きトーナメント表</h1>
             <p id="tournament-year-display" class="text-gray-600 mt-2">（最終実装版）</p>
@@ -806,7 +854,9 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     const INITIAL_TEAM_POOL = Object.keys(TEAM_DATA);
 
     // --- Utility & State Functions ---
-    function shuffleArray(array) {
+   
+
+ function shuffleArray(array) {
         const newArray = [...array];
         for (let i = newArray.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -866,6 +916,33 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     }
 // --- Utility & State Functions --- などに追加
 
+/**
+ * Creates a subtle, realistic dust particle animation.
+ */
+function createDustEffect() {
+    const container = document.getElementById('dust-container');
+    if (!container) return;
+    
+    const particleCount = 20; // The number of dust particles
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'dust-particle';
+        
+        const size = Math.random() * 3 + 1; // Particle size between 1px and 4px
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        
+        // Use CSS variables to randomize the start and end points of the animation
+        particle.style.setProperty('--x-start', `${Math.random() * 100}vw`);
+        particle.style.setProperty('--x-end', `${Math.random() * 100}vw`);
+        
+        particle.style.animationDuration = `${Math.random() * 20 + 10}s`; // Duration between 10s and 30s
+        particle.style.animationDelay = `${Math.random() * 10}s`; // Stagger the start time
+        
+        container.appendChild(particle);
+    }
+}
 /**
  * スコアボードの合計点を更新する
  */
@@ -5926,7 +6003,32 @@ function closeReviewModal() {
      * 【診断用】アプリケーションの初期化処理
      */
     async function initializeApp() {
-        // --- ここから診断コード ---
+
+ // --- 1. 背景画像を先に読み込む ---
+    const bgContainer = document.querySelector('.ballpark-background');
+    if (bgContainer) {
+        const img = new Image();
+        const imageUrl = 'https://images.unsplash.com/photo-1593102221614-99ced1589325';
+        
+        img.onload = function() {
+            // 画像の読み込みが成功したら、背景として設定し、土埃アニメーションを開始する
+            bgContainer.style.backgroundImage = `url(${imageUrl})`;
+            createDustEffect(); // ★読み込み完了後に、ここで初めて呼び出す
+        };
+        img.onerror = function() {
+            // もし画像の読み込みに失敗しても、土埃アニメーションは開始する
+            console.error('背景画像の読み込みに失敗しました。');
+            createDustEffect();
+        };
+        
+        img.src = imageUrl; // この行で、画像のダウンロードが開始される
+    } else {
+        // もし背景コンテナがなければ、すぐに土埃アニメーションを開始
+        createDustEffect();
+    }
+
+       
+ // --- ここから診断コード ---
         try {
             alert('デバッグ開始：initializeApp関数が実行されました。');
             
@@ -5950,6 +6052,7 @@ function closeReviewModal() {
         } catch (e) {
             alert('致命的なエラーが発生しました： ' + e.message);
         }
+
         // --- ここまで診断コード ---
 
         
@@ -5979,7 +6082,7 @@ function closeReviewModal() {
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
 　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
-    }
+}
 
     // --- Event Listeners ---
     
