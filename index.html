@@ -12,6 +12,133 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* Weather Effects */
+.rain {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+}
+.drop {
+    position: absolute;
+    bottom: 100%;
+    width: 1px;
+    height: 50px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.4));
+    animation: drop 0.5s linear infinite;
+}
+@keyframes drop {
+    to { transform: translateY(100vh); }
+}
+
+.sunshine {
+    position: absolute;
+    top: -50px;
+    left: -50px;
+    width: 100px;
+    height: 100px;
+    z-index: 2;
+}
+.sun {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(255,255,220,0.8) 0%, rgba(255,255,220,0) 60%);
+    border-radius: 50%;
+}
+.sun-flare {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: flare 5s infinite;
+}
+@keyframes flare {
+    0% { transform: scale(1); opacity: 0.1; }
+    50% { transform: scale(1.2); opacity: 0.2; }
+    100% { transform: scale(1); opacity: 0.1; }
+}
+
+/* Weather Control Buttons */
+.weather-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.2);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.weather-btn:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    border-color: white;
+}
+
+/* ▼▼▼ このブロックを追加 ▼▼▼ */
+        .subtitle-text {
+            color: white;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+        }
+        .setup-header {
+            color: white !important; /* Tailwind CSSより優先させる */
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+            border-bottom-color: rgba(255, 255, 255, 0.5) !important; /* 下線も白っぽくする */
+        }
+        /* ▲▲▲ ▲▲▲ */
+
+/* ▼▼▼ このブロックを追加 ▼▼▼ */
+        .main-title {
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+        }
+        /* ▲▲▲ ▲▲▲ */
+
+/* 写実的な天候アニメーション用のスタイル */
+   /* 写実的な天候アニメーション用のスタイル（★調査モード★） */
+/* 背景画像 */
+.ballpark-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Layer 1 (Bottom) */
+    /* ▼▼▼ This line is the only change ▼▼▼ */
+    background-image: url('ballpark.jpg'); /* Use the local image */
+    /* ▲▲▲ END OF CHANGE ▲▲▲ */
+    background-size: cover;
+    background-position: center;
+    filter: blur(2px) brightness(0.7);
+    animation: subtle-breathing 20s ease-in-out infinite;
+}
+/* 土埃のアニメーション用コンテナ */
+#dust-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; /* クリックの邪魔をしない */
+    z-index: 2; /* 階層2（中間） */
+}
+/* メインコンテンツのコンテナ */
+#app-container {
+    position: relative; /* z-indexを有効にするため */
+    z-index: 3; /* 階層3（一番手前） */
+}
+@keyframes subtle-breathing {
+    0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); }
+}
+.dust-particle {
+    position: absolute; background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%; opacity: 0; animation: drift-up linear infinite;
+}
+@keyframes drift-up {
+    0% { transform: translateY(100vh) translateX(var(--x-start)); opacity: 0; }
+    10% { opacity: 1; } 90% { opacity: 1; }
+    100% { transform: translateY(-100px) translateX(var(--x-end)); opacity: 0; }
+}
 /* Input field color-coding */
 .result-hit { background-color: #eff6ff !important; color: #1d4ed8; } /* Blue for hits */
 .result-out { background-color: #fee2e2 !important; color: #b91c1c; } /* Red for outs */
@@ -24,8 +151,19 @@
 .clickable-team-name:hover {
     color: #1d4ed8; /* blue-700 */
 }
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #f0f2f5; }
-        .setup-card, .display-card { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
+        body { 
+    font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+}
+.setup-card { 
+    background-color: transparent; /* 背景を透明に */
+    padding: 24px; 
+    border-radius: 12px; 
+    box-shadow: none; /* 影を削除 */
+    margin-bottom: 24px;
+}
+.display-card {
+    background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
+}
         #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
         .bracket-half { display: flex; }
         .bracket-half.right { flex-direction: row-reverse; }
@@ -214,16 +352,33 @@
 　 </style>
 </head>
 <body class="p-4 md:p-8">
-
+    <div class="ballpark-background"></div>
+    <div id="dust-container"></div>
+ <div id="rain-container" class="rain hidden"></div>
+    <div id="sun-container" class="sunshine hidden">
+        <div class="sun"></div>
+        <div class="sun-flare"></div>
+    </div>
     <div id="app-container" class="max-w-full mx-auto">
+/div>
+
+    <div id="weather-controls" class="fixed bottom-4 right-4 z-10">
+        <div class="flex gap-2 p-2 bg-black bg-opacity-20 rounded-lg">
+            <button class="weather-btn" data-weather="sun">☀️</button>
+            <button class="weather-btn" data-weather="rain">🌧️</button>
+            <button class="weather-btn" data-weather="none">💨</button>
+        </div>
+    </div>
+        
+
         <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">AI記者付きトーナメント表</h1>
-            <p id="tournament-year-display" class="text-gray-600 mt-2">（最終実装版）</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-white main-title">AI記者付きトーナメント表</h1>
+            <p id="tournament-year-display" class="mt-2 subtitle-text">（最終実装版）</p>
         </div>
 
         <div id="setup" class="setup-card">
              <div class="w-full">
-                 <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">参加チーム (64チーム)</h2>
+                 <h2 class="text-xl font-semibold mb-4 border-b pb-2 setup-header">参加チーム (64チーム)</h2>
                  <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
              </div>
              <div class="mt-8 text-center">
@@ -806,7 +961,9 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     const INITIAL_TEAM_POOL = Object.keys(TEAM_DATA);
 
     // --- Utility & State Functions ---
-    function shuffleArray(array) {
+   
+
+ function shuffleArray(array) {
         const newArray = [...array];
         for (let i = newArray.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -867,6 +1024,33 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
 // --- Utility & State Functions --- などに追加
 
 /**
+ * Creates a subtle, realistic dust particle animation.
+ */
+function createDustEffect() {
+    const container = document.getElementById('dust-container');
+    if (!container) return;
+    
+    const particleCount = 20; // The number of dust particles
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'dust-particle';
+        
+        const size = Math.random() * 3 + 1; // Particle size between 1px and 4px
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        
+        // Use CSS variables to randomize the start and end points of the animation
+        particle.style.setProperty('--x-start', `${Math.random() * 100}vw`);
+        particle.style.setProperty('--x-end', `${Math.random() * 100}vw`);
+        
+        particle.style.animationDuration = `${Math.random() * 20 + 10}s`; // Duration between 10s and 30s
+        particle.style.animationDelay = `${Math.random() * 10}s`; // Stagger the start time
+        
+        container.appendChild(particle);
+    }
+}
+/**
  * スコアボードの合計点を更新する
  */
 /**
@@ -902,6 +1086,35 @@ function formatRecordToString(record) {
     const prefix = record.rank < 0 ? '' : '県大会'; // 甲子園成績の場合は「県大会」をつけない
     return `'${year} ${tournament}: ${prefix}${rank}`;
     // ★★★ ここまで変更 ★★★
+}
+
+/**
+ * Sets the weather effect for the background.
+ * @param {'none' | 'rain' | 'sun'} weatherType - The type of weather to display.
+ */
+function setWeather(weatherType) {
+    const rainContainer = document.getElementById('rain-container');
+    const sunContainer = document.getElementById('sun-container');
+
+    // Hide all weather effects first
+    rainContainer.classList.add('hidden');
+    sunContainer.classList.add('hidden');
+    rainContainer.innerHTML = ''; // Clear old raindrops
+
+    if (weatherType === 'rain') {
+        rainContainer.classList.remove('hidden');
+        // Create 100 raindrops
+        for (let i = 0; i < 100; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'drop';
+            drop.style.left = Math.random() * 100 + 'vw';
+            drop.style.animationDelay = Math.random() * 0.5 + 's';
+            drop.style.animationDuration = Math.random() * 0.2 + 0.3 + 's';
+            rainContainer.appendChild(drop);
+        }
+    } else if (weatherType === 'sun') {
+        sunContainer.classList.remove('hidden');
+    }
 }
 
 /**
@@ -5926,7 +6139,31 @@ function closeReviewModal() {
      * 【診断用】アプリケーションの初期化処理
      */
     async function initializeApp() {
-        // --- ここから診断コード ---
+
+ // --- 1. Preload the background image ---
+    const bgContainer = document.querySelector('.ballpark-background');
+    if (bgContainer) {
+        const img = new Image();
+        const imageUrl = 'ballpark.jpg'; // The local image path
+        
+        img.onload = function() {
+            // Image loaded successfully, set it as the background and start the dust effect
+            bgContainer.style.backgroundImage = `url(${imageUrl})`;
+            createDustEffect();
+        };
+        img.onerror = function() {
+            // If the image fails to load, log an error but still start the dust effect
+            console.error('Failed to load the background image.');
+            createDustEffect();
+        };
+        
+        img.src = imageUrl; // This starts the image download
+    } else {
+        // If the background container doesn't exist, just start the dust effect
+        createDustEffect();
+    }
+       
+ // --- ここから診断コード ---
         try {
             alert('デバッグ開始：initializeApp関数が実行されました。');
             
@@ -5950,6 +6187,7 @@ function closeReviewModal() {
         } catch (e) {
             alert('致命的なエラーが発生しました： ' + e.message);
         }
+
         // --- ここまで診断コード ---
 
         
@@ -5979,7 +6217,7 @@ function closeReviewModal() {
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
 　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
-    }
+}
 
     // --- Event Listeners ---
     
@@ -6120,6 +6358,12 @@ document.body.addEventListener('click', async (e) => {
             cell.insertAdjacentHTML('beforeend', newDropdownsHTML);
         }
     }
+// --- Weather Control Buttons ---
+    else if (e.target.matches('.weather-btn')) {
+        const weatherType = e.target.dataset.weather;
+        setWeather(weatherType);
+    }
+
 
 // ★★★ このブロックを丸ごと置き換えてください ★★★
 // --- 【詳細モーダル内】交代選手追加ボタン ---
