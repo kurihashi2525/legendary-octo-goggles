@@ -93,10 +93,100 @@
         /* ▲▲▲ ▲▲▲ */
 
 /* ▼▼▼ このブロックを追加 ▼▼▼ */
-        .main-title {
+     .main-title {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 3rem; /* 少し大きくして迫力を出す */
+            letter-spacing: 0.2em; /* 文字間を調整 */
             text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+            animation: fadeIn 2s ease-in-out; /* フェードインアニメーション */
         }
-        /* ▲▲▲ ▲▲▲ */
+
+        .subtitle-text {
+            color: white;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+            animation: fadeIn 2.2s ease-in-out; /* アニメーションを追加 */
+        }
+
+        /* メインコンテンツエリアをガラスパネル風に */
+        .setup-card {
+            background-color: rgba(10, 10, 20, 0.65) !important; /* 半透明背景を優先 */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px); /* 背景をぼかす（対応ブラウザのみ） */
+            padding: 2.5rem !important; /* paddingを調整 */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1.5s ease-in-out;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .setup-header {
+            color: white !important;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.7);
+            border-bottom-color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        /* チーム一覧エリアを名簿風に */
+        #teams-list {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #f0f0f0 !important;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            padding: 1.5rem !important;
+        }
+
+        /* ボタンエリアにアニメーションを追加 */
+        #setup .mt-8 {
+            animation: fadeIn 2.5s ease-in-out;
+        }
+
+        /* フェードイン用アニメーションの定義 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+/* ▲▲▲ ここまで ▲▲▲ */
+
+/* ▼▼▼ このブロックを追加 ▼▼▼ */
+#news-ticker-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    display: flex;
+    align-items: center;
+    z-index: 50; /* 他の要素より手前に */
+    height: 30px;
+    font-family: 'Noto Sans JP', sans-serif;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+.ticker-label {
+    background-color: #e53935; /* 赤色 */
+    font-weight: bold;
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+.ticker-content {
+    flex-grow: 1;
+    overflow: hidden; /* はみ出したテキストを隠す */
+    padding-left: 1rem;
+}
+#ticker-text {
+    white-space: nowrap; /* テキストを改行させない */
+    /* アニメーション時間を少し長めに設定してゆっくり流す */
+    animation: scroll-ticker 40s linear infinite;
+}
+@keyframes scroll-ticker {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+/* ▲▲▲ ここまで ▲▲▲ */
 
 /* 写実的な天候アニメーション用のスタイル */
    /* 写実的な天候アニメーション用のスタイル（★調査モード★） */
@@ -361,6 +451,13 @@
     </div>
     <div id="app-container" class="max-w-full mx-auto">
 /div>
+
+<div id="news-ticker-container">
+    <div class="ticker-label">NEWS</div>
+    <div class="ticker-content">
+        <p id="ticker-text"></p>
+    </div>
+</div>
 
     <div id="weather-controls" class="fixed bottom-4 right-4 z-10">
         <div class="flex gap-2 p-2 bg-black bg-opacity-20 rounded-lg">
@@ -6217,6 +6314,22 @@ function closeReviewModal() {
         setupEl.classList.remove('hidden');
         tournamentDisplayEl.classList.add('hidden');
 　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
+
+// ▼▼▼ ここにニュースティッカーのコードを追加します ▼▼▼
+    // --- ニュースティッカー機能 ---
+    const tickerHeadlines = [
+        "昨年度王者・283学園、連覇に向け盤石の仕上がり",
+        "公立の雄・代矢東、悲願の甲子園へ『今年こそ』",
+        "プロ注目右腕、大船渡・斎藤擁する布陣に死角なしか",
+        "ノーシードからの下剋上なるか。ダークホース・豊中學園に注目",
+        "新設校・緑山、初めての夏へ。全員野球で挑む",
+        "765総合高校、2年前の栄光再び。聖地を知るメンバーがチームを牽引"
+    ];
+    // シャッフルして長い文字列を生成
+    const tickerText = new Array(5).fill(tickerHeadlines).flat().sort(() => Math.random() - 0.5).join('　／／　');
+    document.getElementById('ticker-text').textContent = tickerText;
+    // ▲▲▲ ここまで ▲▲▲
+
 }
 
     // --- Event Listeners ---
