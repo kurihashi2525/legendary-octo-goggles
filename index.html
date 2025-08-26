@@ -1540,6 +1540,7 @@ function simulateKoshien(teamRank) {
             tournamentState.seeds = [];
             tournamentState.bbsComments = [];
             tournamentState.daiyaBbsComments = [];
+            tournamentState.tickerHeadlines = [];
             tournamentState.rivalries = RIVALRIES;
             tournamentState.feuds = tournamentState.feuds || [];
             tournamentState.namcoNews = null;
@@ -1864,6 +1865,7 @@ function renderTournament(data) {
     renderDaiyaBbsComments(data.daiyaBbsComments || []);
     renderNamcoNews(data.namcoNews);
     checkTournamentProgress();
+    updateTicker();
 }
 
     /**
@@ -2388,7 +2390,7 @@ function openDetailsModal(matchId) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (details.batting[teamKey].length === 0 && teamRecord && teamRecord.roster) {
-            details.batting[teamKey] = teamRecord.roster.map(p => ({ ...p, results: Array(numInningsOnScreen).fill('') }));
+            details.batting[teamKey] = teamRecord.roster.map(p => ({ ...p, results: Array(numInnings).fill('') }));
         }
     }
     
@@ -2588,69 +2590,81 @@ function createPlayerBattingTable(teamName, teamKey, details) {
  * 詳細データを保存し、通算成績を更新する
  * (★先攻後攻を入れ替えた場合にも対応した最終版)
  */
+/**
+ * 詳細データを保存し、通算成績を更新する（全ての機能を網羅した最終完成版）
+ */
 function saveDetailedStats() {
-    if (!currentMatchIdForDetails) {
-        console.log("[saveDetailedStats] エラー: currentMatchIdForDetails が見つかりません。");
-        return;
-    }
+    if (!currentMatchIdForDetails) return;
     const match = findMatchById(currentMatchIdForDetails);
-    if (!match) {
-        console.error(`[saveDetailedStats] エラー: ID ${currentMatchIdForDetails} の試合が見つかりません。`);
-        return;
+    if (!match) return;
+
+    // --- 1. 古い成績を一度リセットする処理 ---
+    if (match.details && match.details.playerGameStats) {
+        for (const teamKey of ['team1', 'team2']) {
+            const teamName = match[teamKey];
+            const teamRecord = tournamentState.teamRecords[teamName];
+            if (!teamRecord || !teamRecord.playerStats) continue;
+
+            const previousBattingStats = match.details.playerGameStats[teamKey];
+            if (previousBattingStats) {
+                for (const playerName in previousBattingStats) {
+                    const careerStats = teamRecord.playerStats.batting[playerName];
+                    const prevGameStats = previousBattingStats[playerName];
+                    if (careerStats && prevGameStats) {
+                        careerStats.pa -= prevGameStats.pa || 0;
+                        careerStats.ab -= prevGameStats.ab || 0;
+                        careerStats.h -= prevGameStats.h || 0;
+                        careerStats.hr -= prevGameStats.hr || 0;
+                        careerStats.rbi -= prevGameStats.rbi || 0;
+                    }
+                }
+            }
+            const previousPitchingStats = match.details.pitching?.[teamKey];
+             if (previousPitchingStats) {
+                previousPitchingStats.forEach(prevGameStats => {
+                    const playerName = prevGameStats.name;
+                    const careerStats = teamRecord.playerStats.pitching[playerName];
+                     if (careerStats && prevGameStats) {
+                        if (prevGameStats.result === 'W') careerStats.w--;
+                        if (prevGameStats.result === 'L') careerStats.l--;
+                        careerStats.ip -= parseFloat(prevGameStats.innings || 0);
+                        careerStats.so -= parseInt(prevGameStats.strikeouts || 0);
+                        careerStats.er -= parseInt(prevGameStats.earnedRuns || 0);
+                    }
+                });
+            }
+        }
     }
 
-    console.log("--- [保存処理 開始] ---", { matchId: currentMatchIdForDetails });
-
-    const scoreTable = document.getElementById('inning-score-table');
+    // --- 2. 新しい詳細データオブジェクトを作成 ---
     const details = { 
         inningScore: { team1: [], team2: [] }, 
-        batting: {}, 
-        pitching: {}, 
+        batting: { team1: [], team2: [] }, 
+        pitching: { team1: [], team2: [] }, 
         inningEvents: { team1: [], team2: [] },
         playerGameStats: { team1: {}, team2: {} },
         positionChanges: match.details?.positionChanges || []
     };
-    // ▲▲▲ ▲▲▲
     
-    // --- 1. Read Inning Scores ---
+    // --- 3. 画面から入力された値を読み取り、成績を再計算・加算 ---
+    const scoreTable = document.getElementById('inning-score-table');
     if (scoreTable) {
         const rows = scoreTable.querySelectorAll('tbody tr');
-        
-        // ▼▼▼ THIS IS THE FIX ▼▼▼
-        // Correctly find the row by looking for the team name in the first <td>
-         const team1Row = Array.from(rows).find(row => row.querySelector('th')?.textContent.trim() === match.team1);
+        const team1Row = Array.from(rows).find(row => row.querySelector('th')?.textContent.trim() === match.team1);
         const team2Row = Array.from(rows).find(row => row.querySelector('th')?.textContent.trim() === match.team2);
-        // ▲▲▲ ▲▲▲
-
-        if (team1Row) {
-            details.inningScore.team1 = Array.from(team1Row.querySelectorAll('input')).map(input => input.value);
-        }
-        if (team2Row) {
-            details.inningScore.team2 = Array.from(team2Row.querySelectorAll('input')).map(input => input.value);
-        }
+        if (team1Row) details.inningScore.team1 = Array.from(team1Row.querySelectorAll('input')).map(input => input.value);
+        if (team2Row) details.inningScore.team2 = Array.from(team2Row.querySelectorAll('input')).map(input => input.value);
     }
+    match.score1 = details.inningScore.team1.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
+    match.score2 = details.inningScore.team2.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
 
-     // Calculate total scores
-
-    const totalScore1 = details.inningScore.team1.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-
-    const totalScore2 = details.inningScore.team2.reduce((sum, score) => sum + (parseInt(score) || 0), 0);
-
-    match.score1 = totalScore1;
-
-    match.score2 = totalScore2;   
-    
-    // --- 2. 打撃・投手成績の読み取りと各種データ保存 ---
-   for (const teamKey of ['team1', 'team2']) {
+    for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
+        if (!teamRecord.playerStats) teamRecord.playerStats = { batting: {}, pitching: {} };
 
-        if (!teamRecord.playerStats) {
-            teamRecord.playerStats = { batting: {}, pitching: {} };
-        }
-
-        details.batting[teamKey] = [];
+        // 打撃成績
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         if (battingTable) {
             battingTable.querySelectorAll('tbody tr').forEach(row => {
@@ -2659,95 +2673,71 @@ function saveDetailedStats() {
                     const numberSelect = row.querySelector('.player-number');
                     const posSelect = row.querySelector('.player-pos');
                     const subTypeSelect = row.querySelector('.sub-type-select');
-                    
-                     // ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
-                    // Find all the table cells that contain batting results
                     const resultCells = Array.from(row.querySelectorAll('td.col-inning'));
-                    
                     const results = resultCells.map(cell => {
-                        // Find ALL at-bat containers within this one cell
-                        const atBatContainers = cell.querySelectorAll('.batting-result-container');
-                        
-                        // Read the values from each set of dropdowns
-                        const atBatResults = Array.from(atBatContainers).map(container => {
+                        return Array.from(cell.querySelectorAll('.batting-result-container')).map(container => {
                             const resultType = container.querySelector('.result-type').value;
                             const direction = container.querySelector('.result-direction').value;
                             const rbi = container.querySelector('.result-rbi').value;
                             return [direction, resultType, rbi].filter(Boolean).join('');
-                        });
-
-                        // Join multiple at-bats in the same inning with '、'
-                        return atBatResults.filter(Boolean).join('、');
+                        }).filter(Boolean).join('、');
                     });
-                    // ▲▲▲ END OF NEW LOGIC ▲▲▲
-
+                    
                     const playerData = {
                         order: row.dataset.order, number: numberSelect.value, name: nameInput.value.trim(),
                         pos: posSelect.value, sub_type: subTypeSelect ? subTypeSelect.value : null,
                         results: results
                     };
                     details.batting[teamKey].push(playerData);
-                     // --- ここからが通算成績と試合ごと成績の計算ロジック ---
+                    
                     const playerName = playerData.name;
                     if (!teamRecord.playerStats.batting[playerName]) {
                         teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
                     }
-                    const stats = teamRecord.playerStats.batting[playerName];
-                    
-                    if (!stats.lastGameId || stats.lastGameId !== currentMatchIdForDetails) {
-                        stats.games = (stats.games || 0) + 1;
-                        stats.lastGameId = currentMatchIdForDetails;
-                    }
-                    
-                    let gameHitCount = 0;
+                    const careerStats = teamRecord.playerStats.batting[playerName];
+if (!careerStats.lastGameId || careerStats.lastGameId !== currentMatchIdForDetails) {
+    careerStats.games = (careerStats.games || 0) + 1;
+    careerStats.lastGameId = currentMatchIdForDetails;
+}
+                    const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
+
                     playerData.results.forEach(inningResultString => {
-                        if (!inningResultString || inningResultString.trim() === '') return;
-                        const atBatsInInning = inningResultString.split('、').map(s => s.trim());
-                        atBatsInInning.forEach(res => {
+                        if (!inningResultString) return;
+                        inningResultString.split('、').forEach(res => {
                             if (!res) return;
+                            gameStats.pa++;
+                            if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) gameStats.ab++;
                             
-                            stats.pa++;
-                            if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) {
-                                stats.ab++;
-                            }
-                            
-                            // ▼▼▼ 安打判定ロジックを、以前修正した「賢い」バージョンに統一 ▼▼▼
+                            // ▼▼▼【修正箇所】このブロックを差し替えてください▼▼▼
                             const isHitWord = res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三');
                             const isOutWord = res.includes('ゴロ') || res.includes('飛') || res.includes('振') || res.includes('併殺') || res.includes('直');
                             
                             if (isHitWord && !isOutWord) {
-                                stats.h++;   // 通算安打を+1
-                                gameHitCount++; // この試合の安打数も+1
+                                gameStats.h++;
                             }
-                            // ▲▲▲ ▲▲▲
+                            // ▲▲▲【修正箇所】ここまで▲▲▲
 
-                            if (res.includes('本') || res.toLowerCase().includes('hr')) {
-                                stats.hr++;
-                            }
-                            const rbiMatch = res.match(/(\d+)点/);
-                            if (rbiMatch) {
-                                stats.rbi += parseInt(rbiMatch[1]);
-                            } else if (res.includes('点')) {
-                                stats.rbi += 1;
+                            if (res.includes('本')) gameStats.hr++;
+                            if (res.includes('点')) {
+                                const rbiMatch = res.match(/(\d+)点/);
+                                gameStats.rbi += rbiMatch ? parseInt(rbiMatch[1]) : 1;
                             }
                         });
                     });
+                    careerStats.pa += gameStats.pa;
+                    careerStats.ab += gameStats.ab;
+                    careerStats.h += gameStats.h;
+                    careerStats.hr += gameStats.hr;
+                    careerStats.rbi += gameStats.rbi;
                     
-                    // 試合ごとの成績を保存
-                    if (!details.playerGameStats[teamKey]) details.playerGameStats[teamKey] = {};
-                    details.playerGameStats[teamKey][playerName] = { h: gameHitCount };
+                    details.playerGameStats[teamKey][playerName] = gameStats;
                 }
             });
- const eventsContainer = battingTable.querySelector('tfoot');
-            if (eventsContainer) {
-                const eventsInputs = eventsContainer.querySelectorAll('.inning-events-input');
-                details.inningEvents[teamKey] = Array.from(eventsInputs).map(input => input.value);
-            }
-            // ▲▲▲ END OF CORRECTION ▲▲▲
+            const eventsInputs = battingTable.querySelectorAll('.inning-events-input');
+            details.inningEvents[teamKey] = Array.from(eventsInputs).map(input => input.value);
         }
 
-        // 投手成績の処理
-        details.pitching[teamKey] = [];
+        // 投手成績
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
             pitchingTable.querySelectorAll('tbody tr').forEach(row => {
@@ -2761,55 +2751,26 @@ function saveDetailedStats() {
                         earnedRuns: inputs[8].value,
                     };
                     details.pitching[teamKey].push(pitcherData);
+
                     const pitcherName = pitcherData.name;
                     if (!teamRecord.playerStats.pitching[pitcherName]) {
-                        teamRecord.playerStats.pitching[pitcherName] = { w: 0, l: 0, s: 0, hld: 0, ip: 0, so: 0, er: 0 };
+                        teamRecord.playerStats.pitching[pitcherName] = { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0 };
                     }
-                    const stats = teamRecord.playerStats.pitching[pitcherName];
-                    if (pitcherData.result === 'W') stats.w++;
-                    if (pitcherData.result === 'L') stats.l++;
-                    if (pitcherData.result === 'S') stats.s = (stats.s || 0) + 1;
-                    if (pitcherData.result === 'H') stats.hld = (stats.hld || 0) + 1;
-                    stats.ip += parseFloat(pitcherData.innings) || 0;
-                    stats.so += parseInt(pitcherData.strikeouts) || 0;
-                    stats.er += parseInt(pitcherData.earnedRuns) || 0;
+                    const careerStats = teamRecord.playerStats.pitching[pitcherName];
+                    if (pitcherData.result === 'W') careerStats.w++;
+                    if (pitcherData.result === 'L') careerStats.l++;
+                    careerStats.ip += parseFloat(pitcherData.innings) || 0;
+                    careerStats.so += parseInt(pitcherData.strikeouts) || 0;
+                    careerStats.er += parseInt(pitcherData.earnedRuns) || 0;
                 }
             });
         }
     }
 
-// --- 「主な出来事」の調査パート ---
-    console.log("--- [調査] 「主な出来事」の入力欄を探します... ---");
-    const allEventInputs = document.querySelectorAll('#details-modal .inning-events-input');
-    
-    let debugReport = `発見した「主な出来事」入力欄の数: ${allEventInputs.length}個\n\n`;
-
-    if (allEventInputs.length > 0) {
-        allEventInputs.forEach(input => {
-            const teamKey = input.dataset.teamKey;
-            const inningIndex = parseInt(input.dataset.inningIndex, 10);
-            const value = input.value;
-
-            debugReport += `[発見した入力] チーム:${teamKey}, イニング:${inningIndex + 1}, 入力値:'${value}'\n`;
-            
-            if (details.inningEvents[teamKey] && inningIndex >= 0) {
-                while(details.inningEvents[teamKey].length <= inningIndex) {
-                    details.inningEvents[teamKey].push("");
-                }
-                details.inningEvents[teamKey][inningIndex] = value;
-                debugReport += ` -> 保存成功\n`;
-            } else {
-                debugReport += ` -> 保存失敗（チームキーまたはイニング番号が無効）\n`;
-            }
-        });
-    } else {
-        debugReport += "エラー: '.inning-events-input' というクラス名を持つ要素が見つかりませんでした。";
-    }
-    
-    console.log(debugReport);
-    alert("【調査レポート】\n" + debugReport);    
-    // --- 3. 試合オブジェクトと選手名簿の更新 ---
+    // --- 4. 試合オブジェクトと選手名簿（ロースター）の更新 ---
     match.details = details;
+    
+    // ▼▼▼【重要】ご指摘のあった「スタメン記憶」機能のコードをここに再追加▼▼▼
     for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
@@ -2823,13 +2784,14 @@ function saveDetailedStats() {
                 }));
         }
     }
- console.log("--- [保存処理 終了] 最終的に保存されるデータ: ---", details);
-    // --- 4. 最終処理 ---
+    // ▲▲▲ここまで▲▲▲
+
+    // --- 5. 最終的な保存と画面更新 ---
     saveState();
     detailsModal.classList.add('hidden');
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
-}    
+}
 /**
      * 【修正版】スキップ機能関連
      */
@@ -4095,9 +4057,9 @@ return;
 あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
 ---
 ### **【最重要】この記事の唯一の事実情報源**
-以下は、この試合で実際に起きた出来事を時系列でリスト化した「事実リスト」です。あなたの記事は、**必ずこのリストに書かれている情報に厳密に基づいて**執筆されなければなりません。このリストにない出来事（例：リストにない選手の本塁打など）を創作してはいけません。
+以下は、この試合で実際に起きた出来事を、**正しい時系列で**リスト化した「事実リスト」です。あなたの記事は、**必ずこのリストに書かれている情報に厳密に基づいて**執筆されなければなりません。
+**【厳重注意】事実リストに書かれていない出来事（例：三者凡退、好プレー、凡退の内容など）を、絶対に創作・推測してはいけません。**
 ${factListText}
-
 ### **参考情報：補足**
 
 - 前試合からのスタメン変更: ${lineupChangesText}
@@ -5302,132 +5264,311 @@ function addExtraInning() {
 }
 
 /**
+ * ニュースティッカーの表示を更新する
+ */
+function updateTicker() {
+    const tickerContainer = document.querySelector('.ticker-content');
+    const oldTickerText = document.getElementById('ticker-text');
+    if (!tickerContainer || !oldTickerText) return;
+
+    let headlines = tournamentState.tickerHeadlines || [];
+    
+    // 表示するヘッドラインがなければ、デフォルトのものを表示
+    if (headlines.length === 0) {
+        const defaultHeadlines = [
+            "昨年度王者・283学園、連覇に向け盤石の仕上がり", "公立の雄・代矢東、悲願の甲子園へ『今年こそ』",
+            "プロ注目右腕、大船渡・斎藤擁する布陣に死角なしか", "ノーシードからの下剋上なるか。ダークホース・豊中學園に注目",
+            "新設校・緑山、初めての夏へ。全員野球で挑む", "765総合高校、2年前の栄光再び。聖地を知るメンバーがチームを牽引"
+        ];
+        headlines = new Array(5).fill(defaultHeadlines).flat().sort(() => Math.random() - 0.5);
+    }
+
+    const newTextContent = headlines.join('　／／　');
+    
+    // アニメーションをリセットするために要素を再生成
+    const newTickerText = oldTickerText.cloneNode(false);
+    newTickerText.textContent = newTextContent;
+    oldTickerText.remove();
+    tickerContainer.appendChild(newTickerText);
+}
+
+/**
+ * 試合結果からニュースティッカー用の短いヘッドラインを生成する
+ * @param {object} matchData - 試合のデータオブジェクト
+ * @returns {string | null} - 生成されたヘッドラインの文字列、またはnull
+ */
+function generateTickerHeadline(matchData) {
+    const { winnerName, loserName, score1, score2 } = matchData;
+    const winnerScore = Math.max(parseInt(score1), parseInt(score2));
+    const loserScore = Math.min(parseInt(score1), parseInt(score2));
+    const scoreDiff = winnerScore - loserScore;
+
+    const winnerRank = calculateRank(winnerName, tournamentState);
+    const loserRank = calculateRank(loserName, tournamentState);
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    const rankDiff = rankValues[winnerRank] - rankValues[loserRank];
+
+    // パターン1：大番狂わせ（ジャイアントキリング）
+    if (rankDiff <= -2) {
+        return `【波乱】${getRankDescription(loserRank)}・${loserName}が初戦で散る！ ${winnerName}が金星挙げる`;
+    }
+    // パターン2：接戦
+    if (scoreDiff <= 2 && rankDiff <= 1 && rankDiff >= -1) {
+        return `手に汗握る接戦！ ${winnerName}が${loserName}を${winnerScore}-${loserScore}で振り切る`;
+    }
+    // パターン3：圧勝
+    if (scoreDiff >= 8 && rankDiff >= 2) {
+        return `王者・${winnerName}、盤石の試合運びで${loserName}を圧倒。${winnerScore}対${loserScore}でコールド勝ち級の快勝`;
+    }
+    // パターン4：ライバル対決
+    const rivalry = RIVALRIES.find(r => r.teams.includes(winnerName) && r.teams.includes(loserName));
+    if (rivalry) {
+        return `因縁の${rivalry.type}は${winnerName}に軍配！ ${loserName}を下す`;
+    }
+    // デフォルト
+    return `${winnerName}が${loserName}を下し、次のラウンドへ駒を進める`;
+}
+
+/**
  * 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す最終版
+ */
+/**
+ * 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す（全ての分析機能を搭載した最終完成版）
  */
 function createHighlightsText(dbMatch, winnerName) {
     if (!dbMatch.details) {
         return { highlights: [], keyPlayerNames: [] };
     }
 
-    const highlights = [];
-    const keyPlayerNames = new Set(); 
-    const winningTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+    // --- 内部ヘルパー関数：走塁シミュレーション ---
+    const advanceRunners = (result, batterName, currentBases, currentOuts) => {
+        let bases = [...currentBases];
+        let outs = currentOuts;
+        let runsScored = 0;
+        const [base1, base2, base3] = bases;
+        if (result.includes('三振') || result.includes('ゴロ') || result.includes('飛') || result.includes('直')) {
+            outs++;
+            if (result.includes('併殺')) { outs++; if (base1) bases[0] = null; }
+            if (result.includes('犠飛') && base3 && outs < 3) { runsScored++; bases[2] = null; }
+            return { newBases: bases, newOuts: outs, runsScored: runsScored };
+        }
+        if (result.includes('本塁打')) {
+            runsScored += bases.filter(runner => runner).length + 1;
+            bases = [null, null, null];
+        } else if (result.includes('三塁打')) {
+            runsScored += bases.filter(runner => runner).length;
+            bases = [null, null, batterName];
+        } else if (result.includes('二塁打')) {
+            if (base3) { runsScored++; bases[2] = null; }
+            if (base2) { runsScored++; bases[1] = null; }
+            if (base1) { bases[2] = base1; bases[0] = null; }
+            bases[1] = batterName;
+        } else if (result.includes('安')) {
+            if (base3) { runsScored++; bases[2] = null; }
+            if (base2) { runsScored++; bases[1] = null; }
+            if (base1) { bases[2] = base1; bases[0] = null; }
+            bases[0] = batterName;
+        } else if (result.includes('四球') || result.includes('死球')) {
+            if (base1 && base2 && base3) { runsScored++; }
+            else {
+                if (base1 && base2) { bases[2] = base2; }
+                if (base1) { bases[1] = base1; }
+            }
+            bases[0] = batterName;
+        } else {
+            if (base3) { runsScored++; bases[2] = null; }
+            if (base2) { bases[1] = base2; }
+            if (base1) { bases[1] = base1; }
+            bases[0] = batterName;
+        }
+        return { newBases: bases, newOuts: outs, runsScored: runsScored };
+    };
+    const translateResult = (res, playerInfo, eventType) => {
+        if (!res) return null;
+        let description = `${playerInfo}が`;
+        const rbiMatch = res.match(/(\d+)点/);
+        const rbiText = rbiMatch ? (parseInt(rbiMatch[1]) > 1 ? `${rbiMatch[1]}点` : '') : '';
+        if (res.includes('本塁打')) description = `${playerInfo}が${eventType}となる${rbiText}本塁打を放った`;
+        else if (res.includes('三塁打')) description = `${playerInfo}が${eventType}となる${rbiText}三塁打を放った`;
+        else if (res.includes('二塁打')) description = `${playerInfo}が${eventType}となる${rbiText}二塁打を放った`;
+        else if (res.includes('安')) description = `${playerInfo}が${eventType}となる${rbiText}ヒットを放った`;
+        else if (res.includes('犠飛')) description = `${playerInfo}が犠牲フライで${eventType}となる${rbiText || '1'}点を挙げた`;
+        else if (res.includes('ゴロ') && res.includes('点')) description = `${playerInfo}の内野ゴロの間に${eventType}となる${rbiText || '1'}点を挙げた`;
+        else if ((res.includes('エラー') || res.includes('失')) && res.includes('点')) description = `相手エラーの間に${eventType}となる${rbiText || '1'}点を記録した`;
+        else if (res.includes('犠打')) description = `${playerInfo}が送りバントを決めた`;
+        else if (res.includes('四球')) description = `${playerInfo}が四球を選んだ`;
+        else if (res.includes('死球')) description = `${playerInfo}が死球で出塁した`;
+        else if (res.includes('エラー')) description = `${playerInfo}がエラーで出塁した`;
+        else if (res.includes('野選')) description = `${playerInfo}が野選で出塁した`;
+        else if (res.includes('三振')) description = `${playerInfo}が三振に倒れた`;
+        else if (res.includes('併殺')) description = `${playerInfo}が併殺打に倒れた`;
+        else if (res.includes('ゴロ')) description = `${playerInfo}が内野ゴロに倒れた`;
+        else if (res.includes('飛')) description = `${playerInfo}が外野フライに倒れた`;
+        else if (res.includes('直')) description = `${playerInfo}がライナーに倒れた`;
+        else return null;
+        return description.replace(/1点/g, '');
+    };
+    // --- ヘルパー関数ここまで ---
 
-    let scores = { team1: 0, team2: 0 };
-    let hasScored = false;
-    let isReversed = false;
+    const highlights = [];
+    const keyPlayerNames = new Set();
+    const winningTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
     const numInnings = dbMatch.details.inningScore?.team1?.length || 9;
 
-    // --- 1. イニングごとの詳細な分析 ---
+    let hasScored = false;
+    let isReversed = false;
+    let scores = { team1: 0, team2: 0 };
+
+    // --- 1. イニングごとのシミュレーションと分析 ---
     for (let i = 0; i < numInnings; i++) {
         for (const teamKey of ['team1', 'team2']) {
             const teamName = dbMatch[teamKey];
-            const teamBatting = dbMatch.details.batting?.[teamKey] || [];
-            
-            for (let order = 1; order <= 9; order++) {
-                const playersInOrderSlot = teamBatting.filter(p => p.order && p.order.toString() === order.toString());
-                const substitutesForSlot = teamBatting.filter(p => p.order && p.order.toString().startsWith(`${order}-sub`));
-                const playersToProcess = [...playersInOrderSlot, ...substitutesForSlot];
+            const opponentTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
 
-                for (const player of playersToProcess) {
-                    if (!player.name) continue;
+            let inningOuts = 0;
+            let inningBases = [null, null, null];
+            let inningRuns = 0;
+            let wasBasesLoaded = false;
 
-                    if (i === 0 && player.order && !player.order.includes('sub')) {
-                        const playerNumber = parseInt(player.number);
-                        const playerOrder = parseInt(player.order);
-                        const teamRecord = tournamentState.teamRecords[teamName];
-                        const isKeyBattingOrder = [1, 3, 4, 5].includes(playerOrder);
-                        if (teamRecord && isKeyBattingOrder && playerNumber >= 10) {
-                            const isFirstGame = (teamRecord.wins || 0) === 0 && (teamRecord.losses || 0) === 0;
-                            let isSurpriseStarter = false;
-                            if (isFirstGame) {
-                                isSurpriseStarter = true;
-                            } else {
-                                const wasPreviouslyStarter = teamRecord.previousStarters?.some(p => p.name === player.name);
-                                if (!wasPreviouslyStarter) {
-                                    isSurpriseStarter = true;
-                                }
-                            }
-                            if (isSurpriseStarter) {
-                                highlights.push({
-                                    type: 'surprise_starter', inning: 1, team: teamName, player: player.name,
-                                    description: `背番号${playerNumber}の${player.name}が${playerOrder}番に大抜擢された`
-                                });
-                                keyPlayerNames.add(player.name);
-                            }
+            const allBattingData = dbMatch.details.batting?.[teamKey] || [];
+            const playersInInning = allBattingData
+                .map(player => ({ player, result: player.results?.[i] }))
+                .filter(item => item.result)
+                .sort((a, b) => parseFloat(a.player.order.replace('-sub', '.')) - parseFloat(b.player.order.replace('-sub', '.')));
+
+            for (const item of playersInInning) {
+                if (inningOuts >= 3) break;
+                const { player, result } = item;
+                if (!player.name) continue;
+
+                // サプライズ選出の検知
+                if (i === 0 && player.order && !player.order.includes('sub')) {
+                    const playerNumber = parseInt(player.number);
+                    const playerOrder = parseInt(player.order);
+                    const teamRecord = tournamentState.teamRecords[teamName];
+                    if (teamRecord && [1, 3, 4, 5].includes(playerOrder) && playerNumber >= 10) {
+                        const isFirstGame = (teamRecord.wins || 0) + (teamRecord.losses || 0) === 0;
+                        if (isFirstGame || !teamRecord.previousStarters?.some(p => p.name === player.name)) {
+                            highlights.push({ type: 'surprise_starter', inning: 1, team: teamName, player: player.name, description: `背番号${playerNumber}の${player.name}が${playerOrder}番に大抜擢された` });
+                            keyPlayerNames.add(player.name);
+                        }
+                    }
+                }
+
+                const atBats = result.split('、');
+                for (const res of atBats) {
+                    if (inningOuts >= 3) break;
+                    
+                    const simResult = advanceRunners(res, player.name, inningBases, inningOuts);
+                    inningBases = simResult.newBases;
+                    inningOuts = simResult.newOuts;
+
+                    if (simResult.runsScored > 0) {
+                        inningRuns += simResult.runsScored;
+                        const prevTotalScore = scores[teamKey];
+                        scores[teamKey] += simResult.runsScored;
+
+                        let eventType = '追加点';
+                        if (!hasScored) { eventType = '先制'; hasScored = true; }
+                        else if (teamKey === winningTeamKey && prevTotalScore <= scores[opponentTeamKey] && scores[teamKey] > scores[opponentTeamKey] && !isReversed) { eventType = '逆転'; isReversed = true; }
+                        
+                        const playerInfo = `${player.name}(${player.order.includes('sub') ? '交代' : player.order + '番'})`;
+                        const description = translateResult(res, playerInfo, eventType);
+                        if (description) {
+                            highlights.push({ inning: i + 1, team: teamName, player: player.name, description });
+                            keyPlayerNames.add(player.name);
                         }
                     }
 
-                    const result = player.results?.[i];
-                    if (!result) continue;
+                    if(simResult.runsScored > 0 && (res.includes('安') || res.includes('塁打') || res.includes('四球') || res.includes('死球'))) {
+                         highlights.push({ inning: i + 1, team: teamName, player: player.name, description: `${player.name}の出塁が得点に繋がった` });
+                         keyPlayerNames.add(player.name);
+                    }
                     
-                    // ▼▼▼ 抜け落ちていたのは、この打席結果を分析する部分です ▼▼▼
-                   const atBats = result.split('、');
-                    atBats.forEach(res => {
-                        if (!res) return;
-                        const playerInfo = `${player.name}(${player.order.includes('sub') ? '交代' : player.order + '番'})`;
-
-                        // --- Scoring Play Analysis (Corrected) ---
-                        if (res.includes('点') || res.toLowerCase().includes('hr') || res.includes('本')) {
-                            const prevScores = { ...scores };
-                            const scoreMatch = res.match(/(\d+)点/);
-                            let addedScore = 0;
-                            if (scoreMatch) { addedScore = parseInt(scoreMatch[1]); }
-                            else if (res.includes('本') || res.toLowerCase().includes('hr')) { addedScore = 1; }
-                            else if (res.includes('点')) { addedScore = 1; }
-                            
-                            scores[teamKey] += addedScore;
-                            
-                            let eventType = '追加点';
-                            if (!hasScored) { eventType = '先制'; hasScored = true; }
-                            else if (teamKey === winningTeamKey && prevScores[winningTeamKey] < scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && scores[winningTeamKey] > scores[dbMatch.team1 === winnerName ? 'team2' : 'team1'] && !isReversed) {
-                                eventType = '逆転'; isReversed = true;
-                            }
-                            
-                           let playDescription = '';
-                            const rbiText = addedScore > 1 ? `${addedScore}点` : '';
-                            
-                            // ▼▼▼ THIS IS THE CORRECTED STRUCTURE ▼▼▼
-                            if (res.includes('併殺') || res.includes('ゲッツー')) {
-                                playDescription = `${playerInfo}の内野ゴロ併殺打の間に走者が生還`;
-                            } else if (res.includes('ゴロ') || res.includes('野選')) {
-                                playDescription = `${playerInfo}の${rbiText}内野ゴロの間に走者が生還`;
-                            } else if (res.includes('失')) {
-                                playDescription = `相手エラーの間に${addedScore}点を追加`;
-                            } else {
-                                let hitType = '';
-                                if (res.includes('本') || res.toLowerCase().includes('hr')) hitType = '本塁打';
-                                else if (res.includes('三')) hitType = '三塁打';
-                                else if (res.includes('二')) hitType = '二塁打';
-                                else if (res.includes('安')) hitType = '安打';
-                                else if (res.includes('犠飛')) hitType = '犠飛';
-                                else hitType = '適時打';
-                                playDescription = `${playerInfo}が${eventType}となる${rbiText}${hitType}`;
-                            }
-                            // ▲▲▲ END OF CORRECTION ▲▲▲                            
-                            highlights.push({ type: 'score', inning: i + 1, team: teamName, player: player.name, order: player.order, description: playDescription.replace(/1点/g, '') });
-                            keyPlayerNames.add(player.name);
-  }
-  
-
-
-                        else if (res.includes('併殺') || res.includes('ゲッツー') || res.includes('三振') || res.includes('ゴロ') || res.includes('フライ') || res.includes('直')) {
-                            const pitcherTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
-                            const pitcherTeamName = dbMatch[pitcherTeamKey];
-                            const pitcher = dbMatch.details.pitching?.[pitcherTeamKey]?.[0];
-                            if (pitcher && pitcher.name) {
-                                highlights.push({ type: 'defense', inning: i + 1, team: pitcherTeamName, player: pitcher.name, description: `打者${player.name}を打ち取る` });
-                                keyPlayerNames.add(pitcher.name);
-                            }
-                        }
-                    });
-                    // ▲▲▲ ▲▲▲
+                    if (inningBases.every(b => b !== null)) wasBasesLoaded = true;
                 }
+            }
+            
+               const eventsText = dbMatch.details.inningEvents?.[teamKey]?.[i];
+            if (eventsText) {
+                const eventParts = eventsText.split('、').map(s => s.trim());
+                for (const event of eventParts) {
+                    const parts = event.split(' ');
+                    if (parts.length < 2) continue;
+                    
+                    const playerName = parts[0];
+                    const playDescription = parts.slice(1).join(' ');
+
+                    let description = '';
+                    let type = 'baserunning';
+                    let isKeyPlay = true;
+
+                    if (playDescription.includes('挟殺')) {
+                        description = `三本間の挟殺プレーの末にタッチアウト。好機を逸する痛いプレーとなった`;
+                        type += '_out';
+                    } else if (playDescription.includes('牽制死')) {
+                        description = `巧みな牽制球に誘い出され、帰塁できずアウトになった`;
+                        type += '_out';
+                    } else if (playDescription.includes('走塁死')) {
+                        description = `果敢に次の塁を狙ったが、好返球に阻まれ走塁死となった`;
+                        type += '_out';
+                    } else if (playDescription.includes('盗塁死')) {
+                        const opponentCatcher = dbMatch.details.batting?.[opponentTeamKey]?.find(p => p.pos === '捕');
+                        if(opponentCatcher?.name) {
+                            description = `${opponentCatcher.name}捕手の好送球に阻まれ、盗塁失敗`;
+                            keyPlayerNames.add(opponentCatcher.name);
+                        } else {
+                            description = `痛恨の盗塁失敗`;
+                        }
+                        type += '_out';
+                    } else if (playDescription.includes('盗塁')) {
+                        description = `俊足を生かして盗塁を成功させた`;
+                        type += '_success';
+                    } else if (playDescription.includes('タッチアップ')) {
+                        const goal = playDescription.includes('生還') ? 'ホームに生還した' : '進塁した';
+                        description = `犠牲フライでタッチアップし、${goal}`;
+                        type += '_success';
+                    } else if (playDescription.includes('間に')) {
+                        const goal = playDescription.includes('生還') ? '貴重な得点を挙げた' : '次の塁へ進んだ';
+                        description = `内野ゴロの間に${goal}`;
+                        type += '_success';
+                    } else {
+                        isKeyPlay = false; // 上記のどれにも当てはまらなければハイライトにしない
+                    }
+                    
+                    if(isKeyPlay){
+                         highlights.push({ type: type, inning: i + 1, team: teamName, player: playerName, description: description });
+                         keyPlayerNames.add(playerName);
+                    }
+                }
+            }
+
+            if (wasBasesLoaded && inningRuns <= 1) {
+                const pitcher = dbMatch.details.pitching?.[opponentTeamKey]?.find(p => parseFloat(p.innings) > 0);
+                if (pitcher?.name) {
+                    highlights.push({ type: 'jam_escape', inning: i + 1, team: dbMatch[opponentTeamKey], player: pitcher.name, description: `満塁のピンチを最少失点（${inningRuns}点）で切り抜ける粘りの投球を見せた` });
+                    keyPlayerNames.add(pitcher.name);
+                }
+            }
+            if (inningOuts >= 3 && (inningBases[1] || inningBases[2])) {
+                 highlights.push({ type: 'lob', inning: i + 1, team: teamName, description: `得点圏に走者を進めるも、あと一本が出なかった` });
             }
         }
     }
-
-    // --- 2. 交代選手の活躍を分析 ---
+    
+    // --- 2. 試合全体の分析 ---
+    // 孤高のエース検知
+    const loserKey = winningTeamKey === 'team1' ? 'team2' : 'team1';
+    const loserName = dbMatch[loserKey];
+    const losingPitchers = dbMatch.details.pitching?.[loserKey] || [];
+    if (losingPitchers.length === 1) {
+        const ace = losingPitchers[0];
+        if (ace.result === 'L' && parseFloat(ace.innings) >= 8 && parseInt(ace.earnedRuns) <= 2) {
+             highlights.push({ type: 'tough_loss', team: loserName, player: ace.name, description: `${ace.name}投手は${ace.innings}回を${ace.earnedRuns}失点と好投したが、打線の援護に恵まれなかった` });
+             keyPlayerNames.add(ace.name);
+        }
+    }
+    // 交代選手の活躍を分析
     for (const teamKey of ['team1', 'team2']) {
         const teamName = dbMatch[teamKey];
         const teamBatting = dbMatch.details.batting?.[teamKey] || [];
@@ -5444,11 +5585,12 @@ function createHighlightsText(dbMatch, winnerName) {
             }
         });
     }
-    // --- 3. 投手成績を直接分析 ---
+    
+    // 投手成績を直接分析
     for (const teamKey of ['team1', 'team2']) {
         const teamName = dbMatch[teamKey];
         const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
-        if (!pitchingData || pitchingData.length === 0) continue;
+        if (!pitchingData) continue;
 
         pitchingData.forEach((pitcher, index) => {
             if (!pitcher.name) return;
@@ -5456,7 +5598,6 @@ function createHighlightsText(dbMatch, winnerName) {
             const runs = parseInt(pitcher.runs || 0);
             const strikeouts = parseInt(pitcher.strikeouts || 0);
             const earnedRuns = parseInt(pitcher.earnedRuns || 0);
-
             if (pitcher.result === 'W' && runs === 0 && innings >= 7) {
                 highlights.push({ type: 'pitching_feat', team: teamName, player: pitcher.name, description: '圧巻の投球で完封勝利' });
                 keyPlayerNames.add(pitcher.name);
@@ -5464,122 +5605,42 @@ function createHighlightsText(dbMatch, winnerName) {
                 highlights.push({ type: 'pitching_feat', team: teamName, player: pitcher.name, description: `${strikeouts}奪三振の快投` });
                 keyPlayerNames.add(pitcher.name);
             }
+        });
+    }
 
-            if (index === 0 && innings >= 6) {
-                if (!highlights.some(h => h.player === pitcher.name)) {
-                    let description = `先発として${innings}回を力投`;
-                    if (pitcher.result === 'W') {
-                        description = `先発として${innings}回を粘投し勝利に貢献`;
-                    }
-                    highlights.push({ type: 'pitching_workhorse', team: teamName, player: pitcher.name, description: description });
-                    keyPlayerNames.add(pitcher.name);
-                }
+    // 戦略的な采配（エース温存・守備変更）を分析
+    for (const teamKey of ['team1', 'team2']) {
+        const teamName = dbMatch[teamKey];
+        const teamBattingData = dbMatch.details.batting?.[teamKey] || [];
+        const acePlayer = teamBattingData.find(p => p.number === '1');
+        if (acePlayer && acePlayer.name) {
+            const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
+            if (!pitchingData.some(p => p.name === acePlayer.name)) {
+                highlights.push({ type: 'strategy', team: teamName, player: acePlayer.name, description: `エースの${acePlayer.name}を温存する采配を見せた` });
             }
-            else if (index > 0) { 
-                if (!highlights.some(h => h.player === pitcher.name)) {
-                    let description = '';
-                    if (pitcher.result === 'S') {
-                        description = `抑えとして試合を締めセーブを記録`;
-                    } else if (pitcher.result === 'H' || (innings >= 2 && earnedRuns === 0)) {
-                        description = `${innings}回を無失点に抑える好リリーフ`;
-                    }
-                    if (description) {
-                        highlights.push({ type: 'pitching_relief', team: teamName, player: pitcher.name, description: description });
-                        keyPlayerNames.add(pitcher.name);
-                    }
-                }
+        }
+    }
+    if (dbMatch.details.positionChanges) {
+        dbMatch.details.positionChanges.forEach(change => {
+            const teamName = dbMatch[change.teamKey];
+            if (change.newPos === '投' || change.newPos === '投手') {
+                highlights.push({ type: 'strategy', inning: change.inning, team: teamName, player: change.playerName, description: `主軸の${change.playerName}が${change.inning}回からマウンドに上がるという大胆な采配` });
+                keyPlayerNames.add(change.playerName);
             }
         });
     }
 
-        // ▼▼▼ ここからが「エース温存」を検知する新しいロジック ▼▼▼
-    // --- 4. 戦略的な采配（エース温存）を分析 ---
-    for (const teamKey of ['team1', 'team2']) {
-        const teamName = dbMatch[teamKey];
-        const teamBattingData = dbMatch.details.batting?.[teamKey] || [];
-        if (teamBattingData.length === 0) continue;
-
-        // チームの選手リストから背番号1の選手（エース）を探す
-        const acePlayer = teamBattingData.find(p => p.number === '1');
-        
-        // エースが見つかった場合のみ処理を続ける
-        if (acePlayer && acePlayer.name) {
-            const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
-            // エースがこの試合で登板したかを確認
-            const didAcePitch = pitchingData.some(p => p.name === acePlayer.name);
-
-            // もしエースが登板していなければ、ハイライトとして記録
-            if (!didAcePitch) {
-                highlights.push({
-                    type: 'strategy',
-                    team: teamName,
-                    player: acePlayer.name,
-                    description: `エースの${acePlayer.name}を温存する采配を見せた`
-                });
-                // この采配は監督の功績なので、選手をキープレイヤーとして追加する必要はない
-            }
-        }
-    }
- // --- 4. イニングごとの「主な出来事」を分析 ---
-    for (let i = 0; i < numInnings; i++) {
-        for (const teamKey of ['team1', 'team2']) {
-            const teamName = dbMatch[teamKey];
-            const eventsText = dbMatch.details.inningEvents?.[teamKey]?.[i];
-            if (!eventsText) continue;
-
-            const eventParts = eventsText.split('、').map(s => s.trim());
-            for (const event of eventParts) {
-                const parts = event.split(' ');
-                if (parts.length < 2) continue;
-
-                const playerName = parts[0];
-                const play = parts[1];
-
-                if (play === '盗塁' || play === '盗塁成功') {
-                    highlights.push({
-                        type: 'baserunning_success', inning: i + 1, team: teamName, player: playerName,
-                        description: `俊足を生かして盗塁を成功させた`
-                    });
-                    keyPlayerNames.add(playerName);
-                }
-                else if (play === '盗塁死' || play === '盗塁失敗') {
-                    const opponentTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
-                    const opponentCatcher = dbMatch.details.batting?.[opponentTeamKey]?.find(p => p.pos === '捕');
-                    let description = `痛恨の盗塁失敗でチャンスを逸した`;
-                    if (opponentCatcher && opponentCatcher.name) {
-                        description = `${opponentCatcher.name}捕手の好送球がチャンスの芽を摘んだ`;
-                        keyPlayerNames.add(opponentCatcher.name);
-                    }
-                    highlights.push({
-                        type: 'baserunning_out', inning: i + 1, team: teamName, player: playerName,
-                        description: description
-                    });
-                }
-            }
-        }
-    }
-
- // ▼▼▼ ここからが新しい「継投サマリー」生成ロジック ▼▼▼
-    // --- 5. 継投サマリーの生成 ---
+    // 継投サマリーの生成
     for (const teamKey of ['team1', 'team2']) {
         const teamName = dbMatch[teamKey];
         const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
-        
-        // 登板した投手が2人以上の場合のみ「継投」と判断
         if (pitchingData.length > 1) {
             const pitcherNames = pitchingData.map(p => `${p.name}(${p.innings}回)`);
-            const relayDescription = `投手リレーは ${pitcherNames.join(' → ')} だった`;
-
-            highlights.push({
-                type: 'pitching_relay',
-                team: teamName,
-                description: relayDescription
-            });
+            highlights.push({ type: 'pitching_relay', team: teamName, description: `投手リレーは ${pitcherNames.join(' → ')} だった` });
         }
     }
-    // ▲▲▲ 新しいロジックここまで ▲▲▲
 
-// --- 5. 最終的なフォールバック処理 ---
+    // フォールバック処理
     if (highlights.length === 0) {
         const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
         const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
@@ -5588,20 +5649,135 @@ function createHighlightsText(dbMatch, winnerName) {
         const loser = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
 
         let fallbackDesc = '両チームともに決め手に欠ける展開だった';
-        if (scoreDiff >= 7) {
-            fallbackDesc = `${winner}が一方的な試合展開で${loser}を圧倒`;
-        } else if (winnerScore >= 7) {
-            fallbackDesc = `${winner}の打線が繋がり、効果的に得点を重ねた`;
-        } else if (loserScore <= 1) {
-            fallbackDesc = `${winner}の投手陣が${loser}打線を封じ込めた`;
-        }
+        if (scoreDiff >= 7) fallbackDesc = `${winner}が一方的な試合展開で${loser}を圧倒`;
+        else if (winnerScore >= 7) fallbackDesc = `${winner}の打線が繋がり、効果的に得点を重ねた`;
+        else if (loserScore <= 1) fallbackDesc = `${winner}の投手陣が${loser}打線を封じ込めた`;
         highlights.push({ type: 'info', description: fallbackDesc });
     }
     
+// ▼▼▼【最終機能】試合全体の物語性を分析し、総括ハイライトを生成 ▼▼▼
+    let summaryHighlight = null;
+    const winnerScore = parseInt(dbMatch[winningTeamKey === 'team1' ? 'score1' : 'score2']);
+    const loserScore = parseInt(dbMatch[losingTeamKey === 'team1' ? 'score1' : 'score2']);
+    const totalRuns = winnerScore + loserScore;
+
+    const winnerBatting = dbMatch.details.batting?.[winningTeamKey] || [];
+    const loserBatting = dbMatch.details.batting?.[losingTeamKey] || [];
+    const winnerPitching = dbMatch.details.pitching?.[winningTeamKey] || [];
+
+    const countHits = (battingData) => battingData.reduce((sum, p) => sum + (p.results?.filter(r => r && (r.includes('安') || r.includes('塁打'))).length || 0), 0);
+    const winnerHits = countHits(winnerBatting);
+    const loserHits = countHits(loserBatting);
+    const totalHits = winnerHits + loserHits;
     
+    const inningScores = dbMatch.details.inningScore;
+    let scoreAfter6th = { team1: 0, team2: 0 };
+    let scoreAfter4th = { team1: 0, team2: 0 };
+    for(let i = 0; i < numInnings; i++) {
+        const score1 = parseInt(inningScores?.team1[i] || 0);
+        const score2 = parseInt(inningScores?.team2[i] || 0);
+        if (i < 4) { scoreAfter4th.team1 += score1; scoreAfter4th.team2 += score2; }
+        if (i < 6) { scoreAfter6th.team1 += score1; scoreAfter6th.team2 += score2; }
+    }
+    const winnerScoreAfter6th = scoreAfter6th[winningTeamKey];
+    const loserScoreAfter6th = scoreAfter6th[losingTeamKey];
+    const winnerScoreAfter4th = scoreAfter4th[winningTeamKey];
+    const loserScoreAfter4th = scoreAfter4th[losingTeamKey];
+
+    const lastInning = numInnings - 1;
+    const lastInningScore = parseInt(inningScores?.[winningTeamKey][lastInning] || 0);
+    
+    if (lastInning >= 8 && lastInningScore > 0 && scores[losingTeamKey] < scores[winningTeamKey]) {
+        summaryHighlight = { type: 'summary', description: `劇的なサヨナラ勝ちで、${winnerName}が熱戦に終止符を打った` };
+    } else if (winnerPitching.length === 1 && parseFloat(winnerPitching[0].innings) >= 8) {
+        const acePitcher = winnerPitching[0];
+        const aceBatting = winnerBatting.find(p => p.name === acePitcher.name);
+        const gameWinningRBI = aceBatting?.results.some(r => r && r.includes('点') && isReversed);
+        if (gameWinningRBI) {
+             summaryHighlight = { type: 'summary', description: `エース${acePitcher.name}が投打にわたる大車輪の活躍（ワンマンショー）でチームを勝利に導いた` };
+        }
+    } else if (winnerScoreAfter6th < loserScoreAfter6th && numInnings >= 7) {
+        summaryHighlight = { type: 'summary', description: `${winnerName}が終盤に試合をひっくり返す、劇的な逆転勝利となった` };
+    } 
+    // NEW: 初回猛攻での逃げ切り勝ち
+    else if (parseInt(inningScores?.[winningTeamKey][0] || 0) >= 3 && winnerScore - parseInt(inningScores?.[winningTeamKey][0] || 0) < 2) {
+        summaryHighlight = { type: 'summary', description: `${winnerName}は初回の猛攻で奪ったリードを投手陣が最後まで守り抜き、見事な逃げ切り勝ちを収めた` };
+    }
+    else if (winnerScoreAfter4th < loserScoreAfter4th && !highlights.some(h => h.description.includes('一挙'))) {
+         summaryHighlight = { type: 'summary', description: `${winnerName}は中盤以降じわじわと得点を重ね、粘り勝ちした` };
+    } else if (winnerScoreAfter6th > loserScoreAfter6th && winnerScore < loserScore) {
+        summaryHighlight = { type: 'summary', description: `リードを守り切れなかった${loserName}は、終盤に崩れて痛い逆転負けを喫した` };
+    } else if (totalRuns <= 5 && totalHits <= 12) {
+        summaryHighlight = { type: 'summary', description: `両チームの投手が好投し、1点を争う緊迫した投手戦となった` };
+    } else if (totalRuns >= 13 && totalHits >= 20) {
+        summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点が乱れ飛ぶ、壮絶な乱打戦となった` };
+    } 
+    // NEW: 一発攻勢での勝利
+    else if (winnerHits > 0) {
+        const homeRuns = winnerBatting.reduce((sum, p) => sum + (p.results?.filter(r => r && r.includes('本塁打')).length || 0), 0);
+        const runsFromHR = winnerBatting.reduce((sum, p) => sum + (p.results?.reduce((rSum, r) => {
+            if (r && r.includes('本塁打')) {
+                const rbiMatch = r.match(/(\d+)点/);
+                return rSum + (rbiMatch ? parseInt(rbiMatch[1]) : 1);
+            }
+            return rSum;
+        }, 0) || 0), 0);
+        if (homeRuns >= 2 && runsFromHR >= winnerScore * 0.6) {
+             summaryHighlight = { type: 'summary', description: `まさに一発攻勢だった${winnerName}。効果的なホームランで得点を重ね、鮮やかな勝利を飾った` };
+        }
+    }
+    // NEW: 下位打線の活躍
+    else if (winnerScore > 0) {
+        let topOrderRBI = 0;
+        let bottomOrderRBI = 0;
+        winnerBatting.forEach(p => {
+            const order = parseInt(p.order);
+            const rbis = p.results?.reduce((sum, r) => {
+                if (r && r.includes('点')) {
+                    const rbiMatch = r.match(/(\d+)点/);
+                    return sum + (rbiMatch ? parseInt(rbiMatch[1]) : 1);
+                }
+                return sum;
+            }, 0) || 0;
+
+            if (order <= 5) topOrderRBI += rbis;
+            else bottomOrderRBI += rbis;
+        });
+        if (bottomOrderRBI > topOrderRBI && bottomOrderRBI > 0) {
+            summaryHighlight = { type: 'summary', description: `上位打線が沈黙する中、${winnerName}は下位打線の奮起でチャンスをものにし、価値ある勝利を掴んだ` };
+        }
+    }
+    // NEW: 鉄壁の守備での勝利
+    else if (loserBatting.every(p => !(p.results?.some(r => r && r.includes('エラー'))))) {
+        const doublePlays = winnerPitching.reduce((sum, p) => sum + (p.results?.filter(r => r && r.includes('併殺')).length || 0), 0);
+        if (doublePlays >= 2) {
+             summaryHighlight = { type: 'summary', description: `${winnerName}の勝利の要因は鉄壁の守備にあった。無失策に加え${doublePlays}つの併殺を完成させ、相手に付け入る隙を与えなかった` };
+        }
+    }
+    else if (winnerPitching.length >= 3 && winnerScore <= 5) {
+        summaryHighlight = { type: 'summary', description: `${winnerName}は小刻みな継投策で相手打線の的を絞らせず、見事な勝利を収めた` };
+    } else if (winnerScore - loserScore >= 7) {
+         summaryHighlight = { type: 'summary', description: `${winnerName}が投打に圧倒し、一方的な試合展開で勝利を収めた` };
+     } 
+    // ▼▼▼【省略箇所を復元】ここから▼▼▼
+    else if (winnerHits <= 6 && winnerScore > 0) {
+        const sacrifices = winnerBatting.reduce((sum, p) => sum + (p.results?.filter(r => r && (r.includes('犠打') || r.includes('犠飛'))).length || 0), 0);
+        if (sacrifices >= 2) {
+            summaryHighlight = { type: 'summary', description: `${winnerName}はヒット数こそ少なかったが、犠打や進塁打を絡めて着実に得点を重ねる堅実な野球で勝利した` };
+        }
+    } else {
+        const runsFromError = winnerBatting.reduce((sum, p) => sum + (p.results?.filter(r => r && r.includes('点') && (r.includes('エラー') || r.includes('野選'))).length || 0), 0);
+        if (runsFromError > 0 && runsFromError >= winnerScore / 2) {
+            summaryHighlight = { type: 'summary', description: `勝利した${winnerName}だったが、相手のミスに助けられた部分も大きく、課題の残る一戦となった` };
+        }
+    }
+    // ▲▲▲【省略箇所を復元】ここまで▲▲▲    
+    if (summaryHighlight) {
+        highlights.unshift(summaryHighlight);
+    }
+
     return { highlights: highlights, keyPlayerNames: Array.from(keyPlayerNames) };
 }
-  
 /**
  * 3連携の打撃結果プルダウンメニューのHTMLを生成する
  */
@@ -5753,6 +5929,8 @@ function getCurrentTournamentPerformance(teamName, currentMatchId) {
 
     return summary;
 }
+
+
 /**
  * 選手の大会通算成績を、AIプロンプト用の短い文章に要約する
  * @param {string} playerName - 選手名
@@ -5941,6 +6119,16 @@ async function processMatchWin(matchId, winnerName) {
             dbMatch.score2 = score2El.value;
         }
         dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
+// ▼▼▼ このブロックを追加 ▼▼▼
+const newHeadline = generateTickerHeadline({ winnerName, loserName, score1: dbMatch.score1, score2: dbMatch.score2 });
+if (newHeadline) {
+    tournamentState.tickerHeadlines.unshift(newHeadline); // 新しいニュースを先頭に追加
+    if (tournamentState.tickerHeadlines.length > 20) {
+        tournamentState.tickerHeadlines.pop(); // 古いニュースを削除
+    }
+    updateTicker(); // ティッカーを即時更新
+}
+// ▲▲▲ ここまで ▲▲▲
     }
 
     const winnerRank = calculateRank(winnerName, tournamentState);
@@ -6314,21 +6502,7 @@ function closeReviewModal() {
         tournamentDisplayEl.classList.add('hidden');
 　　　　teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
 
-// ▼▼▼ ここにニュースティッカーのコードを追加します ▼▼▼
-    // --- ニュースティッカー機能 ---
-    const tickerHeadlines = [
-        "昨年度王者・283学園、連覇に向け盤石の仕上がり",
-        "公立の雄・代矢東、悲願の甲子園へ『今年こそ』",
-        "プロ注目右腕、大船渡・斎藤擁する布陣に死角なしか",
-        "ノーシードからの下剋上なるか。ダークホース・豊中學園に注目",
-        "新設校・緑山、初めての夏へ。全員野球で挑む",
-        "765総合高校、2年前の栄光再び。聖地を知るメンバーがチームを牽引"
-    ];
-    // シャッフルして長い文字列を生成
-    const tickerText = new Array(5).fill(tickerHeadlines).flat().sort(() => Math.random() - 0.5).join('　／／　');
-    document.getElementById('ticker-text').textContent = tickerText;
-    // ▲▲▲ ここまで ▲▲▲
-
+ updateTicker();
 }
 
     // --- Event Listeners ---
