@@ -1588,27 +1588,27 @@ function simulateKoshien(teamRank) {
     }
 // --- Tournament Logic & Rendering ---
 
-    /**
-     * 新しいトーナメントを開始するメイン関数。大会の種類に応じて処理を分岐させる。
-     * @param {boolean} isNext - これが最初のトーナメントではないか（世代交代か）
-     * @param {string} nextTournamentType - 'summer', 'autumn', 'spring'のいずれか
-     */
-    async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {        
-        setupEl.classList.add('hidden');
-        tournamentDisplayEl.classList.remove('hidden');
+   /**
+ * 新しいトーナメントを開始するメイン関数（省略箇所を全て復元した最終完成版）
+ * @param {boolean} isNext - これが最初のトーナメントではないか（世代交代か）
+ * @param {string} nextTournamentType - 'summer', 'autumn', 'spring'のいずれか
+ * @param {Array<string> | null} predeterminedTeams - 抽選会で決定済みの組み合わせ
+ */
+async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {
+    setupEl.classList.add('hidden');
+    tournamentDisplayEl.classList.remove('hidden');
 
-        // 世代交代処理：現在の大会の最終順位を「前回の成績」として保存
-        if (isNext && tournamentState.teamRecords) {
-            for (const teamName in tournamentState.teamRecords) {
-                if (tournamentState.teamRecords.hasOwnProperty(teamName)) {
-                    const record = tournamentState.teamRecords[teamName];
-                    record.previousRank = record.lastFinish;
-                    // 新しい大会に向けて勝利数などをリセット
-                    record.wins = 0;
-                    record.losses = 0;
-                }
+    // 世代交代処理
+    if (isNext && tournamentState.teamRecords) {
+        for (const teamName in tournamentState.teamRecords) {
+            if (tournamentState.teamRecords.hasOwnProperty(teamName)) {
+                const record = tournamentState.teamRecords[teamName];
+                record.previousRank = record.lastFinish;
+                record.wins = 0;
+                record.losses = 0;
             }
         }
+    }
 
         // --- 秋季大会の開始 ---
         if (nextTournamentType === 'autumn') {
@@ -1715,105 +1715,116 @@ function simulateKoshien(teamRank) {
 
    
         
-        // --- 夏季・春季大会の開始 ---
-        else {
-            autumnRegionalContainer.classList.add('hidden');
-            autumnRankingContainer.classList.add('hidden');
-            autumnControls.classList.add('hidden');
-            mainBracketWrapper.classList.remove('hidden');
+            // --- ここからが夏季大会の処理 ---
+    mainBracketWrapper.classList.remove('hidden');
+    tournamentState.is16team = false;
+    
+    // 年度とチーム記録の初期化
+    if (!isNext) { 
+        tournamentState.tournamentYear = 2025;
+        tournamentState.currentTournament = 'summer';
+        tournamentState.teamRecords = {};
+        const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
+        historicalRanks.sort((a, b) => a.rank - b.rank);
+        
+        INITIAL_TEAM_POOL.forEach(t => {
+            const historicalRank = historicalRanks.find(hr => hr.name === t);
+            tournamentState.teamRecords[t] = { 
+                wins: 0, losses: 0, best: null, history: [],
+                lastFinish: historicalRank ? historicalRank.rank : 64, 
+                previousRank: null,
+                teamTraits: [], 
+                previousStarters: null,
+                roster: null,
+            };
+        });
+    }
+    
+    let teams;
+    let seeds = [];
 
-            tournamentState.is16team = false;
-            let teams;
-            let seeds = [];
-
-            // ▼▼▼ ここからが重要な修正部分 ▼▼▼
-        if (predeterminedTeams) {
-            // 抽選会からの組み合わせが提供された場合
-            console.log("抽選会結果を元にトーナメントを生成します。");
-            teams = predeterminedTeams;
-            // シード校も再計算して特定
+    if (predeterminedTeams) {
+        // 抽選会からの組み合わせ
+        teams = predeterminedTeams;
+        const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
+        historicalRanks.sort((a, b) => a.rank - b.rank);
+        seeds = historicalRanks.slice(0, 8).map(t => t.name);
+    } else {
+        // 抽選会スキップ時の組み合わせ
+        if (isNext) {
+            const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
+                .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
+                .sort((a, b) => a.lastFinish - b.lastFinish);
+            seeds = lastTournamentTeams.slice(0, 8).map(t => t.name);
+        } else {
             const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
             historicalRanks.sort((a, b) => a.rank - b.rank);
             seeds = historicalRanks.slice(0, 8).map(t => t.name);
-
-        } else {
-            // 抽選会がスキップされた場合（従来のロジック）
-            console.log("新しい組み合わせをランダムに生成します。");
-            if (isNext) {
-                // (isNextの場合のシード決定ロジック ... 省略)
-            } else { // 初回起動時
-                tournamentState.tournamentYear = 2025;
-                tournamentState.currentTournament = 'summer';
-                tournamentState.teamRecords = {};
-                const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-                historicalRanks.sort((a, b) => a.rank - b.rank);
-                seeds = historicalRanks.slice(0, 8).map(t => t.name);
-                INITIAL_TEAM_POOL.forEach(t => { /* ... 初回レコード作成 ... */ });
-            }
-
-            const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
-            const shuffledNonSeeds = shuffleArray(nonSeeds);
-            teams = Array(64).fill(null);
-            const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
-            const seedPositions = seedPositionsTemplate.slice(0, seeds.length);
-            const seedPlacements = {};
-            seeds.forEach((seed, i) => { seedPlacements[seedPositions[i]] = seed; });
-            let nonSeedIndex = 0;
-            for (let i = 0; i < 64; i++) {
-                teams[i] = seedPlacements[i] ? seedPlacements[i] : shuffledNonSeeds[nonSeedIndex++];
-            }
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
 
-            tournamentState.teams = teams;
-            tournamentState.matches = {};
-            tournamentState.news = [];
-            tournamentState.seeds = seeds;
-            tournamentState.bbsComments = [];
-            tournamentState.daiyaBbsComments = [];
-            tournamentState.rivalries = RIVALRIES;
-            tournamentState.feuds = tournamentState.feuds || [];
-            tournamentState.namcoNews = null;
-            tournamentState.autumnPhase = null;
-
-            const round1Setup = teams.reduce((acc, team, i) => {
-                if (i % 2 === 0) acc.push({ team1: team, team2: null });
-                else acc[acc.length - 1].team2 = team;
-                return acc;
-            }, []);
-
-            round1Setup.forEach((match, index) => {
-                const side = index < 16 ? 'L' : 'R';
-                const matchNum = index < 16 ? index + 1 : index - 15;
-                const matchId = `${side}-R1-M${matchNum}`;
-                tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
-            });
-
-            saveState();
-            renderTournament(tournamentState);
-            
-            const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-            newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
-            bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-            namcoNewsSection.classList.remove('hidden');
-            namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
-
-            const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-                generateNewsArticle(null, null, null, 'preview', null, null),
-                generateBracketReactionComments(tournamentState),
-                generateNamcoNews(tournamentState, 'bracket')
-            ]);
-
-            if (previewArticle) tournamentState.news.unshift(previewArticle);
-            if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
-            if (namcoNews) tournamentState.namcoNews = namcoNews;
-
-            renderNews(tournamentState.news);
-            renderBbsComments(tournamentState.bbsComments);
-            renderNamcoNews(tournamentState.namcoNews);
-            saveState();
+        const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
+        const shuffledNonSeeds = shuffleArray(nonSeeds);
+        teams = Array(64).fill(null);
+        const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
+        const seedPlacements = {};
+        seeds.forEach((seed, i) => { seedPlacements[seedPositionsTemplate[i]] = seed; });
+        let nonSeedIndex = 0;
+        for (let i = 0; i < 64; i++) {
+            teams[i] = seedPlacements[i] ? seedPlacements[i] : shuffledNonSeeds[nonSeedIndex++];
         }
     }
+    
+    // トーナメントデータの作成
+    tournamentState.teams = teams;
+    tournamentState.matches = {};
+    tournamentState.news = [];
+    tournamentState.seeds = seeds;
+    tournamentState.bbsComments = [];
+    tournamentState.daiyaBbsComments = [];
+    tournamentState.tickerHeadlines = []; 
+    tournamentState.rivalries = RIVALRIES;
+    tournamentState.feuds = tournamentState.feuds || [];
+    tournamentState.namcoNews = null;
+
+    const round1Setup = teams.reduce((acc, team, i) => {
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
+        return acc;
+    }, []);
+
+    round1Setup.forEach((match, index) => {
+        const side = index < 16 ? 'L' : 'R';
+        const matchNum = index < 16 ? index + 1 : index - 15;
+        const matchId = `${side}-R1-M${matchNum}`;
+        tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+    });
+
+    saveState();
+    renderTournament(tournamentState);
+    
+    // ▼▼▼【重要】ご指摘のあった、大会開始時のAIコンテンツ生成処理を復元▼▼▼
+    const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+    namcoNewsSection.classList.remove('hidden');
+    namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+
+    const [previewArticle, bracketComments, namcoNews] = await Promise.all([
+        generateNewsArticle(null, null, null, 'preview'),
+        generateBracketReactionComments(tournamentState),
+        generateNamcoNews(tournamentState, 'bracket')
+    ]);
+
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
+    if (namcoNews) tournamentState.namcoNews = namcoNews;
+
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments);
+    renderNamcoNews(tournamentState.namcoNews);
+    saveState();
+    // ▲▲▲ここまで▲▲▲
+}
 
    /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
@@ -6672,7 +6683,7 @@ ${notableMatchups.map(m => `- ${m.team1} vs ${m.team2}`).join('\n')}
             interviewContent.innerHTML = interviews.map(iv => `
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h4 class="font-bold text-lg text-gray-800">${iv.team} 主将</h4>
-                    <p class="mt-1 text-gray-700">「${iv.comment}」</p>
+                    <p class="mt-1 text-gray-700">「${iv.captain_comment}」</p>
                 </div>
             `).join('');
         }
