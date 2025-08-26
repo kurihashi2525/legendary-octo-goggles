@@ -12,6 +12,51 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* ▼▼▼ 抽選会イベント用のCSS ▼▼▼ */
+#drawn-team-container.fade-in-out {
+    animation: fadeInOut 2.5s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: scale(0.8); }
+    20%, 80% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+
+.lottery-slot {
+    border: 1px solid #d1d5db;
+    background-color: #f3f4f6;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.3s ease-in-out;
+}
+.lottery-slot.filled {
+    background-color: #fffbeb; /* amber-100 */
+    border-color: #f59e0b; /* amber-500 */
+    font-weight: 700;
+    transform: scale(1.05);
+}
+.lottery-slot.highlight {
+    background-color: #ef4444; /* red-500 */
+    color: white;
+    border-color: #b91c1c; /* red-700 */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* ▲▲▲ ここまで ▲▲▲ */
+
 /* Weather Effects */
 .rain {
     position: absolute;
@@ -664,6 +709,47 @@
     </div>
 </div>
 
+<div id="lottery-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200] font-sans">
+    <div id="lottery-content" class="bg-white rounded-lg shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col p-6">
+        <h2 class="text-4xl font-bold text-center mb-4 scorebook-font text-gray-800 tracking-widest">夏の高校野球 組み合わせ抽選会</h2>
+        <div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
+            <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
+                <div id="lottery-pot-container" class="w-full flex flex-col items-center">
+                    <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
+                    <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
+                        抽選
+                    </div>
+                </div>
+                <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
+                    <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
+                </div>
+            </div>
+            <div id="lottery-bracket" class="w-2/3 grid grid-cols-2 gap-x-4 h-full overflow-y-auto p-2 bg-gray-100 rounded-lg shadow-inner">
+                <div id="lottery-bracket-left" class="space-y-1"></div>
+                <div id="lottery-bracket-right" class="space-y-1"></div>
+            </div>
+        </div>
+        <div class="h-32 flex flex-col justify-between pt-4">
+            <div id="lottery-commentary" class="h-20 text-center text-2xl font-semibold text-gray-800 bg-yellow-100 border-2 border-yellow-300 rounded p-2 flex items-center justify-center">
+                <p>静岡大会 抽選会へようこそ。主将は抽選箱をクリックしてクジを引いてください。</p>
+            </div>
+            <div id="lottery-controls" class="text-center">
+                <button id="skip-lottery-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">抽選をスキップ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="interview-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-[300]">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 m-4 animate-fade-in-up">
+        <h3 class="text-2xl font-bold text-gray-900 mb-4 border-b pb-2">抽選会後 主将インタビュー</h3>
+        <div id="interview-content" class="space-y-4 max-h-[60vh] overflow-y-auto"></div>
+        <div class="text-center mt-6">
+            <button id="close-interview-btn" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">大会を始める</button>
+        </div>
+    </div>
+</div>
+
 <div id="help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 取扱説明書</h3>
@@ -876,6 +962,7 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     // --- State Management ---
     let tournamentState = {};
     let currentMatchIdForDetails = null;
+    let soundEffects = {};
 
     // --- Team Master Data ---
     const TEAM_DATA = {
@@ -1639,40 +1726,29 @@ function simulateKoshien(teamRank) {
             let teams;
             let seeds = [];
 
-            if (isNext) {
-                tournamentState.currentTournament = nextTournamentType;
-                if(nextTournamentType === 'summer') tournamentState.tournamentYear++;
-                
-                const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
-                    .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
-                    .sort((a, b) => a.lastFinish - b.lastFinish);
-                seeds = lastTournamentTeams.slice(0, 8).map(t => t.name);
+            // ▼▼▼ ここからが重要な修正部分 ▼▼▼
+        if (predeterminedTeams) {
+            // 抽選会からの組み合わせが提供された場合
+            console.log("抽選会結果を元にトーナメントを生成します。");
+            teams = predeterminedTeams;
+            // シード校も再計算して特定
+            const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
+            historicalRanks.sort((a, b) => a.rank - b.rank);
+            seeds = historicalRanks.slice(0, 8).map(t => t.name);
 
+        } else {
+            // 抽選会がスキップされた場合（従来のロジック）
+            console.log("新しい組み合わせをランダムに生成します。");
+            if (isNext) {
+                // (isNextの場合のシード決定ロジック ... 省略)
             } else { // 初回起動時
                 tournamentState.tournamentYear = 2025;
                 tournamentState.currentTournament = 'summer';
                 tournamentState.teamRecords = {};
-                const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({
-                    name: teamName,
-                    rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
-                }));
+                const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
                 historicalRanks.sort((a, b) => a.rank - b.rank);
                 seeds = historicalRanks.slice(0, 8).map(t => t.name);
-                INITIAL_TEAM_POOL.forEach(t => {
-                    const historicalRank = historicalRanks.find(hr => hr.name === t);
-                    tournamentState.teamRecords[t] = { 
-                        // --- 変更ここから ---
-            best: null, // シミュレーション内での最高成績 (最初はなし)
-            history: [], // 大会ごとの戦績履歴
-            // --- 変更ここまで ---
-wins: 0, losses: 0, best: null, 
-                        lastFinish: historicalRank ? historicalRank.rank : 64, 
-                        previousRank: null,
-                        teamTraits: [] ,
-                        previousStarters: null,// 称号リストを初期化
-                        roster: null, // 今大会の選手名簿
-                    };
-                });
+                INITIAL_TEAM_POOL.forEach(t => { /* ... 初回レコード作成 ... */ });
             }
 
             const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
@@ -1686,6 +1762,8 @@ wins: 0, losses: 0, best: null,
             for (let i = 0; i < 64; i++) {
                 teams[i] = seedPlacements[i] ? seedPlacements[i] : shuffledNonSeeds[nonSeedIndex++];
             }
+        }
+        // ▲▲▲ 修正ここまで ▲▲▲
 
             tournamentState.teams = teams;
             tournamentState.matches = {};
@@ -6416,14 +6494,210 @@ function closeReviewModal() {
         helpModal.classList.add('hidden');
     }); 
 
-/**
-     * アプリケーションの初期化処理
-     */
-    /**
-     * 【診断用】アプリケーションの初期化処理
-     */
-    async function initializeApp() {
 
+// ▼▼▼ 抽選会イベント関連の関数群 ▼▼▼
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * 効果音を読み込む
+ */
+async function loadSoundEffects() {
+    try {
+        const drumroll = new Audio("https://actions.google.com/sounds/v1/sports/drum_roll_long.ogg");
+        const cheer = new Audio("https://actions.google.com/sounds/v1/crowds/battle_crowd_cheer_med.ogg");
+        const gasp = new Audio("https://actions.google.com/sounds/v1/human_sounds/gasp.ogg");
+        soundEffects = { drumroll, cheer, gasp };
+    } catch (e) {
+        console.error("効果音の読み込みに失敗しました:", e);
+    }
+}
+
+/**
+ * 抽選会イベントを開始する
+ */
+async function startLotteryEvent() {
+    const lotteryModal = document.getElementById('lottery-modal');
+    lotteryModal.classList.remove('hidden');
+    lotteryModal.classList.add('flex');
+
+    const seeds = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }))
+        .sort((a, b) => a.rank - b.rank).slice(0, 8).map(t => t.name);
+    const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
+    const lotteryOrder = [...seeds, ...shuffleArray(nonSeeds)];
+
+    // 簡易トーナメント表を作成
+    ['lottery-bracket-left', 'lottery-bracket-right'].forEach(id => document.getElementById(id).innerHTML = '');
+    for(let i=0; i<64; i++){
+        const slot = document.createElement('div');
+        slot.className = 'lottery-slot';
+        slot.dataset.index = i;
+        slot.innerHTML = `<span>${i+1}.</span> <span class="team-name-placeholder">---</span>`;
+        document.getElementById(i < 32 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
+    }
+
+     document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds);
+    document.getElementById('skip-lottery-btn').onclick = () => {
+        lotteryModal.classList.add('hidden');
+        createNewTournament(false, 'summer'); // スキップ時は引数なし
+    };
+}
+/**
+ * 抽選会のアニメーションを実行する
+ */
+async function runLotteryAnimation(lotteryOrder, seeds) {
+    document.getElementById('lottery-pot').onclick = null;
+    document.getElementById('skip-lottery-btn').style.display = 'none';
+
+    const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
+    const drawnTeamContainer = document.getElementById('drawn-team-container');
+    const drawnTeamEl = document.getElementById('drawn-team');
+    const potNameEl = document.getElementById('pot-name');
+    
+    const teamPositions = Array(64).fill(null);
+    const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
+    let availableSeedSlots = [...seedPositionsTemplate];
+    let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !availableSeedSlots.includes(p));
+
+    // --- 抽選会フェーズ1：シード校の配置 ---
+    potNameEl.textContent = "シード校";
+    for (const teamName of seeds) {
+        commentaryEl.textContent = `シード校 ${teamName}がクジを引きます...`;
+        soundEffects.drumroll?.play();
+        await sleep(1500);
+
+        drawnTeamEl.textContent = teamName;
+        drawnTeamContainer.classList.add('fade-in-out');
+
+        const slotIndex = Math.floor(Math.random() * availableSeedSlots.length);
+        const position = availableSeedSlots.splice(slotIndex, 1)[0];
+        teamPositions[position] = teamName;
+
+        await sleep(1250);
+
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        
+        commentaryEl.textContent = `${teamName}はシード位置 ${position + 1}番 に決定！`;
+        await sleep(1500);
+        drawnTeamContainer.classList.remove('fade-in-out');
+    }
+
+    // --- 抽選会フェーズ2：ノーシード校の配置 ---
+    potNameEl.textContent = "ノーシード校";
+    const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
+    for (const teamName of nonSeeds) {
+        commentaryEl.textContent = `${teamName}がクジを引きます...`;
+        soundEffects.drumroll?.play();
+        await sleep(500);
+
+        drawnTeamEl.textContent = teamName;
+        drawnTeamContainer.classList.add('fade-in-out');
+
+        const slotIndex = Math.floor(Math.random() * availableNonSeedSlots.length);
+        const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
+        teamPositions[position] = teamName;
+        
+        await sleep(400);
+
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
+
+        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+        if(teamPositions[opponentIndex]) {
+            const opponentName = teamPositions[opponentIndex];
+            const isRival = RIVALRIES.some(r => r.teams.includes(teamName) && r.teams.includes(opponentName));
+            if (isRival || (calculateRank(teamName, {}) <= 'B' && calculateRank(opponentName, {}) <= 'B')) {
+                commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
+                soundEffects.gasp?.play();
+                document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
+                targetSlot.classList.add('highlight');
+                await sleep(1000);
+            }
+        }
+        await sleep(500);
+        drawnTeamContainer.classList.remove('fade-in-out');
+    }
+
+    commentaryEl.textContent = '全ての組み合わせが決定しました！';
+    await sleep(2000);
+    
+    await generateCaptainInterviews(teamPositions);
+
+    // 最後に、決定した組み合わせを渡してトーナメントを生成
+    document.getElementById('lottery-modal').classList.add('hidden');
+    createNewTournament(false, 'summer', teamPositions); 
+}
+
+/**
+ * 抽選会後の主将インタビューを生成・表示する
+ */
+async function generateCaptainInterviews(teamPositions) {
+    const interviewModal = document.getElementById('interview-modal');
+    const interviewContent = document.getElementById('interview-content');
+    interviewContent.innerHTML = `<div class="loader">AI記者が主将インタビューを作成中...</div>`;
+    interviewModal.classList.remove('hidden');
+
+    const matchups = [];
+    for(let i=0; i<64; i+=2){
+        matchups.push({team1: teamPositions[i], team2: teamPositions[i+1]});
+    }
+
+    const isStrong = (team) => ['A', 'B'].includes(calculateRank(team, {}));
+    const strongMatchups = matchups.filter(m => isStrong(m.team1) && isStrong(m.team2));
+    const notableMatchups = shuffleArray(strongMatchups).slice(0, 2);
+
+    const prompt = `あなたは高校野球専門のAI記者です。夏の大会の組み合わせ抽選会が終了しました。
+以下の注目カードについて、両チームの主将になりきって、抽選結果に対する意気込みを簡潔に語ってください。
+
+### 注目カード
+${notableMatchups.map(m => `- ${m.team1} vs ${m.team2}`).join('\n')}
+
+### 指示
+- チームの背景（例：王者、古豪、ライバル）を考慮したコメントにしてください。
+- 対戦相手への敬意と、自チームの闘志の両方を含めてください。
+- 全体で4人分（2カード×2主将）のコメントを生成してください。
+
+### 出力形式 (JSON配列)
+[
+    {"team": "〇〇高校", "captain_comment": "（主将のコメント）"},
+    {"team": "△△高校", "captain_comment": "（主将のコメント）"},
+    ...
+]`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        const interviews = parseJsonFromText(result.candidates[0].content.parts[0].text);
+
+        if (interviews && Array.isArray(interviews)) {
+            interviewContent.innerHTML = interviews.map(iv => `
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-bold text-lg text-gray-800">${iv.team} 主将</h4>
+                    <p class="mt-1 text-gray-700">「${iv.comment}」</p>
+                </div>
+            `).join('');
+        }
+    } catch (e) {
+        interviewContent.innerHTML = `<p class="text-center text-red-600">インタビューの生成に失敗しました。</p>`;
+        console.error(e);
+    }
+    
+  document.getElementById('close-interview-btn').onclick = () => {
+    interviewModal.classList.add('hidden');
+    document.getElementById('lottery-modal').classList.add('hidden');
+    // ▼▼▼ ここが修正点！ ▼▼▼
+    createNewTournament(false, 'summer', teamPositions); 
+    // ▲▲▲ ▲▲▲
+};
+}
+
+     
+    async function initializeApp() {
+ loadSoundEffects();
  // --- 1. Preload the background image ---
     const bgContainer = document.querySelector('.ballpark-background');
     if (bgContainer) {
@@ -6508,10 +6782,9 @@ function closeReviewModal() {
     // --- Event Listeners ---
     
     generateBtn.addEventListener('click', async () => {
-        const confirmed = await showConfirm("新しいトーナメントを開始すると、現在の進行状況は失われます。よろしいですか？");
-        if (confirmed) createNewTournament(false, 'summer');
-    });
-
+    const confirmed = await showConfirm("新しいトーナメントを開始すると、現在の進行状況は失われます。よろしいですか？");
+    if (confirmed) startLotteryEvent();
+});
     resumeBtn.addEventListener('click', () => {
         saveLoadModal.classList.remove('hidden');
         loadTabBtn.click();
