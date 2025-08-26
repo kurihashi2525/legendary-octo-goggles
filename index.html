@@ -6553,45 +6553,59 @@ async function startLotteryEvent() {
         createNewTournament(false, 'summer'); // スキップ時は引数なし
     };
 }
+
 /**
- * 抽選会のアニメーションを実行する（効果音エラー対策版）
+ * 抽選会のアニメーションを実行する（AI記者によるリアルタイム実況強化・完全版）
+ * @param {Array<string>} lotteryOrder - シード校と、シャッフル済みのノーシード校を含む全チームの配列
+ * @param {Array<string>} seeds - シード校8チームの配列
  */
 async function runLotteryAnimation(lotteryOrder, seeds) {
-    document.getElementById('lottery-pot').onclick = null;
+    // --- 1. 初期設定 ---
+    document.getElementById('lottery-pot').onclick = null; // 二重実行を防止
     document.getElementById('skip-lottery-btn').style.display = 'none';
 
+    // 必要なHTML要素を取得
     const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
     const drawnTeamContainer = document.getElementById('drawn-team-container');
     const drawnTeamEl = document.getElementById('drawn-team');
     const potNameEl = document.getElementById('pot-name');
     
+    // 抽選結果を保存する配列と、配置可能なスロットのリストを準備
     const teamPositions = Array(64).fill(null);
     const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
     let availableSeedSlots = [...seedPositionsTemplate];
     let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !availableSeedSlots.includes(p));
+    
+    // 「死のブロック」実況をブロックごとに一度だけ行うためのフラグ
+    const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
-    const processTeamDraw = async (teamName, position) => {
-        teamPositions[position] = teamName;
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
-        targetSlot.classList.add('filled');
-        
-        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        
-        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
-        if(teamPositions[opponentIndex]) {
-            const opponentName = teamPositions[opponentIndex];
-            const isRival = RIVALRIES.some(r => r.teams.includes(teamName) && r.teams.includes(opponentName));
-            if (isRival || (calculateRank(teamName, {}) <= 'B' && calculateRank(opponentName, {}) <= 'B')) {
-                commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
-                try { soundEffects.gasp?.play(); } catch(e) { console.warn("効果音の再生に失敗:", e); }
-                document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
-                targetSlot.classList.add('highlight');
-                await sleep(2000);
-            }
+    // 内部ヘルパー関数：死のブロックが誕生したかチェックする
+    const checkDeathBlock = (position) => {
+        const blockStarts = { A: 0, B: 16, C: 32, D: 48 };
+        let blockName = '';
+        let startIdx = 0;
+
+        if (position < 16) { blockName = 'A'; startIdx = 0; }
+        else if (position < 32) { blockName = 'B'; startIdx = 16; }
+        else if (position < 48) { blockName = 'C'; startIdx = 32; }
+        else { blockName = 'D'; startIdx = 48; }
+
+        if (blockDeathAnnounced[blockName]) return false; // 既に実況済みなら何もしない
+
+        const teamsInBlock = teamPositions.slice(startIdx, startIdx + 16);
+        const strongTeamsCount = teamsInBlock.filter(team => team && ['A', 'B'].includes(calculateRank(team, {}))).length;
+
+        if (strongTeamsCount >= 3) { // ブロック内に強豪が3チーム以上で「死のブロック」と判定
+            commentaryEl.textContent = `これは...！ ${blockName}ブロックは有力校が集中する「死のブロック」になりました！`;
+            blockDeathAnnounced[blockName] = true;
+            try { soundEffects.gasp?.play(); } catch(e) { console.warn("効果音の再生に失敗:", e); }
+            return true; // 実況したことを伝える
         }
+        return false;
     };
 
+
+    // --- 2. 抽選会フェーズ1：シード校の配置 ---
     potNameEl.textContent = "シード校";
     for (const teamName of seeds) {
         commentaryEl.textContent = `シード校 ${teamName}がクジを引きます...`;
@@ -6603,32 +6617,72 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
 
         const slotIndex = Math.floor(Math.random() * availableSeedSlots.length);
         const position = availableSeedSlots.splice(slotIndex, 1)[0];
-        
+        teamPositions[position] = teamName;
+
         await sleep(1250);
-        await processTeamDraw(teamName, position);
+
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        
+        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+        if (teamPositions[opponentIndex]) {
+            commentaryEl.textContent = `${teamName}の相手は${teamPositions[opponentIndex]}に決定！`;
+        } else {
+            commentaryEl.textContent = `${teamName}は ${position + 1}番！ 相手はまだ決まりません！`;
+        }
+
         await sleep(1500);
         drawnTeamContainer.classList.remove('fade-in-out');
     }
 
+
+    // --- 3. 抽選会フェーズ2：ノーシード校の配置 ---
     potNameEl.textContent = "ノーシード校";
     const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
     for (const teamName of nonSeeds) {
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
         try { soundEffects.drumroll?.play(); } catch(e) { console.warn("効果音の再生に失敗:", e); }
-        await sleep(500);
+        await sleep(250); // ノーシードは少しテンポアップ
 
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
 
         const slotIndex = Math.floor(Math.random() * availableNonSeedSlots.length);
         const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
+        teamPositions[position] = teamName;
         
-        await sleep(400);
-        await processTeamDraw(teamName, position);
-        await sleep(500);
+        await sleep(200);
+
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
+
+        let didComment = false;
+        if (['A', 'B'].includes(calculateRank(teamName, {}))) {
+            didComment = checkDeathBlock(position);
+        }
+
+        if (!didComment) {
+            const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+            if(teamPositions[opponentIndex]) {
+                const opponentName = teamPositions[opponentIndex];
+                const isRival = RIVALRIES.some(r => r.teams.includes(teamName) && r.teams.includes(opponentName));
+                if (isRival || (calculateRank(teamName, {}) <= 'B' && calculateRank(opponentName, {}) <= 'B')) {
+                    commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
+                    try { soundEffects.gasp?.play(); } catch(e) { console.warn("効果音の再生に失敗:", e); }
+                    document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
+                    targetSlot.classList.add('highlight');
+                    await sleep(1500);
+                }
+            }
+        }
+        await sleep(250);
         drawnTeamContainer.classList.remove('fade-in-out');
     }
 
+    // --- 4. 終了処理 ---
     commentaryEl.textContent = '全ての組み合わせが決定しました！';
     await sleep(2000);
     
