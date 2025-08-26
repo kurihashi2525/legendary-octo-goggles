@@ -5502,6 +5502,7 @@ function createHighlightsText(dbMatch, winnerName) {
     const highlights = [];
     const keyPlayerNames = new Set();
     const winningTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+    
     const numInnings = dbMatch.details.inningScore?.team1?.length || 9;
 
     let hasScored = false;
@@ -5746,6 +5747,7 @@ function createHighlightsText(dbMatch, winnerName) {
     
 // ▼▼▼【最終機能】試合全体の物語性を分析し、総括ハイライトを生成 ▼▼▼
     let summaryHighlight = null;
+const losingTeamKey = winningTeamKey === 'team1' ? 'team2' : 'team1';
     const winnerScore = parseInt(dbMatch[winningTeamKey === 'team1' ? 'score1' : 'score2']);
     const loserScore = parseInt(dbMatch[losingTeamKey === 'team1' ? 'score1' : 'score2']);
     const totalRuns = winnerScore + loserScore;
