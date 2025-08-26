@@ -2486,10 +2486,10 @@ function createPlayerBattingTable(teamName, teamKey, details) {
                 const inningResultsArray = inningResultsString.split('、').filter(res => res);
                 if (inningResultsArray.length === 0) inningResultsArray.push('');
                 const dropdownsHTML = inningResultsArray.map((res, idx) => createBattingResultDropdowns(res, idx)).join('');
-                resultInputs += `<td class="col-inning batting-result-cell">${dropdownsHTML}</td>`;
+                subResultInputs += `<td class="col-inning batting-result-cell">${dropdownsHTML}</td>`;
             }
             
-            bodyRows += `
+             bodyRows += `
                 <tr data-order="${subData.order}">
                     <td class="col-order"></td>
                     <td class="col-number">${subNumberSelect}</td>
@@ -2504,8 +2504,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
                             <option value="PITCHER" ${subData.sub_type === 'PITCHER' ? 'selected' : ''}>投手</option>
                         </select>
                     </td>
-                    ${subResultInputs}
-                </tr>
+                    ${subResultInputs} </tr>
             `;
         });
     }
