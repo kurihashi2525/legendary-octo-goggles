@@ -1000,6 +1000,8 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     let soundEffects = {};
     const UNDERDOG_TEAMS = ["虎府島総合", "緑山", "鷲尾", "県立由暇"];
     const POWERHOUSE_TEAMS = ["283学園", "天下無双学園", "代矢東", "雷門南", "稲城実業", "青道", "765総合高校"];
+　　const POWERHOUSE_REVIVAL_TEAMS = ["海堂学園", "帝王実業", "風林大尾"];
+　　const ONE_MAN_TEAMS = ["大船渡"];
 
 // ▼▼▼ このオブジェクトで、既存のSoundManagerを完全に置き換えてください ▼▼▼
 // ▼▼▼ サウンド管理システム ▼▼▼
@@ -1405,9 +1407,9 @@ async function startDocumentary(type, teamName) {
 
 
 /**
- * ドキュメンタリー調の記事をAIに生成させる（ハイライト情報活用・最終完全版）
+ * ドキュメンタリー調の記事をAIに生成させる（全4テーマ統合・最終完全版）
  * @param {'intro' | 'win' | 'lose'} phase - 記事の種類
- * @param {'underdog' | 'powerhouse'} type - ドキュメンタリーの種類
+ * @param {'underdog' | 'powerhouse' | 'powerhouse_revival' | 'one_man_team'} type - ドキュメンタリーの種類
  * @param {string} teamName - 主役のチーム名
  * @param {object} [matchData=null] - 試合データ
  * @returns {Promise<object|null>}
@@ -1417,14 +1419,117 @@ async function generateDocumentaryArticle(phase, type, teamName, matchData = nul
     let prompt = `あなたは、情熱的で人間ドラマを描くのが得意なドキュメンタリー番組の記者です。あなたは今、高校野球チーム「${teamName}」に密着取材しています。`;
     let title = "";
 
+    // AIに渡すための登場人物リストを動的に作成
     let charactersPrompt = `### 主な登場人物\n- 監督: ${teamMasterData.coach.name} (${teamMasterData.coach.style})\n`;
-    if (type === 'powerhouse' && DETAILED_TEAM_DATA[teamName]) {
+    if ((type === 'powerhouse' || type === 'powerhouse_revival' || type === 'one_man_team') && DETAILED_TEAM_DATA[teamName]) {
         const detailedData = DETAILED_TEAM_DATA[teamName];
-        const keyPlayers = detailedData.players.slice(0, 4).map(p => `- ${p.name}(${p.year}年, ${p.position}): ${p.desc}`).join('\n');
+        const keyPlayers = detailedData.players.map(p => `- ${p.name}(${p.year}年, ${p.position}): ${p.desc}`).join('\n');
         charactersPrompt += `### 注目選手\n${keyPlayers}\n`;
     }
 
-    if (type === 'powerhouse') {
+    if (type === 'powerhouse_revival') {
+        // --- 古豪復活チーム用のプロンプト ---
+        switch (phase) {
+            case 'intro':
+                title = `『${teamName}、復活への序曲』`;
+                prompt += `
+### 取材テーマ
+かつて黄金時代を築いた古豪「${teamName}」が、失われた栄光を取り戻すべく挑む夏を追う、感動的なドキュメンタリーの導入記事を作成してください。
+${charactersPrompt}
+### 構成案
+1.  **【埃をかぶった優勝旗】**
+    部室に眠る、色褪せた優勝旗やトロフィーの描写から始める。過去の栄光の重圧と、現在のチームが置かれた状況との対比を鮮やかに描く。
+2.  **【OBたちの熱き眼差し】**
+    練習を厳しい目で見つめるOB会長にインタビュー。「俺たちの時代は…」という昔語りと、現在のチームへの歯がゆさ、そして心の底にある期待を語らせる。
+3.  **【重圧を背負う主将】**
+    主将に「〇〇（校名）のユニフォームを着て戦うことの意味」を問う。伝統の重みと、それを力に変えようとする彼の覚悟を描写する。
+4.  **【監督の信念】**
+    監督に「古豪復活への道筋」をインタビューする。OBからのプレッシャーの中で、彼が信じる今の選手たちの可能性について語らせる。
+### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
+                break;
+            case 'win':
+                title = `『${teamName}、復活への第一歩』`;
+                prompt += `
+### 取材テーマ
+古豪「${teamName}」が ${matchData.opponent} との試合に ${matchData.score} で勝利しました。「名門復活への狼煙」となるこの一勝の価値を、感動的に描写してください。
+${charactersPrompt}
+### この試合の主なハイライト
+${matchData.highlights}
+### 構成案
+1. 勝利の瞬間、安堵と誇りの入り混じった表情で整列する選手たちを描写する。
+2. OB席が「よくやったぞ！」という歓声と拍手に包まれる様子を伝える。
+3. 監督に「伝統の粘り強さが出せた」という趣旨のコメントをさせる。
+4. 主将に、次戦への意気込みと共に「先輩たちが築いた歴史に、新たな1ページを刻みたい」と語らせる。
+### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
+                break;
+            case 'lose':
+                title = `『${teamName}、夢、またも届かず』`;
+                prompt += `
+### 取材テーマ
+古豪「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。復活を願った人々の期待と、それに応えられなかった選手たちの無念さを、切なく描いてください。
+${charactersPrompt}
+### この試合の主なハイライト
+${matchData.highlights}
+### 構成案
+1. 試合後、OBたちの厳しい叱咤と温かい労いの声が飛び交う、独特の雰囲気のスタンドを描写する。
+2. グラウンドに泣き崩れる選手たちと、彼らにかける言葉が見つからない監督の姿。
+3. 主将が涙ながらに「先輩たちに申し訳ない…」と語るインタビュー。
+4. 「彼らの挑戦は終わった。しかし、〇〇（校名）の野球部の灯が消えることはない。来年こそは、と誓う後輩たちの目が、確かに前を向いていた」と、未来への希望で締めくくる。
+### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
+                break;
+        }
+    } else if (type === 'one_man_team') {
+        // --- 絶対的エースチーム用のプロンプト ---
+        switch (phase) {
+            case 'intro':
+                title = `『${teamName}のエースと、8人の仲間たち』`;
+                prompt += `
+### 取材テーマ
+プロ注目の絶対的エースを擁する「${teamName}」。メディアの注目がエース一人に集まる中で、他の選手たちは何を想い、戦うのか。天才の苦悩と、彼を支える「その他大勢」と呼ばれた仲間たちのプライドを描く、感動的なドキュメンタリーの導入記事を作成してください。
+${charactersPrompt}
+### 構成案
+1.  **【殺到する報道陣】**
+    練習グラウンドに集まる、エースだけを狙う無数のカメラの描写から始める。
+2.  **【エースの孤独なマウンド】**
+    エースにインタビュー。「チームを勝たせるのが自分の仕事」と語る彼の言葉の裏にある、10代の少年が背負うにはあまりに重いプレッシャーを描写する。
+3.  **【名もなき脇役たちの意地】**
+    メディアからは「モブ」として扱われる、他の野手たちに焦点を当てる。「俺たちは、あいつの引き立て役じゃない。俺たちの守備や打撃がなければ、あいつはただの一人の投手に過ぎない」という、彼らの静かなプライドと葛藤を引き出す。
+4.  **【監督の信念】**
+    監督に「彼らはワンマンチームですか？」と問う。「世間はそう言うだろう。だが、私だけは知っている。本当の主役が誰なのかをね」と、意味深に語らせる。
+### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
+                break;
+            case 'win':
+                title = `エース快投！しかし、勝利の影に${teamName}の結束あり`;
+                prompt += `
+### 取材テーマ
+「${teamName}」が ${matchData.opponent} に ${matchData.score} で勝利。メディアはエースの快投ばかりを報じるだろう。しかし、その裏にあった仲間たちのファインプレーや、チームの結束こそが真の勝因だったことを、あなたの視点で深く描写してください。
+${charactersPrompt}
+### この試合の主なハイライト
+${matchData.highlights}
+### 構成案
+1. エースの完璧な投球内容を簡潔に紹介する。
+2. しかし、と続け、**ハイライトにあった**、メディアが決して報じないであろう「名もなき選手のファインプレー」や「繋ぎのバッティング」を、試合のターニングポイントとして詳細に描写する。
+3. そのプレーをした選手に「エースを助けるのが俺たちの仕事ですから」と、誇らしげに語らせる。
+4. エースに「今日の勝利は、俺一人の力じゃない。みんなが守ってくれたおかげです」と、初めて仲間に感謝の言葉を述べさせる。
+### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
+                break;
+            case 'lose':
+                title = `英雄、あまりに早すぎる敗退。${teamName}の夏、終わる`;
+                prompt += `
+### 取材テーマ
+絶対的エースを擁しながら、「${teamName}」は ${matchData.opponent} に ${matchData.score} で敗れました。エースが打たれ、仲間たちが涙する…。天才と仲間たちの、残酷で、しかし美しい夏の終わりを描いてください。
+${charactersPrompt}
+### この試合の主なハイライト
+${matchData.highlights}
+### 構成案
+1. **ハイライトにあった**、エースが決勝点を浴びたシーンをスローモーションのように描写する。
+2. マウンドで呆然とするエースと、彼に駆け寄り「お前のせいじゃない」と声をかける仲間たちの姿を描く。
+3. 試合後、「全部、自分のせいです…」と涙を流すエースと、「俺たちが、あいつを守ってやれなかった…」と悔しがる野手たちの両方のコメントを紹介する。
+4. 「彼らはワンマンチームではなかった。勝つ時も、負ける時も、彼らは一つのチームだった」と締めくくる。
+### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
+                break;
+        }
+    } else if (type === 'powerhouse') {
         // --- 強豪校用のプロンプト ---
         switch (phase) {
             case 'intro':
@@ -1432,7 +1537,6 @@ async function generateDocumentaryArticle(phase, type, teamName, matchData = nul
                 prompt += `
 ### 取材テーマ
 絶対的王者「${teamName}」の栄光の裏に隠された苦悩と、常人には理解しがたいプレッシャーを描く、重厚なドキュメンタリーの導入記事を作成してください。
-
 ${charactersPrompt} 
 ### 構成案
 1.  **【静寂のトロフィー室】**
@@ -1445,12 +1549,10 @@ ${charactersPrompt}
     1年生ながらベンチ入りを果たした天才ルーキーにインタビュー。偉大な先輩たちへの尊敬と、同時に「早くあの人たちを追い越したい」という若さゆえの野心と焦燥感を語らせる。
 5.  **【主将の孤独な背中】**
     最後に、主将に話を聞く。場所は、全員が帰った後、一人で素振りをする夜のグラウンド。スター選手揃いのチームを一つにまとめることの難しさ、そして「負けることが許されない」という王者ならではの孤独な覚悟を語らせる。
-
 ### 描写のポイント
 -   **対比:** 完璧に整備された設備と、そこで流される選手たちの生々しい汗や涙を対比させること。
 -   **音:** トロフィー室の静寂、Bグラウンドから聞こえる声にならない叫び、監督の静かだが重い言葉、主将のバットが夜の空気を切り裂く音など、「音」の描写を効果的に使うこと。
 -   **心理描写:** 登場人物たちのセリフだけでなく、彼らの表情や仕草から、言葉にならない葛藤やプライドを丁寧に描写すること。
-
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
@@ -1458,17 +1560,14 @@ ${charactersPrompt}
                 prompt += `
 ### 取材テーマ
 「${teamName}」が、${matchData.opponent}との試合に ${matchData.score} で勝利しました。しかし、彼らにとってこの勝利は歓喜ではなく、「次へ進むための義務」でしかない。その独特の空気感を、以下のハイライトを基にリアルに描写してください。
-
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
-
 ### 構成案
 1. 試合後、安堵の表情を浮かべるも、決して喜びを爆発させない選手たちの姿を描写する。
 2. **ハイライトを基に**、試合内容の反省点を冷静に監督にインタビューする。
 3. **ハイライトで活躍した**選手にも「今日のプレーで満足せず、次を見据えている」という趣旨のコメントをさせる。
 4. 記事の最後に「彼らの戦いは、まだ終わらない」という一文で、次なる戦いへの緊張感を煽る。
-
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1476,17 +1575,14 @@ ${matchData.highlights}
                 prompt += `
 ### 取材テーマ
 絶対的王者「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。王国の崩壊の瞬間と、選手たちの初めて見せる涙、そして彼らが背負っていた重圧からの解放を、以下のハイライトを基に感傷的かつ克明に記録してください。
-
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
-
 ### 構成案
 1. 試合終了のサイレンが鳴り響く、球場の信じられないような静寂を描写する。
 2. **ハイライトを参考に**、グラウンドに泣き崩れる選手たち。特に、これまで常に気丈に振る舞ってきた主将の涙に焦点を当てる。
 3. **ハイライトで勝敗を分けたプレー**について、監督に敗戦の責任と、選手たちへの労いの言葉を語らせる。
 4. 「彼らは今日、初めてただの高校生に戻れたのかもしれない」というような、詩的な一文で締めくくる。
-
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1494,44 +1590,35 @@ ${matchData.highlights}
         // --- 逆境チーム用のプロンプト ---
         switch (phase) {
             case 'intro':
-                // ▼▼▼ ここが前回省略されていた部分です ▼▼▼
                 title = `『${teamName}、魂の記録』序章`;
                 prompt += `
 ### 取材テーマ
 「${teamName}」が抱える困難な状況と、それでも夢を諦めない彼ら、そして彼らを支える地域の人々の姿を描く、感動的なドキュメンタリーの導入記事を作成してください。
-
 ${charactersPrompt}
 ### 構成案
 1. 記者がチームの元を訪れる場面から始める。
 2. 監督や選手、マネージャー、地元の人々など、複数の人物にインタビューし、それぞれの視点からチームの苦悩と情熱を明らかにする。
 3. 最後に、大会へ向かう彼らの決意で締めくくる。
-
 ### 必ず含めるべき要素
 - チームが抱える具体的なハンデ（例：${teamMasterData.info}）
 - 監督の名前や登場人物の実名を効果的に使用すること。
 - 情景が目に浮かぶような、エモーショナルな描写
-
-### 出力形式
-JSON形式で出力してください: {"title": "${title}", "body": "（長編の記事本文）"}`;
-                // ▲▲▲ ここまでが補完部分です ▲▲▲
+### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
                 title = `『${teamName}、魂の記録』第${matchData.round}章`;
                 prompt += `
 ### 取材テーマ
 「${teamName}」が、${matchData.opponent}との激闘を ${matchData.score} で制しました。この奇跡的な勝利が彼らにとってどれほど大きな意味を持つのか、以下のハイライトを基に感動的に描写してください。
-
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
-
 ### 構成案
 1. 勝利の瞬間の選手たちの様子を描写する（例：子供のように抱き合って泣いた）。
 2. **ハイライトで示された試合のターニングポイント**を、手に汗握るように振り返る。
 3. 監督や主役選手の、喜びと感謝に満ちた勝利インタビューを挿入する。
 4. この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
 5. 「彼らの物語は、まだ終わらない」と、次の試合への期待感で締めくくる。
-
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1539,17 +1626,14 @@ ${matchData.highlights}
                 prompt += `
 ### 取材テーマ
 「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。夢破れた彼らの姿と、それでも確かに残ったもの、そして彼らを見守った人々の想いを、以下のハイライトを基に描くドキュメンタリー最終章を作成してください。
-
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
-
 ### 構成案
 1. 試合終了の瞬間、泣き崩れるも、やがて顔を上げる選手たちの姿を描写する。
 2. 監督や主将が、**ハイライトにあった悔しいプレー**にも触れつつ、この夏を振り返る最後のインタビューに答える。
 3. チームを支え続けたマネージャーや地元の人々の、選手たちへの温かい労いの言葉を挿入する。
 4. 3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
-
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1569,8 +1653,6 @@ ${matchData.highlights}
         return null;
     }
 }
-
-
 /**
  * Sets the weather effect for the background.
  * @param {'none' | 'rain' | 'sun'} weatherType - The type of weather to display.
@@ -2371,21 +2453,27 @@ function renderTournament(data) {
 function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
     // ▼▼▼ 先に関数の定義をここ（関数の冒頭）に移動します ▼▼▼
     const createSpecialButtons = (teamName) => {
-        // 大会開始前、または既に対象選択済みの場合はボタンを表示しない
-        if (!tournamentState.teams || tournamentState.teams.length === 0 || (tournamentState.documentary && tournamentState.documentary.target)) {
-            return '';
-        }
-        if (!teamName) return '';
+    if (!teamName || (tournamentState.documentary && tournamentState.documentary.target)) return '';
+    
+    let buttonHTML = '';
+    // 逆境チーム用
+    if (UNDERDOG_TEAMS.includes(teamName)) {
+        buttonHTML += `<button class="underdog-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の逆境に密着取材する">📹</button>`;
+    }
+    // 通常の強豪校用
+    if (POWERHOUSE_TEAMS.includes(teamName)) {
+        buttonHTML += `<button class="powerhouse-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の王者の苦悩に密着取材する">👑</button>`;
+    }
+    // ▼▼▼ ここから追加 ▼▼▼
+    // 古豪復活チーム用
+    if (POWERHOUSE_REVIVAL_TEAMS.includes(teamName)) {
+        buttonHTML += `<button class="powerhouse-revival-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の古豪復活に密着取材する">🏰</button>`;
+    }
+if (ONE_MAN_TEAMS.includes(teamName)) {
+        buttonHTML += `<button class="one-man-team-doc-btn text-lg ml-2" data-team-name="${teamName}" title="絶対的エースとその仲間たちに密着取材する">🌟</button>`;
+    }
 
-        let buttonHTML = '';
-        // 逆境チーム用のボタン
-        if (UNDERDOG_TEAMS.includes(teamName)) {
-            buttonHTML += `<button class="underdog-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の逆境に密着取材する">📹</button>`;
-        }
-        // 強豪校用のボタン
-        if (POWERHOUSE_TEAMS.includes(teamName)) {
-            buttonHTML += `<button class="powerhouse-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の王者の苦悩に密着取材する">👑</button>`;
-        }
+
         return buttonHTML;
     };
     // ▲▲▲ 関数の定義はここまで ▲▲▲
@@ -7500,6 +7588,25 @@ document.body.addEventListener('click', async (e) => {
             startDocumentary('powerhouse', teamName);
         }
     }
+
+// ▼▼▼ ここから追加 ▼▼▼
+    // --- ドキュメンタリー密着取材ボタン（古豪復活） ---
+    else if (e.target.matches('.powerhouse-revival-doc-btn')) {
+        const teamName = e.target.dataset.teamName;
+        const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
+        if (confirmed) {
+            startDocumentary('powerhouse_revival', teamName);
+        }
+    }
+
+ else if (e.target.matches('.one-man-team-doc-btn')) {
+        const teamName = e.target.dataset.teamName;
+        const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
+        if (confirmed) {
+            startDocumentary('one_man_team', teamName);
+        }
+    }
+
     // --- 「＋ 走者プレーを追加」ボタン ---
     else if (e.target.matches('.add-runner-play-btn')) {
         e.preventDefault();
