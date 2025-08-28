@@ -2640,17 +2640,18 @@ function openDetailsModal(matchId) {
 /**
  * 個人別打席結果のテーブルHTMLを生成する（打者・走者入力分離の最終完成版）
  */
+/**
+ * 個人別打席結果のテーブルHTMLを生成する（引数渡しエラー修正版）
+ */
 function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
-    const playersOnField = battingData.filter(p => p.name); // 現在の名簿から選手リストを作成
+    const playersOnField = battingData.filter(p => p.name);
 
-    // 選手背番号と守備位置の選択肢を事前に生成
     let numberOptions = '<option value=""></option>';
     for (let i = 1; i <= 20; i++) { numberOptions += `<option value="${i}">${i}</option>`; }
     const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右'].map(p => `<option value="${p}">${p}</option>`).join('');
     
-    // イニングヘッダーを生成
     let inningsHeader = '';
     for (let i = 1; i <= numInnings; i++) {
         inningsHeader += `<th class="col-inning">${i}</th>`;
@@ -2658,7 +2659,6 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 
     let bodyRows = '';
 
-    // 1番から9番まで、スタメンと交代選手を順番に処理
     for (let i = 1; i <= 9; i++) {
         // --- スターティングメンバーの行を生成 ---
         let starterData = battingData.find(p => p.order && parseInt(p.order) === i);
@@ -2669,14 +2669,14 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         const starterPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${starterData.pos}"`, `value="${starterData.pos}" selected`)}</select>`;
         
         let resultInputs = '';
-for (let j = 0; j < numInnings; j++) {
-    const resultString = starterData.results[j] || '';
-    resultInputs += `
-        <td class="col-inning batting-result-cell align-top p-1">
-            ${createBattingResultDropdowns(playersOnField, resultString)}
-        </td>
-    `;
-}
+        for (let j = 0; j < numInnings; j++) {
+            const resultString = starterData.results[j] || '';
+            resultInputs += `
+                <td class="col-inning batting-result-cell align-top p-1">
+                    ${createBattingResultDropdowns(playersOnField, resultString)}
+                </td>
+            `;
+        }
         bodyRows += `
             <tr data-order="${starterData.order}">
                 <td class="col-order">${i}</td>
@@ -2698,12 +2698,13 @@ for (let j = 0; j < numInnings; j++) {
             let subResultInputs = '';
             for (let j = 0; j < numInnings; j++) {
                 const resultString = subData.results[j] || '';
+                // ▼▼▼【重要修正】不足していた`playersOnField`引数を追加しました▼▼▼
                 subResultInputs += `
                     <td class="col-inning batting-result-cell align-top p-1">
-                        ${createBattingResultDropdowns(resultString)}
-                        ${createRunnerInputsHTML(playersOnField, resultString)}
+                        ${createBattingResultDropdowns(playersOnField, resultString)}
                     </td>
                 `;
+                // ▲▲▲
             }
             
             bodyRows += `
@@ -2748,46 +2749,6 @@ for (let j = 0; j < numInnings; j++) {
         </div>
     `;
 }
-    /**
-     * 投手成績のテーブルHTMLを生成する
-     */
-    function createPitchingStatsTable(teamKey, details) {
-        const pitchingData = details.pitching[teamKey] || [];
-        let bodyRows = pitchingData.map((player, index) => `
-            <tr data-pitcher-index="${index}">
-                <td>
-                    <select>
-                        <option value="" ${!player.result ? 'selected' : ''}>-</option>
-                        <option value="W" ${player.result === 'W' ? 'selected' : ''}>○</option>
-                        <option value="L" ${player.result === 'L' ? 'selected' : ''}>●</option>
-                        <option value="S" ${player.result === 'S' ? 'selected' : ''}>S</option>
-                        <option value="H" ${player.result === 'H' ? 'selected' : ''}>H</option>
-                    </select>
-                </td>
-                <td><input type="text" value="${player.name || ''}"></td>
-                <td><input type="text" value="${player.innings || ''}"></td>
-                <td><input type="number" value="${player.battersFaced || ''}"></td>
-                <td><input type="number" value="${player.pitches || ''}"></td>
-                <td><input type="number" value="${player.hits || ''}"></td>
-                <td><input type="number" value="${player.strikeouts || ''}"></td>
-                <td><input type="number" value="${player.walks || ''}"></td>
-                <td><input type="number" value="${player.runs || ''}"></td>
-                <td><input type="number" value="${player.earnedRuns || ''}"></td>
-            </tr>
-        `).join('');
-
-        return `
-            <table class="details-table" id="pitching-table-${teamKey}">
-                <thead>
-                    <tr>
-                        <th class="w-12">勝敗</th><th class="col-player">選手名</th><th class="col-stat">回数</th><th class="col-stat">打者</th><th class="col-stat">球数</th><th class="col-stat">被安打</th><th class="col-stat">奪三振</th><th class="col-stat">与四球</th><th class="col-stat">失点</th><th class="col-stat">自責点</th>
-                    </tr>
-                </thead>
-                <tbody>${bodyRows}</tbody>
-            </table>
-            <button class="add-row-btn" data-table-id="pitching-table-${teamKey}">+ 投手を追加</button>
-        `;
-    }
 
     /**
  * 詳細データを保存し、通算成績を更新する
