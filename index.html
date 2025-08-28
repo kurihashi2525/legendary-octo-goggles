@@ -2333,93 +2333,100 @@ function renderTournament(data) {
     /**
      * 1試合分のHTMLを生成する
      */
-    function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
-        const t1Empty = !team1;
-        const t2Empty = !team2;
-
-        let specialMatchClass = '';
-        if (!t1Empty && !t2Empty) {
-            const feud = tournamentState.feuds?.find(f => f.teams.includes(team1) && f.teams.includes(team2));
-            if (feud) {
-                specialMatchClass = 'feud-match';
-            } else {
-                const rivalry = tournamentState.rivalries?.find(r => r.teams.includes(team1) && r.teams.includes(team2));
-                if (rivalry) {
-                    specialMatchClass = 'rivalry-match';
-                }
-            }
+    /**
+ * 1試合分のHTMLを生成する（ドキュメンタリーボタン対応・エラー修正版）
+ */
+function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
+    // ▼▼▼ 先に関数の定義をここ（関数の冒頭）に移動します ▼▼▼
+    const createSpecialButtons = (teamName) => {
+        // 大会開始前、または既に対象選択済みの場合はボタンを表示しない
+        if (!tournamentState.teams || tournamentState.teams.length === 0 || (tournamentState.documentary && tournamentState.documentary.target)) {
+            return '';
         }
+        if (!teamName) return '';
 
-        const rank1 = calculateRank(team1, tournamentState);
-        const rank2 = calculateRank(team2, tournamentState);
-        const rankColor = (rank) => {
-            switch(rank) {
-                case 'A': return 'rank-A';
-                case 'B': return 'rank-B';
-                case 'C': return 'rank-C';
-                case 'D': return 'rank-D';
-                case 'E': return 'rank-E';
-                default: return '';
-            }
-        };
-        
-        const isMainBracketMatch = matchId.includes('-R');
-        const roundStr = isMainBracketMatch ? matchId.split('-')[1] : '';
-        // 修正後のコード（全ての試合で表示）
-        const showDetailsButton = !t1Empty && !t2Empty;
-        const isSeed1 = seeds.includes(team1);
-        const isSeed2 = seeds.includes(team2);
-
-const createSpecialButtons = (teamName) => {
-        if (!teamName || tournamentState.documentary.target) return ''; // チーム名がないか、既に対象選択済みの場合は表示しない
-        
         let buttonHTML = '';
+        // 逆境チーム用のボタン
         if (UNDERDOG_TEAMS.includes(teamName)) {
             buttonHTML += `<button class="underdog-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の逆境に密着取材する">📹</button>`;
         }
+        // 強豪校用のボタン
         if (POWERHOUSE_TEAMS.includes(teamName)) {
             buttonHTML += `<button class="powerhouse-doc-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}の王者の苦悩に密着取材する">👑</button>`;
         }
         return buttonHTML;
-    };      
+    };
+    // ▲▲▲ 関数の定義はここまで ▲▲▲
 
-const content = `
-            <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
-                 <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
-                    ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
-                    ${isSeed1 ? 'S ' : ''}${team1 || '---'}
-                </span>
+    const t1Empty = !team1;
+    const t2Empty = !team2;
 
-                 ${createDocumentaryButton(team1)} 
-
-                <input type="text" class="score-input" value="${dbMatch.score1 ?? ''}" data-team-pos="1">
-                <button class="win-btn">▶</button>
-            </div>
-            <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
-                <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}">
-                    ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
-                    ${isSeed2 ? 'S ' : ''}${team2 || '---'}
-                </span>
-
-                ${createDocumentaryButton(team2)}
-
-                <input type="text" class="score-input" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
-                <button class="win-btn">▶</button>
-            </div>
-            <div class="match-summary-container ${!t1Empty && !t2Empty ? '' : 'hidden'}">
-                <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
-            </div>
-            `;
-        
-        const footer = showDetailsButton 
-        ? `<div class="matchup-footer">
-               <button class="details-btn" data-match-id="${matchId}">詳細入力</button>
-               <button class="quick-sim-btn text-lg" data-match-id="${matchId}" title="このスコアでおまかせ入力">🎲</button>
-           </div>` 
-        : '';
-
-        return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">${content}${footer}</div>`;
+    let specialMatchClass = '';
+    if (!t1Empty && !t2Empty) {
+        const feud = tournamentState.feuds?.find(f => f.teams.includes(team1) && f.teams.includes(team2));
+        if (feud) {
+            specialMatchClass = 'feud-match';
+        } else {
+            const rivalry = tournamentState.rivalries?.find(r => r.teams.includes(team1) && r.teams.includes(team2));
+            if (rivalry) {
+                specialMatchClass = 'rivalry-match';
+            }
+        }
     }
+
+    const rank1 = calculateRank(team1, tournamentState);
+    const rank2 = calculateRank(team2, tournamentState);
+    const rankColor = (rank) => {
+        switch (rank) {
+            case 'A': return 'rank-A';
+            case 'B': return 'rank-B';
+            case 'C': return 'rank-C';
+            case 'D': return 'rank-D';
+            case 'E': return 'rank-E';
+            default: return '';
+        }
+    };
+
+    const isMainBracketMatch = matchId.includes('-R');
+    const roundStr = isMainBracketMatch ? matchId.split('-')[1] : '';
+    const showDetailsButton = !t1Empty && !t2Empty;
+    const isSeed1 = seeds.includes(team1);
+    const isSeed2 = seeds.includes(team2);
+
+    // HTMLテンプレート内の関数呼び出し名を修正
+    const content = `
+        <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
+            <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
+                ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
+                ${isSeed1 ? 'S ' : ''}${team1 || '---'}
+            </span>
+            ${createSpecialButtons(team1)} 
+            <input type="text" class="score-input" value="${dbMatch.score1 ?? ''}" data-team-pos="1">
+            <button class="win-btn">▶</button>
+        </div>
+        <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
+            <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}">
+                ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
+                ${isSeed2 ? 'S ' : ''}${team2 || '---'}
+            </span>
+            ${createSpecialButtons(team2)}
+            <input type="text" class="score-input" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
+            <button class="win-btn">▶</button>
+        </div>
+        <div class="match-summary-container ${!t1Empty && !t2Empty ? '' : 'hidden'}">
+            <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
+        </div>
+    `;
+
+    const footer = showDetailsButton ?
+        `<div class="matchup-footer">
+            <button class="details-btn" data-match-id="${matchId}">詳細入力</button>
+            <button class="quick-sim-btn text-lg" data-match-id="${matchId}" title="このスコアでおまかせ入力">🎲</button>
+        </div>` :
+        '';
+
+    return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">${content}${footer}</div>`;
+}
 
     /**
      * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
