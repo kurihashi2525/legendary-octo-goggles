@@ -2641,7 +2641,7 @@ function openDetailsModal(matchId) {
  * 個人別打席結果のテーブルHTMLを生成する（打者・走者入力分離の最終完成版）
  */
 /**
- * 個人別打席結果のテーブルHTMLを生成する（引数渡しエラー修正版）
+ * 個人別打席結果のテーブルHTMLを生成する（複数打席ロジック統合版）
  */
 function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
@@ -2660,9 +2660,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     let bodyRows = '';
 
     for (let i = 1; i <= 9; i++) {
-        // --- スターティングメンバーの行を生成 ---
-        let starterData = battingData.find(p => p.order && parseInt(p.order) === i);
-        if (!starterData) { starterData = { order: i, number: '', name: '', pos: '', results: Array(numInnings).fill('') }; }
+        let starterData = battingData.find(p => p.order && parseInt(p.order) === i) || { order: i, results: Array(numInnings).fill('') };
         if (!starterData.results) starterData.results = Array(numInnings).fill('');
 
         const starterNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${starterData.number}"`, `value="${starterData.number}" selected`)}</select>`;
@@ -2671,9 +2669,22 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
             const resultString = starterData.results[j] || '';
+            const atBats = (resultString && resultString.split('、').length > 0) ? resultString.split('、') : [''];
+            
+            const atBatBlocksHTML = atBats.map(atBatString => {
+                const [batterPlay, runnerPlaysString] = atBatString.split(';');
+                return `
+                    <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
+                        ${createBattingResultDropdowns(batterPlay)}
+                        ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
+                    </div>
+                `;
+            }).join('');
+
             resultInputs += `
                 <td class="col-inning batting-result-cell align-top p-1">
-                    ${createBattingResultDropdowns(playersOnField, resultString)}
+                    ${atBatBlocksHTML}
+                    <button class="add-at-bat-btn text-xs mt-2 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 w-full font-semibold">＋ 2打席目を追加</button>
                 </td>
             `;
         }
@@ -2688,7 +2699,6 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             </tr>
         `;
 
-        // --- 交代選手の行を生成 ---
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
@@ -2698,13 +2708,22 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             let subResultInputs = '';
             for (let j = 0; j < numInnings; j++) {
                 const resultString = subData.results[j] || '';
-                // ▼▼▼【重要修正】不足していた`playersOnField`引数を追加しました▼▼▼
+                const atBats = (resultString && resultString.split('、').length > 0) ? resultString.split('、') : [''];
+                const atBatBlocksHTML = atBats.map(atBatString => {
+                    const [batterPlay, runnerPlaysString] = atBatString.split(';');
+                    return `
+                        <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
+                            ${createBattingResultDropdowns(batterPlay)}
+                            ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
+                        </div>
+                    `;
+                }).join('');
                 subResultInputs += `
                     <td class="col-inning batting-result-cell align-top p-1">
-                        ${createBattingResultDropdowns(playersOnField, resultString)}
+                        ${atBatBlocksHTML}
+                        <button class="add-at-bat-btn text-xs mt-2 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 w-full font-semibold">＋ 2打席目を追加</button>
                     </td>
                 `;
-                // ▲▲▲
             }
             
             bodyRows += `
@@ -2728,18 +2747,13 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         });
     }
 
-    // テーブル全体を組み立てて返す
     return `
         <div class="overflow-x-auto">
             <table class="details-table batting-table" id="batting-table-${teamKey}">
                 <thead>
                     <tr>
-                        <th class="col-order">打順</th>
-                        <th class="col-number">#</th>
-                        <th class="col-player">選手名</th>
-                        <th class="col-pos">守備</th>
-                        <th class="col-sub-type">出場</th>
-                        ${inningsHeader}
+                        <th class="col-order">打順</th><th class="col-number">#</th><th class="col-player">選手名</th>
+                        <th class="col-pos">守備</th><th class="col-sub-type">出場</th>${inningsHeader}
                         <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
                     </tr>
                 </thead>
@@ -2749,7 +2763,6 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         </div>
     `;
 }
-
     /**
  * 詳細データを保存し、通算成績を更新する
  * (★先攻後攻を入れ替えた場合にも対応した最終版)
@@ -5953,78 +5966,54 @@ function createHighlightsText(dbMatch, winnerName) {
  * 3連携の打席結果プルダウンと、それに付随する走塁入力欄のHTMLを生成する（参照エラー修正版）
  */
 /**
- * 4連携の打撃結果プルダウンを生成する（打者一巡・複数打席対応の最終完成版）
- * @param {string} currentResult - 保存済みの打席結果文字列（「、」で複数打席を区切る）
+ * 1打席分の「打者」のプレーを入力する、4連プルダウンを生成する（役割を単機能化）
+ * @param {string} batterPlay - 保存済みの打者のプレー文字列 (例: "中安1点好走塁")
  * @returns {string} - 生成されたHTML
  */
-function createBattingResultDropdowns(currentResult = '') {
-    // 1イニングに複数打席があった場合（「、」区切り）、それぞれを処理。なければ空の1打席分を作成。
-    const atBats = (currentResult && currentResult.split('、').length > 0) 
-        ? currentResult.split('、').filter(s => !s.includes(' ')) // 走者プレーを除外
-        : [''];
+function createBattingResultDropdowns(batterPlay = '') {
+    let selectedResult = '', selectedDirection = '', selectedRbi = '', selectedRunnerPlay = '';
+    let tempResult = batterPlay.trim();
 
-    // 各打席ごとにHTMLブロックを生成
-    const atBatBlocksHTML = atBats.map((atBatString, index) => {
-        const batterPlay = atBatString.split(';')[0] || '';
-        
-        let selectedResult = '', selectedDirection = '', selectedRbi = '', selectedRunnerPlay = '';
-        let tempResult = batterPlay.trim();
-
-        if (tempResult) {
-            // 1. 打点を先に抽出 (例: "1点")
-            const rbiMatch = tempResult.match(/(\d+点)/);
-            if (rbiMatch) {
-                selectedRbi = rbiMatch[0];
-                tempResult = tempResult.replace(selectedRbi, '').trim();
-            }
-            // 2. 打者走者のプレーを抽出 (例: "好走塁")
-            if (tempResult.includes('好走塁')) {
-                selectedRunnerPlay = '好走塁';
-                tempResult = tempResult.replace('好走塁', '').trim();
-            }
-            
-            // 3. 結果タイプを検索 (例: "安", "二塁打", "犠失")
-            const allResultTypes = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ];
-            for (const type of allResultTypes) {
-                if (tempResult.includes(type)) {
-                    selectedResult = type;
-                    tempResult = tempResult.replace(type, '').trim();
-                    break;
-                }
-            }
-            
-            // 4. 残ったものを打球方向として判断 (例: "中", "左")
-            if (tempResult.length > 0 && DIRECTIONS.includes(tempResult)) {
-                selectedDirection = tempResult;
+    if (tempResult) {
+        const rbiMatch = tempResult.match(/(\d+点)/);
+        if (rbiMatch) {
+            selectedRbi = rbiMatch[0];
+            tempResult = tempResult.replace(selectedRbi, '').trim();
+        }
+        if (tempResult.includes('好走塁')) {
+            selectedRunnerPlay = '好走塁';
+            tempResult = tempResult.replace('好走塁', '').trim();
+        }
+        const allResultTypes = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ];
+        for (const type of allResultTypes) {
+            if (tempResult.includes(type)) {
+                selectedResult = type;
+                tempResult = tempResult.replace(type, '').trim();
+                break;
             }
         }
+        if (tempResult.length > 0 && DIRECTIONS.includes(tempResult)) {
+            selectedDirection = tempResult;
+        }
+    }
 
-        // 各プルダウンの選択肢HTMLを生成
-        const resultOptions = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ]
-            .map(r => `<option value="${r}" ${selectedResult === r ? 'selected' : ''}>${r}</option>`).join('');
-        const directionOptions = DIRECTIONS.map(d => `<option value="${d}" ${selectedDirection === d ? 'selected' : ''}>${d}</option>`).join('');
-        const rbiOptions = RBIS.map(r => `<option value="${r}" ${selectedRbi === r ? 'selected' : ''}>${r}</option>`).join('');
-        const runnerPlayOptions = ['好走塁'].map(r => `<option value="${r}" ${selectedRunnerPlay === r ? 'selected' : ''}>${r}</option>`).join('');
+    const resultOptions = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ]
+        .map(r => `<option value="${r}" ${selectedResult === r ? 'selected' : ''}>${r}</option>`).join('');
+    const directionOptions = DIRECTIONS.map(d => `<option value="${d}" ${selectedDirection === d ? 'selected' : ''}>${d}</option>`).join('');
+    const rbiOptions = RBIS.map(r => `<option value="${r}" ${selectedRbi === r ? 'selected' : ''}>${r}</option>`).join('');
+    const runnerPlayOptions = ['好走塁'].map(r => `<option value="${r}" ${selectedRunnerPlay === r ? 'selected' : ''}>${r}</option>`).join('');
 
-        // 1打席分のHTMLブロック
-        return `
-            <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
-                <div class="flex items-center gap-1 batting-result-container mb-1" data-at-bat-index="${index}">
-                    <div class="flex-grow flex gap-1">
-                        <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-type"><option value="">-結果-</option>${resultOptions}</select>
-                        <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-direction"><option value="">-方向-</option>${directionOptions}</select>
-                        <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-rbi"><option value="">-打点-</option>${rbiOptions}</select>
-                        <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-runner-play bg-yellow-50"><option value="">-打者走塁-</option>${runnerPlayOptions}</select>
-                    </div>
-                </div>
+    return `
+        <div class="flex items-center gap-1 batting-result-container mb-1">
+            <div class="flex-grow flex gap-1">
+                <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-type"><option value="">-結果-</option>${resultOptions}</select>
+                <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-direction"><option value="">-方向/走塁-</option>${directionOptions}</select>
+                <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-rbi"><option value="">-打点-</option>${rbiOptions}</select>
+                <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-runner-play bg-yellow-50"><option value="">-打者走塁-</option>${runnerPlayOptions}</select>
             </div>
-        `;
-    }).join(''); // 複数打席のHTMLを結合
-
-    // 最後に「2打席目を追加」ボタンを追加
-    return atBatBlocksHTML + '<button class="add-at-bat-btn text-xs mt-2 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 w-full font-semibold">＋ この選手に2打席目を追加</button>';
+        </div>
+    `;
 }
-
   /**
  * 特定チームの、今大会におけるここまでの戦績を要約する
  * @param {string} teamName - チーム名
@@ -7149,34 +7138,21 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 【詳細モーダル内】イニング追加ボタン ---
- // --- 【詳細モーダル内】イニング追加ボタン（全てのテーブルに共通） ---
     else if (e.target.matches('.add-inning-btn') || e.target.matches('#add-inning-score-btn')) {
         e.preventDefault();
-        addExtraInning(); // 新しい司令塔関数を呼び出すだけ
+        addExtraInning();
     }
     
-   // --- Add a second at-bat in the same inning ---
-    else if (e.target.matches('.add-at-bat-btn')) {
-        e.preventDefault();
-        const container = e.target.closest('.batting-result-container');
-        const cell = e.target.closest('td'); // Find the parent table cell
-        
-        if (cell) {
-            // Create a new set of dropdowns and insert it INSIDE the cell
-            const newDropdownsHTML = createBattingResultDropdowns();
-            cell.insertAdjacentHTML('beforeend', newDropdownsHTML);
-        }
-    }
-// --- Weather Control Buttons ---
+    // --- 天候ボタン ---
     else if (e.target.matches('.weather-btn')) {
         const weatherType = e.target.dataset.weather;
         setWeather(weatherType);
     }
 
-// ▼▼▼【追加1】「＋ 走者プレーを追加」ボタンの処理 ▼▼▼
+    // --- 「＋ 走者プレーを追加」ボタン ---
     else if (e.target.matches('.add-runner-play-btn')) {
         e.preventDefault();
-        const container = e.target.closest('.batting-result-cell').querySelector('.runner-plays-container');
+        const container = e.target.closest('.at-bat-block').querySelector('.runner-plays-container');
         if (!container) return;
 
         if (container.children.length >= 3) {
@@ -7184,10 +7160,9 @@ document.body.addEventListener('click', async (e) => {
             return;
         }
 
-        // 現在の選手名簿から選択肢を生成
         const table = e.target.closest('.batting-table');
-        const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => input.value.trim()).filter(name => name);
-        const nameOptions = playersOnField.map(p => `<option value="${p}">${p}</option>`).join('');
+        const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => ({name: input.value.trim()})).filter(p => p.name);
+        const nameOptions = playersOnField.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
 
         const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
         const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
@@ -7195,7 +7170,7 @@ document.body.addEventListener('click', async (e) => {
         const baseOptions = bases.map(b => `<option value="${b}">${b}</option>`).join('');
 
         const newPlayHTML = `
-            <div class="runner-play-input flex gap-1 items-center">
+            <div class="runner-play-input flex gap-1 items-center mt-1">
                 <select class="runner-name w-1/3 text-xs p-1 border rounded"><option value="">-誰が-</option>${nameOptions}</select>
                 <select class="runner-play w-1/3 text-xs p-1 border rounded bg-green-50"><option value="">-何をした-</option>${playOptions}</select>
                 <select class="runner-base w-1/3 text-xs p-1 border rounded bg-green-50"><option value="">-どこへ-</option>${baseOptions}</select>
@@ -7204,103 +7179,89 @@ document.body.addEventListener('click', async (e) => {
         `;
         container.insertAdjacentHTML('beforeend', newPlayHTML);
     }
-    // ▲▲▲ここまで▲▲▲
-
-    // ▼▼▼【追加2】走者プレーの「×」削除ボタンの処理 ▼▼▼
+    
+    // --- 走者プレーの「×」削除ボタン ---
     else if (e.target.matches('.remove-runner-play-btn')) {
         e.target.closest('.runner-play-input').remove();
     }
-    // ▲▲▲ここまで▲▲▲
 
- // ▼▼▼【追加】おまかせ入力ボタンの処理 ▼▼▼
+    // --- おまかせ入力ボタン ---
     else if (e.target.matches('.quick-sim-btn')) {
         e.preventDefault();
         autoFillMatchDetails(e.target.dataset.matchId);
     }
 
-else if (e.target.matches('.add-at-bat-btn')) {
+    // --- 1イニングに複数打席を追加するボタン ---
+    else if (e.target.matches('.add-at-bat-btn')) {
         e.preventDefault();
-        const cell = e.target.closest('.batting-result-cell');
         const table = e.target.closest('.batting-table');
-        const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => input.value.trim()).filter(name => name);
+        const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => ({ name: input.value.trim() })).filter(p => p.name);
         
-        // 新しい空の打席ブロックを追加
         const newAtBatHTML = `
-            <div class="at-bat-block border-t border-dashed pt-1 mt-1">
-                ${createBattingResultDropdowns(playersOnField, '')}
+            <div class="at-bat-block border-t border-dashed pt-2 mt-2">
+                ${createBattingResultDropdowns('')}
+                ${createRunnerInputsHTML(playersOnField, '')}
             </div>
         `;
         e.target.insertAdjacentHTML('beforebegin', newAtBatHTML);
     }
 
-// ★★★ このブロックを丸ごと置き換えてください ★★★
-// --- 【詳細モーダル内】交代選手追加ボタン ---
-else if (e.target.matches('.add-substitute-btn')) {
-    e.preventDefault();
-    const teamKey = e.target.dataset.teamKey;
-    const tableBody = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
-    if (!tableBody) return;
+    // --- 交代選手追加ボタン ---
+    else if (e.target.matches('.add-substitute-btn')) {
+        e.preventDefault();
+        const teamKey = e.target.dataset.teamKey;
+        const tableBody = document.getElementById(`batting-table-${teamKey}`).querySelector('tbody');
+        if (!tableBody) return;
 
-    const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
-    if (!orderInput || isNaN(orderInput) || orderInput < 1 || orderInput > 9) {
-        // Added more robust validation
-        alert("1から9の正しい打順を入力してください。");
-        return;
+        const orderInput = prompt("何番打者の交代選手を追加しますか？（例：3）");
+        if (!orderInput || isNaN(orderInput) || orderInput < 1 || orderInput > 9) {
+            alert("1から9の正しい打順を入力してください。");
+            return;
+        }
+        const order = parseInt(orderInput);
+
+        const allOrderRows = Array.from(tableBody.querySelectorAll(`tr[data-order^="${order}"]`));
+        if (allOrderRows.length === 0) {
+            alert(order + '番打者が見つかりません。');
+            return;
+        }
+        const targetRow = allOrderRows[allOrderRows.length - 1];
+
+        const newRow = document.createElement('tr');
+        const subCount = allOrderRows.filter(row => row.dataset.order.includes('sub')).length + 1;
+        newRow.dataset.order = `${order}-sub-${subCount}`;
+        
+        const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 6;
+        let resultInputs = '';
+        for (let j = 0; j < numInnings; j++) {
+            resultInputs += `<td class="col-inning batting-result-cell align-top p-1">
+                                ${createBattingResultDropdowns('')}
+                                ${createRunnerInputsHTML([], '')}
+                             </td>`;
+        }
+        
+        newRow.innerHTML = `
+            <td class="col-order"></td>
+            <td><select class="player-number w-full bg-transparent"><option value=""></option>${Array.from({length:20},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select></td>
+            <td class="pl-4"><input type="text" class="player-name" placeholder="交代選手名"></td>
+            <td><select class="player-pos w-full bg-transparent"><option value=""></option>${['投', '捕', '一', '二', '三', '遊', '左', '中', '右'].map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
+            <td>
+                <select class="sub-type-select w-full bg-transparent">
+                    <option value="" selected>-</option><option value="PH">代打</option><option value="PR">代走</option>
+                    <option value="DEF">守備</option><option value="PITCHER">投手</option>
+                </select>
+            </td>
+            ${resultInputs}
+        `;
+        targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
     }
-    const order = parseInt(orderInput);
 
-    // Find the last row for this batting order (could be the starter or another sub)
-    const allOrderRows = Array.from(tableBody.querySelectorAll(`tr[data-order^="${order}"]`));
-    if (allOrderRows.length === 0) {
-        alert(order + '番打者が見つかりません。');
-        return;
-    }
-    const targetRow = allOrderRows[allOrderRows.length - 1];
-
-    // Create a new row element to insert
-    const newRow = document.createElement('tr');
-    const subCount = allOrderRows.filter(row => row.dataset.order.includes('sub')).length + 1;
-    newRow.dataset.order = `${order}-sub-${subCount}`;
-    
-    // Determine the number of inning columns from the table header
-    const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 6; // Now 6 columns before innings
-    let resultInputs = '';
-    for (let j = 0; j < numInnings; j++) {
-        resultInputs += `<td><input type="text" placeholder="-"></td>`;
-    }
-    
-    // ▼▼▼ This is the main part to fix ▼▼▼
-    // Build the new row's HTML, including the <select> dropdown
-    newRow.innerHTML = `
-        <td></td>
-        <td><input type="text" class="player-number" placeholder="#"></td>
-        <td class="pl-4"><input type="text" class="player-name" placeholder="交代選手名"></td>
-        <td><input type="text" class="player-pos" placeholder="守備"></td>
-        <td>
-            <select class="sub-type-select w-full">
-                <option value="" selected>-</option>
-                <option value="PH">代打</option>
-                <option value="PR">代走</option>
-                <option value="DEF">守備</option>
-                <option value="PITCHER">投手</option>
-            </select>
-        </td>
-        ${resultInputs}
-    `;
-    // ▲▲▲ ▲▲▲
-
-    // Insert the new row after the target row
-    targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
-}
-
-// --- 【詳細モーダル内】守備変更ボタン ---
+    // --- 守備変更ボタン ---
     else if (e.target.matches('.pos-change-btn')) {
         const playerName = e.target.dataset.playerName;
         const teamKey = e.target.dataset.teamKey;
-
         const inning = prompt(`${playerName}選手が何回からポジションを変更しましたか？`);
         if (!inning || isNaN(inning)) return;
-        
         const newPos = prompt(`${inning}回から、${playerName}選手の守備位置はどこになりましたか？ (例: 投, 一, 中)`);
         if (!newPos) return;
 
@@ -7308,18 +7269,12 @@ else if (e.target.matches('.add-substitute-btn')) {
         if (match) {
             if (!match.details) match.details = {};
             if (!match.details.positionChanges) match.details.positionChanges = [];
-            
-            match.details.positionChanges.push({
-                inning: parseInt(inning),
-                teamKey: teamKey,
-                playerName: playerName,
-                newPos: newPos
-            });
+            match.details.positionChanges.push({ inning: parseInt(inning), teamKey, playerName, newPos });
             alert(`${inning}回から${playerName}選手が${newPos}を守るように記録しました。`);
         }
     }
 
-    // --- 【詳細モーダル内】投手追加ボタン ---
+    // --- 投手追加ボタン ---
     else if (e.target.matches('.add-row-btn')) {
         e.preventDefault();
         const tableId = e.target.dataset.tableId;
@@ -7327,28 +7282,17 @@ else if (e.target.matches('.add-substitute-btn')) {
         const newRow = table.insertRow();
         newRow.innerHTML = `
             <td><select><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
-            <td><input type="text" value=""></td>
-            <td><input type="text" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
-            <td><input type="number" value=""></td>
+            <td><input type="text" value=""></td><td><input type="text" value=""></td><td><input type="number" value=""></td>
+            <td><input type="number" value=""></td><td><input type="number" value=""></td><td><input type="number" value=""></td>
+            <td><input type="number" value=""></td><td><input type="number" value=""></td><td><input type="number" value=""></td>
         `;
     }
-// ★★★ この else if ブロックを新しく追加 ★★★
-    // --- 【詳細モーdal内】先攻後攻入れ替えボタン ---
+
+    // --- 先攻後攻入れ替えボタン ---
     else if (e.target.matches('#swap-teams-btn')) {
-        const matchId = e.target.dataset.matchId;
-        swapTeamDetails(matchId);
+        swapTeamDetails(e.target.dataset.matchId);
     }
 
-    // ★★★ ここまで追加 ★★★
- // ★★★ ここが「+」ボタンの処理です ★★★
-   
-    
     // --- チーム名クリック（ステータス表示） ---
     else if (e.target.matches('.clickable-team-name')) {
         const teamName = e.target.dataset.teamName;
@@ -7356,7 +7300,6 @@ else if (e.target.matches('.add-substitute-btn')) {
             showTeamStatusModal(teamName);
         }
     }
-
     // --- 記事表示ボタン（通常記事の「本文」） ---
     else if (e.target.matches('.news-article-btn')) {
         const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
