@@ -998,6 +998,7 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     let tournamentState = {};
     let currentMatchIdForDetails = null;
     let soundEffects = {};
+    const UNDERDOG_TEAMS = ["虎府島総合", "緑山", "鷲尾", "県立由暇"];
 
 // ▼▼▼ このオブジェクトで、既存のSoundManagerを完全に置き換えてください ▼▼▼
 // ▼▼▼ サウンド管理システム ▼▼▼
@@ -1370,6 +1371,119 @@ function formatRecordToString(record) {
     const prefix = record.rank < 0 ? '' : '県大会'; // 甲子園成績の場合は「県大会」をつけない
     return `'${year} ${tournament}: ${prefix}${rank}`;
     // ★★★ ここまで変更 ★★★
+}
+
+// AI Content Generation & Helpers のセクションに追加
+
+/**
+ * 密着ドキュメンタリーを開始し、序章の記事を生成する
+ * @param {string} teamName - 取材対象のチーム名
+ */
+async function startDocumentary(teamName) {
+    tournamentState.documentaryTarget = teamName;
+    newsContainer.innerHTML = `<div class="loader">AI記者が「${teamName}」の特別ドキュメンタリー番組の制作を開始しました...</div>`;
+    
+    // 全てのドキュメンタリーボタンを非表示にするため、再描画
+    renderTournament(tournamentState); 
+    
+    // AIに序章の記事を生成させる
+    const article = await generateDocumentaryArticle('intro', teamName);
+
+    if (article) {
+        tournamentState.news.push(article);
+    } else {
+        tournamentState.news.push({
+            title: "記事生成エラー",
+            body: `「${teamName}」のドキュメンタリー記事生成に失敗しました。`,
+            timestamp: Date.now(),
+            error: true
+        });
+    }
+    renderNews(tournamentState.news);
+    saveState();
+}
+
+
+/**
+ * ドキュメンタリー調の記事をAIに生成させる
+ * @param {'intro' | 'win' | 'lose'} type - 記事の種類
+ * @param {string} teamName - 主役のチーム名
+ * @param {object} [matchData=null] - 試合データ (勝敗記事の場合)
+ * @returns {Promise<object|null>} 生成された記事オブジェクト
+ */
+async function generateDocumentaryArticle(type, teamName, matchData = null) {
+    const teamMasterData = TEAM_DATA[teamName];
+    let prompt = `あなたは、情熱的で人間ドラマを描くのが得意なドキュメンタリー番組の記者です。あなたは今、高校野球チーム「${teamName}」に密着取材しています。`;
+    let title = "";
+
+    switch (type) {
+        case 'intro':
+            title = `『${teamName}、魂の記録』序章`;
+            prompt += `
+### 取材テーマ
+「${teamName}」が抱える困難な状況と、それでも夢を諦めない彼ら、そして彼らを支える地域の人々の姿を描く、感動的なドキュメンタリーの導入記事を作成してください。
+
+### 構成案
+1. 記者がチームの元を訪れる場面から始める。
+2. 監督や選手、マネージャー、地元の人々など、複数の人物にインタビューし、それぞれの視点からチームの苦悩と情熱を明らかにする。
+3. 最後に、大会へ向かう彼らの決意で締めくくる。
+
+### 必ず含めるべき要素
+- チームが抱える具体的なハンデ（例：${teamMasterData.info}）
+- 複数の登場人物のリアルな声
+- 情景が目に浮かぶような、エモーショナルな描写
+
+### 出力形式
+JSON形式で出力してください: {"title": "${title}", "body": "（長編の記事本文）"}`;
+            break;
+
+        case 'win':
+            title = `『${teamName}、魂の記録』第${matchData.round}章`;
+            prompt += `
+### 取材テーマ
+「${teamName}」が、${matchData.opponent}との激闘を ${matchData.score} で制しました。この勝利が彼らにとってどれほど大きな意味を持つのか、感動的に描写してください。
+
+### 構成案
+1. 勝利の瞬間の選手たちの様子を描写する。
+2. 試合のターニングポイントを振り返る。
+3. 監督や主役選手の勝利インタビューを挿入する。
+4. この勝利を見届けた地元の人々の喜びの声を加える。
+5. 次の試合への新たな決意で締めくくる。
+
+### 出力形式
+JSON形式で出力してください: {"title": "${title}", "body": "（記事本文）"}`;
+            break;
+
+        case 'lose':
+            title = `『${teamName}、魂の記録』最終章`;
+            prompt += `
+### 取材テーマ
+「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。夢破れた彼らの姿と、それでも確かに残ったものと、彼らを見守った人々の想いを描く、ドキュメンタリーの最終章を作成してください。
+
+### 構成案
+1. 試合終了の瞬間、泣き崩れる選手たちの姿を描写する。
+2. 監督や主将が、この夏を振り返る最後のインタビューに答える。
+3. チームを支え続けたマネージャーや地元の人々の、選手たちへの労いの言葉を挿入する。
+4. 3年生の引退と、後輩たちへの世代交代を示唆して、物語を締めくくる。
+
+### 出力形式
+JSON形式で出力してください: {"title": "${title}", "body": "（記事本文）"}`;
+            break;
+    }
+    
+    // (以下、fetchWithRetryを使ったAIへのリクエスト処理。generateNewsArticle関数と同様)
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (article) return { ...article, timestamp: Date.now() };
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI documentary article generation failed:", error);
+        return null;
+    }
 }
 
 /**
@@ -1877,6 +1991,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.teams = teams;
     tournamentState.matches = {};
     tournamentState.news = [];
+    tournamentState.documentaryTarget = null;
     tournamentState.seeds = seeds;
     tournamentState.bbsComments = [];
     tournamentState.daiyaBbsComments = [];
@@ -2202,12 +2317,23 @@ function renderTournament(data) {
         const isSeed1 = seeds.includes(team1);
         const isSeed2 = seeds.includes(team2);
 
-        const content = `
+const createDocumentaryButton = (teamName) => {
+        if (!teamName || tournamentState.documentaryTarget) return ''; // チーム名がないか、既に対象選択済みの場合は表示しない
+        if (UNDERDOG_TEAMS.includes(teamName)) {
+            return `<button class="documentary-btn text-lg ml-2" data-team-name="${teamName}" title="${teamName}に密着取材する">📹</button>`;
+        }
+        return '';
+    };        
+
+const content = `
             <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
                  <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
                     ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
                     ${isSeed1 ? 'S ' : ''}${team1 || '---'}
                 </span>
+
+                 ${createDocumentaryButton(team1)} 
+
                 <input type="text" class="score-input" value="${dbMatch.score1 ?? ''}" data-team-pos="1">
                 <button class="win-btn">▶</button>
             </div>
@@ -2216,6 +2342,9 @@ function renderTournament(data) {
                     ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
                     ${isSeed2 ? 'S ' : ''}${team2 || '---'}
                 </span>
+
+                ${createDocumentaryButton(team2)}
+
                 <input type="text" class="score-input" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
                 <button class="win-btn">▶</button>
             </div>
@@ -6615,9 +6744,46 @@ async function processMatchWin(matchId, winnerName) {
         return text;
     }).join('、');
 
+     let articlePromise; // 生成される記事のPromiseを格納する変数
+    const documentaryTarget = tournamentState.documentaryTarget;
+
+    // もし密着取材対象チームの試合であれば...
+    if (documentaryTarget && (documentaryTarget === winnerName || documentaryTarget === loserName)) {
+        
+        const isWin = documentaryTarget === winnerName;
+        const round = matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1;
+        const score = `${dbMatch.score1}-${dbMatch.score2}`;
+        const opponent = isWin ? loserName : winnerName;
+        
+        // ドキュメンタリー記事を生成する関数を呼び出す
+        articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentaryTarget, { round, opponent, score });
+        
+        if (!isWin) {
+            // 敗退した場合、密着取材は終了するのでターゲットをリセット
+            tournamentState.documentaryTarget = null;
+        }
+
+    } else {
+        // 通常の試合の場合
+        // 元々の通常記事を生成する関数を呼び出す
+        articlePromise = generateNewsArticle(
+            winnerName, loserName, dbMatch, matchId, 
+            winnerData, loserData, winnerDetailedData, loserDetailedData, 
+            highlights, keyPlayerNames
+        );
+    }
+    
+    // 掲示板コメントの生成は、どちらの分岐でも共通して行う
+    const commentsPromise = generateBbsComments(
+        winnerName, loserName, dbMatch, matchId, 
+        winnerData, loserData, winnerDetailedData, loserDetailedData, 
+        highlightsText
+    );
+
+    // 記事（ドキュメンタリー or 通常）とコメントの生成を並行して実行
     const [article, newComments] = await Promise.all([
-        generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames),
-        generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText)
+        articlePromise,
+        commentsPromise
     ]);
 
     if (newComments && newComments.length > 0) {
@@ -7206,6 +7372,15 @@ document.body.addEventListener('click', async (e) => {
     else if (e.target.matches('.weather-btn')) {
         const weatherType = e.target.dataset.weather;
         setWeather(weatherType);
+    }
+
+// --- ドキュメンタリー密着取材ボタン ---
+    else if (e.target.matches('.documentary-btn')) {
+        const teamName = e.target.dataset.teamName;
+        const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
+        if (confirmed) {
+            startDocumentary(teamName);
+        }
     }
 
     // --- 「＋ 走者プレーを追加」ボタン ---
