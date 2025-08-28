@@ -2706,6 +2706,12 @@ function createPitchingStatsTable(teamKey, details) {
 /**
  * 個人別打席結果のテーブルHTMLを生成する（複数打席ロジック統合版）
  */
+/**
+ * 個人別打席結果のテーブルHTMLを生成する（複数打席ロジック統合・最終版）
+ */
+/**
+ * 個人別打席結果のテーブルHTMLを生成する（司令塔として再設計した最終版）
+ */
 function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
@@ -2734,15 +2740,9 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             const resultString = starterData.results[j] || '';
             const atBats = (resultString && resultString.split('、').length > 0) ? resultString.split('、') : [''];
             
-            const atBatBlocksHTML = atBats.map(atBatString => {
-                const [batterPlay, runnerPlaysString] = atBatString.split(';');
-                return `
-                    <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
-                        ${createBattingResultDropdowns(batterPlay)}
-                        ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
-                    </div>
-                `;
-            }).join('');
+            const atBatBlocksHTML = atBats.map(atBatString => 
+                createBattingResultDropdowns(playersOnField, atBatString)
+            ).join('');
 
             resultInputs += `
                 <td class="col-inning batting-result-cell align-top p-1">
@@ -2753,15 +2753,13 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         }
         bodyRows += `
             <tr data-order="${starterData.order}">
-                <td class="col-order">${i}</td>
-                <td class="col-number">${starterNumberSelect}</td>
+                <td class="col-order">${i}</td><td class="col-number">${starterNumberSelect}</td>
                 <td class="col-player"><input type="text" class="player-name" value="${starterData.name || ''}"></td>
                 <td class="col-pos flex items-center justify-between">${starterPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${starterData.name || ''}" data-team-key="${teamKey}">変更</button></td>
-                <td class="col-sub-type"></td>
-                ${resultInputs}
+                <td class="col-sub-type"></td>${resultInputs}
             </tr>
         `;
-
+        
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
@@ -2772,15 +2770,9 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             for (let j = 0; j < numInnings; j++) {
                 const resultString = subData.results[j] || '';
                 const atBats = (resultString && resultString.split('、').length > 0) ? resultString.split('、') : [''];
-                const atBatBlocksHTML = atBats.map(atBatString => {
-                    const [batterPlay, runnerPlaysString] = atBatString.split(';');
-                    return `
-                        <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
-                            ${createBattingResultDropdowns(batterPlay)}
-                            ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
-                        </div>
-                    `;
-                }).join('');
+                const atBatBlocksHTML = atBats.map(atBatString => 
+                    createBattingResultDropdowns(playersOnField, atBatString)
+                ).join('');
                 subResultInputs += `
                     <td class="col-inning batting-result-cell align-top p-1">
                         ${atBatBlocksHTML}
@@ -2791,8 +2783,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             
             bodyRows += `
                 <tr data-order="${subData.order}">
-                    <td class="col-order"></td>
-                    <td class="col-number">${subNumberSelect}</td>
+                    <td class="col-order"></td><td class="col-number">${subNumberSelect}</td>
                     <td class="col-player pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td>
                     <td class="col-pos flex items-center justify-between">${subPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${subData.name || ''}" data-team-key="${teamKey}">変更</button></td>
                     <td class="col-sub-type">
@@ -2836,12 +2827,18 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 /**
  * 詳細データを保存し、通算成績を更新する（省略箇所を全て復元した最終完成版）
  */
+/**
+ * 詳細データを保存し、通算成績を更新する（データ構造の矛盾を解消した最終完成版）
+ */
+/**
+ * 詳細データを保存し、通算成績を更新する（データ構造の矛盾を解消した最終完成版）
+ */
 function saveDetailedStats() {
     if (!currentMatchIdForDetails) return;
     const match = findMatchById(currentMatchIdForDetails);
     if (!match) return;
 
-    // --- 1. 古い成績を一度リセットする処理 ---
+    // --- 1. 古い成績を一度リセット ---
     if (match.details && match.details.playerGameStats) {
         for (const teamKey of ['team1', 'team2']) {
             const teamName = match[teamKey];
@@ -2864,11 +2861,11 @@ function saveDetailedStats() {
                 }
             }
             const previousPitchingStats = match.details.pitching?.[teamKey];
-             if (previousPitchingStats) {
+            if (previousPitchingStats) {
                 previousPitchingStats.forEach(prevGameStats => {
                     const playerName = prevGameStats.name;
                     const careerStats = teamRecord.playerStats.pitching[playerName];
-                     if (careerStats && prevGameStats && parseFloat(prevGameStats.innings) > 0) {
+                    if (careerStats && prevGameStats && parseFloat(prevGameStats.innings) > 0) {
                         careerStats.games = (careerStats.games || 1) - 1;
                         if (prevGameStats.result === 'W') careerStats.w--;
                         if (prevGameStats.result === 'L') careerStats.l--;
@@ -2914,29 +2911,35 @@ function saveDetailedStats() {
                 const nameInput = row.querySelector('.player-name');
                 if (nameInput && nameInput.value.trim() !== '') {
                     
-                    // ▼▼▼【最重要改修点】新しい階層構造を正しく読み取るロジック▼▼▼
                     const resultCells = Array.from(row.querySelectorAll('td.col-inning'));
-const results = resultCells.map(cell => {
-    const batterPlay = Array.from(cell.querySelectorAll('.batting-result-container')).map(container => {
-        const resultType = container.querySelector('.result-type').value;
-        const direction = container.querySelector('.result-direction').value;
-        const rbi = container.querySelector('.result-rbi').value;
-        const runner = container.querySelector('.result-runner').value;
-        return [direction, resultType, rbi, runner].filter(Boolean).join('');
-    }).join('');
+                    const results = resultCells.map(cell => {
+                        const atBatBlocks = Array.from(cell.querySelectorAll('.at-bat-block'));
+                        
+                        const atBatsString = atBatBlocks.map(block => {
+                            const container = block.querySelector('.batting-result-container');
+                            if (!container) return ''; 
 
-    const runnerPlays = Array.from(cell.querySelectorAll('.runner-play-input')).map(container => {
-        const name = container.querySelector('.runner-name').value;
-        const play = container.querySelector('.runner-play').value;
-        const base = container.querySelector('.runner-base').value;
-        if (!name || !play) return '';
-        return [name, play, base].filter(Boolean).join(' ');
-    }).filter(Boolean).join('、'); // 走者プレー間は「、」で区切る
+                            const resultType = container.querySelector('.result-type').value;
+                            const direction = container.querySelector('.result-direction').value;
+                            const rbi = container.querySelector('.result-rbi').value;
+                            const runnerPlay = container.querySelector('.result-runner-play').value;
+                            const batterPlay = [direction, resultType, rbi, runnerPlay].filter(Boolean).join('');
+                            
+                            // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
+                            const runnerPlays = Array.from(block.querySelectorAll('.runner-play-input')).map(rpContainer => {
+                                const name = rpContainer.querySelector('.runner-name').value;
+                                const play = rpContainer.querySelector('.runner-play').value;
+                                const base = rpContainer.querySelector('.runner-base').value;
+                                if (!name || !play) return '';
+                                return [name, play, base].filter(Boolean).join(' ');
+                            }).filter(Boolean).join(',');
+                            // ▲▲▲
+                            
+                            return [batterPlay, runnerPlays].filter(Boolean).join(';');
+                        }).join('、');
 
-    // 打者プレーと走者プレー全体を「;」で明確に区切る
-    return [batterPlay, runnerPlays].filter(Boolean).join(';');
-});
-                    // ▲▲▲ここまで▲▲▲
+                        return atBatsString;
+                    });
                     
                     const playerData = {
                         order: row.dataset.order, name: nameInput.value.trim(),
@@ -2956,21 +2959,20 @@ const results = resultCells.map(cell => {
 
                     playerData.results.forEach(inningResultString => {
                         if (!inningResultString) return;
-                        inningResultString.split('、').forEach(res => {
-                            if (!res) return;
-                            if (['盗塁', '盗塁死', '牽制死', '走塁死', '挟殺'].some(p => res.includes(p))) return;
+                        inningResultString.split('、').forEach(atBatString => {
+                            if (!atBatString) return;
+                            const [batterPlay] = atBatString.split(';');
+                            if (!batterPlay) return;
                             
                             gameStats.played = true;
                             gameStats.pa++;
-                            if (!res.includes('四球') && !res.includes('死球') && !res.includes('犠')) gameStats.ab++;
+                            if (!batterPlay.includes('四球') && !batterPlay.includes('死球') && !batterPlay.includes('犠')) gameStats.ab++;
                             
-                            const isHitWord = res.includes('安') || res.includes('本') || res.includes('二') || res.includes('三');
-                            const isOutWord = res.includes('ゴロ') || res.includes('飛') || res.includes('振') || res.includes('併殺') || res.includes('直');
-                            if (isHitWord && !isOutWord) gameStats.h++;
-
-                            if (res.includes('本')) gameStats.hr++;
-                            if (res.includes('点')) {
-                                const rbiMatch = res.match(/(\d+)点/);
+                            const isHitWord = ['安', '本', '二', '三'].some(w => batterPlay.includes(w));
+                            if (isHitWord) gameStats.h++;
+                            if (batterPlay.includes('本')) gameStats.hr++;
+                            if (batterPlay.includes('点')) {
+                                const rbiMatch = batterPlay.match(/(\d+)点/);
                                 gameStats.rbi += rbiMatch ? parseInt(rbiMatch[1]) : 1;
                             }
                         });
@@ -2988,7 +2990,6 @@ const results = resultCells.map(cell => {
             });
         }
 
-        // 投手成績
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
             pitchingTable.querySelectorAll('tbody tr').forEach(row => {
@@ -3009,22 +3010,18 @@ const results = resultCells.map(cell => {
                     }
                     const careerStats = teamRecord.playerStats.pitching[pitcherName];
                     if (parseFloat(pitcherData.innings) > 0) {
-                        if (!careerStats.lastGameId || careerStats.lastGameId !== currentMatchIdForDetails) {
-                            careerStats.games = (careerStats.games || 0) + 1;
-                            careerStats.lastGameId = currentMatchIdForDetails;
-                        }
+                        careerStats.games = (careerStats.games || 0) + 1;
+                        if (pitcherData.result === 'W') careerStats.w++;
+                        if (pitcherData.result === 'L') careerStats.l--;
+                        careerStats.ip += parseFloat(pitcherData.innings) || 0;
+                        careerStats.so += parseInt(pitcherData.strikeouts) || 0;
+                        careerStats.er += parseInt(pitcherData.earnedRuns) || 0;
                     }
-                    if (pitcherData.result === 'W') careerStats.w++;
-                    if (pitcherData.result === 'L') careerStats.l++;
-                    careerStats.ip += parseFloat(pitcherData.innings) || 0;
-                    careerStats.so += parseInt(pitcherData.strikeouts) || 0;
-                    careerStats.er += parseInt(pitcherData.earnedRuns) || 0;
                 }
             });
         }
     }
 
-    // --- 4. 試合オブジェクトと選手名簿の更新 ---
     match.details = details;
     for (const teamKey of ['team1', 'team2']) {
         const teamName = match[teamKey];
@@ -3038,7 +3035,6 @@ const results = resultCells.map(cell => {
         }
     }
 
-    // --- 5. 最終的な保存と画面更新 ---
     saveState();
     detailsModal.classList.add('hidden');
     renderTournament(tournamentState);
@@ -5877,7 +5873,9 @@ function createHighlightsText(dbMatch, winnerName) {
                     }
                     
                     if (runnerPlaysString) {
+                        // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
                         runnerPlaysString.split(',').forEach(runnerPlay => {
+                        // ▲▲▲
                             if (!runnerPlay) return;
                             const runnerPlayParts = runnerPlay.trim().split(' ');
                             if (runnerPlayParts.length < 2) return;
@@ -5900,8 +5898,7 @@ function createHighlightsText(dbMatch, winnerName) {
                 });
             });
         }
-    }
-    
+    }    
     // --- 2. 試合全体の個別要素を分析 ---
     const loserName = dbMatch[losingTeamKey];
     const losingPitchers = dbMatch.details.pitching?.[losingTeamKey] || [];
@@ -6027,15 +6024,20 @@ function createHighlightsText(dbMatch, winnerName) {
  */
 /**
  * 3連携の打席結果プルダウンと、それに付随する走塁入力欄のHTMLを生成する（参照エラー修正版）
- */
 /**
- * 1打席分の「打者」のプレーを入力する、4連プルダウンを生成する（役割を単機能化）
- * @param {string} batterPlay - 保存済みの打者のプレー文字列 (例: "中安1点好走塁")
+ * 1打席分の入力ブロックHTMLを生成する（役割を単機能化した最終版）
+ * @param {Array<object>} playersOnField - 現在出場中の選手リスト
+ * @param {string} atBatString - 1打席分の保存済み文字列 (例: "中安1点好走塁;田中 進塁 二塁へ")
  * @returns {string} - 生成されたHTML
  */
-function createBattingResultDropdowns(batterPlay = '') {
+/**
+ * 1打席分の入力ブロックHTMLを生成する（役割を単機能化した最終版）
+ */
+function createBattingResultDropdowns(playersOnField, atBatString = '') {
+    const [batterPlay, runnerPlaysString] = (atBatString || '').split(';');
+    
     let selectedResult = '', selectedDirection = '', selectedRbi = '', selectedRunnerPlay = '';
-    let tempResult = batterPlay.trim();
+    let tempResult = (batterPlay || '').trim();
 
     if (tempResult) {
         const rbiMatch = tempResult.match(/(\d+点)/);
@@ -6067,13 +6069,16 @@ function createBattingResultDropdowns(batterPlay = '') {
     const runnerPlayOptions = ['好走塁'].map(r => `<option value="${r}" ${selectedRunnerPlay === r ? 'selected' : ''}>${r}</option>`).join('');
 
     return `
-        <div class="flex items-center gap-1 batting-result-container mb-1">
-            <div class="flex-grow flex gap-1">
-                <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-type"><option value="">-結果-</option>${resultOptions}</select>
-                <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-direction"><option value="">-方向/走塁-</option>${directionOptions}</select>
-                <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-rbi"><option value="">-打点-</option>${rbiOptions}</select>
-                <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-runner-play bg-yellow-50"><option value="">-打者走塁-</option>${runnerPlayOptions}</select>
+        <div class="at-bat-block border-t border-dashed pt-2 mt-2 first:mt-0 first:pt-0 first:border-t-0">
+            <div class="flex items-center gap-1 batting-result-container mb-1">
+                <div class="flex-grow flex gap-1">
+                    <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-type"><option value="">-結果-</option>${resultOptions}</select>
+                    <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-direction"><option value="">-方向-</option>${directionOptions}</select>
+                    <select class="batting-result-part w-[22%] text-xs p-1 border rounded result-rbi"><option value="">-打点-</option>${rbiOptions}</select>
+                    <select class="batting-result-part w-[28%] text-xs p-1 border rounded result-runner-play bg-yellow-50"><option value="">-打者走塁-</option>${runnerPlayOptions}</select>
+                </div>
             </div>
+            ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
         </div>
     `;
 }
@@ -6179,31 +6184,35 @@ function getCurrentTournamentPerformance(teamName, currentMatchId) {
  * @param {string} currentResult - 保存済みの打席結果文字列
  * @returns {string} - 生成されたHTML
  */
-function createRunnerInputsHTML(playersOnField, currentResult = '') {
+/**
+ * 複数走者に対応した走塁入力欄のHTMLを生成する（区切り文字バグ修正版）
+ */
+function createRunnerInputsHTML(playersOnField, runnerPlaysString = '') {
     const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
     const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
     
-    // 保存済みのデータから走塁プレーを抽出
-    // 例: "田中 盗塁 二塁へ、佐藤 タッチアップ 三塁へ"
-    const runnerEvents = currentResult.split('、').filter(s => baserunningPlays.some(p => s.includes(p)));
+    // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
+    const runnerEvents = runnerPlaysString ? runnerPlaysString.split(',') : [];
+    // ▲▲▲
 
     let html = '<div class="runner-plays-container space-y-1 mt-1">';
     
     runnerEvents.forEach(event => {
-        const parts = event.split(' ');
+        const parts = event.trim().split(' ');
         const name = parts[0] || '';
         const play = parts[1] || '';
-        const base = parts[2] || '';
+        const base = parts.slice(2).join(' ') || '';
         
         const nameOptions = playersOnField.map(p => `<option value="${p.name}" ${p.name === name ? 'selected' : ''}>${p.name}</option>`).join('');
         const playOptions = baserunningPlays.map(p => `<option value="${p}" ${p === play ? 'selected' : ''}>${p}</option>`).join('');
         const baseOptions = bases.map(b => `<option value="${b}" ${b === base ? 'selected' : ''}>${b}</option>`).join('');
 
         html += `
-            <div class="runner-play-input flex gap-1">
+            <div class="runner-play-input flex gap-1 items-center mt-1">
                 <select class="runner-name w-1/3 text-xs p-1 border rounded"><option value="">-誰が-</option>${nameOptions}</select>
                 <select class="runner-play w-1/3 text-xs p-1 border rounded bg-green-50"><option value="">-何をした-</option>${playOptions}</select>
                 <select class="runner-base w-1/3 text-xs p-1 border rounded bg-green-50"><option value="">-どこへ-</option>${baseOptions}</select>
+                <button class="remove-runner-play-btn text-red-500 hover:text-red-700 font-bold text-lg leading-none p-1">×</button>
             </div>
         `;
     });
@@ -7260,12 +7269,10 @@ document.body.addEventListener('click', async (e) => {
         const table = e.target.closest('.batting-table');
         const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => ({ name: input.value.trim() })).filter(p => p.name);
         
-        const newAtBatHTML = `
-            <div class="at-bat-block border-t border-dashed pt-2 mt-2">
-                ${createBattingResultDropdowns('')}
-                ${createRunnerInputsHTML(playersOnField, '')}
-            </div>
-        `;
+        // 新しい空の打席ブロック（打者入力欄＋走者入力欄の正しいセット）を生成
+        const newAtBatHTML = createBattingResultDropdowns(playersOnField, '');
+        
+        // クリックされたボタンの直前に、新しいブロックを挿入
         e.target.insertAdjacentHTML('beforebegin', newAtBatHTML);
     }
 
