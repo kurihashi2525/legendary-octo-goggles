@@ -6929,20 +6929,24 @@ async function processMatchWin(matchId, winnerName) {
         return text;
     }).join('、');
 
-     let articlePromise; // 生成される記事のPromiseを格納する変数
-    const documentary = tournamentState.documentary; // オブジェクトで取得
+     let articlePromise;
+    const documentary = tournamentState.documentary;
 
-    // もし密着取材対象チームの試合であれば...
-     if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
-        
+    if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
         const isWin = documentary.target === winnerName;
 
-        // ▼▼▼ このオブジェクトに highlights を追加 ▼▼▼
+        // ▼▼▼ ここがエラーの原因でした。変数を明確に定義します ▼▼▼
+        const round = matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1;
+        const opponent = isWin ? loserName : winnerName;
+        const score = isWin 
+            ? `${dbMatch.score1}-${dbMatch.score2}` 
+            : (dbMatch.team1 === loserName ? `${dbMatch.score2}-${dbMatch.score1}` : `${dbMatch.score1}-${dbMatch.score2}`);
+
         const matchInfoForArticle = { 
-            round: matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1,
-            opponent: isWin ? loserName : winnerName,
-            score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
-            highlights: highlightsText // ← この行を追加！
+            round: round,
+            opponent: opponent,
+            score: score,
+            highlights: highlightsText
         };
         // ドキュメンタリー記事を生成（typeも渡す）
         articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, { round, opponent, score });
