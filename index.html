@@ -2620,7 +2620,70 @@ function openDetailsModal(matchId) {
     detailsModal.classList.remove('hidden');
     updateTotalScores();
 }
- // ★★★ この関数を丸ごと置き換えてください ★★★
+ 
+
+/**
+ * 投手成績のテーブルHTMLを生成する
+ * @param {string} teamKey - 'team1' または 'team2'
+ * @param {object} details - 試合の詳細データ
+ * @returns {string} - 生成されたHTML
+ */
+function createPitchingStatsTable(teamKey, details) {
+    const pitchingData = details.pitching[teamKey] || [];
+    let bodyRows = pitchingData.map((player, index) => `
+        <tr data-pitcher-index="${index}">
+            <td>
+                <select>
+                    <option value="" ${!player.result ? 'selected' : ''}>-</option>
+                    <option value="W" ${player.result === 'W' ? 'selected' : ''}>○</option>
+                    <option value="L" ${player.result === 'L' ? 'selected' : ''}>●</option>
+                    <option value="S" ${player.result === 'S' ? 'selected' : ''}>S</option>
+                    <option value="H" ${player.result === 'H' ? 'selected' : ''}>H</option>
+                </select>
+            </td>
+            <td><input type="text" value="${player.name || ''}"></td>
+            <td><input type="text" value="${player.innings || ''}"></td>
+            <td><input type="number" value="${player.battersFaced || ''}"></td>
+            <td><input type="number" value="${player.pitches || ''}"></td>
+            <td><input type="number" value="${player.hits || ''}"></td>
+            <td><input type="number" value="${player.strikeouts || ''}"></td>
+            <td><input type="number" value="${player.walks || ''}"></td>
+            <td><input type="number" value="${player.runs || ''}"></td>
+            <td><input type="number" value="${player.earnedRuns || ''}"></td>
+        </tr>
+    `).join('');
+
+    // もし投手が一人もいなければ、空の行を1つ追加しておく
+    if (pitchingData.length === 0) {
+        bodyRows = `
+            <tr data-pitcher-index="0">
+                <td><select><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
+                <td><input type="text" value=""></td><td><input type="text" value=""></td><td><input type="number" value=""></td>
+                <td><input type="number" value=""></td><td><input type="number" value=""></td><td><input type="number" value=""></td>
+                <td><input type="number" value=""></td><td><input type="number" value=""></td><td><input type="number" value=""></td>
+            </tr>
+        `;
+    }
+
+    return `
+        <div class="overflow-x-auto">
+            <table class="details-table" id="pitching-table-${teamKey}">
+                <thead>
+                    <tr>
+                        <th class="w-12">勝敗</th><th class="col-player">選手名</th><th class="col-stat">回数</th>
+                        <th class="col-stat">打者</th><th class="col-stat">球数</th><th class="col-stat">被安打</th>
+                        <th class="col-stat">奪三振</th><th class="col-stat">与四球</th><th class="col-stat">失点</th>
+                        <th class="col-stat">自責点</th>
+                    </tr>
+                </thead>
+                <tbody>${bodyRows}</tbody>
+            </table>
+            <button class="add-row-btn text-xs mt-2" data-table-id="pitching-table-${teamKey}">+ 投手を追加</button>
+        </div>
+    `;
+}
+
+// ★★★ この関数を丸ごと置き換えてください ★★★
 /**
  * 個人別打席結果のテーブルHTMLを生成する（交代選手表示バグ修正・最終版）
  */
