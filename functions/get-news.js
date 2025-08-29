@@ -1,12 +1,18 @@
-// functions/get-news.js
-
-import fetch from 'node-fetch';
-
 // Netlify Functions のお決まりの書き方
-export const handler = async (event, context) => {
+exports.handler = async (event, context) => {
     console.log("Netlify Functionがニュース取得リクエストを受け取りました。");
 
-    // サーバーの本体部分をここに移設
+    // 配列をシャッフルするヘルパー関数
+    const shuffleArray = (array) => {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    };
+
+    // サーバーの本体部分
     const allNews = {
         "政治": [ { title: "〇〇内閣、支持率が過去最低の21%に急落。解散総選挙も視野か" }, { title: "来年度予算案、防衛費が過去最大規模に。野党は反発" } ],
         "芸能": [ { title: "人気俳優Aと女優Bが電撃結婚！公式サイトで発表" }, { title: "国民的アイドルグループ、年内での解散を電撃発表" } ],
@@ -15,32 +21,32 @@ export const handler = async (event, context) => {
         "MLB": [ { title: "【速報】大谷翔平、またしても破壊。特大の第50号ソロホームラン！" }, { title: "ダルビッシュ有、圧巻の12奪三振で今季10勝目をマーク" } ]
     };
 
-    const body = JSON.parse(event.body || '{}');
-    const searchQueries = body.queries || [];
-    const results = searchQueries.map(query => {
-        let categoryKey = "話題のニュース";
-        if (query.includes("政治")) categoryKey = "政治";
-        else if (query.includes("芸能")) categoryKey = "芸能";
-        else if (query.includes("学歴")) categoryKey = "学歴";
-        else if (query.includes("プロ野球")) categoryKey = "プロ野球";
-        else if (query.includes("大谷翔平")) categoryKey = "MLB";
-        
-        return { items: allNews[categoryKey] ? shuffleArray(allNews[categoryKey]) : [] };
-    });
+    try {
+        const body = JSON.parse(event.body || '{}');
+        const searchQueries = body.queries || [];
+        const results = searchQueries.map(query => {
+            let categoryKey = "話題のニュース";
+            if (query.includes("政治")) categoryKey = "政治";
+            else if (query.includes("芸能")) categoryKey = "芸能";
+            else if (query.includes("学歴")) categoryKey = "学歴";
+            else if (query.includes("プロ野球")) categoryKey = "プロ野球";
+            else if (query.includes("大谷翔平")) categoryKey = "MLB";
+            
+            return { items: allNews[categoryKey] ? shuffleArray(allNews[categoryKey]) : [] };
+        });
 
-    // ブラウザに結果を返す
-    return {
-        statusCode: 200,
-        body: JSON.stringify(results)
-    };
-};
+        // ブラウザに成功した結果を返す
+        return {
+            statusCode: 200,
+            body: JSON.stringify(results)
+        };
 
-// 配列をシャッフルするヘルパー関数
-function shuffleArray(array) {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    } catch (error) {
+        console.error("サーバー機能でエラーが発生:", error);
+        // ブラウザにエラーが発生したことを伝える
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "サーバー内部でエラーが発生しました。" })
+        };
     }
-    return newArray;
-}
+};
