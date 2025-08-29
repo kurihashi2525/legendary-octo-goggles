@@ -573,7 +573,19 @@
  </div>
         </div>
 
-
+<div id="bbs-thread-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[210]">
+    <div class="bg-gray-100 p-6 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center border-b-2 border-gray-300 pb-3 mb-4">
+            <h3 id="bbs-thread-title" class="text-xl font-bold text-gray-800"></h3>
+            <button id="bbs-thread-close-btn" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="bbs-thread-content" class="overflow-y-auto space-y-3">
+            <div class="loader">スレッドを読み込んでいます...</div>
+        </div>
+    </div>
+</div>
 
 
         <div id="tournament-display" class="hidden">
@@ -589,7 +601,10 @@
                 </button>
             </div>
 
-            <div id="region-map-section" class="display-card hidden scorebook-font">
+            
+
+
+<div id="region-map-section" class="display-card hidden scorebook-font">
                  <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">地区別 勝ち残り状況</h2>
                  <div id="region-map-container" class="w-full"></div>
             </div>
@@ -8095,7 +8110,14 @@ document.body.addEventListener('click', async (e) => {
         setWeather(weatherType);
     }
 
- // --- 「まとめサイトを見る」ボタンが押された時の処理 ---
+
+    
+    // --- まとめサイト内の記事リンクがクリックされた時の処理 ---
+   // document.body.addEventListener('click', ...) 内の、まとめサイト関連の if ブロックを全てこれで置き換える
+
+    // ▼▼▼ このブロックで、まとめサイト関連の処理を全て書き換える ▼▼▼
+
+    // --- 「まとめサイトを見る」ボタン ---
     const showMatomeBtn = e.target.closest('#show-matome-site-btn');
     if (showMatomeBtn) {
         const modal = document.getElementById('matome-site-modal');
@@ -8103,7 +8125,6 @@ document.body.addEventListener('click', async (e) => {
         modal.classList.remove('hidden');
         contentEl.innerHTML = `<div class="loader">最新ニュースと試合結果をまとめています...</div>`;
         
-        // 非同期でサイトの内容を生成して表示
         (async () => {
             const matomeHtml = await generateMatomeSiteHtml();
             contentEl.innerHTML = matomeHtml;
@@ -8113,13 +8134,9 @@ document.body.addEventListener('click', async (e) => {
     // --- まとめサイトのモーダルを閉じるボタン ---
     if (e.target.closest('#matome-site-close-btn')) {
         document.getElementById('matome-site-modal').classList.add('hidden');
-        // 表示を元に戻す（重要）
-        document.querySelector('#news-section h2').textContent = '注目ニュース';
-        document.getElementById('bbs-section').classList.remove('hidden');
-        renderNews(tournamentState.news);
     }
     
-    // --- まとめサイト内の記事リンクがクリックされた時の処理 ---
+    // --- まとめサイト内の記事リンククリック ---
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
@@ -8128,22 +8145,21 @@ document.body.addEventListener('click', async (e) => {
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
 
-        // UIを「反応表示モード」に切り替え
-        const newsSectionTitle = document.querySelector('#news-section h2');
-        const newsContainer = document.getElementById('news-articles');
-        const bbsSection = document.getElementById('bbs-section');
+        // 新しいスレッド表示用モーダルを準備
+        const threadModal = document.getElementById('bbs-thread-modal');
+        const threadTitleEl = document.getElementById('bbs-thread-title');
+        const threadContentEl = document.getElementById('bbs-thread-content');
+        
+        threadTitleEl.textContent = headline;
+        threadContentEl.innerHTML = `<div class="loader">AIが掲示板の反応を生成中...</div>`;
+        
+        // まとめサイトを隠し、スレッドモーダルを表示
+        document.getElementById('matome-site-modal').classList.add('hidden');
+        threadModal.classList.remove('hidden');
 
-        newsSectionTitle.textContent = `「${headline}」に対する反応`;
-        newsContainer.innerHTML = `<div class="loader">AIが掲示板の反応を生成中...</div>`;
-        bbsSection.classList.add('hidden'); // 本来の掲示板は一旦隠す
-        document.getElementById('matome-site-modal').classList.add('hidden'); // まとめサイトを閉じる
-
-        // AIに関数を呼び出し、結果を表示
         (async () => {
             let result;
-
             if (type === 'game' && matchId) {
-                // --- ゲーム内記事の場合 ---
                 const match = findMatchById(matchId);
                 if (match && match.winner) {
                     const context = {
@@ -8155,37 +8171,37 @@ document.body.addEventListener('click', async (e) => {
                     result = await generateGameMatchBbsComments(context);
                 }
             } else if (type === 'real') {
-                // --- 現実のニュースの場合 ---
                 const comments = await generateRealNewsBbsComments(headline, category);
                 if (comments) {
                     result = { title: headline, comments: comments };
                 }
             }
 
-            // --- 結果の描画 ---
             if (result && result.comments) {
-                newsSectionTitle.textContent = `【掲示板】${result.title}`;
-                newsContainer.innerHTML = ''; // ローダーを消す
+                threadTitleEl.textContent = `【スレ】${result.title}`;
+                threadContentEl.innerHTML = ''; // ローダーを消す
                 result.comments.forEach(comment => {
                     const commentEl = document.createElement('div');
-                    commentEl.className = 'bbs-comment'; // 掲示板のスタイルを流用
+                    commentEl.className = 'bbs-comment bg-white'; // スタイルを少し調整
                     commentEl.innerHTML = `
-                        <p class="font-semibold text-gray-600 text-sm">${comment.personality}</p>
+                        <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
                         <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
                     `;
-                    newsContainer.appendChild(commentEl);
+                    threadContentEl.appendChild(commentEl);
                 });
             } else {
-                newsContainer.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
-                // 失敗した場合は3秒後に表示を元に戻す
-                setTimeout(() => {
-                    document.querySelector('#news-section h2').textContent = '注目ニュース';
-                    bbsSection.classList.remove('hidden');
-                    renderNews(tournamentState.news);
-                }, 3000);
+                threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
         })();
     }
+
+    // --- スレッド表示モーダルの閉じるボタン ---
+    if (e.target.closest('#bbs-thread-close-btn')) {
+        document.getElementById('bbs-thread-modal').classList.add('hidden');
+        // まとめサイトのリストに再び表示を戻す
+        document.getElementById('matome-site-modal').classList.remove('hidden');
+    }
+    // ▲▲▲ ここまで置き換え ▲▲▲
 
  // --- スキャンダル告発/無視ボタン ---
    // --- スキャンダル告発/無視ボタン ---
