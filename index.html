@@ -567,8 +567,13 @@
 　　　　　　　　<button id="help-btn" class="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-600 shadow-md mt-4 w-full md:w-auto">
     遊び方
 </button>
-             </div>
+ <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-600 shadow-md mt-4 w-full md:w-auto">
+    📰 まとめサイトを見る
+    </button>            
+ </div>
         </div>
+
+
 
 
         <div id="tournament-display" class="hidden">
@@ -607,6 +612,9 @@
                         <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
                         <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
                         <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
+<button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
+    📰 まとめ
+    </button>
                         <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
                         <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
                     </div>
@@ -665,7 +673,22 @@
         </div>
     </div>
     
-    <div id="confirm-modal" class="confirm-modal hidden">
+  
+<div id="matome-site-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="text-2xl font-bold text-gray-800 scorebook-font">俺たちの甲子園速報＠なんJまとめ</h3>
+            <button id="matome-site-close-btn" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="matome-site-content" class="overflow-y-auto space-y-4">
+            <div class="loader">ニュースを取得中...</div>
+        </div>
+    </div>
+</div>
+
+  <div id="confirm-modal" class="confirm-modal hidden">
         <div class="confirm-modal-content">
             <p id="confirm-modal-text" class="mb-4 text-lg"></p>
             <button id="confirm-ok" class="bg-red-600 text-white px-6 py-2 rounded-lg mr-2">はい</button>
@@ -722,6 +745,27 @@
             </div>
         </div>
     </div>
+
+
+<div id="feedback-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-[150]">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者への追加指示</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="feedback-include" class="block text-sm font-medium text-gray-700">✅ この要素を必ず含めてください</label>
+                <textarea id="feedback-include" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="例：殊勲打を放った〇〇選手のコメントを中心に。&#10;例：敗れた△△高校のエースの涙にも触れてほしい。"></textarea>
+            </div>
+            <div>
+                <label for="feedback-exclude" class="block text-sm font-medium text-gray-700">❌ この要素・展開は避けてください</label>
+                <textarea id="feedback-exclude" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="例：監督の采配ミスという論調はもういい。&#10;例：ありきたりな「全員野球」という言葉は使わないで。"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 text-center border-t pt-4">
+            <button id="feedback-submit-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">この指示で再生成</button>
+            <button id="feedback-cancel-btn" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">キャンセル</button>
+        </div>
+    </div>
+</div>
 
 <div id="review-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -943,6 +987,69 @@ const RBIS = ['1点', '2点', '3点', '4点'];
         WALL_OF_TOKYO: { id: 'wall_of_tokyo', name: '西東京の壁', desc: '西東京地区に立ちはだかる絶対的強者。' } // 例
     };
 const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
+
+// ▼▼▼ このブロックをまるごと置き換える ▼▼▼
+const SCANDAL_DEFINITIONS = [
+    {
+        id: 'overpractice',
+        condition: (teamName) => ['A', 'B'].includes(calculateRank(teamName, tournamentState)),
+        
+        // 文字列から関数に変更
+        rumorTitle: (teamName) => `【週刊熱闘】${teamName}に「違法練習」疑惑か？`,
+        rumorBody: (teamName) => `強豪として知られる${teamName}だが、その強さの裏には、高校野球連盟が定める練習時間規定を大幅に超過するほどの猛練習があるというタレコミが本誌に寄せられた。深夜までバットの音が鳴り響くという近隣住民の証言もあり、今後の動向が注目される。`,
+        
+        consequences: {
+            report: {
+                // こちらも同様に関数に変更
+                outcomeTitle: (teamName) => `【速報】${teamName}、練習規定違反で公式戦を辞退`,
+                outcomeBody: (teamName) => `先日、週刊誌で報じられた${teamName}の練習時間規定違反問題で、高野連は調査の結果、違反の事実を認定。同校は事態を重く受け止め、今大会の残り試合を辞退することを発表した。`,
+                applyEffect: (teamName, state) => {
+        if (state.teamRecords[teamName]) {
+            state.teamRecords[teamName].penalty = 'forfeit';
+        }
+
+        const currentMatch = findCurrentMatchForTeam(teamName, state);
+        if (!currentMatch) return; // 該当する試合がなければ何もしない
+
+        const opponent = currentMatch.team1 === teamName ? currentMatch.team2 : currentMatch.team1;
+
+        // 相手がいない場合（シードなど）は、単に負け扱いにする
+        if (!opponent) {
+            currentMatch.winner = `(不戦敗)`;
+            currentMatch.team1 = teamName;
+            currentMatch.team2 = null;
+            return;
+        }
+
+        // 不戦勝として試合結果を記録
+        currentMatch.winner = opponent;
+        currentMatch.summary = `${teamName}の不祥事による不戦勝`;
+
+        if (currentMatch.team1 === opponent) {
+            currentMatch.score1 = 'W'; // Win
+            currentMatch.score2 = 'L'; // Lose
+        } else {
+            currentMatch.score1 = 'L';
+            currentMatch.score2 = 'W';
+        }
+
+        // チーム記録を更新
+        if(state.teamRecords[opponent]) state.teamRecords[opponent].wins++;
+        if(state.teamRecords[teamName]) state.teamRecords[teamName].losses++;
+        
+        // 勝者を次のラウンドへ自動で進める
+        advanceWinnerToNextRound(currentMatch, opponent, state);
+    }
+            },
+            ignore: {
+                outcomeTitle: (teamName) => `${teamName}の練習問題、高野連は「事実確認できず」`,
+                outcomeBody: (teamName) => `先日、一部週刊誌で報じられた${teamName}の練習時間に関する疑惑に対し、高野連は「現時点で違反の事実は確認できなかった」と発表。噂は噂のまま、球児たちの夏は続く。`,
+                applyEffect: (teamName, state) => { /* 何もしない */ }
+            }
+        }
+    }
+];
+// ▲▲▲ ここまで置き換え ▲▲▲
     // --- DOM Elements ---
     const setupEl = document.getElementById('setup');
     const tournamentDisplayEl = document.getElementById('tournament-display');
@@ -997,6 +1104,7 @@ const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spri
     // --- State Management ---
     let tournamentState = {};
     let currentMatchIdForDetails = null;
+    let articleForRegeneration = null; 
     let soundEffects = {};
     const UNDERDOG_TEAMS = ["虎府島総合", "緑山", "鷲尾", "県立由暇"];
     const POWERHOUSE_TEAMS = ["283学園", "天下無双学園", "代矢東", "雷門南", "稲城実業", "青道", "765総合高校"];
@@ -1378,6 +1486,336 @@ function formatRecordToString(record) {
 
 // AI Content Generation & Helpers のセクションに追加
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * 本格的なまとめサイトのHTMLを、現実と架空のニュースを融合させて生成する（最終進化版）
+ * @returns {Promise<string>} 生成されたHTML文字列
+ */
+async function generateMatomeSiteHtml() {
+    let articles = [];
+    const now = Date.now();
+
+    // --- 1. 現実のニュースをGoogle検索で大量に取得 ---
+    const searchQueries = [
+        { query: "プロ野球 読売ジャイアンツ 試合結果", category: "NPB" },
+        { query: "大谷翔平 速報", category: "MLB" },
+        { query: "話題のニュース 速報", category: "速報" },
+        { query: "芸能人 結婚 ニュース", category: "芸能" },
+        { query: "なんJ 学歴スレ", category: "学歴" },
+        { query: "日本の政治ニュース", category: "政治" }
+    ];
+
+    try {
+        const searchResults = await google_search.search({queries: searchQueries.map(q => q.query)});
+        
+        // --- 2. AIによる「スレタイ化」 ---
+        const headlinesToConvert = [];
+        searchResults.forEach((result, index) => {
+            if (result && result.items) {
+                result.items.slice(0, 3).forEach(item => { // 各カテゴリから最大3件取得
+                    headlinesToConvert.push({ title: item.title, category: searchQueries[index].category });
+                });
+            }
+        });
+
+        if (headlinesToConvert.length > 0) {
+            const conversionPrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。以下のニュース見出しを、読者のクリックを誘うような、なんJ風の煽り気味なスレッドタイトルに変換してください。
+
+### 元のニュース見出しリスト:
+${headlinesToConvert.map(h => `- ${h.title}`).join('\n')}
+
+### 指示:
+- 各タイトルを、簡潔かつインパクトのあるものにしてください。
+- ネットスラング（「ｗｗｗ」「【悲報】」「【朗報】」「なお、」など）を効果的に使用してください。
+- 元のニュースの内容が推測できる範囲で、少し大げさに表現してください。
+
+### 出力形式 (JSON配列):
+[
+  {"original_title": "元の見出し1", "converted_title": "変換後のスレタイ1"},
+  {"original_title": "元の見出し2", "converted_title": "変換後のスレタイ2"}
+]`;
+            const conversionResponse = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+            const conversionResult = await conversionResponse.json();
+            const convertedTitles = parseJsonFromText(conversionResult.candidates[0].content.parts[0].text);
+            
+            const titleMap = new Map(convertedTitles.map(item => [item.original_title, item.converted_title]));
+
+            headlinesToConvert.forEach(item => {
+                articles.push({
+                    headline: titleMap.get(item.title) || item.title,
+                    type: 'real',
+                    timestamp: now - Math.floor(Math.random() * 1000 * 3600 * 6), // 6時間以内
+                    category: item.category
+                });
+            });
+        }
+
+    } catch (e) {
+        console.error("リアルタイムニュースの取得または変換に失敗しました:", e);
+    }
+
+
+    // --- 3. ゲーム内のニュースを取得し、スレタイ化 ---
+    const gameNewsList = tournamentState.news || [];
+    gameNewsList.filter(n => n.context && n.context.dbMatch).slice(-5).forEach(gameNews => {
+        const { winnerName, loserName, dbMatch } = gameNews.context;
+        const winnerRank = calculateRank(winnerName, tournamentState);
+        const loserRank = calculateRank(loserName, tournamentState);
+        let gameTitle = `【高校野球】${winnerName}が${loserName}に勝利！`; // デフォルト
+        if (rankValues[winnerRank] < rankValues[loserRank]) {
+            gameTitle = `【超絶悲報】${loserName}さん、格下の${winnerName}に負けるｗｗｗｗ`;
+        } else if ((dbMatch.score1 + dbMatch.score2) > 15) {
+            gameTitle = `【乱打戦】${winnerName}vs${loserName}、とんでもない試合になる`;
+        }
+        articles.push({
+            headline: gameTitle,
+            type: 'game',
+            matchId: dbMatch.id,
+            timestamp: gameNews.timestamp,
+            category: '高校野球'
+        });
+    });
+
+    // --- 4. 全記事をタイムスタンプでソートしてHTMLを生成 ---
+    articles.sort((a, b) => b.timestamp - a.timestamp);
+
+    if (articles.length === 0) {
+        return '<p class="text-center text-gray-500">まだ表示できるニュースがありません。</p>';
+    }
+
+    const categoryColors = {
+        "高校野球": "bg-green-100 text-green-800",
+        "NPB": "bg-blue-100 text-blue-800",
+        "MLB": "bg-sky-100 text-sky-800",
+        "芸能": "bg-pink-100 text-pink-800",
+        "政治": "bg-gray-100 text-gray-800",
+        "学歴": "bg-indigo-100 text-indigo-800",
+        "速報": "bg-red-100 text-red-800",
+    };
+
+    return articles.map(article => {
+        const time = new Date(article.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        const commentCount = Math.floor(Math.random() * 1000) + 1;
+        const color = categoryColors[article.category] || "bg-yellow-100 text-yellow-800";
+        return `
+            <a href="#" class="matome-article-link block p-3 hover:bg-gray-50 rounded border-b" 
+               data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}"
+               ${article.matchId ? `data-match-id="${article.matchId}"` : ''}>
+                <p class="font-bold text-lg text-gray-800">${article.headline}</p>
+                <div class="flex items-center justify-between text-sm text-gray-500 mt-1">
+                    <span><span class="text-xs font-semibold px-2 py-0.5 rounded ${color}">${article.category}</span></span>
+                    <span>[${time}] コメント: ${commentCount} 💬</span>
+                </div>
+            </a>
+        `;
+    }).join('');
+}// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる（カテゴリ対応・完全版）
+ * @param {string} headline - 現実のニュースの見出し
+ * @param {string} category - ニュースのカテゴリ
+ * @returns {Promise<Array|null>} コメントオブジェクトの配列
+ */
+async function generateRealNewsBbsComments(headline, category) {
+    // 1. 基本となるAIのペルソナ（人格）を設定
+    let personaPrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは少し皮肉屋で、ネットスラングを多用し、あらゆる話題に短いコメントを書き込みます。あなたの口癖は「～やで」「～やん」「どうすんのこれ」「草」「ｗｗｗ」などです。`;
+    
+    // 2. ニュースのカテゴリに応じて、AIへの追加指示を切り替える
+    let instructions = ``;
+    switch (category) {
+        case '政治':
+            instructions = `政治ニュースに詳しい住民として、与党や野党を煽ったり、将来を悲観したり、達観したようなコメントをしてください。`;
+            break;
+        case '芸能・ゴシップ':
+            instructions = `芸能ニュースが大好きな野次馬として、「〇〇ロスだわ」「どうせすぐ別れる」といった、お祝いと嫉妬が入り混じったコメントをしてください。`;
+            break;
+        case '学歴':
+            instructions = `学歴コンプレックスを持つ住民として、「F欄のワイ、高みの見物」「結局は学歴よりコミュ力」といった、自虐や持論を展開してください。`;
+            break;
+        default:
+            instructions = `一般的な住民として、ニュースに反応してください。`;
+            break;
+    }
+    
+    // 3. 最終的なAIへの指示書（プロンプト）を組み立てる
+    const prompt = `${personaPrompt}
+
+以下の【${category}】のニュースヘッドラインに対して、${instructions}リアルな掲示板の反応（スレッド）を5～7個生成してください。
+
+### ニュースヘッドライン
+${headline}
+
+### あなたがなりきるべきキャラクターたちと指示
+- **>>1（スレ主）:** ニュースを貼り付けただけのような、素っ気ない投稿。
+- **悲観的な住民:** 「もう終わりだよこの国」「日本オワタ」など、すぐに絶望する。
+- **楽観的な住民:** 「まあなんとかなるやろ」「ええやん」と、あまり深く考えない。
+- **斜に構えた住民:** 「で、俺たちの生活に何か影響あるわけ？」と、一歩引いた視点からコメントする。
+- **すぐに面白がる住民:** どんなニュースでも「草」「ｗｗｗ」と笑い飛ばす。
+
+### 出力形式
+必ず以下のJSON配列形式で出力してください。
+[
+    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
+    {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"},
+    {"personality": "3: 風吹けば名無し", "comment": "（住民3のコメント）"}
+]`;
+
+    // 4. AIにリクエストを送信し、結果を整形して返す
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map(c => ({
+                    id: crypto.randomUUID(),
+                    personality: c.personality,
+                    text: c.comment,
+                    timestamp: Date.now()
+                }));
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI real news BBS generation failed:", error);
+        return null;
+    }
+}
+
+// ▲▲▲ ここまで追加 ▲▲▲
+
+/**
+ * 指定されたチームが次に出場する、まだ終わっていない試合を探す
+ * @param {string} teamName - 探したいチーム名
+ * @param {object} state - 現在のtournamentState
+ * @returns {object|null} - 見つかった試合オブジェクト、またはnull
+ */
+function findCurrentMatchForTeam(teamName, state) {
+    const allMatches = { ...state.matches, ...(state.autumnData?.allMatches || {}), ...(state.springData?.allMatches || {}) };
+    let earliestMatch = null;
+    let minRound = Infinity;
+
+    for (const matchId in allMatches) {
+        const match = allMatches[matchId];
+        if (!match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 0;
+            if (roundNum < minRound) {
+                minRound = roundNum;
+                earliestMatch = match;
+            }
+        }
+    }
+    return earliestMatch;
+}
+
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
+ * @param {object} matchContext - 試合の全コンテキスト情報
+ * @returns {Promise<Array|null>} コメントオブジェクトの配列
+ */
+async function generateGameMatchBbsComments(matchContext) {
+    const { winnerName, loserName, dbMatch, highlightsText } = matchContext;
+    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    
+    const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
+以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を10個前後生成してください。
+
+### 試合結果データ
+- **勝利チーム:** ${winnerName}
+- **敗北チーム:** ${loserName}
+- **スコア:** ${score}
+- **試合ハイライト:** ${highlightsText || '特になし'}
+- **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
+
+### 指示
+1.  **スレッドタイトル:** 試合結果が最も端的に伝わり、かつ少し煽り気味の面白いタイトルを考えてください。（例：【悲報】〇〇、あまりにも弱い【甲子園】）
+2.  **コメント生成:**
+    - なんJ特有の口調（「～やで」「～ニキ」「草」「どうすんのこれ」など）やネットスラングを多用してください。
+    - 試合内容（特にハイライトやスコア）に具体的に言及してください。
+    - 勝者を称賛する声、敗者を煽る声、斜に構えた意見、全く関係ない雑談などをバランス良く混ぜてください。
+    - 試合展開を実況しているかのような、時系列を感じさせるコメントもいくつか含めてください。
+
+### 出力形式
+必ず以下のJSON形式で出力してください。
+{
+  "threadTitle": "（生成したスレッドタイトル）",
+  "comments": [
+    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
+    {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"},
+    {"personality": "3: 風吹けば名無し", "comment": "（住民3のコメント）"}
+  ]
+}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const bbsJson = parseJsonFromText(rawText);
+            if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
+                // 扱いやすいように、タイトルもオブジェクトに含めて返す
+                return {
+                    title: bbsJson.threadTitle,
+                    comments: bbsJson.comments.map(c => ({
+                        id: crypto.randomUUID(),
+                        personality: c.personality,
+                        text: c.comment,
+                        timestamp: Date.now()
+                    }))
+                };
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI game match BBS generation failed:", error);
+        return null;
+    }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
+/**
+ * トーナメントの勝者を次のラウンドに進める（processMatchWinから抜粋・改造）
+ * @param {object} match - 終了した試合のオブジェクト
+ * @param {string} winnerName - 勝者名
+ * @param {object} state - 現在のtournamentState
+ */
+function advanceWinnerToNextRound(match, winnerName, state) {
+    const matchId = match.id;
+    const idParts = matchId.split('-');
+    const side = idParts[0];
+
+    if (side === 'F') return; // 決勝戦なら何もしない
+
+    const roundStr = idParts[1];
+    const roundNum = parseInt(roundStr.slice(1));
+    
+    // このロジックは夏季・春季県大会（16 or 64チーム）を想定
+    if (state.teams && state.teams.length > 0) {
+        const numTeamsInTournament = state.teams.length;
+        const finalRound = Math.log2(numTeamsInTournament);
+
+        if (roundNum < finalRound) {
+            const matchNum = parseInt(idParts[2].slice(1));
+            const nextRoundNum = roundNum + 1;
+            let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+            
+            if (!state.matches[nextMatchId]) {
+                state.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+            }
+            let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
+            state.matches[nextMatchId][`team${slot}`] = winnerName;
+        }
+    }
+    // TODO: 秋季大会などの複雑な進行ロジックが必要な場合は、ここに追加する
+}
+
+// ▲▲▲ ここまで追加 ▲▲▲
+
+
 /**
  * 密着ドキュメンタリーを開始し、序章の記事を生成する
  * @param {'underdog' | 'powerhouse'} type - ドキュメンタリーの種類
@@ -1405,16 +1843,16 @@ async function startDocumentary(type, teamName) {
     saveState();
 }
 
-
 /**
- * ドキュメンタリー調の記事をAIに生成させる（全4テーマ統合・最終完全版）
+ * ドキュメンタリー調の記事をAIに生成させる（全4テーマ統合・フィードバック機能付き最終完全版）
  * @param {'intro' | 'win' | 'lose'} phase - 記事の種類
  * @param {'underdog' | 'powerhouse' | 'powerhouse_revival' | 'one_man_team'} type - ドキュメンタリーの種類
  * @param {string} teamName - 主役のチーム名
  * @param {object} [matchData=null] - 試合データ
+ * @param {object} [userFeedback=null] - ユーザーからの追加指示
  * @returns {Promise<object|null>}
  */
-async function generateDocumentaryArticle(phase, type, teamName, matchData = null) {
+async function generateDocumentaryArticle(phase, type, teamName, matchData = null, userFeedback = null) {
     const teamMasterData = TEAM_DATA[teamName];
     let prompt = `あなたは、情熱的で人間ドラマを描くのが得意なドキュメンタリー番組の記者です。あなたは今、高校野球チーム「${teamName}」に密着取材しています。`;
     let title = "";
@@ -1426,6 +1864,19 @@ async function generateDocumentaryArticle(phase, type, teamName, matchData = nul
         const keyPlayers = detailedData.players.map(p => `- ${p.name}(${p.year}年, ${p.position}): ${p.desc}`).join('\n');
         charactersPrompt += `### 注目選手\n${keyPlayers}\n`;
     }
+    
+    // ユーザーからのフィードバックをプロンプトに追加する部分
+    let feedbackPrompt = '';
+    if (userFeedback) {
+        if (userFeedback.include && userFeedback.include.trim() !== '') {
+            feedbackPrompt += `\n- **【最重要指示】** 以下の要素を必ず記事の中心に据えて、最もドラマチックに描写してください：\n${userFeedback.include}\n`;
+        }
+        if (userFeedback.exclude && userFeedback.exclude.trim() !== '') {
+            feedbackPrompt += `\n- **【厳禁事項】** 以下の要素や表現は、絶対に記事に含めないでください：\n${userFeedback.exclude}\n`;
+        }
+    }
+    const finalFeedbackPrompt = `\n### ディレクターからの追加指示\n${feedbackPrompt || '特になし'}`;
+
 
     if (type === 'powerhouse_revival') {
         // --- 古豪復活チーム用のプロンプト ---
@@ -1445,6 +1896,7 @@ ${charactersPrompt}
     主将に「〇〇（校名）のユニフォームを着て戦うことの意味」を問う。伝統の重みと、それを力に変えようとする彼の覚悟を描写する。
 4.  **【監督の信念】**
     監督に「古豪復活への道筋」をインタビューする。OBからのプレッシャーの中で、彼が信じる今の選手たちの可能性について語らせる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
@@ -1460,6 +1912,7 @@ ${matchData.highlights}
 2. OB席が「よくやったぞ！」という歓声と拍手に包まれる様子を伝える。
 3. 監督に「伝統の粘り強さが出せた」という趣旨のコメントをさせる。
 4. 主将に、次戦への意気込みと共に「先輩たちが築いた歴史に、新たな1ページを刻みたい」と語らせる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1475,6 +1928,7 @@ ${matchData.highlights}
 2. グラウンドに泣き崩れる選手たちと、彼らにかける言葉が見つからない監督の姿。
 3. 主将が涙ながらに「先輩たちに申し訳ない…」と語るインタビュー。
 4. 「彼らの挑戦は終わった。しかし、〇〇（校名）の野球部の灯が消えることはない。来年こそは、と誓う後輩たちの目が、確かに前を向いていた」と、未来への希望で締めくくる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1496,6 +1950,7 @@ ${charactersPrompt}
     メディアからは「モブ」として扱われる、他の野手たちに焦点を当てる。「俺たちは、あいつの引き立て役じゃない。俺たちの守備や打撃がなければ、あいつはただの一人の投手に過ぎない」という、彼らの静かなプライドと葛藤を引き出す。
 4.  **【監督の信念】**
     監督に「彼らはワンマンチームですか？」と問う。「世間はそう言うだろう。だが、私だけは知っている。本当の主役が誰なのかをね」と、意味深に語らせる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
@@ -1511,6 +1966,7 @@ ${matchData.highlights}
 2. しかし、と続け、**ハイライトにあった**、メディアが決して報じないであろう「名もなき選手のファインプレー」や「繋ぎのバッティング」を、試合のターニングポイントとして詳細に描写する。
 3. そのプレーをした選手に「エースを助けるのが俺たちの仕事ですから」と、誇らしげに語らせる。
 4. エースに「今日の勝利は、俺一人の力じゃない。みんなが守ってくれたおかげです」と、初めて仲間に感謝の言葉を述べさせる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1526,6 +1982,7 @@ ${matchData.highlights}
 2. マウンドで呆然とするエースと、彼に駆け寄り「お前のせいじゃない」と声をかける仲間たちの姿を描く。
 3. 試合後、「全部、自分のせいです…」と涙を流すエースと、「俺たちが、あいつを守ってやれなかった…」と悔しがる野手たちの両方のコメントを紹介する。
 4. 「彼らはワンマンチームではなかった。勝つ時も、負ける時も、彼らは一つのチームだった」と締めくくる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1553,6 +2010,7 @@ ${charactersPrompt}
 -   **対比:** 完璧に整備された設備と、そこで流される選手たちの生々しい汗や涙を対比させること。
 -   **音:** トロフィー室の静寂、Bグラウンドから聞こえる声にならない叫び、監督の静かだが重い言葉、主将のバットが夜の空気を切り裂く音など、「音」の描写を効果的に使うこと。
 -   **心理描写:** 登場人物たちのセリフだけでなく、彼らの表情や仕草から、言葉にならない葛藤やプライドを丁寧に描写すること。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
@@ -1568,6 +2026,7 @@ ${matchData.highlights}
 2. **ハイライトを基に**、試合内容の反省点を冷静に監督にインタビューする。
 3. **ハイライトで活躍した**選手にも「今日のプレーで満足せず、次を見据えている」という趣旨のコメントをさせる。
 4. 記事の最後に「彼らの戦いは、まだ終わらない」という一文で、次なる戦いへの緊張感を煽る。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1583,6 +2042,7 @@ ${matchData.highlights}
 2. **ハイライトを参考に**、グラウンドに泣き崩れる選手たち。特に、これまで常に気丈に振る舞ってきた主将の涙に焦点を当てる。
 3. **ハイライトで勝敗を分けたプレー**について、監督に敗戦の責任と、選手たちへの労いの言葉を語らせる。
 4. 「彼らは今日、初めてただの高校生に戻れたのかもしれない」というような、詩的な一文で締めくくる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1603,6 +2063,7 @@ ${charactersPrompt}
 - チームが抱える具体的なハンデ（例：${teamMasterData.info}）
 - 監督の名前や登場人物の実名を効果的に使用すること。
 - 情景が目に浮かぶような、エモーショナルな描写
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
             case 'win':
@@ -1619,6 +2080,7 @@ ${matchData.highlights}
 3. 監督や主役選手の、喜びと感謝に満ちた勝利インタビューを挿入する。
 4. この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
 5. 「彼らの物語は、まだ終わらない」と、次の試合への期待感で締めくくる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
             case 'lose':
@@ -1634,6 +2096,7 @@ ${matchData.highlights}
 2. 監督や主将が、**ハイライトにあった悔しいプレー**にも触れつつ、この夏を振り返る最後のインタビューに答える。
 3. チームを支え続けたマネージャーや地元の人々の、選手たちへの温かい労いの言葉を挿入する。
 4. 3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
+${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
         }
@@ -1653,6 +2116,7 @@ ${matchData.highlights}
         return null;
     }
 }
+
 /**
  * Sets the weather effect for the background.
  * @param {'none' | 'rain' | 'sun'} weatherType - The type of weather to display.
@@ -2159,6 +2623,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.matches = {};
     tournamentState.news = [];
     tournamentState.documentary = { target: null, type: null };
+    tournamentState.activeScandal = null;
     tournamentState.seeds = seeds;
     tournamentState.bbsComments = [];
     tournamentState.daiyaBbsComments = [];
@@ -2551,39 +3016,66 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
     /**
      * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
      */
-    function renderNews(news) {
-        if (!news || news.length === 0) {
-            newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
-            return;
-        }
-        newsContainer.innerHTML = '';
-        news.slice().reverse().forEach((article, index) => {
-            const articleEl = document.createElement('div');
-            if (article.error) {
-                articleEl.className = 'article-error';
-                articleEl.innerHTML = `
-                    <span>${article.title}</span>
-                    <button class="retry-btn" data-error-id="${article.errorId}">再生成</button>
-                `;
-            } else {
-                const originalIndex = news.length - 1 - index;
-                articleEl.className = 'bg-white p-4 rounded-lg shadow';
-                articleEl.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
-                            <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
-                        </div>
-                        <div>
-                            <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
-                            ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}
-                        </div>
+   /**
+ * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
+ * （再生成ボタンを常時表示するように修正）
+ */
+function renderNews(news) {
+    if (!news || news.length === 0) {
+        newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
+        return;
+    }
+    newsContainer.innerHTML = '';
+    news.slice().reverse().forEach((article, index) => {
+        const articleEl = document.createElement('div');
+        const originalIndex = news.length - 1 - index;
+
+        // ▼▼▼ このブロックを全面的に修正 ▼▼▼
+        if (article.error) {
+            // エラー記事の場合の表示
+            articleEl.className = 'article-error';
+            articleEl.innerHTML = `
+                <span>${article.title}</span>
+                <button class="regenerate-btn" data-index="${originalIndex}">再生成</button>
+            `;
+        } else {
+            // 通常記事の場合の表示
+            articleEl.className = 'bg-white p-4 rounded-lg shadow';
+            
+            let specialButtonsHTML = '';
+            // 再生成ボタン
+            if (article.context) {
+                specialButtonsHTML += `<button class="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>`;
+            }
+            // スキャンダル告発ボタン
+            if (article.isScandalRumor && tournamentState.activeScandal) {
+                specialButtonsHTML += `
+                    <div class="mt-4 border-t pt-2 text-center">
+                        <p class="text-sm text-red-700 font-bold mb-2">あなたはこの疑惑をどうしますか？</p>
+                        <button class="report-scandal-btn bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700">大会運営に報告する</button>
+                        <button class="ignore-scandal-btn bg-gray-500 text-white px-4 py-1 rounded text-sm hover:bg-gray-600 ml-2">見て見ぬふりをする</button>
                     </div>
                 `;
             }
-            newsContainer.appendChild(articleEl);
-        });
-    }
+
+            articleEl.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
+                        <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                    <div>
+                        <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                        ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}
+                        ${regenerateButtonHTML}
+                    </div>
+                </div>
+            `;
+        }
+        // ▲▲▲ ここまで修正 ▲▲▲
+        newsContainer.appendChild(articleEl);
+    });
+}
 
     function renderBbsComments(comments) {
     if (!comments || comments.length === 0) {
@@ -4496,10 +4988,22 @@ function getSubstitutionDescription(player) {
 }
 
 /**
- * AI記者にニュース記事を執筆させるメイン関数（AI脱線防止策を施した最終完成版）
- * 展望記事と、試合で活躍した全選手に対応した試合後記事を生成する
+ * AI記者にニュース記事を執筆させるメイン関数（フィードバック機能付き・最終完全版）
+ * @param {string|null} winnerName - 勝者名
+ * @param {string|null} loserName - 敗者名
+ * @param {object} dbMatch - 試合データ
+ * @param {string} matchId - 試合ID
+ * @param {object} winnerData - 勝者チームのマスターデータ
+ * @param {object} loserData - 敗者チームのマスターデータ
+ * @param {object} winnerDetailedData - 勝者チームの詳細選手データ
+ * @param {object} loserDetailedData - 敗者チームの詳細選手データ
+ * @param {Array} highlightsText - 試合のハイライト
+ * @param {Array} keyPlayerNames - 注目選手名
+ * @param {object|null} userFeedback - ユーザーからの追加指示
+ * @returns {Promise<object|null>}
  */
-async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames) {    
+async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames, userFeedback = null) {    
+ let prompt = '';
     // --- 1. 大会展望記事の生成ロジック ---
     if (matchId === 'preview') {
         let prompt;
@@ -4714,7 +5218,7 @@ return;
         else if (roundNum === 1) roundAchievement = '初戦突破';
     }
     
-    let prompt = '';
+    
 
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
@@ -4840,17 +5344,33 @@ ${formatPlayerList(loserKeyPlayers, loserName, loserDetailedData)}
 1.  まず、「事実リスト」を熟読し、試合の全体像（勝敗、スコア、試合展開）を把握してください。
 2.  次に、その試合展開の中で、どの選手のどのプレーが重要だったかを判断してください。
 3.  「参考情報」を元に、それらの選手やチームの背景を肉付けし、物語性のある記事を作成してください。
-4.  **【厳重注意】**: 「参考情報」に書かれている選手の前評判（例：「リードオフマン」）と、「事実リスト」に書かれている実際の打順や結果が異なる場合は、**必ず「事実リスト」を優先**してください。
+4.  **【厳重注意】**: 「参考情報」に書かれている選手の前評判と、「事実リスト」に書かれている実際の打順や結果が異なる場合は、**必ず「事実リスト」を優先**してください。
 - **監督の采配**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
 - **インタビューコメント**: 試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
- **物語の連続性**: 「今大会の軌跡」情報を参考に、「1回戦で好投した投手が今日も先発」といった、これまでの戦いと繋がりのある物語を描写すること。初戦の場合やデータのない場合は別に無理に書く必要はない。
----
-### **ステップ4：出力形式**
+- **物語の連続性**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。`;
+
+        // ▼▼▼ ここからがユーザーフィードバックを反映させる追加ブロックです ▼▼▼
+        let feedbackPrompt = '';
+        if (userFeedback) {
+            if (userFeedback.include && userFeedback.include.trim() !== '') {
+                feedbackPrompt += `\n- **【最重要指示】** 以下の要素を必ず記事の中心に据えて、最もドラマチックに描写してください：\n${userFeedback.include}\n`;
+            }
+            if (userFeedback.exclude && userFeedback.exclude.trim() !== '') {
+                feedbackPrompt += `\n- **【厳禁事項】** 以下の要素や表現は、絶対に記事に含めないでください：\n${userFeedback.exclude}\n`;
+            }
+        }
+        
+        prompt += `
+### 編集長からの追加指示
+${feedbackPrompt || '特になし'}
+        
+### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。
 {
     "title": "（ここに記事のタイトル）",
     "body": "（ここに記事の本文）"
 }`;
+        // ▲▲▲ ここまでが追加ブロックです ▲▲▲
     }
     // --- 詳細データがない場合 (Bルート) ---
     else {
@@ -6931,7 +7451,7 @@ async function processMatchWin(matchId, winnerName) {
 
      let articlePromise;
     const documentary = tournamentState.documentary;
-
+const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
     if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
         const isWin = documentary.target === winnerName;
 
@@ -6998,6 +7518,9 @@ async function processMatchWin(matchId, winnerName) {
     renderBbsComments(tournamentState.bbsComments);
 
     if (article) {
+if (!article.error) {
+            article.context = matchContext; 
+        }
         newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認を実行中...</div>`;
         const isVerified = await factCheckArticle(article, highlights);
         if (isVerified) {
@@ -7018,10 +7541,54 @@ async function processMatchWin(matchId, winnerName) {
         renderNews(tournamentState.news);
     }
     
-    saveState();
+    if (!tournamentState.activeScandal && Math.random() < 0.1) { // 10%の確率で発生チェック
+        triggerScandalEvent(winnerName, loserName);
+    }
+
+saveState();
 }
 
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * スキャンダルイベントを発生させる
+ * @param {string} winnerName 
+ * @param {string} loserName 
+ */
+function triggerScandalEvent(winnerName, loserName) {
+    const potentialTargets = [winnerName, loserName];
+    const eligibleScandals = [];
 
+    for (const team of potentialTargets) {
+        for (const scandal of SCANDAL_DEFINITIONS) {
+            if (scandal.condition(team)) {
+                eligibleScandals.push({ team, scandal });
+            }
+        }
+    }
+
+    if (eligibleScandals.length > 0) {
+        const selected = eligibleScandals[Math.floor(Math.random() * eligibleScandals.length)];
+        
+        tournamentState.activeScandal = {
+            teamName: selected.team,
+            scandalId: selected.scandal.id
+        };
+
+        // ▼▼▼ この部分を修正 ▼▼▼
+        const rumorArticle = {
+            title: selected.scandal.rumorTitle(selected.team), // 関数として呼び出し、teamNameを渡す
+            body: selected.scandal.rumorBody(selected.team),   // 関数として呼び出し、teamNameを渡す
+            timestamp: Date.now(),
+            isScandalRumor: true
+        };
+        // ▲▲▲ ここまで修正 ▲▲▲
+
+        tournamentState.news.push(rumorArticle);
+        renderNews(tournamentState.news);
+        saveState();
+    }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
 
 // --- 編集モーダル用のグローバル変数 ---
 let articleForReview = null; // レビュー中の記事データを一時的に保持する
@@ -7573,6 +8140,130 @@ document.body.addEventListener('click', async (e) => {
         setWeather(weatherType);
     }
 
+ // --- 「まとめサイトを見る」ボタンが押された時の処理 ---
+    const showMatomeBtn = e.target.closest('#show-matome-site-btn');
+    if (showMatomeBtn) {
+        const modal = document.getElementById('matome-site-modal');
+        const contentEl = document.getElementById('matome-site-content');
+        modal.classList.remove('hidden');
+        contentEl.innerHTML = `<div class="loader">最新ニュースと試合結果をまとめています...</div>`;
+        
+        // 非同期でサイトの内容を生成して表示
+        (async () => {
+            const matomeHtml = await generateMatomeSiteHtml();
+            contentEl.innerHTML = matomeHtml;
+        })();
+    }
+
+    // --- まとめサイトのモーダルを閉じるボタン ---
+    if (e.target.closest('#matome-site-close-btn')) {
+        document.getElementById('matome-site-modal').classList.add('hidden');
+        // 表示を元に戻す（重要）
+        document.querySelector('#news-section h2').textContent = '注目ニュース';
+        document.getElementById('bbs-section').classList.remove('hidden');
+        renderNews(tournamentState.news);
+    }
+    
+    // --- まとめサイト内の記事リンクがクリックされた時の処理 ---
+    const matomeLink = e.target.closest('.matome-article-link');
+    if (matomeLink) {
+        e.preventDefault();
+        const headline = matomeLink.dataset.headline;
+        const type = matomeLink.dataset.type;
+        const category = matomeLink.dataset.category;
+        const matchId = matomeLink.dataset.matchId;
+
+        // UIを「反応表示モード」に切り替え
+        const newsSectionTitle = document.querySelector('#news-section h2');
+        const newsContainer = document.getElementById('news-articles');
+        const bbsSection = document.getElementById('bbs-section');
+
+        newsSectionTitle.textContent = `「${headline}」に対する反応`;
+        newsContainer.innerHTML = `<div class="loader">AIが掲示板の反応を生成中...</div>`;
+        bbsSection.classList.add('hidden'); // 本来の掲示板は一旦隠す
+        document.getElementById('matome-site-modal').classList.add('hidden'); // まとめサイトを閉じる
+
+        // AIに関数を呼び出し、結果を表示
+        (async () => {
+            let result;
+
+            if (type === 'game' && matchId) {
+                // --- ゲーム内記事の場合 ---
+                const match = findMatchById(matchId);
+                if (match && match.winner) {
+                    const context = {
+                        winnerName: match.winner,
+                        loserName: match.team1 === match.winner ? match.team2 : match.team1,
+                        dbMatch: match,
+                        highlightsText: createHighlightsText(match, match.winner).highlights.map(h => h.description).join('、')
+                    };
+                    result = await generateGameMatchBbsComments(context);
+                }
+            } else if (type === 'real') {
+                // --- 現実のニュースの場合 ---
+                const comments = await generateRealNewsBbsComments(headline, category);
+                if (comments) {
+                    result = { title: headline, comments: comments };
+                }
+            }
+
+            // --- 結果の描画 ---
+            if (result && result.comments) {
+                newsSectionTitle.textContent = `【掲示板】${result.title}`;
+                newsContainer.innerHTML = ''; // ローダーを消す
+                result.comments.forEach(comment => {
+                    const commentEl = document.createElement('div');
+                    commentEl.className = 'bbs-comment'; // 掲示板のスタイルを流用
+                    commentEl.innerHTML = `
+                        <p class="font-semibold text-gray-600 text-sm">${comment.personality}</p>
+                        <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
+                    `;
+                    newsContainer.appendChild(commentEl);
+                });
+            } else {
+                newsContainer.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
+                // 失敗した場合は3秒後に表示を元に戻す
+                setTimeout(() => {
+                    document.querySelector('#news-section h2').textContent = '注目ニュース';
+                    bbsSection.classList.remove('hidden');
+                    renderNews(tournamentState.news);
+                }, 3000);
+            }
+        })();
+    }
+
+ // --- スキャンダル告発/無視ボタン ---
+   // --- スキャンダル告発/無視ボタン ---
+    const scandalBtn = e.target.closest('.report-scandal-btn, .ignore-scandal-btn');
+    if (scandalBtn && tournamentState.activeScandal) {
+        const { teamName, scandalId } = tournamentState.activeScandal; // teamNameをここで取得
+        const scandalDef = SCANDAL_DEFINITIONS.find(s => s.id === scandalId);
+        if (!scandalDef) return;
+
+        const choice = scandalBtn.classList.contains('report-scandal-btn') ? 'report' : 'ignore';
+        const consequence = scandalDef.consequences[choice];
+
+        // 効果を適用
+        consequence.applyEffect(teamName, tournamentState);
+
+        // 結果記事を生成
+        const outcomeArticle = {
+            title: consequence.outcomeTitle(teamName), // ← 関数として呼び出し
+            body: consequence.outcomeBody(teamName),   // ← 関数として呼び出し
+            timestamp: Date.now()
+        };
+        
+        // 噂記事をニュースリストから削除し、結果記事を追加
+        tournamentState.news = tournamentState.news.filter(n => !n.isScandalRumor);
+        tournamentState.news.push(outcomeArticle);
+        
+        // スキャンダルを解決済みにする
+        tournamentState.activeScandal = null;
+
+        renderTournament(tournamentState);
+        saveState();
+    }
+
 // --- ドキュメンタリー密着取材ボタン ---
     // --- ドキュメンタリー密着取材ボタン（逆境） ---
     else if (e.target.matches('.underdog-doc-btn')) { // ← クラス名を変更
@@ -7797,40 +8488,115 @@ document.body.addEventListener('click', async (e) => {
     }
     // ▲▲▲ ▲▲▲
 
-// --- AI記事の再生成ボタン ---
-    else if (e.target.matches('.retry-btn')) {
-        const btn = e.target;
-        const errorId = btn.dataset.errorId;
-        const articleIndex = tournamentState.news.findIndex(n => n.errorId === errorId);
-        if (articleIndex === -1) return;
+// document.body.addEventListener('click', ...) の中
 
-        btn.textContent = '生成中...';
-        btn.disabled = true;
+    
+    // document.body.addEventListener('click', ...) 内の該当箇所を、以下のように修正・追記
 
-        const errorContext = tournamentState.news[articleIndex].context;
-        
-        const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = errorContext;
-        const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-        
-        const newArticle = await generateNewsArticle(
-            winnerName, loserName, dbMatch, matchId,
-            winnerData, loserData, winnerDetailedData, loserDetailedData,
-            highlights, keyPlayerNames
-        );
+    // ▼▼▼ 既存の「.retry-btn」の else if ブロックを、以下の内容にまるごと置き換える ▼▼▼
+    // --- AI記事の再生成ボタン（エラー記事・成功記事の両方に対応） ---
+    const regenerateBtn = e.target.closest('.regenerate-btn');
+    if (regenerateBtn) {
+        const originalIndex = parseInt(regenerateBtn.dataset.index, 10);
+        const articleIndex = tournamentState.news.length - 1 - originalIndex;
+        const originalArticle = tournamentState.news[articleIndex];
 
-        // ▼▼▼ THIS IS THE CRITICAL FIX ▼▼▼
-        // After retrying, strictly check the result again
-        if (newArticle && newArticle.title && newArticle.body && !newArticle.error) {
-            tournamentState.news[articleIndex] = newArticle;
-        } else {
-            // If the retry also fails or returns incomplete data, keep it as an error
-            tournamentState.news[articleIndex].body = "再生成に失敗しました。AIの応答が不安定なようです。";
+        if (!originalArticle || !originalArticle.context) {
+            alert("この記事は再生成できません。");
+            return;
         }
-        // ▲▲▲ ▲▲▲
 
-        saveState();
-        renderNews(tournamentState.news);
+        // 再生成する記事の情報を一時的に保存
+        articleForRegeneration = {
+            index: articleIndex,
+            article: originalArticle
+        };
+
+        // フィードバックモーダルを開く
+        document.getElementById('feedback-include').value = '';
+        document.getElementById('feedback-exclude').value = '';
+        document.getElementById('feedback-modal').classList.remove('hidden');
     }
+    // ▲▲▲ ここまでが置き換え部分 ▲▲▲
+
+
+    // ▼▼▼ このブロックを新たに追加 ▼▼▼
+    // --- フィードバックモーダルの「この指示で再生成」ボタン ---
+    const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
+    if (feedbackSubmitBtn) {
+        if (!articleForRegeneration) return;
+
+        const { index, article } = articleForRegeneration;
+        const context = article.context;
+        
+        feedbackSubmitBtn.textContent = '生成中...';
+        feedbackSubmitBtn.disabled = true;
+
+        const userFeedback = {
+            include: document.getElementById('feedback-include').value,
+            exclude: document.getElementById('feedback-exclude').value
+        };
+
+        // 即座にモーダルを閉じ、裏で処理を開始
+        document.getElementById('feedback-modal').classList.add('hidden');
+        articleForRegeneration = null;
+        
+        newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
+
+        // 非同期で再生成処理を実行
+        (async () => {
+            const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = context;
+            const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+            
+            let articlePromise;
+            const documentary = tournamentState.documentary;
+
+            if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+                const isWin = documentary.target === winnerName;
+                const matchInfo = { 
+                    round: matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1,
+                    opponent: isWin ? loserName : winnerName,
+                    score: `${dbMatch.score1}-${dbMatch.score2}`,
+                    highlights: highlights.map(h => h.description).join('、')
+                };
+                articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfo, userFeedback);
+            } else {
+                articlePromise = generateNewsArticle(
+                    winnerName, loserName, dbMatch, matchId,
+                    winnerData, loserData, winnerDetailedData, loserDetailedData,
+                    highlights, keyPlayerNames, userFeedback
+                );
+            }
+            
+            const newArticle = await articlePromise;
+
+            tournamentState.news.splice(index, 1);
+
+            if (newArticle && !newArticle.error) {
+                newArticle.context = context;
+                const isVerified = await factCheckArticle(newArticle, highlights);
+                if (isVerified) {
+                    showArticleReviewModal(newArticle);
+                } else {
+                    // エラー処理
+                }
+            } else {
+                // エラー処理
+            }
+            
+            saveState();
+            renderNews(tournamentState.news);
+            feedbackSubmitBtn.textContent = 'この指示で再生成';
+            feedbackSubmitBtn.disabled = false;
+        })();
+    }
+
+    // --- フィードバックモーダルの「キャンセル」ボタン ---
+    if (e.target.matches('#feedback-cancel-btn')) {
+        document.getElementById('feedback-modal').classList.add('hidden');
+        articleForRegeneration = null;
+    }
+    // ▲▲▲ ここまで追加 ▲▲▲    // ▲▲▲ ここまで追加 ▲▲▲
 
 // ▼▼▼ ADD THE NEW BLOCK HERE ▼▼▼
     // --- BBS Comment Retry Button ---
