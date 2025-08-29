@@ -1,3 +1,4 @@
 # netlify.toml
 [build]
+  command = "npm install"
   functions = "functions"
