@@ -1512,26 +1512,41 @@ async function generateMatomeSiteHtml() {
     let articles = [];
     const now = Date.now();
 
-    // --- 1. 現実のニュースをリアルなダミーデータで代用 ---
-    const realNewsHeadlines = [
-        { headline: "【政治】内閣支持率、20%台に急落。今国会、波乱の予感", category: "政治" },
-        { headline: "【芸能】人気俳優Aと女優Bが熱愛報道！事務所は「プライベートは本人に」", category: "芸能" },
-        { headline: "【悲報】ワイ、Fラン大学4年生。いまだに内定ゼロ", category: "学歴" },
-        { headline: "【なんJ】「正直、社会人になってからの方が楽しい奴ｗｗｗ」", category: "なんJ" },
-        { headline: "【プロ野球】巨人・岡本、3試合連続ホームラン！セ界の主砲、覚醒か", category: "NPB" },
-        { headline: "【MLB】大谷翔平、またしても破壊。特大の第50号ソロホームラン！", category: "MLB" },
-        { headline: "【速報】全国的に猛暑日。熱中症に厳重な警戒を", category: "速報" },
-        { headline: "【議論】「週休3日制」って、実際どうなん？", category: "議論" }
+    // --- 1. 現実のニュースを、自作のサーバーにリクエストして取得 ---
+    const searchQueries = [
+        { query: "日本の最新ニュース 政治", category: "政治" },
+        { query: "芸能ニュース 速報", category: "芸能" },
+        { query: "なんj 学歴スレ", category: "学歴" },
+        { query: "プロ野球 試合結果", category: "プロ野球" },
+        { query: "大谷翔平 速報", category: "MLB" },
     ];
 
-    realNewsHeadlines.forEach(news => {
-        articles.push({
-            headline: news.headline,
-            type: 'real',
-            timestamp: now - Math.floor(Math.random() * 1000 * 3600 * 6), // 6時間以内
-            category: news.category
+    try {
+        // サーバーの「/get-news」というドアを叩いて、ニュースを要求する
+        const response = await fetch('/.netlify/functions/get-news', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queries: searchQueries.map(q => q.query) })
         });
-    });
+        const searchResults = await response.json();
+        
+        // --- 2. AIによる「スレタイ化」は、本格実装ではサーバー側で行うのが理想だが、今回はフロントで実行 ---
+        searchResults.forEach((result, index) => {
+            if (result && result.items && result.items.length > 0) {
+                const topHit = result.items[0];
+                articles.push({
+                    headline: `【${searchQueries[index].category}】${topHit.title}`,
+                    type: 'real',
+                    timestamp: now - Math.random() * 1000 * 3600 * 2,
+                    category: searchQueries[index].category
+                });
+            }
+        });
+
+    } catch (e) {
+        console.error("サーバーからのニュース取得に失敗しました:", e);
+        articles.push({ headline: "【速報】ニュースサーバー、ダウン中", type: 'real', timestamp: now, category: 'システム' });
+    }
 
     // --- 2. ゲーム内のニュースを取得し、スレタイ化 ---
     const gameNewsList = tournamentState.news || [];
