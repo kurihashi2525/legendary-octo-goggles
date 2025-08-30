@@ -3176,20 +3176,23 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
  * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
  * （再生成ボタンを常時表示するように修正）
  */
+// renderNews関数を、以下のコードにまるごと置き換えてください
+
 function renderNews(news) {
     if (!news || news.length === 0) {
         newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
         return;
     }
     newsContainer.innerHTML = '';
-    news.slice().reverse().forEach((article, index) => {
+    // slice()で配列のコピーを作成してからreverse()することで、元の配列に影響を与えない
+    news.slice().reverse().forEach((article, reversedIndex) => {
         const articleEl = document.createElement('div');
-        const originalIndex = news.length - 1 - index;
+        // 元の配列での正しいインデックスを計算
+        const originalIndex = news.length - 1 - reversedIndex;
 
-        // ▼▼▼ このブロックを全面的に修正 ▼▼▼
-        let regenerateButtonHTML = ''; // 先に変数を定義しておく
-        
-        if (article.context) { // contextを持つ記事（＝再生成可能）の場合にボタンを生成
+        let regenerateButtonHTML = '';
+        if (article.context) {
+            // data-indexには、元の配列での正しいインデックスを格納する
             regenerateButtonHTML = `<button class="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>`;
         }
 
@@ -3215,7 +3218,6 @@ function renderNews(news) {
                 </div>
             `;
         }
-        // ▲▲▲ ここまで修正 ▲▲▲
         newsContainer.appendChild(articleEl);
     });
 }
@@ -8686,8 +8688,7 @@ document.body.addEventListener('click', async (e) => {
     // --- AI記事の再生成ボタン（エラー記事・成功記事の両方に対応） ---
     const regenerateBtn = e.target.closest('.regenerate-btn');
     if (regenerateBtn) {
-        const originalIndex = parseInt(regenerateBtn.dataset.index, 10);
-        const articleIndex = tournamentState.news.length - 1 - originalIndex;
+        const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
         const originalArticle = tournamentState.news[articleIndex];
 
         if (!originalArticle || !originalArticle.context) {
