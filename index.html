@@ -12,6 +12,37 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* まとめサイトのロゴスタイル */
+.matome-site-logo-container {
+    position: relative;
+    width: 80px; /* ロゴの幅 */
+    height: 50px; /* ロゴの高さ */
+    overflow: hidden;
+    border-radius: 5px; /* 角を少し丸める */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3); /* 影で立体感を出す */
+}
+
+.matome-site-logo-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 画像をコンテナに合わせて表示 */
+    position: absolute;
+    top: 0;
+    left: 0;
+    filter: brightness(0.7) blur(1px); /* 少し暗く、ぼかして文字を読みやすく */
+}
+
+.matome-site-logo-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem; /* 文字サイズ調整 */
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8); /* 文字の視認性を高める影 */
+    white-space: nowrap; /* テキストの折り返しを防ぐ */
+}
 
 /* 新しいまとめサイトモーダルのためのスタイル */
 /* スクロールバーのカスタマイズ (TailwindCSS JIT mode with plugins is better, but this is a quick fix) */
@@ -82,22 +113,32 @@
     line-height: 1.5;
 }
 
-/* ローダーの基本スタイル */
+/* ▼▼▼ 新しいローダー用のCSS ▼▼▼ */
 .loader {
-    border: 4px solid #f3f3f3; /* Light grey */
-    border-top: 4px solid #3498db; /* Blue */
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
+    text-align: center;
+    padding: 40px 20px;
+    font-style: italic;
+    color: #4b5563; /* gray-600 */
+    font-size: 1.1rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    margin: 1rem 0;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.loader .ellipsis span {
+    opacity: 0;
+    animation: pulse-ellipsis 1.4s infinite;
 }
+.loader .ellipsis span:nth-child(1) { animation-delay: 0s; }
+.loader .ellipsis span:nth-child(2) { animation-delay: 0.2s; }
+.loader .ellipsis span:nth-child(3) { animation-delay: 0.4s; }
 
+@keyframes pulse-ellipsis {
+    0% { opacity: 0.2; }
+    50% { opacity: 1; }
+    100% { opacity: 0.2; }
+}
+/* ▲▲▲ ここまで ▲▲▲ */
 
 /* ▼▼▼ 禍々しい雰囲気用のCSS ▼▼▼ */
 .dread-mode-bg {
@@ -768,7 +809,7 @@
         
         <div class="flex justify-between items-center mb-2 px-2 md:px-0">
             <h2 class="text-2xl md:text-3xl font-extrabold text-red-700 font-sans tracking-wide">
-                <img src="https://i.imgur.com/your-stadium-logo.png" alt="なんJスタジアム" class="h-10 md:h-12 inline-block mr-2">
+                <img src="koshien.jpg" alt="なんJスタジアム" class="h-10 md:h-12 inline-block mr-2">
                 俺たちの甲子園速報＠なんJまとめ
             </h2>
             <button id="matome-modal-close-btn" class="text-gray-400 hover:text-gray-600">
@@ -810,7 +851,7 @@
                 <div class="space-y-4">
                     <div class="bg-white p-2 rounded-lg shadow-md text-center">
                         <h3 class="text-md font-bold text-gray-800 border-b pb-1 mb-2">他社から乗り換えで</h3>
-                        <img src="https://i.imgur.com/your-ad-image.png" alt="広告" class="w-full h-auto rounded">
+                        <img src="sumaho.jpg" alt="広告" class="w-full h-auto rounded">
                         <p class="text-sm text-gray-600 mt-1">人気スマホ<span class="text-xl font-bold text-red-600">500</span>円！</p>
                         <p class="text-xs text-gray-500">2025/8/31まで</p>
                     </div>
@@ -7394,8 +7435,8 @@ async function processMatchWin(matchId, winnerName) {
         return;
     }
 
-    newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+    newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
 
     // --- 3. トーナメント進行ロジック ---
     if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
