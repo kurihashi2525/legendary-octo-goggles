@@ -1778,25 +1778,22 @@ async function generateMatomeSiteHtml() {
 
     return articles.map(article => {
         const time = new Date(article.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        const commentCount = Math.floor(Math.random() * 800) + 50;
+        const commentCount = Math.floor(Math.random() * 1000) + 1;
         const color = categoryColors[article.category] || "bg-gray-100 text-gray-800";
-
-        // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
         return `
-            <a href="${article.url || '#'}" target="_blank" rel="noopener noreferrer" class="matome-article-entry flex items-center p-4">
-                <div class="flex-grow">
-                    <div><span class="category-tag">${article.category}</span></div>
-                    <h4 class="article-title mt-1">${article.headline}</h4>
-                    <div class="article-meta mt-2">
-                        <span>${time}</span> | <span>コメント: ${commentCount} 💬</span>
-                    </div>
+            <a href="#" class="matome-article-link block p-3 hover:bg-gray-50 rounded border-b" 
+               data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}"
+               ${article.matchId ? `data-match-id="${article.matchId}"` : ''}>
+                <p class="font-bold text-lg text-gray-800 hover:text-blue-700">${article.headline}</p>
+                <div class="flex items-center justify-between text-sm text-gray-500 mt-1">
+                    <span><span class="text-xs font-semibold px-2 py-0.5 rounded ${color}">${article.category}</span></span>
+                    <span>[${time}] コメント: ${commentCount} 💬</span>
                 </div>
-                <div class="ml-4 text-gray-300 text-2xl">></div>
             </a>
         `;
-        // ▲▲▲ ここまで修正 ▲▲▲
     }).join('');
 }
+
 
 
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
