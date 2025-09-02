@@ -12,7 +12,125 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS ▼▼▼ */
+/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS（勝ち上がり対応版） ▼▼▼ */
+/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS（勝ち上がり対応・最終版） ▼▼▼ */
+#lottery-bracket-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* スクロール可能にする */
+    background-color: #f0f4f8;
+    border-radius: 8px;
+    padding: 24px;
+    font-family: 'Noto Sans JP', sans-serif;
+}
+.lottery-bracket-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem; /* ラウンド間のスペース */
+    margin: auto; /* 中央揃え */
+}
+.lottery-bracket-side {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+}
+.lottery-bracket-side.right {
+    flex-direction: row-reverse;
+}
+.lottery-round {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 170px; /* チーム名の横幅 */
+    flex-shrink: 0;
+}
+.lottery-round .round-title {
+    font-weight: bold;
+    text-align: center;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+.lottery-matchup {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    margin: 6px 0;
+}
+.lottery-team-slot {
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+    height: 30px;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.lottery-team-slot.filled {
+    background-color: #fefcbf;
+    border-color: #f59e0b;
+    font-weight: bold;
+}
+.lottery-team-slot.highlight {
+    background-color: #ef4444;
+    color: white;
+    border-color: #b91c1c;
+}
 
+/* 勝ち上がり線のスタイル */
+.lottery-matchup::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.75rem; /* 線の長さ */
+    height: 2px;
+    background-color: #cbd5e1;
+}
+.lottery-bracket-side.left .lottery-matchup::after { right: -0.75rem; }
+.lottery-bracket-side.right .lottery-matchup::after { left: -0.75rem; }
+
+.lottery-round:not(:first-child) .lottery-matchup::before {
+    content: '';
+    position: absolute;
+    transform: translateY(-50%);
+    width: 2px;
+    background-color: #cbd5e1;
+}
+.lottery-bracket-side.left .lottery-round:not(:first-child) .lottery-matchup::before {
+    left: -0.75rem;
+    top: 50%;
+    height: calc(100% + 16px); /* matchupのmargin分を考慮 */
+}
+.lottery-bracket-side.right .lottery-round:not(:first-child) .lottery-matchup::before {
+    right: -0.75rem;
+    top: 50%;
+    height: calc(100% + 16px);
+}
+
+.lottery-final-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.lottery-final-area .round-title {
+     font-weight: bold;
+    text-align: center;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+/* ▲▲▲ ここまで ▲▲▲ */
 /* ▼▼▼ 勢力図分析アニメーション用のCSS ▼▼▼ */
 /* ▼▼▼ 勢力図分析アニメーション用のCSS（トーナメント表示版）▼▼▼ */
 #analysis-stage {
@@ -1106,23 +1224,23 @@
 <div id="lottery-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200] font-sans">
     <div id="lottery-content" class="bg-white rounded-lg shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col p-6">
         <h2 class="text-4xl font-bold text-center mb-4 scorebook-font text-gray-800 tracking-widest">夏の高校野球 組み合わせ抽選会</h2>
-        <div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
-            <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
-                <div id="lottery-pot-container" class="w-full flex flex-col items-center">
-                    <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
-                    <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
-                        抽選
-                    </div>
-                </div>
-                <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
-                    <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
-                </div>
-            </div>
-            <div id="lottery-bracket" class="w-2/3 grid grid-cols-2 gap-x-4 h-full overflow-y-auto p-2 bg-gray-100 rounded-lg shadow-inner">
-                <div id="lottery-bracket-left" class="space-y-1"></div>
-                <div id="lottery-bracket-right" class="space-y-1"></div>
+        
+<div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
+    <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
+        <div id="lottery-pot-container" class="w-full flex flex-col items-center">
+            <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
+            <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
+                抽選
             </div>
         </div>
+        <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
+            <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
+        </div>
+    </div>
+    <div id="lottery-bracket-container" class="flex-grow bg-gray-100 p-2 overflow-auto scorebook-font">
+        </div>
+</div>
+
         <div class="h-32 flex flex-col justify-between pt-4">
             <div id="lottery-commentary" class="h-20 text-center text-2xl font-semibold text-gray-800 bg-yellow-100 border-2 border-yellow-300 rounded p-2 flex items-center justify-center">
                 <p>静岡大会 抽選会へようこそ。主将は抽選箱をクリックしてクジを引いてください。</p>
@@ -1422,6 +1540,8 @@ const SCANDAL_DEFINITIONS = [
     let currentMatchIdForDetails = null;
     let articleForRegeneration = null; 
     let soundEffects = {};
+    let currentLotteryOrder = [];
+let currentSeeds = [];
     const UNDERDOG_TEAMS = ["虎府島総合", "緑山", "鷲尾", "県立由暇"];
     const POWERHOUSE_TEAMS = ["283学園", "天下無双学園", "代矢東", "雷門南", "稲城実業", "青道", "765総合高校"];
 　　const POWERHOUSE_REVIVAL_TEAMS = ["海堂学園", "帝王実業", "風林大尾"];
@@ -1894,6 +2014,19 @@ async function generateMatomeSiteHtml() {
 
 
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
+
+// ▼▼▼ この関数をまるごと追加してください ▼▼▼
+/**
+ * チームが強豪（AまたはBランク）かどうかを判定する
+ * @param {string} teamName - チーム名
+ * @returns {boolean}
+ */
+const isStrongRank = (teamName) => {
+    if (!teamName) return false;
+    const rank = calculateRank(teamName, tournamentState);
+    return ['A', 'B'].includes(rank);
+};
+// ▲▲▲ ここまで追加 ▲-▲▲
 
 /**
  * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
@@ -7991,18 +8124,132 @@ async function loadSoundEffects() {
     }
 }
 
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * 抽選会用に、空のトーナメント表の枠を描画する
+ */
+function renderEmptyLotteryBracket() {
+    const container = document.getElementById('lottery-bracket-container');
+    container.innerHTML = ''; // 中身をクリア
+
+    const bracketWrapper = document.createElement('div');
+    bracketWrapper.className = 'flex flex-row';
+    
+    const leftHalf = document.createElement('div');
+    leftHalf.className = 'bracket-half left';
+    const rightHalf = document.createElement('div');
+    rightHalf.className = 'bracket-half right';
+
+    // 1回戦の枠だけを描画
+    const roundEl = document.createElement('div');
+    roundEl.className = 'round';
+    for (let i = 0; i < 16; i++) {
+        roundEl.innerHTML += `
+            <div class="matchup" data-match-index="${i}">
+                <div class="team-slot empty" data-slot-index="${i*2}">
+                    <span class="team-name">${i*2 + 1}. ---</span>
+                </div>
+                <div class="team-slot empty" data-slot-index="${i*2 + 1}">
+                    <span class="team-name">${i*2 + 2}. ---</span>
+                </div>
+            </div>`;
+    }
+    leftHalf.appendChild(roundEl);
+
+    const roundEl2 = document.createElement('div');
+    roundEl2.className = 'round';
+     for (let i = 16; i < 32; i++) {
+        roundEl2.innerHTML += `
+            <div class="matchup" data-match-index="${i}">
+                <div class="team-slot empty" data-slot-index="${i*2}">
+                    <span class="team-name">${i*2 + 1}. ---</span>
+                </div>
+                <div class="team-slot empty" data-slot-index="${i*2 + 1}">
+                    <span class="team-name">${i*2 + 2}. ---</span>
+                </div>
+            </div>`;
+    }
+    rightHalf.appendChild(roundEl2);
+
+    bracketWrapper.append(leftHalf, rightHalf);
+    container.appendChild(bracketWrapper);
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * 抽選会用に、空の64チーム分のトーナメント表の枠を描画する
+ */
+function renderFullEmptyLotteryBracket() {
+    const container = document.getElementById('lottery-bracket-container');
+    container.innerHTML = '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'lottery-bracket-wrapper';
+
+    const leftSide = document.createElement('div');
+    leftSide.className = 'lottery-bracket-side left';
+    
+    const rightSide = document.createElement('div');
+    rightSide.className = 'lottery-bracket-side right';
+
+    const finalArea = document.createElement('div');
+    finalArea.className = 'lottery-final-area';
+
+    const sidesData = { L: leftSide, R: rightSide };
+    const roundNames = ["1回戦", "2回戦", "3回戦", "準々決勝", "準決勝"];
+
+    for (const sideKey in sidesData) {
+        const sideEl = sidesData[sideKey];
+        for (let r = 1; r <= 5; r++) {
+            const roundEl = document.createElement('div');
+            roundEl.className = 'lottery-round';
+            roundEl.innerHTML = `<h3 class="round-title">${roundNames[r-1]}</h3>`;
+            
+            const numMatches = 16 / Math.pow(2, r - 1);
+            for (let m = 0; m < numMatches; m++) {
+                let matchupHtml = '<div class="lottery-matchup">';
+                if (r === 1) { // 1回戦のみslot-indexを振る
+                    const slot1 = (sideKey === 'L' ? 0 : 32) + (m * 2);
+                    const slot2 = slot1 + 1;
+                    matchupHtml += `
+                        <div class="lottery-team-slot" data-slot-index="${slot1}"><span>${slot1 + 1}. ---</span></div>
+                        <div class="lottery-team-slot" data-slot-index="${slot2}"><span>${slot2 + 1}. ---</span></div>`;
+                } else {
+                    matchupHtml += `
+                        <div class="lottery-team-slot"><span>---</span></div>
+                        <div class="lottery-team-slot"><span>---</span></div>`;
+                }
+                matchupHtml += '</div>';
+                roundEl.innerHTML += matchupHtml;
+            }
+            sideEl.appendChild(roundEl);
+        }
+    }
+
+    finalArea.innerHTML = `<h3 class="round-title">決勝</h3><div class="lottery-matchup"><div class="lottery-team-slot"><span>---</span></div><div class="lottery-team-slot"><span>---</span></div></div>`;
+
+    wrapper.append(leftSide, finalArea, rightSide);
+    container.appendChild(wrapper);
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
 /**
  * 抽選会イベントを開始する
  */
 /**
  * 抽選会イベントを開始する（BGM再生機能付き・完全版）
  */
+// startLotteryEvent 関数を修正
+/**
+ * 抽選会イベントを開始する（イベント処理分離版）
+ */
 async function startLotteryEvent() {
     const lotteryModal = document.getElementById('lottery-modal');
     lotteryModal.classList.remove('hidden');
     lotteryModal.classList.add('flex');
 
-    // 抽選順を決める（トーナメントの組み合わせの元）
+    // 抽選順を決定
     const seeds = INITIAL_TEAM_POOL.map(teamName => ({
         name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
     })).sort((a, b) => a.rank - b.rank).slice(0, 8).map(t => t.name);
@@ -8010,42 +8257,34 @@ async function startLotteryEvent() {
     const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
     const lotteryOrder = [...seeds, ...shuffleArray(nonSeeds)];
 
-    // 簡易トーナメント表を作成
-    const leftBracket = document.getElementById('lottery-bracket-left');
-    const rightBracket = document.getElementById('lottery-bracket-right');
-    leftBracket.innerHTML = '';
-    rightBracket.innerHTML = '';
-    for(let i=0; i<64; i++){
-        const slot = document.createElement('div');
-        slot.className = 'lottery-slot';
-        slot.dataset.index = i;
-        slot.innerHTML = `<span>${i+1}.</span> <span class="team-name-placeholder">---</span>`;
-        document.getElementById(i < 32 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
-    }
+    // ▼▼▼ この部分を修正 ▼▼▼
+    // グローバル変数に抽選情報を保存する
+    currentLotteryOrder = lotteryOrder;
+    currentSeeds = seeds;
 
-    // ボタンのイベントリスナーを設定
-    document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds);
+   
+
+    // 空のトーナメント表を描画
+    renderFullEmptyLotteryBracket();
     
+    // スキップボタンの処理はここに残す
     document.getElementById('skip-lottery-btn').onclick = () => {
         lotteryModal.classList.add('hidden');
-        SoundManager.stopBgm(); // スキップ時もBGMを停止
+        SoundManager.stopBgm();
         createNewTournament(false, 'summer');
     };
 
-    // BGM再生開始
     SoundManager.startBgm();
 }
+
 /**
- * 抽選会のアニメーションを実行する（強豪校の禍々しい雰囲気演出付き・完全版）
- * @param {Array<string>} lotteryOrder - シード校と、シャッフル済みのノーシード校を含む全チームの配列
+ * 抽選会のアニメーションを実行する（シード配置修正・最終完全版）
+ * @param {Array<string>} lotteryOrder - 抽選順に並んだ全チームの配列
  * @param {Array<string>} seeds - シード校8チームの配列
- */
-/**
- * 抽選会のアニメーションを実行する（サウンドマネージャー対応の最終完成版）
  */
 async function runLotteryAnimation(lotteryOrder, seeds) {
     // --- 1. 初期設定 ---
-    document.getElementById('lottery-pot').onclick = null;
+    document.getElementById('start-lottery-btn').style.display = 'none';
     document.getElementById('skip-lottery-btn').style.display = 'none';
 
     const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
@@ -8055,102 +8294,60 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const potNameEl = document.getElementById('pot-name');
     
     const teamPositions = Array(64).fill(null);
+    
+    // ▼▼▼ ここからが重要な修正点です ▼▼▼
     const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
     let availableSeedSlots = [...seedPositionsTemplate];
     let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !availableSeedSlots.includes(p));
-    
-    const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
+    // ▲▲▲
 
-    // --- 内部ヘルパー関数：安全に音声を再生する ---
-    const playSound = (id) => {
-        const soundElement = document.getElementById(id);
-        if (soundElement) {
-            soundElement.currentTime = 0;
-            soundElement.play().catch(e => console.warn(`Audio play failed for ${id}:`, e));
-        }
-    };
-    
-    const isStrongRank = (team) => ['S', 'A'].includes(calculateRank(team, {}));
-
-    const checkDeathBlock = (position) => {
-        const blockName = position < 16 ? 'A' : position < 32 ? 'B' : position < 48 ? 'C' : 'D';
-        const startIdx = position < 16 ? 0 : position < 32 ? 16 : position < 48 ? 32 : 48;
-        if (blockDeathAnnounced[blockName]) return false;
-        const teamsInBlock = teamPositions.slice(startIdx, startIdx + 16);
-        const strongTeamsCount = teamsInBlock.filter(team => team && isStrongRank(team)).length;
-        if (strongTeamsCount >= 3) {
-            commentaryEl.textContent = `これは...！ ${blockName}ブロックは有力校が集中する「死のブロック」になりました！`;
-            blockDeathAnnounced[blockName] = true;
-            playSound('sound-gasp');
-            return true;
-        }
-        return false;
-    };
+    const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
 
     // --- 2. 抽選会フェーズ1：シード校の配置 ---
     potNameEl.textContent = "シード校";
     for (const teamName of seeds) {
-        let dreadBg = null;
         if (isStrongRank(teamName)) {
-            dreadBg = document.createElement('div');
-            dreadBg.className = 'dread-mode-bg';
-            document.body.appendChild(dreadBg);
             potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る... 次は ${teamName} です...`;
-            await sleep(2500);
+            commentaryEl.textContent = `会場が静まり返る...次は ${teamName} です...`;
+            await sleep(1500);
         }
 
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
-        playSound('sound-drumroll');
-        await sleep(1500);
-
+        await sleep(1000);
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
 
+        // シード校専用の枠からランダムに選ぶ
         const slotIndex = Math.floor(Math.random() * availableSeedSlots.length);
         const position = availableSeedSlots.splice(slotIndex, 1)[0];
         teamPositions[position] = teamName;
-
-        await sleep(1250);
-
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
-        targetSlot.classList.add('filled');
-        playSound('sound-cymbal');
         
-        if (dreadBg) {
-            dreadBg.remove();
-            potEl.classList.remove('dread');
-            playSound('sound-gasp');
+        await sleep(1000);
+
+        const targetSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${position}"]`);
+        if (targetSlot) {
+            targetSlot.querySelector('span').textContent = `${position + 1}. ${teamName}`;
+            targetSlot.classList.add('filled', 'highlight');
         }
         
-        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
-        if (teamPositions[opponentIndex]) {
-            commentaryEl.textContent = `${teamName}の相手は${teamPositions[opponentIndex]}に決定！`;
-        } else {
-            commentaryEl.textContent = `${teamName}は ${position + 1}番！ 相手はまだ決まりません！`;
-        }
-        await sleep(1500);
+        if (potEl.classList.contains('dread')) potEl.classList.remove('dread');
+        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
+        await sleep(1200);
         drawnTeamContainer.classList.remove('fade-in-out');
     }
 
     // --- 3. 抽選会フェーズ2：ノーシード校の配置 ---
+       // --- 3. 抽選会フェーズ2：ノーシード校の配置 (時間を短縮) ---
     potNameEl.textContent = "ノーシード校";
-    const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
     for (const teamName of nonSeeds) {
-        let dreadBg = null;
         if (isStrongRank(teamName)) {
-            dreadBg = document.createElement('div');
-            dreadBg.className = 'dread-mode-bg';
-            document.body.appendChild(dreadBg);
             potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る... 強豪 ${teamName} が登場...`;
-            await sleep(2500);
+            commentaryEl.textContent = `会場が静まり返る...強豪 ${teamName} が登場...`;
+            await sleep(500); // 1500 -> 500
         }
 
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
-        playSound('sound-drumroll');
-        await sleep(250);
+        await sleep(200); // 300 -> 200
 
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
@@ -8159,46 +8356,42 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
         teamPositions[position] = teamName;
         
-        await sleep(200);
+        await sleep(300); // 1000 -> 300
 
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
-        targetSlot.classList.add('filled');
-        playSound('sound-cymbal');
-        
-        if (dreadBg) {
-            dreadBg.remove();
-            potEl.classList.remove('dread');
-            playSound('sound-gasp');
+        const targetSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${position}"]`);
+        if (targetSlot) {
+            targetSlot.querySelector('span').textContent = `${position + 1}. ${teamName}`;
+            targetSlot.classList.add('filled');
         }
         
-        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        let didComment = checkDeathBlock(position);
+        if (potEl.classList.contains('dread')) potEl.classList.remove('dread');
 
-        if (!didComment) {
-            const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
-            if(teamPositions[opponentIndex]) {
-                const opponentName = teamPositions[opponentIndex];
-                const isRival = RIVALRIES.some(r => r.teams.includes(teamName) && r.teams.includes(opponentName));
-                if (isRival || (isStrongRank(teamName) && isStrongRank(opponentName))) {
-                    commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
-                    playSound('sound-gasp');
-                    document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
-                    targetSlot.classList.add('highlight');
-                    await sleep(1500);
-                }
-            }
+        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+        if(teamPositions[opponentIndex]) {
+             const opponentName = teamPositions[opponentIndex];
+             commentaryEl.textContent = `決まった！ ${teamName} は ${position + 1}番、${opponentName} との対戦です！`;
+             const opponentSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${opponentIndex}"]`);
+             if(targetSlot) targetSlot.classList.add('highlight');
+             if(opponentSlot) opponentSlot.classList.add('highlight');
+        } else {
+            commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
         }
-        await sleep(250);
+
+        await sleep(400); // 1200 -> 400
         drawnTeamContainer.classList.remove('fade-in-out');
+        document.querySelectorAll('.lottery-team-slot.highlight').forEach(el => {
+            if(!seeds.includes(el.textContent.split('. ')[1])) {
+                el.classList.remove('highlight');
+            }
+        });
     }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // --- 4. 終了処理 ---
+    // --- 4. 最終処理 ---
     commentaryEl.textContent = '全ての組み合わせが決定しました！';
     await sleep(2000);
     
     await generateCaptainInterviews(teamPositions);
- // 最後に、決定した組み合わせを渡してトーナメントを生成
     document.getElementById('lottery-modal').classList.add('hidden');
     createNewTournament(false, 'summer', teamPositions); 
 }
@@ -8441,7 +8634,18 @@ startMainTournamentBtn.addEventListener('click', async () => {
 
 document.body.addEventListener('click', async (e) => {
 
-    // --- 試合進行ボタン (▶) ---
+      // --- 抽選会モーダルの「抽選を開始」ボタン ---
+    if (e.target.closest('#start-lottery-btn')) {
+        // グローバル変数から抽選情報を読み込んでアニメーションを開始
+        if (currentLotteryOrder.length > 0 && currentSeeds.length > 0) {
+            runLotteryAnimation(currentLotteryOrder, currentSeeds);
+        } else {
+            alert("抽選情報の準備ができていません。");
+        }
+    }
+
+
+// --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
         const teamSlot = e.target.closest('.team-slot');
         const matchEl = e.target.closest('[data-match-id]');
