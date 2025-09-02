@@ -14,21 +14,40 @@
 
 
 /* ▼▼▼ 勢力図分析アニメーション用のCSS ▼▼▼ */
+/* ▼▼▼ 勢力図分析アニメーション用のCSS（トーナメント表示版）▼▼▼ */
 #analysis-stage {
     background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
-    perspective: 800px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+.round-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: 100%;
+}
+.analysis-matchup {
+    margin: 10px 0;
+    position: relative;
 }
 .analysis-team {
-    position: absolute;
     padding: 4px 10px;
     background-color: rgba(0, 183, 255, 0.2);
     border: 1px solid rgba(0, 183, 255, 0.7);
     color: #e0f2fe;
     border-radius: 4px;
     font-weight: bold;
+    font-size: 0.9rem;
+    margin: 4px 0;
     transition: all 0.5s ease-in-out;
     opacity: 0;
-    transform-style: preserve-3d;
+    width: 150px; /* チーム名の横幅を固定 */
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .analysis-team.show {
     opacity: 1;
@@ -37,12 +56,40 @@
     background-color: rgba(255, 204, 0, 0.4);
     border-color: rgba(255, 204, 0, 1);
     color: white;
-    transform: scale(1.15) translateZ(50px) !important;
+    transform: scale(1.1);
     box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
 }
-#analysis-stage.zoom-in {
-    transition: transform 1s ease-in-out;
+
+/* 勝ち上がり線のスタイル */
+.matchup-connector {
+    position: absolute;
+    top: 50%;
+    right: -20px;
+    width: 20px;
+    height: 2px;
+    background-color: rgba(0, 183, 255, 0.5);
 }
+.round-connector {
+    position: absolute;
+    top: 25%;
+    right: -30px;
+    width: 2px;
+    height: 50%;
+    background-color: rgba(0, 183, 255, 0.5);
+}
+.flow-line {
+    position: absolute;
+    background: white;
+    box-shadow: 0 0 5px white, 0 0 10px cyan;
+    border-radius: 50%;
+    opacity: 0;
+    animation: flow 1.5s ease-out forwards;
+}
+@keyframes flow {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+/* ▲▲▲ ここまで ▲▲▲ */
 /* ▲▲▲ ここまで追加 ▲▲▲ */
 
 /* まとめサイトのロゴスタイル */
@@ -9249,7 +9296,7 @@ function startBlockAnalysisAnimation() {
 }
 
 /**
- * 指定されたブロックのアニメーションを再生する
+ * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
  */
 async function playBlockAnimation(blockId) {
     // タブのアクティブ表示を更新
@@ -9272,23 +9319,37 @@ async function playBlockAnimation(blockId) {
     // いったんクリア
     stage.innerHTML = '';
     narrationTextEl.textContent = '';
-    stage.style.transform = 'scale(1) rotateX(0deg) rotateY(0deg)';
+    
+    // ラウンドごとのカラムを作成
+    stage.innerHTML = `
+        <div id="r1-col" class="round-column"></div>
+        <div id="r2-col" class="round-column"></div>
+        <div id="r3-col" class="round-column"></div>
+        <div id="r4-col" class="round-column"></div>
+    `;
 
-    await new Promise(r => setTimeout(r, 200));
+    // 1回戦のチームを配置
+    for(let i = 0; i < 8; i++) {
+        const matchupEl = document.createElement('div');
+        matchupEl.className = 'analysis-matchup';
+        matchupEl.innerHTML = `
+            <div class="analysis-team" data-team-name="${blockTeams[i*2]}">${blockTeams[i*2]}</div>
+            <div class="analysis-team" data-team-name="${blockTeams[i*2+1]}">${blockTeams[i*2+1]}</div>
+            <div class="matchup-connector"></div>
+        `;
+        stage.querySelector('#r1-col').appendChild(matchupEl);
+    }
+    
+    // 2回戦以降のプレースホルダーを配置
+    for(let i = 0; i < 4; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    for(let i = 0; i < 2; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
 
-    // チーム名をステージに配置
-    blockTeams.forEach((team, i) => {
-        const teamEl = document.createElement('div');
-        teamEl.className = 'analysis-team';
-        teamEl.textContent = team;
-        teamEl.style.left = `${(i % 4) * 25 + 2}%`;
-        teamEl.style.top = `${Math.floor(i / 4) * 25 + 5}%`;
-        teamEl.style.transitionDelay = `${i * 50}ms`;
-        stage.appendChild(teamEl);
-    });
-
+    // アニメーション開始
     await new Promise(r => setTimeout(r, 100));
-    document.querySelectorAll('.analysis-team').forEach(el => el.classList.add('show'));
+    document.querySelectorAll('.analysis-team').forEach((el, i) => {
+        setTimeout(() => el.classList.add('show'), i * 50);
+    });
 
     // ナレーションをタイプライター風に表示
     for (let i = 0; i < narration.length; i++) {
@@ -9299,15 +9360,12 @@ async function playBlockAnimation(blockId) {
     // ナレーション内のチーム名をハイライト
     blockTeams.forEach(team => {
         if (narration.includes(team)) {
-            document.querySelectorAll('.analysis-team').forEach(el => {
-                if (el.textContent === team) {
-                    el.classList.add('highlight');
-                }
+            document.querySelectorAll(`.analysis-team[data-team-name="${team}"]`).forEach(el => {
+                el.classList.add('highlight');
             });
         }
     });
 }
-
 
 // ▲▲▲ ここまで追加 ▲▲▲
     // アプリケーション起動
