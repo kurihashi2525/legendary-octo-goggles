@@ -1,8 +1,10 @@
 # netlify.toml
+
 [build]
   command = "npm install"
   functions = "functions"
-# ▼▼▼ このブロックをまるごと追加 ▼▼▼
-[functions]
-  timeout = 25 # タイムアウトを25秒に延長する
-# ▲▲▲ ここまで追加 ▲▲▲
+
+# ▼▼▼ このブロックに書き換えてください ▼▼▼
+[functions."*"]
+  timeout = 25
+# ▲▲▲
