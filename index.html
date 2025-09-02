@@ -2978,7 +2978,7 @@ function updateTournamentFinishRecords() {
 
  // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
- * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる
+ * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる（データ分析強化版）
  * @param {object} state - tournamentState
  * @returns {Promise<object|null>}
  */
@@ -2992,22 +2992,49 @@ async function generateBlockAnalysisArticle(state) {
         else blocks.D.push(team);
     });
 
-    const prompt = `あなたは、未来的なスポーツニュース番組の敏腕解説者です。高校野球のトーナメントの組み合わせが決定しました。
-以下の各ブロックのチームリストを分析し、あなたが例に挙げたような、視聴者の期待感を煽る、プロフェッショナルな「ナレーション原稿」を生成してください。
+    // ▼▼▼ ここからが新しい処理 ▼▼▼
+    // AIに渡すための、より詳細な分析データを作成する
+    const blockAnalysisData = {};
+    for (const blockId in blocks) {
+        const blockTeams = blocks[blockId];
+        const teamDetails = blockTeams.map(teamName => {
+            const rank = calculateRank(teamName, state);
+            const isSeed = seeds.includes(teamName);
+            const info = TEAM_DATA[teamName]?.info || '';
+            return `${teamName} (ランク:${rank}${isSeed ? ', シード校' : ''}, 特徴:${info})`;
+        }).join(' | ');
 
-### 分析対象ブロック
-- **Aブロック:** ${blocks.A.join(', ')}
-- **Bブロック:** ${blocks.B.join(', ')}
-- **Cブロック:** ${blocks.C.join(', ')}
-- **Dブロック:** ${blocks.D.join(', ')}
+        // ライバル対決の情報を探す
+        let rivalries = '';
+        for(let i = 0; i < blockTeams.length; i++) {
+            for(let j = i + 1; j < blockTeams.length; j++) {
+                const rivalry = RIVALRIES.find(r => r.teams.includes(blockTeams[i]) && r.teams.includes(blockTeams[j]));
+                if(rivalry) {
+                    rivalries += `[注目カード: ${blockTeams[i]} vs ${blockTeams[j]} (${rivalry.type})] `;
+                }
+            }
+        }
+        blockAnalysisData[blockId] = `${teamDetails} ${rivalries}`;
+    }
+    // ▲▲▲ ここまでが新しい処理 ▲▲▲
+
+    const prompt = `あなたは、データ分析を得意とする、非常に鋭い視点を持つプロの高校野球解説者です。
+トーナメントの組み合わせが決定しました。以下の各ブロックの【詳細なチームデータ】を徹底的に分析し、視聴者の心を掴む、的確で深みのある「ナレーション原稿」を生成してください。
+
+### 【詳細なチームデータ】
+- **Aブロック:** ${blockAnalysisData.A}
+- **Bブロック:** ${blockAnalysisData.B}
+- **Cブロック:** ${blockAnalysisData.C}
+- **Dブロック:** ${blockAnalysisData.D}
 
 ### あなたが生成するナレーション原稿の例
-「夏の高校野球静岡大会Dブロック。投手層ナンバーワンの日大三島に静岡、静岡商ら伝統校が挑む構図。強豪磐田東と静岡市立は昨夏同様1回戦で潰し合うことに。知徳、清水桜ヶ丘、藤枝東なども控え、まさに『死のブロック』だ」
+「夏の高校野球静岡大会Dブロック。最大の注目は、やはりランクAのシード校・日大三島でしょう。しかし、同じブロックにはランクBの伝統校・静岡、静岡商が入り、予断を許しません。さらに注目すべきは、磐田東と静岡市立という強豪同士が初戦で潰し合うという厳しい組み合わせ。虎視眈々と上位を狙う知徳や清水桜が丘も控え、まさに『死のブロック』と言えるでしょう」
 
 ### 指示
-- 各ブロックについて、シード校、伝統校、注目校、ライバル対決などを特定してください。
-- それぞれのブロックの見どころを、2〜4文程度の簡潔なナレーションにまとめてください。
-- チーム名は必ず正確に使用してください。
+- **データに基づいた分析:** 各チームの【ランク】や【特徴】、【シード校】であるか、【注目カード】（ライバル対決）といった、提供されたデータを必ず分析の根拠としてください。
+- **「死のブロック」の特定:** 最も激戦が予想されるブロックを特定し、その理由をデータに基づいて解説してください。
+- **ダークホースの指摘:** ランクは高くないが、特徴（info）を見ると面白い存在になりそうなチームを「ダークホース」として挙げてください。
+- **プロの解説者として:** 表面的な情報だけでなく、その組み合わせが持つ「物語」や「因縁」まで読み解くような、深みのある解説をお願いします。
 
 ### 出力形式 (JSON)
 {
