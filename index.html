@@ -12,6 +12,39 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+
+/* ▼▼▼ 勢力図分析アニメーション用のCSS ▼▼▼ */
+#analysis-stage {
+    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
+    perspective: 800px;
+}
+.analysis-team {
+    position: absolute;
+    padding: 4px 10px;
+    background-color: rgba(0, 183, 255, 0.2);
+    border: 1px solid rgba(0, 183, 255, 0.7);
+    color: #e0f2fe;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.5s ease-in-out;
+    opacity: 0;
+    transform-style: preserve-3d;
+}
+.analysis-team.show {
+    opacity: 1;
+}
+.analysis-team.highlight {
+    background-color: rgba(255, 204, 0, 0.4);
+    border-color: rgba(255, 204, 0, 1);
+    color: white;
+    transform: scale(1.15) translateZ(50px) !important;
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
+}
+#analysis-stage.zoom-in {
+    transition: transform 1s ease-in-out;
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
+
 /* まとめサイトのロゴスタイル */
 .matome-site-logo-container {
     position: relative;
@@ -803,7 +836,24 @@
         </div>
     </div>
     
-  
+  <div id="analysis-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-[300] font-sans">
+    <div class="w-full h-full flex flex-col p-4">
+        <div class="flex-shrink-0 mb-4 flex justify-between items-center">
+            <div id="analysis-block-selector" class="flex space-x-2">
+                </div>
+            <button id="analysis-modal-close-btn" class="text-white bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-red-700">×</button>
+        </div>
+        
+        <div id="analysis-stage" class="flex-grow border-2 border-cyan-500/50 rounded-lg p-6 relative overflow-hidden">
+            </div>
+
+        <div id="analysis-narration-box" class="flex-shrink-0 mt-4 bg-gray-900/80 border border-gray-700 rounded-lg p-4 h-28 text-white text-lg overflow-y-auto">
+            <p id="analysis-narration-text"></p>
+        </div>
+    </div>
+</div>
+
+
 <div id="integrated-matome-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200]">
     <div class="bg-gray-100 p-2 md:p-4 rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden">
         
@@ -2819,19 +2869,38 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderTournament(tournamentState);
     
     // ▼▼▼【重要】ご指摘のあった、大会開始時のAIコンテンツ生成処理を復元▼▼▼
+    // ▼▼▼ 既存の展望記事生成ブロックを、以下に置き換える ▼▼▼
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
     namcoNewsSection.classList.remove('hidden');
     namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-        generateNewsArticle(null, null, null, 'preview'),
+    // 夏の大会の場合のみ、新しい勢力図分析を呼び出す
+    if (tournamentState.currentTournament === 'summer') {
+        const analysisData = await generateBlockAnalysisArticle(tournamentState);
+        if (analysisData) {
+            tournamentState.blockAnalysisData = analysisData; // 分析データをstateに保存
+            const summaryArticle = {
+                title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
+                body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
+                timestamp: Date.now(),
+                isAnalysisArticle: true // これが勢力図記事であるという目印
+            };
+            tournamentState.news.unshift(summaryArticle);
+        }
+    } else {
+        // 夏以外の大会は、これまで通りの展望記事を生成
+        const previewArticle = await generateNewsArticle(null, null, null, 'preview');
+        if (previewArticle) tournamentState.news.unshift(previewArticle);
+    }
+    
+    // 掲示板とナムコニュースの生成は共通して行う
+    const [bracketComments, namcoNews] = await Promise.all([
         generateBracketReactionComments(tournamentState),
         generateNamcoNews(tournamentState, 'bracket')
     ]);
 
-    if (previewArticle) tournamentState.news.unshift(previewArticle);
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
 
@@ -2839,7 +2908,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderBbsComments(tournamentState.bbsComments);
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
-    // ▲▲▲ここまで▲▲▲
+    // ▲▲▲ ここまで置き換え ▲▲▲
 }
 
    /**
@@ -2907,7 +2976,59 @@ function updateTournamentFinishRecords() {
     // ★★★ ここまで ★★★
 }
 
- /**
+ // ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる
+ * @param {object} state - tournamentState
+ * @returns {Promise<object|null>}
+ */
+async function generateBlockAnalysisArticle(state) {
+    const { teams, seeds } = state;
+    const blocks = { A: [], B: [], C: [], D: [] };
+    teams.forEach((team, i) => {
+        if (i < 16) blocks.A.push(team);
+        else if (i < 32) blocks.B.push(team);
+        else if (i < 48) blocks.C.push(team);
+        else blocks.D.push(team);
+    });
+
+    const prompt = `あなたは、未来的なスポーツニュース番組の敏腕解説者です。高校野球のトーナメントの組み合わせが決定しました。
+以下の各ブロックのチームリストを分析し、あなたが例に挙げたような、視聴者の期待感を煽る、プロフェッショナルな「ナレーション原稿」を生成してください。
+
+### 分析対象ブロック
+- **Aブロック:** ${blocks.A.join(', ')}
+- **Bブロック:** ${blocks.B.join(', ')}
+- **Cブロック:** ${blocks.C.join(', ')}
+- **Dブロック:** ${blocks.D.join(', ')}
+
+### あなたが生成するナレーション原稿の例
+「夏の高校野球静岡大会Dブロック。投手層ナンバーワンの日大三島に静岡、静岡商ら伝統校が挑む構図。強豪磐田東と静岡市立は昨夏同様1回戦で潰し合うことに。知徳、清水桜ヶ丘、藤枝東なども控え、まさに『死のブロック』だ」
+
+### 指示
+- 各ブロックについて、シード校、伝統校、注目校、ライバル対決などを特定してください。
+- それぞれのブロックの見どころを、2〜4文程度の簡潔なナレーションにまとめてください。
+- チーム名は必ず正確に使用してください。
+
+### 出力形式 (JSON)
+{
+  "A": "（Aブロックのナレーション原稿）",
+  "B": "（Bブロックのナレーション原稿）",
+  "C": "（Cブロックのナレーション原稿）",
+  "D": "（Dブロックのナレーション原稿）"
+}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        return parseJsonFromText(result.candidates[0].content.parts[0].text);
+    } catch (error) {
+        console.error("AIブロック分析記事の生成に失敗:", error);
+        return null;
+    }
+}
+// ▲▲▲ ここまで追加 ▲▲▲
+
+/**
      * 現在のトーナメント状態に基づいてUI全体を再描画する
      * @param {object} data - 現在のtournamentState
      */
@@ -3218,6 +3339,20 @@ function renderNews(news) {
             `;
         } else {
             articleEl.className = 'bg-white p-4 rounded-lg shadow';
+ // ▼▼▼ この if-else ブロックを追加 ▼▼▼
+            let buttonsHTML = '';
+            if (article.isAnalysisArticle) {
+                buttonsHTML = `<button class="text-sm bg-cyan-500 text-white px-3 py-1 rounded hover:bg-cyan-600 ml-2 view-analysis-btn">勢力図をアニメーションで見る</button>`;
+            } else {
+                const regenerateButtonHTML = article.context ? `<button ... class="regenerate-btn" ...>再生成</button>` : '';
+                buttonsHTML = `
+                    <button class="text-sm bg-gray-200 ... news-article-btn" ...>本文</button>
+                    ${article.isNewspaper ? `<button ... class="newspaper-view-btn" ...>新聞を読む</button>` : ''}
+                    ${regenerateButtonHTML}
+                `;
+            }
+            // ▲▲▲
+
             articleEl.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
@@ -9051,6 +9186,109 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
             showAlert('データの読み込みに失敗しました。');
         }
     });
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+
+let currentBlock = 'A';
+
+/**
+ * 勢力図分析アニメーションを開始する
+ */
+function startBlockAnalysisAnimation() {
+    const analysisData = tournamentState.blockAnalysisData;
+    if (!analysisData) {
+        alert("分析データが見つかりません。");
+        return;
+    }
+    const modal = document.getElementById('analysis-modal');
+    modal.classList.remove('hidden');
+
+    const selector = document.getElementById('analysis-block-selector');
+    selector.innerHTML = ['A', 'B', 'C', 'D'].map(b => 
+        `<button class="analysis-block-tab-btn px-4 py-2 rounded font-bold" data-block="${b}">${b}ブロック</button>`
+    ).join('');
+    
+    // イベントリスナーを一度クリアして再設定
+    document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            currentBlock = e.target.dataset.block;
+            playBlockAnimation(currentBlock);
+        });
+    });
+
+    playBlockAnimation(currentBlock); // 最初のブロックのアニメーションを開始
+}
+
+/**
+ * 指定されたブロックのアニメーションを再生する
+ */
+async function playBlockAnimation(blockId) {
+    // タブのアクティブ表示を更新
+    document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
+        btn.classList.toggle('bg-cyan-500', btn.dataset.block === blockId);
+        btn.classList.toggle('text-white', btn.dataset.block === blockId);
+        btn.classList.toggle('bg-gray-700', btn.dataset.block !== blockId);
+        btn.classList.toggle('text-gray-400', btn.dataset.block !== blockId);
+    });
+
+    const stage = document.getElementById('analysis-stage');
+    const narrationTextEl = document.getElementById('analysis-narration-text');
+    const analysisData = tournamentState.blockAnalysisData;
+    const narration = analysisData[blockId];
+    const blockTeams = tournamentState.teams.slice(
+        (blockId.charCodeAt(0) - 65) * 16, 
+        (blockId.charCodeAt(0) - 64) * 16
+    );
+
+    // いったんクリア
+    stage.innerHTML = '';
+    narrationTextEl.textContent = '';
+    stage.style.transform = 'scale(1) rotateX(0deg) rotateY(0deg)';
+
+    await new Promise(r => setTimeout(r, 200));
+
+    // チーム名をステージに配置
+    blockTeams.forEach((team, i) => {
+        const teamEl = document.createElement('div');
+        teamEl.className = 'analysis-team';
+        teamEl.textContent = team;
+        teamEl.style.left = `${(i % 4) * 25 + 2}%`;
+        teamEl.style.top = `${Math.floor(i / 4) * 25 + 5}%`;
+        teamEl.style.transitionDelay = `${i * 50}ms`;
+        stage.appendChild(teamEl);
+    });
+
+    await new Promise(r => setTimeout(r, 100));
+    document.querySelectorAll('.analysis-team').forEach(el => el.classList.add('show'));
+
+    // ナレーションをタイプライター風に表示
+    for (let i = 0; i < narration.length; i++) {
+        narrationTextEl.textContent += narration[i];
+        await new Promise(r => setTimeout(r, 50));
+    }
+    
+    // ナレーション内のチーム名をハイライト
+    blockTeams.forEach(team => {
+        if (narration.includes(team)) {
+            document.querySelectorAll('.analysis-team').forEach(el => {
+                if (el.textContent === team) {
+                    el.classList.add('highlight');
+                }
+            });
+        }
+    });
+}
+
+// メインのクリックイベントリスナーに、分析モーダルを開く処理を追加
+document.body.addEventListener('click', (e) => {
+    if (e.target.matches('.view-analysis-btn')) {
+        currentBlock = 'A'; // 初期表示はAブロックにリセット
+        startBlockAnalysisAnimation();
+    }
+    if (e.target.matches('#analysis-modal-close-btn')) {
+        document.getElementById('analysis-modal').classList.add('hidden');
+    }
+});
+// ▲▲▲ ここまで追加 ▲▲▲
     // アプリケーション起動
     initializeApp();
 </script>
