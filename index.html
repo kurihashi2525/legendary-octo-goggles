@@ -12,208 +12,6 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
-/* ▼▼▼ 未来テイストなトーナメント表デザイン用の追加CSS ▼▼▼ */
-
-
-
-/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS ▼▼▼ */
-/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS（勝ち上がり対応版） ▼▼▼ */
-/* ▼▼▼ 抽選会モーダル内トーナメント表用のCSS（勝ち上がり対応・最終版） ▼▼▼ */
-#lottery-bracket-container {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* スクロール可能にする */
-    background-color: #f0f4f8;
-    border-radius: 8px;
-    padding: 24px;
-    font-family: 'Noto Sans JP', sans-serif;
-}
-.lottery-bracket-wrapper {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 1.5rem; /* ラウンド間のスペース */
-    margin: auto; /* 中央揃え */
-}
-.lottery-bracket-side {
-    display: flex;
-    flex-direction: row;
-    gap: 1.5rem;
-}
-.lottery-bracket-side.right {
-    flex-direction: row-reverse;
-}
-.lottery-round {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    width: 170px; /* チーム名の横幅 */
-    flex-shrink: 0;
-}
-.lottery-round .round-title {
-    font-weight: bold;
-    text-align: center;
-    color: #4a5568;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-}
-.lottery-matchup {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1;
-    margin: 6px 0;
-}
-.lottery-team-slot {
-    background-color: white;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 6px 8px;
-    font-size: 12px;
-    height: 30px;
-    margin: 2px 0;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.lottery-team-slot.filled {
-    background-color: #fefcbf;
-    border-color: #f59e0b;
-    font-weight: bold;
-}
-.lottery-team-slot.highlight {
-    background-color: #ef4444;
-    color: white;
-    border-color: #b91c1c;
-}
-
-/* 勝ち上がり線のスタイル */
-.lottery-matchup::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0.75rem; /* 線の長さ */
-    height: 2px;
-    background-color: #cbd5e1;
-}
-.lottery-bracket-side.left .lottery-matchup::after { right: -0.75rem; }
-.lottery-bracket-side.right .lottery-matchup::after { left: -0.75rem; }
-
-.lottery-round:not(:first-child) .lottery-matchup::before {
-    content: '';
-    position: absolute;
-    transform: translateY(-50%);
-    width: 2px;
-    background-color: #cbd5e1;
-}
-.lottery-bracket-side.left .lottery-round:not(:first-child) .lottery-matchup::before {
-    left: -0.75rem;
-    top: 50%;
-    height: calc(100% + 16px); /* matchupのmargin分を考慮 */
-}
-.lottery-bracket-side.right .lottery-round:not(:first-child) .lottery-matchup::before {
-    right: -0.75rem;
-    top: 50%;
-    height: calc(100% + 16px);
-}
-
-.lottery-final-area {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-.lottery-final-area .round-title {
-     font-weight: bold;
-    text-align: center;
-    color: #4a5568;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-}
-/* ▲▲▲ ここまで ▲▲▲ */
-/* ▼▼▼ 勢力図分析アニメーション用のCSS ▼▼▼ */
-/* ▼▼▼ 勢力図分析アニメーション用のCSS（トーナメント表示版）▼▼▼ */
-#analysis-stage {
-    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-}
-.round-column {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    height: 100%;
-}
-.analysis-matchup {
-    margin: 10px 0;
-    position: relative;
-}
-.analysis-team {
-    padding: 4px 10px;
-    background-color: rgba(0, 183, 255, 0.2);
-    border: 1px solid rgba(0, 183, 255, 0.7);
-    color: #e0f2fe;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.9rem;
-    margin: 4px 0;
-    transition: all 0.5s ease-in-out;
-    opacity: 0;
-    width: 150px; /* チーム名の横幅を固定 */
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.analysis-team.show {
-    opacity: 1;
-}
-.analysis-team.highlight {
-    background-color: rgba(255, 204, 0, 0.4);
-    border-color: rgba(255, 204, 0, 1);
-    color: white;
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
-}
-
-/* 勝ち上がり線のスタイル */
-.matchup-connector {
-    position: absolute;
-    top: 50%;
-    right: -20px;
-    width: 20px;
-    height: 2px;
-    background-color: rgba(0, 183, 255, 0.5);
-}
-.round-connector {
-    position: absolute;
-    top: 25%;
-    right: -30px;
-    width: 2px;
-    height: 50%;
-    background-color: rgba(0, 183, 255, 0.5);
-}
-.flow-line {
-    position: absolute;
-    background: white;
-    box-shadow: 0 0 5px white, 0 0 10px cyan;
-    border-radius: 50%;
-    opacity: 0;
-    animation: flow 1.5s ease-out forwards;
-}
-@keyframes flow {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-/* ▲▲▲ ここまで ▲▲▲ */
-/* ▲▲▲ ここまで追加 ▲▲▲ */
-
 /* まとめサイトのロゴスタイル */
 .matome-site-logo-container {
     position: relative;
@@ -660,8 +458,7 @@
 .display-card {
     background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
 }
-       
- #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
+        #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
         .bracket-half { display: flex; }
         .bracket-half.right { flex-direction: row-reverse; }
         .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
@@ -1006,24 +803,7 @@
         </div>
     </div>
     
-  <div id="analysis-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-[300] font-sans">
-    <div class="w-full h-full flex flex-col p-4">
-        <div class="flex-shrink-0 mb-4 flex justify-between items-center">
-            <div id="analysis-block-selector" class="flex space-x-2">
-                </div>
-            <button id="analysis-modal-close-btn" class="text-white bg-red-600 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-red-700">×</button>
-        </div>
-        
-        <div id="analysis-stage" class="flex-grow border-2 border-cyan-500/50 rounded-lg p-6 relative overflow-hidden">
-            </div>
-
-        <div id="analysis-narration-box" class="flex-shrink-0 mt-4 bg-gray-900/80 border border-gray-700 rounded-lg p-4 h-28 text-white text-lg overflow-y-auto">
-            <p id="analysis-narration-text"></p>
-        </div>
-    </div>
-</div>
-
-
+  
 <div id="integrated-matome-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200]">
     <div class="bg-gray-100 p-2 md:p-4 rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden">
         
@@ -1229,23 +1009,23 @@
 <div id="lottery-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200] font-sans">
     <div id="lottery-content" class="bg-white rounded-lg shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col p-6">
         <h2 class="text-4xl font-bold text-center mb-4 scorebook-font text-gray-800 tracking-widest">夏の高校野球 組み合わせ抽選会</h2>
-        
-<div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
-    <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
-        <div id="lottery-pot-container" class="w-full flex flex-col items-center">
-            <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
-            <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
-                抽選
+        <div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
+            <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
+                <div id="lottery-pot-container" class="w-full flex flex-col items-center">
+                    <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
+                    <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
+                        抽選
+                    </div>
+                </div>
+                <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
+                    <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
+                </div>
+            </div>
+            <div id="lottery-bracket" class="w-2/3 grid grid-cols-2 gap-x-4 h-full overflow-y-auto p-2 bg-gray-100 rounded-lg shadow-inner">
+                <div id="lottery-bracket-left" class="space-y-1"></div>
+                <div id="lottery-bracket-right" class="space-y-1"></div>
             </div>
         </div>
-        <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
-            <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
-        </div>
-    </div>
-    <div id="lottery-bracket-container" class="flex-grow bg-gray-100 p-2 overflow-auto scorebook-font">
-        </div>
-</div>
-
         <div class="h-32 flex flex-col justify-between pt-4">
             <div id="lottery-commentary" class="h-20 text-center text-2xl font-semibold text-gray-800 bg-yellow-100 border-2 border-yellow-300 rounded p-2 flex items-center justify-center">
                 <p>静岡大会 抽選会へようこそ。主将は抽選箱をクリックしてクジを引いてください。</p>
@@ -1545,8 +1325,6 @@ const SCANDAL_DEFINITIONS = [
     let currentMatchIdForDetails = null;
     let articleForRegeneration = null; 
     let soundEffects = {};
-    let currentLotteryOrder = [];
-let currentSeeds = [];
     const UNDERDOG_TEAMS = ["虎府島総合", "緑山", "鷲尾", "県立由暇"];
     const POWERHOUSE_TEAMS = ["283学園", "天下無双学園", "代矢東", "雷門南", "稲城実業", "青道", "765総合高校"];
 　　const POWERHOUSE_REVIVAL_TEAMS = ["海堂学園", "帝王実業", "風林大尾"];
@@ -2000,38 +1778,28 @@ async function generateMatomeSiteHtml() {
 
     return articles.map(article => {
         const time = new Date(article.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-        const commentCount = Math.floor(Math.random() * 1000) + 1;
+        const commentCount = Math.floor(Math.random() * 800) + 50;
         const color = categoryColors[article.category] || "bg-gray-100 text-gray-800";
+
+        // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
         return `
-            <a href="#" class="matome-article-link block p-3 hover:bg-gray-50 rounded border-b" 
-               data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}"
-               ${article.matchId ? `data-match-id="${article.matchId}"` : ''}>
-                <p class="font-bold text-lg text-gray-800 hover:text-blue-700">${article.headline}</p>
-                <div class="flex items-center justify-between text-sm text-gray-500 mt-1">
-                    <span><span class="text-xs font-semibold px-2 py-0.5 rounded ${color}">${article.category}</span></span>
-                    <span>[${time}] コメント: ${commentCount} 💬</span>
+            <a href="${article.url || '#'}" target="_blank" rel="noopener noreferrer" class="matome-article-entry flex items-center p-4">
+                <div class="flex-grow">
+                    <div><span class="category-tag">${article.category}</span></div>
+                    <h4 class="article-title mt-1">${article.headline}</h4>
+                    <div class="article-meta mt-2">
+                        <span>${time}</span> | <span>コメント: ${commentCount} 💬</span>
+                    </div>
                 </div>
+                <div class="ml-4 text-gray-300 text-2xl">></div>
             </a>
         `;
+        // ▲▲▲ ここまで修正 ▲▲▲
     }).join('');
 }
 
 
-
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
-
-// ▼▼▼ この関数をまるごと追加してください ▼▼▼
-/**
- * チームが強豪（AまたはBランク）かどうかを判定する
- * @param {string} teamName - チーム名
- * @returns {boolean}
- */
-const isStrongRank = (teamName) => {
-    if (!teamName) return false;
-    const rank = calculateRank(teamName, tournamentState);
-    return ['A', 'B'].includes(rank);
-};
-// ▲▲▲ ここまで追加 ▲-▲▲
 
 /**
  * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
@@ -2112,24 +1880,10 @@ async function generateRealNewsBbsComments(headline, category) {
     }
     
     const prompt = `${personaPrompt}
-
-以下の【${category}】のニュースヘッドラインについて、**リアルタイムでスレッドが進行していくかのように**、自然な流れで**15〜20個**の掲示板の反応を生成してください。
-
+以下の【${category}】のニュースヘッドラインに対して、${instructions}リアルな掲示板の反応（スレッド）を5～7個生成してください。
 ### ニュースヘッドライン
 ${headline}
-
-### スレッド進行の指示
-1.  **序盤 (1〜5レス):** スレ主の投稿に対し、即座に食いつく第一陣の反応。「マジか」「草」「また〇〇か」といった短いコメントが中心。
-2.  **中盤 (6〜15レス):** 少し冷静になった住民たちが、ニュースに対して様々な角度からコメントを始める。肯定、否定、煽り、全く関係ない脱線などを織り交ぜる。**「>>1」「>>5」のような安価（アンカー）を使って、他のコメントに返信するやり取りを必ず含めること。**
-3.  **終盤 (16レス以降):** ある程度議論が出尽くした後の、まとめのようなコメントや、飽きてきた住民による雑なコメントで締めくくる。
-
-### 出力形式（JSON配列）
-[
-    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
-    {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"},
-    {"personality": "3: 風吹けば名無し", "comment": "（住民3のコメント）"},
-    ...
-]`;
+### 出力形式（JSON配列）: [{"personality": "1: 風吹けば名無し", "comment": "..."}]`;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
@@ -3054,38 +2808,19 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderTournament(tournamentState);
     
     // ▼▼▼【重要】ご指摘のあった、大会開始時のAIコンテンツ生成処理を復元▼▼▼
-    // ▼▼▼ 既存の展望記事生成ブロックを、以下に置き換える ▼▼▼
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
     namcoNewsSection.classList.remove('hidden');
     namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    // 夏の大会の場合のみ、新しい勢力図分析を呼び出す
-    if (tournamentState.currentTournament === 'summer') {
-        const analysisData = await generateBlockAnalysisArticle(tournamentState);
-        if (analysisData) {
-            tournamentState.blockAnalysisData = analysisData; // 分析データをstateに保存
-            const summaryArticle = {
-                title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
-                body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
-                timestamp: Date.now(),
-                isAnalysisArticle: true // これが勢力図記事であるという目印
-            };
-            tournamentState.news.unshift(summaryArticle);
-        }
-    } else {
-        // 夏以外の大会は、これまで通りの展望記事を生成
-        const previewArticle = await generateNewsArticle(null, null, null, 'preview');
-        if (previewArticle) tournamentState.news.unshift(previewArticle);
-    }
-    
-    // 掲示板とナムコニュースの生成は共通して行う
-    const [bracketComments, namcoNews] = await Promise.all([
+    const [previewArticle, bracketComments, namcoNews] = await Promise.all([
+        generateNewsArticle(null, null, null, 'preview'),
         generateBracketReactionComments(tournamentState),
         generateNamcoNews(tournamentState, 'bracket')
     ]);
 
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
 
@@ -3093,7 +2828,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderBbsComments(tournamentState.bbsComments);
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
-    // ▲▲▲ ここまで置き換え ▲▲▲
+    // ▲▲▲ここまで▲▲▲
 }
 
    /**
@@ -3161,71 +2896,7 @@ function updateTournamentFinishRecords() {
     // ★★★ ここまで ★★★
 }
 
-/**
- * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる（軽量化版）
- * @param {object} state - tournamentState
- * @returns {Promise<object|null>}
- */
-async function generateBlockAnalysisArticle(state) {
-    const { teams, seeds } = state;
-    const blocks = { A: [], B: [], C: [], D: [] };
-    teams.forEach((team, i) => {
-        if (i < 16) blocks.A.push(team);
-        else if (i < 32) blocks.B.push(team);
-        else if (i < 48) blocks.C.push(team);
-        else blocks.D.push(team);
-    });
-
-    const blockAnalysisData = {};
-    for (const blockId in blocks) {
-        const blockTeams = blocks[blockId];
-        const teamDetails = blockTeams.map(teamName => {
-            const rank = calculateRank(teamName, state);
-            const isSeed = seeds.includes(teamName);
-            return `${teamName}(${rank}${isSeed ? 'S' : ''})`;
-        }).join(', ');
-        blockAnalysisData[blockId] = teamDetails;
-    }
-
-    const prompt = `あなたは、高校野球の解説者です。以下のトーナメントの各ブロックのチームリストを見て、それぞれのブロックの見どころを**140字以内**の簡潔なナレーション原稿にまとめてください。
-
-### 分析対象ブロック (チーム名とランク、Sはシード校)
-- **Aブロック:** ${blockAnalysisData.A}
-- **Bブロック:** ${blockAnalysisData.B}
-- **Cブロック:** ${blockAnalysisData.C}
-- **Dブロック:** ${blockAnalysisData.D}
-
-### 指示
-- 最も激戦区だと思われる「死のブロック」を特定してください。
-- 注目すべき強豪校や、波乱を起こしそうなダークホースに言及してください。
-- 4ブロック分、必ず全てのナレーションを生成してください。
-
-### 出力形式 (JSON)
-{
-  "A": "（Aブロックの140字以内のナレーション）",
-  "B": "（Bブロックの140字以内のナレーション）",
-  "C": "（Cブロックの140字以内のナレーション）",
-  "D": "（Dブロックの140字以内のナレーション）"
-}`;
-
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        // 予期せぬ形式で返ってきた場合への対策を追加
-        if (result.candidates && result.candidates[0].content) {
-            return parseJsonFromText(result.candidates[0].content.parts[0].text);
-        } else {
-            console.error("AIからの応答が予期せぬ形式です:", result);
-            return null; // エラーとして扱う
-        }
-    } catch (error) {
-        console.error("AIブロック分析記事の生成に失敗:", error);
-        return null;
-    }
-}
-// ▲▲▲ ここまで追加 ▲▲▲
-
-/**
+ /**
      * 現在のトーナメント状態に基づいてUI全体を再描画する
      * @param {object} data - 現在のtournamentState
      */
@@ -3510,50 +3181,42 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
  */
 // renderNews関数を、以下のコードにまるごと置き換えてください
 
-/**
- * UIの各種コンテンツエリア（ニュース）を描画する（全機能対応・最終版）
- * @param {Array} news - 表示するニュース記事の配列
- */
 function renderNews(news) {
     if (!news || news.length === 0) {
         newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
         return;
     }
     newsContainer.innerHTML = '';
-    
+    // slice()で配列のコピーを作成してからreverse()することで、元の配列に影響を与えない
     news.slice().reverse().forEach((article, reversedIndex) => {
         const articleEl = document.createElement('div');
+        // 元の配列での正しいインデックスを計算
         const originalIndex = news.length - 1 - reversedIndex;
+
+        let regenerateButtonHTML = '';
+        if (article.context) {
+            // data-indexには、元の配列での正しいインデックスを格納する
+            regenerateButtonHTML = `<button class="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>`;
+        }
 
         if (article.error) {
             articleEl.className = 'article-error';
-            const regenerateButtonHTML = article.context ? `<button class="regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
-            articleEl.innerHTML = `<span>${article.title}</span>${regenerateButtonHTML}`;
+            articleEl.innerHTML = `
+                <span>${article.title}</span>
+                ${regenerateButtonHTML}
+            `;
         } else {
             articleEl.className = 'bg-white p-4 rounded-lg shadow';
-            let buttonsHTML = '';
-
-            if (article.isAnalysisArticle) {
-                buttonsHTML = `<button class="text-sm bg-cyan-500 text-white font-bold px-4 py-2 rounded hover:bg-cyan-600 view-analysis-btn">勢力図をアニメーションで見る</button>`;
-            } else {
-                const regenerateButtonHTML = article.context ? `<button class="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
-                const newspaperButtonHTML = article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : '';
-                
-                buttonsHTML = `
-                    <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
-                    ${newspaperButtonHTML}
-                    ${regenerateButtonHTML}
-                `;
-            }
-
             articleEl.innerHTML = `
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-start">
                     <div>
                         <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
                         <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        ${buttonsHTML}
+                    <div class="flex items-center">
+                        <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                        ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}
+                        ${regenerateButtonHTML}
                     </div>
                 </div>
             `;
@@ -3561,6 +3224,7 @@ function renderNews(news) {
         newsContainer.appendChild(articleEl);
     });
 }
+
     function renderBbsComments(comments) {
     if (!comments || comments.length === 0) {
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
@@ -8129,132 +7793,18 @@ async function loadSoundEffects() {
     }
 }
 
-// ▼▼▼ この関数をまるごと追加 ▼▼▼
-/**
- * 抽選会用に、空のトーナメント表の枠を描画する
- */
-function renderEmptyLotteryBracket() {
-    const container = document.getElementById('lottery-bracket-container');
-    container.innerHTML = ''; // 中身をクリア
-
-    const bracketWrapper = document.createElement('div');
-    bracketWrapper.className = 'flex flex-row';
-    
-    const leftHalf = document.createElement('div');
-    leftHalf.className = 'bracket-half left';
-    const rightHalf = document.createElement('div');
-    rightHalf.className = 'bracket-half right';
-
-    // 1回戦の枠だけを描画
-    const roundEl = document.createElement('div');
-    roundEl.className = 'round';
-    for (let i = 0; i < 16; i++) {
-        roundEl.innerHTML += `
-            <div class="matchup" data-match-index="${i}">
-                <div class="team-slot empty" data-slot-index="${i*2}">
-                    <span class="team-name">${i*2 + 1}. ---</span>
-                </div>
-                <div class="team-slot empty" data-slot-index="${i*2 + 1}">
-                    <span class="team-name">${i*2 + 2}. ---</span>
-                </div>
-            </div>`;
-    }
-    leftHalf.appendChild(roundEl);
-
-    const roundEl2 = document.createElement('div');
-    roundEl2.className = 'round';
-     for (let i = 16; i < 32; i++) {
-        roundEl2.innerHTML += `
-            <div class="matchup" data-match-index="${i}">
-                <div class="team-slot empty" data-slot-index="${i*2}">
-                    <span class="team-name">${i*2 + 1}. ---</span>
-                </div>
-                <div class="team-slot empty" data-slot-index="${i*2 + 1}">
-                    <span class="team-name">${i*2 + 2}. ---</span>
-                </div>
-            </div>`;
-    }
-    rightHalf.appendChild(roundEl2);
-
-    bracketWrapper.append(leftHalf, rightHalf);
-    container.appendChild(bracketWrapper);
-}
-// ▲▲▲ ここまで追加 ▲▲▲
-
-// ▼▼▼ この関数をまるごと追加 ▼▼▼
-/**
- * 抽選会用に、空の64チーム分のトーナメント表の枠を描画する
- */
-function renderFullEmptyLotteryBracket() {
-    const container = document.getElementById('lottery-bracket-container');
-    container.innerHTML = '';
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'lottery-bracket-wrapper';
-
-    const leftSide = document.createElement('div');
-    leftSide.className = 'lottery-bracket-side left';
-    
-    const rightSide = document.createElement('div');
-    rightSide.className = 'lottery-bracket-side right';
-
-    const finalArea = document.createElement('div');
-    finalArea.className = 'lottery-final-area';
-
-    const sidesData = { L: leftSide, R: rightSide };
-    const roundNames = ["1回戦", "2回戦", "3回戦", "準々決勝", "準決勝"];
-
-    for (const sideKey in sidesData) {
-        const sideEl = sidesData[sideKey];
-        for (let r = 1; r <= 5; r++) {
-            const roundEl = document.createElement('div');
-            roundEl.className = 'lottery-round';
-            roundEl.innerHTML = `<h3 class="round-title">${roundNames[r-1]}</h3>`;
-            
-            const numMatches = 16 / Math.pow(2, r - 1);
-            for (let m = 0; m < numMatches; m++) {
-                let matchupHtml = '<div class="lottery-matchup">';
-                if (r === 1) { // 1回戦のみslot-indexを振る
-                    const slot1 = (sideKey === 'L' ? 0 : 32) + (m * 2);
-                    const slot2 = slot1 + 1;
-                    matchupHtml += `
-                        <div class="lottery-team-slot" data-slot-index="${slot1}"><span>${slot1 + 1}. ---</span></div>
-                        <div class="lottery-team-slot" data-slot-index="${slot2}"><span>${slot2 + 1}. ---</span></div>`;
-                } else {
-                    matchupHtml += `
-                        <div class="lottery-team-slot"><span>---</span></div>
-                        <div class="lottery-team-slot"><span>---</span></div>`;
-                }
-                matchupHtml += '</div>';
-                roundEl.innerHTML += matchupHtml;
-            }
-            sideEl.appendChild(roundEl);
-        }
-    }
-
-    finalArea.innerHTML = `<h3 class="round-title">決勝</h3><div class="lottery-matchup"><div class="lottery-team-slot"><span>---</span></div><div class="lottery-team-slot"><span>---</span></div></div>`;
-
-    wrapper.append(leftSide, finalArea, rightSide);
-    container.appendChild(wrapper);
-}
-// ▲▲▲ ここまで追加 ▲▲▲
-
 /**
  * 抽選会イベントを開始する
  */
 /**
  * 抽選会イベントを開始する（BGM再生機能付き・完全版）
  */
-// startLotteryEvent 関数を修正
-/**
- * 抽選会イベントを開始する（イベント処理分離版）
- */
 async function startLotteryEvent() {
     const lotteryModal = document.getElementById('lottery-modal');
     lotteryModal.classList.remove('hidden');
     lotteryModal.classList.add('flex');
 
-    // 抽選順を決定
+    // 抽選順を決める（トーナメントの組み合わせの元）
     const seeds = INITIAL_TEAM_POOL.map(teamName => ({
         name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last)
     })).sort((a, b) => a.rank - b.rank).slice(0, 8).map(t => t.name);
@@ -8262,34 +7812,42 @@ async function startLotteryEvent() {
     const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
     const lotteryOrder = [...seeds, ...shuffleArray(nonSeeds)];
 
-    // ▼▼▼ この部分を修正 ▼▼▼
-    // グローバル変数に抽選情報を保存する
-    currentLotteryOrder = lotteryOrder;
-    currentSeeds = seeds;
+    // 簡易トーナメント表を作成
+    const leftBracket = document.getElementById('lottery-bracket-left');
+    const rightBracket = document.getElementById('lottery-bracket-right');
+    leftBracket.innerHTML = '';
+    rightBracket.innerHTML = '';
+    for(let i=0; i<64; i++){
+        const slot = document.createElement('div');
+        slot.className = 'lottery-slot';
+        slot.dataset.index = i;
+        slot.innerHTML = `<span>${i+1}.</span> <span class="team-name-placeholder">---</span>`;
+        document.getElementById(i < 32 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
+    }
 
-   
-
-    // 空のトーナメント表を描画
-    renderFullEmptyLotteryBracket();
+    // ボタンのイベントリスナーを設定
+    document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds);
     
-    // スキップボタンの処理はここに残す
     document.getElementById('skip-lottery-btn').onclick = () => {
         lotteryModal.classList.add('hidden');
-        SoundManager.stopBgm();
+        SoundManager.stopBgm(); // スキップ時もBGMを停止
         createNewTournament(false, 'summer');
     };
 
+    // BGM再生開始
     SoundManager.startBgm();
 }
-
 /**
- * 抽選会のアニメーションを実行する（シード配置修正・最終完全版）
- * @param {Array<string>} lotteryOrder - 抽選順に並んだ全チームの配列
+ * 抽選会のアニメーションを実行する（強豪校の禍々しい雰囲気演出付き・完全版）
+ * @param {Array<string>} lotteryOrder - シード校と、シャッフル済みのノーシード校を含む全チームの配列
  * @param {Array<string>} seeds - シード校8チームの配列
+ */
+/**
+ * 抽選会のアニメーションを実行する（サウンドマネージャー対応の最終完成版）
  */
 async function runLotteryAnimation(lotteryOrder, seeds) {
     // --- 1. 初期設定 ---
-    document.getElementById('start-lottery-btn').style.display = 'none';
+    document.getElementById('lottery-pot').onclick = null;
     document.getElementById('skip-lottery-btn').style.display = 'none';
 
     const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
@@ -8299,60 +7857,102 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const potNameEl = document.getElementById('pot-name');
     
     const teamPositions = Array(64).fill(null);
-    
-    // ▼▼▼ ここからが重要な修正点です ▼▼▼
     const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
     let availableSeedSlots = [...seedPositionsTemplate];
     let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !availableSeedSlots.includes(p));
-    // ▲▲▲
+    
+    const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
-    const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
+    // --- 内部ヘルパー関数：安全に音声を再生する ---
+    const playSound = (id) => {
+        const soundElement = document.getElementById(id);
+        if (soundElement) {
+            soundElement.currentTime = 0;
+            soundElement.play().catch(e => console.warn(`Audio play failed for ${id}:`, e));
+        }
+    };
+    
+    const isStrongRank = (team) => ['S', 'A'].includes(calculateRank(team, {}));
+
+    const checkDeathBlock = (position) => {
+        const blockName = position < 16 ? 'A' : position < 32 ? 'B' : position < 48 ? 'C' : 'D';
+        const startIdx = position < 16 ? 0 : position < 32 ? 16 : position < 48 ? 32 : 48;
+        if (blockDeathAnnounced[blockName]) return false;
+        const teamsInBlock = teamPositions.slice(startIdx, startIdx + 16);
+        const strongTeamsCount = teamsInBlock.filter(team => team && isStrongRank(team)).length;
+        if (strongTeamsCount >= 3) {
+            commentaryEl.textContent = `これは...！ ${blockName}ブロックは有力校が集中する「死のブロック」になりました！`;
+            blockDeathAnnounced[blockName] = true;
+            playSound('sound-gasp');
+            return true;
+        }
+        return false;
+    };
 
     // --- 2. 抽選会フェーズ1：シード校の配置 ---
     potNameEl.textContent = "シード校";
     for (const teamName of seeds) {
+        let dreadBg = null;
         if (isStrongRank(teamName)) {
+            dreadBg = document.createElement('div');
+            dreadBg.className = 'dread-mode-bg';
+            document.body.appendChild(dreadBg);
             potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る...次は ${teamName} です...`;
-            await sleep(1500);
+            commentaryEl.textContent = `会場が静まり返る... 次は ${teamName} です...`;
+            await sleep(2500);
         }
 
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
-        await sleep(1000);
+        playSound('sound-drumroll');
+        await sleep(1500);
+
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
 
-        // シード校専用の枠からランダムに選ぶ
         const slotIndex = Math.floor(Math.random() * availableSeedSlots.length);
         const position = availableSeedSlots.splice(slotIndex, 1)[0];
         teamPositions[position] = teamName;
-        
-        await sleep(1000);
 
-        const targetSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${position}"]`);
-        if (targetSlot) {
-            targetSlot.querySelector('span').textContent = `${position + 1}. ${teamName}`;
-            targetSlot.classList.add('filled', 'highlight');
+        await sleep(1250);
+
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        playSound('sound-cymbal');
+        
+        if (dreadBg) {
+            dreadBg.remove();
+            potEl.classList.remove('dread');
+            playSound('sound-gasp');
         }
         
-        if (potEl.classList.contains('dread')) potEl.classList.remove('dread');
-        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        await sleep(1200);
+        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+        if (teamPositions[opponentIndex]) {
+            commentaryEl.textContent = `${teamName}の相手は${teamPositions[opponentIndex]}に決定！`;
+        } else {
+            commentaryEl.textContent = `${teamName}は ${position + 1}番！ 相手はまだ決まりません！`;
+        }
+        await sleep(1500);
         drawnTeamContainer.classList.remove('fade-in-out');
     }
 
     // --- 3. 抽選会フェーズ2：ノーシード校の配置 ---
-       // --- 3. 抽選会フェーズ2：ノーシード校の配置 (時間を短縮) ---
     potNameEl.textContent = "ノーシード校";
+    const nonSeeds = lotteryOrder.filter(t => !seeds.includes(t));
     for (const teamName of nonSeeds) {
+        let dreadBg = null;
         if (isStrongRank(teamName)) {
+            dreadBg = document.createElement('div');
+            dreadBg.className = 'dread-mode-bg';
+            document.body.appendChild(dreadBg);
             potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る...強豪 ${teamName} が登場...`;
-            await sleep(500); // 1500 -> 500
+            commentaryEl.textContent = `会場が静まり返る... 強豪 ${teamName} が登場...`;
+            await sleep(2500);
         }
 
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
-        await sleep(200); // 300 -> 200
+        playSound('sound-drumroll');
+        await sleep(250);
 
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
@@ -8361,42 +7961,46 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
         teamPositions[position] = teamName;
         
-        await sleep(300); // 1000 -> 300
+        await sleep(200);
 
-        const targetSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${position}"]`);
-        if (targetSlot) {
-            targetSlot.querySelector('span').textContent = `${position + 1}. ${teamName}`;
-            targetSlot.classList.add('filled');
+        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
+        targetSlot.classList.add('filled');
+        playSound('sound-cymbal');
+        
+        if (dreadBg) {
+            dreadBg.remove();
+            potEl.classList.remove('dread');
+            playSound('sound-gasp');
         }
         
-        if (potEl.classList.contains('dread')) potEl.classList.remove('dread');
+        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
+        let didComment = checkDeathBlock(position);
 
-        const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
-        if(teamPositions[opponentIndex]) {
-             const opponentName = teamPositions[opponentIndex];
-             commentaryEl.textContent = `決まった！ ${teamName} は ${position + 1}番、${opponentName} との対戦です！`;
-             const opponentSlot = document.querySelector(`.lottery-team-slot[data-slot-index="${opponentIndex}"]`);
-             if(targetSlot) targetSlot.classList.add('highlight');
-             if(opponentSlot) opponentSlot.classList.add('highlight');
-        } else {
-            commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        }
-
-        await sleep(400); // 1200 -> 400
-        drawnTeamContainer.classList.remove('fade-in-out');
-        document.querySelectorAll('.lottery-team-slot.highlight').forEach(el => {
-            if(!seeds.includes(el.textContent.split('. ')[1])) {
-                el.classList.remove('highlight');
+        if (!didComment) {
+            const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
+            if(teamPositions[opponentIndex]) {
+                const opponentName = teamPositions[opponentIndex];
+                const isRival = RIVALRIES.some(r => r.teams.includes(teamName) && r.teams.includes(opponentName));
+                if (isRival || (isStrongRank(teamName) && isStrongRank(opponentName))) {
+                    commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
+                    playSound('sound-gasp');
+                    document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
+                    targetSlot.classList.add('highlight');
+                    await sleep(1500);
+                }
             }
-        });
+        }
+        await sleep(250);
+        drawnTeamContainer.classList.remove('fade-in-out');
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // --- 4. 最終処理 ---
+    // --- 4. 終了処理 ---
     commentaryEl.textContent = '全ての組み合わせが決定しました！';
     await sleep(2000);
     
     await generateCaptainInterviews(teamPositions);
+ // 最後に、決定した組み合わせを渡してトーナメントを生成
     document.getElementById('lottery-modal').classList.add('hidden');
     createNewTournament(false, 'summer', teamPositions); 
 }
@@ -8639,18 +8243,7 @@ startMainTournamentBtn.addEventListener('click', async () => {
 
 document.body.addEventListener('click', async (e) => {
 
-      // --- 抽選会モーダルの「抽選を開始」ボタン ---
-    if (e.target.closest('#start-lottery-btn')) {
-        // グローバル変数から抽選情報を読み込んでアニメーションを開始
-        if (currentLotteryOrder.length > 0 && currentSeeds.length > 0) {
-            runLotteryAnimation(currentLotteryOrder, currentSeeds);
-        } else {
-            alert("抽選情報の準備ができていません。");
-        }
-    }
-
-
-// --- 試合進行ボタン (▶) ---
+    // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
         const teamSlot = e.target.closest('.team-slot');
         const matchEl = e.target.closest('[data-match-id]');
@@ -8695,16 +8288,6 @@ document.body.addEventListener('click', async (e) => {
         setWeather(weatherType);
     }
 
-// --- 【新機能】勢力図分析を見るボタン ---
-    else if (e.target.matches('.view-analysis-btn')) {
-        currentBlock = 'A'; // 初期表示はAブロックにリセット
-        startBlockAnalysisAnimation();
-    }
-    
-    // --- 【新機能】勢力図分析モーダルを閉じるボタン ---
-    else if (e.target.matches('#analysis-modal-close-btn')) {
-        document.getElementById('analysis-modal').classList.add('hidden');
-    }
 
    // document.body.addEventListener('click', ...) 内の、まとめサイト関連の if ブロックを全てこれで置き換える
 
@@ -8818,34 +8401,18 @@ document.body.addEventListener('click', async (e) => {
             // ▲▲▲ ここまで修正 ▲▲▲
 
             // --- 結果の描画処理 (変更なし) ---
-             if (result && result.comments) {
+            if (result && result.comments) {
                 threadTitleEl.textContent = `【スレ】${result.title}`;
-                threadContentEl.innerHTML = ''; // ローダーを完全に消す
-
-                // --- ここからが「ライブ感」演出 ---
-                for (const comment of result.comments) {
+                threadContentEl.innerHTML = ''; // ローダーを消す
+                result.comments.forEach(comment => {
                     const commentEl = document.createElement('div');
-                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
+                    commentEl.className = 'bbs-comment';
                     commentEl.innerHTML = `
                         <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
                         <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
                     `;
                     threadContentEl.appendChild(commentEl);
-                    
-                    // 少し遅れてフワッと表示させる
-                    setTimeout(() => {
-                        commentEl.classList.remove('opacity-0');
-                    }, 50);
-
-                    // 次のコメントが表示されるまで、ランダムな時間待つ
-                    const delay = Math.random() * 800 + 200; // 0.2秒から1.0秒
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    
-                    // 自動で一番下までスクロール
-                    threadContentEl.scrollTop = threadContentEl.scrollHeight;
-                }
-                // --- 演出ここまで ---
-
+                });
             } else {
                 threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
@@ -9457,111 +9024,6 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
             showAlert('データの読み込みに失敗しました。');
         }
     });
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-
-let currentBlock = 'A';
-
-/**
- * 勢力図分析アニメーションを開始する
- */
-function startBlockAnalysisAnimation() {
-    const analysisData = tournamentState.blockAnalysisData;
-    if (!analysisData) {
-        alert("分析データが見つかりません。");
-        return;
-    }
-    const modal = document.getElementById('analysis-modal');
-    modal.classList.remove('hidden');
-
-    const selector = document.getElementById('analysis-block-selector');
-    selector.innerHTML = ['A', 'B', 'C', 'D'].map(b => 
-        `<button class="analysis-block-tab-btn px-4 py-2 rounded font-bold" data-block="${b}">${b}ブロック</button>`
-    ).join('');
-    
-    // イベントリスナーを一度クリアして再設定
-    document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            currentBlock = e.target.dataset.block;
-            playBlockAnimation(currentBlock);
-        });
-    });
-
-    playBlockAnimation(currentBlock); // 最初のブロックのアニメーションを開始
-}
-
-/**
- * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
- */
-async function playBlockAnimation(blockId) {
-    // タブのアクティブ表示を更新
-    document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
-        btn.classList.toggle('bg-cyan-500', btn.dataset.block === blockId);
-        btn.classList.toggle('text-white', btn.dataset.block === blockId);
-        btn.classList.toggle('bg-gray-700', btn.dataset.block !== blockId);
-        btn.classList.toggle('text-gray-400', btn.dataset.block !== blockId);
-    });
-
-    const stage = document.getElementById('analysis-stage');
-    const narrationTextEl = document.getElementById('analysis-narration-text');
-    const analysisData = tournamentState.blockAnalysisData;
-    const narration = analysisData[blockId];
-    const blockTeams = tournamentState.teams.slice(
-        (blockId.charCodeAt(0) - 65) * 16, 
-        (blockId.charCodeAt(0) - 64) * 16
-    );
-
-    // いったんクリア
-    stage.innerHTML = '';
-    narrationTextEl.textContent = '';
-    
-    // ラウンドごとのカラムを作成
-    stage.innerHTML = `
-        <div id="r1-col" class="round-column"></div>
-        <div id="r2-col" class="round-column"></div>
-        <div id="r3-col" class="round-column"></div>
-        <div id="r4-col" class="round-column"></div>
-    `;
-
-    // 1回戦のチームを配置
-    for(let i = 0; i < 8; i++) {
-        const matchupEl = document.createElement('div');
-        matchupEl.className = 'analysis-matchup';
-        matchupEl.innerHTML = `
-            <div class="analysis-team" data-team-name="${blockTeams[i*2]}">${blockTeams[i*2]}</div>
-            <div class="analysis-team" data-team-name="${blockTeams[i*2+1]}">${blockTeams[i*2+1]}</div>
-            <div class="matchup-connector"></div>
-        `;
-        stage.querySelector('#r1-col').appendChild(matchupEl);
-    }
-    
-    // 2回戦以降のプレースホルダーを配置
-    for(let i = 0; i < 4; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
-    for(let i = 0; i < 2; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
-    stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
-
-    // アニメーション開始
-    await new Promise(r => setTimeout(r, 100));
-    document.querySelectorAll('.analysis-team').forEach((el, i) => {
-        setTimeout(() => el.classList.add('show'), i * 50);
-    });
-
-    // ナレーションをタイプライター風に表示
-    for (let i = 0; i < narration.length; i++) {
-        narrationTextEl.textContent += narration[i];
-        await new Promise(r => setTimeout(r, 50));
-    }
-    
-    // ナレーション内のチーム名をハイライト
-    blockTeams.forEach(team => {
-        if (narration.includes(team)) {
-            document.querySelectorAll(`.analysis-team[data-team-name="${team}"]`).forEach(el => {
-                el.classList.add('highlight');
-            });
-        }
-    });
-}
-
-// ▲▲▲ ここまで追加 ▲▲▲
     // アプリケーション起動
     initializeApp();
 </script>
