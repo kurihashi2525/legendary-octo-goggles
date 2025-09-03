@@ -2689,7 +2689,22 @@ async function startDocumentary(type, teamName) {
     
     renderTournament(tournamentState); 
     
-    const article = await generateDocumentaryArticle('intro', type, teamName); // ← type を渡す
+    const firstMatch = Object.values(tournamentState.matches).find(m => 
+        m.id.includes('-R1-') && (m.team1 === teamName || m.team2 === teamName)
+    );
+    
+    let matchDataForArticle = null;
+    if (firstMatch) {
+        const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
+        matchDataForArticle = {
+            opponent: opponentName,
+            // 相手のランク情報を追加
+            opponentRank: calculateRank(opponentName, tournamentState) 
+        };
+    }
+    
+    const article = await generateDocumentaryArticle('intro', type, teamName, matchDataForArticle);
+    // ▲▲▲
 
     if (article) {
         tournamentState.news.push(article);
@@ -2758,6 +2773,7 @@ ${charactersPrompt}
     主将に「〇〇（校名）のユニフォームを着て戦うことの意味」を問う。伝統の重みと、それを力に変えようとする彼の覚悟を描写する。
 4.  **【監督の信念】**
     監督に「古豪復活への道筋」をインタビューする。OBからのプレッシャーの中で、彼が信じる今の選手たちの可能性について語らせる。
+追加要素 チームが抱える状況もところどころで描写する（例：${teamMasterData.info}
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
@@ -2812,6 +2828,8 @@ ${charactersPrompt}
     メディアからは「モブ」として扱われる、他の野手たちに焦点を当てる。「俺たちは、あいつの引き立て役じゃない。俺たちの守備や打撃がなければ、あいつはただの一人の投手に過ぎない」という、彼らの静かなプライドと葛藤を引き出す。
 4.  **【監督の信念】**
     監督に「彼らはワンマンチームですか？」と問う。「世間はそう言うだろう。だが、私だけは知っている。本当の主役が誰なのかをね」と、意味深に語らせる。
+追加要素 チームが抱える状況もところどころで描写する（例：${teamMasterData.info}）
+
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
@@ -2872,6 +2890,7 @@ ${charactersPrompt}
 -   **対比:** 完璧に整備された設備と、そこで流される選手たちの生々しい汗や涙を対比させること。
 -   **音:** トロフィー室の静寂、Bグラウンドから聞こえる声にならない叫び、監督の静かだが重い言葉、主将のバットが夜の空気を切り裂く音など、「音」の描写を効果的に使うこと。
 -   **心理描写:** 登場人物たちのセリフだけでなく、彼らの表情や仕草から、言葉にならない葛藤やプライドを丁寧に描写すること。
+- チームが抱える状況もところどころで描写する（例：${teamMasterData.info}）
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
                 break;
@@ -2912,22 +2931,54 @@ ${finalFeedbackPrompt}
         // --- 逆境チーム用のプロンプト ---
         switch (phase) {
             case 'intro':
+                // ▼▼▼ このブロック全体を置き換え ▼▼▼
                 title = `『${teamName}、魂の記録』序章`;
+                
+                // --- ランク差に応じたAIへの追加指示を生成 ---
+                let reactionPrompt = '';
+                if (matchData && matchData.opponent) {
+                    const ourRank = calculateRank(teamName, tournamentState);
+                    const opponentRank = matchData.opponentRank;
+                    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+                    const rankDiff = rankValues[opponentRank] - rankValues[ourRank];
+
+                    if (rankDiff >= 2) { // 絶望的な格上
+                        reactionPrompt = `
+4.  **【残酷な現実】**
+    組み合わせ抽選会の結果、初戦の相手が格上の強豪「${matchData.opponent}」(ランク:${opponentRank})に決定。その事実を知らされた時の、選手たちの絶望と沈黙の瞬間を描写する。
+5.  **【それでも、前へ】**
+    主将に、絶望的な状況でも戦う意味を問う。「0.1%でも可能性があるなら、俺たちは諦めない」といった悲壮な決意を語らせる。
+    監督が選手たちに「これは試練だ。だが、歴史を創るチャンスでもある」と、静かに、しかし力強く語りかける。`;
+                    } else if (rankDiff >= 1) { // 少し格上
+                        reactionPrompt = `
+4.  **【挑戦者たち】**
+    初戦の相手が、格上の「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちが「不足はない相手」「一泡吹かせてやる」と、挑戦者としての闘志を燃やす様子を描く。
+5.  **【監督の戦略】**
+    監督にインタビューし、「相手は強い。しかし、我々には〇〇がある」と、チームの武器を強調させ、勝機があることを示唆させる。`;
+                    } else { // 同格か格下
+                        reactionPrompt = `
+4.  **【運命の初戦】**
+    初戦の相手が、実力の近い「${matchData.opponent}」(ランク:${opponentRank})に決定。「ここを勝てば波に乗れる」と、チームの士気が高まる様子を描く。
+5.  **【主将の誓い】**
+    主将にインタビューし、「この夏、俺たちが主役になる。そのための最初の関門だ」と、力強い勝利宣言をさせる。`;
+                    }
+                }
+
                 prompt += `
 ### 取材テーマ
 「${teamName}」が抱える困難な状況と、それでも夢を諦めない彼ら、そして彼らを支える地域の人々の姿を描く、感動的なドキュメンタリーの導入記事を作成してください。
 ${charactersPrompt}
 ### 構成案
 1. 記者がチームの元を訪れる場面から始める。
-2. 監督や選手、マネージャー、地元の人々など、複数の人物にインタビューし、それぞれの視点からチームの苦悩と情熱を明らかにする。
+2. 監督や選手、マネージャー、地元の人々など、複数の視点からチームの苦悩と情熱を明らかにする。
 3. 最後に、大会へ向かう彼らの決意で締めくくる。
+${reactionPrompt}
 ### 必ず含めるべき要素
 - チームが抱える具体的なハンデ（例：${teamMasterData.info}）
 - 監督の名前や登場人物の実名を効果的に使用すること。
 - 情景が目に浮かぶような、エモーショナルな描写
 ${finalFeedbackPrompt}
-### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;
-                break;
+### 出力形式: JSON {"title": "${title}", "body": "（長編の記事本文）"}`;                break;
             case 'win':
                 title = `『${teamName}、魂の記録』第${matchData.round}章`;
                 prompt += `
