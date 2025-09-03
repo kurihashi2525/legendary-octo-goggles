@@ -2658,6 +2658,79 @@ function simulateKoshien(teamRank) {
     }
 // --- Tournament Logic & Rendering ---
 
+// ▼▼▼ この関数をまるごと追加してください ▼▼▼
+/**
+ * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
+ */
+async function playBlockAnimation(blockId) {
+    // タブのアクティブ表示を更新
+    document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
+        btn.classList.toggle('bg-cyan-500', btn.dataset.block === blockId);
+        btn.classList.toggle('text-white', btn.dataset.block === blockId);
+        btn.classList.toggle('bg-gray-700', btn.dataset.block !== blockId);
+        btn.classList.toggle('text-gray-400', btn.dataset.block !== blockId);
+    });
+
+    const stage = document.getElementById('analysis-stage');
+    const narrationTextEl = document.getElementById('analysis-narration-text');
+    const analysisData = tournamentState.blockAnalysisData;
+    const narration = analysisData[blockId];
+    const blockTeams = tournamentState.teams.slice(
+        (blockId.charCodeAt(0) - 65) * 16, 
+        (blockId.charCodeAt(0) - 64) * 16
+    );
+
+    // いったんクリア
+    stage.innerHTML = '';
+    narrationTextEl.textContent = '';
+    
+    // ラウンドごとのカラムを作成
+    stage.innerHTML = `
+        <div id="r1-col" class="round-column"></div>
+        <div id="r2-col" class="round-column"></div>
+        <div id="r3-col" class="round-column"></div>
+        <div id="r4-col" class="round-column"></div>
+    `;
+
+    // 1回戦のチームを配置
+    for(let i = 0; i < 8; i++) {
+        const matchupEl = document.createElement('div');
+        matchupEl.className = 'analysis-matchup';
+        matchupEl.innerHTML = `
+            <div class="analysis-team" data-team-name="${blockTeams[i*2]}">${blockTeams[i*2]}</div>
+            <div class="analysis-team" data-team-name="${blockTeams[i*2+1]}">${blockTeams[i*2+1]}</div>
+            <div class="matchup-connector"></div>
+        `;
+        stage.querySelector('#r1-col').appendChild(matchupEl);
+    }
+    
+    // 2回戦以降のプレースホルダーを配置
+    for(let i = 0; i < 4; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    for(let i = 0; i < 2; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
+
+    // アニメーション開始
+    await new Promise(r => setTimeout(r, 100));
+    document.querySelectorAll('.analysis-team').forEach((el, i) => {
+        setTimeout(() => el.classList.add('show'), i * 50);
+    });
+
+    // ナレーションをタイプライター風に表示
+    for (let i = 0; i < narration.length; i++) {
+        narrationTextEl.textContent += narration[i];
+        await new Promise(r => setTimeout(r, 50));
+    }
+    
+    // ナレーション内のチーム名をハイライト
+    blockTeams.forEach(team => {
+        if (narration.includes(team)) {
+            document.querySelectorAll(`.analysis-team[data-team-name="${team}"]`).forEach(el => {
+                el.classList.add('highlight');
+            });
+        }
+    });
+}
+// ▲▲▲ ここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加してください ▼▼▼
 /**
