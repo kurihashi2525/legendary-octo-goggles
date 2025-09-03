@@ -8958,7 +8958,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
 }
 
 /**
- * 抽選会後の主将インタビューを生成・表示する（BGM停止機能付き・完全版）
+ * 抽選会後の主将インタビューを生成・表示する（ランク差対応・最終版）
  * @param {Array<string>} teamPositions - 抽選会で決定した最終的なチームの組み合わせ
  */
 async function generateCaptainInterviews(teamPositions) {
@@ -8972,25 +8972,41 @@ async function generateCaptainInterviews(teamPositions) {
         matchups.push({team1: teamPositions[i], team2: teamPositions[i+1]});
     }
 
-    const isStrong = (team) => ['S', 'A', 'B'].includes(calculateRank(team, {}));
-    const strongMatchups = matchups.filter(m => isStrong(m.team1) && isStrong(m.team2));
-    const notableMatchups = shuffleArray(strongMatchups).slice(0, 2);
+    // 注目カードを3つに増やす
+    const notableMatchups = shuffleArray(matchups).slice(0, 3);
 
-    // 注目カードがない場合でも、少なくとも1カードは選ぶ
-    if (notableMatchups.length === 0 && matchups.length > 0) {
-        notableMatchups.push(shuffleArray(matchups)[0]);
-    }
+    // ▼▼▼ ここからが新しい処理 ▼▼▼
+    const matchupsWithRanks = notableMatchups.map(m => ({
+        team1: m.team1,
+        rank1: calculateRank(m.team1, tournamentState),
+        team2: m.team2,
+        rank2: calculateRank(m.team2, tournamentState)
+    }));
+    const promptDataText = matchupsWithRanks.map(m => 
+        `- ${m.team1} (ランク: ${m.rank1}) vs ${m.team2} (ランク: ${m.rank2})`
+    ).join('\n');
+    // ▲▲▲
 
     const prompt = `あなたは高校野球専門のAI記者です。夏の大会の組み合わせ抽選会が終了しました。
-以下の注目カードについて、両チームの主将になりきって、抽選結果に対する意気込みを簡潔に語ってください。
+以下の注目カードについて、両チームの主将になりきって、抽選結果に対するリアルな反応を語ってください。
 
-### 注目カード
-${notableMatchups.map(m => `- ${m.team1} vs ${m.team2}`).join('\n')}
+### 注目カードと各チームのランク
+${promptDataText}
+
+### あなたがなりきる「高校生の主将」の思考パターン
+- **格下の相手と当たった場合 (例: Aランク vs Dランク):**
+  - 少し安堵した様子を見せる。「正直、ホッとした」「自分たちの野球をすれば負けない」
+  - しかし油断は禁物だと付け加える。「どのチームも強いので、一戦必勝で戦いたい」
+- **格上の相手と当たった場合 (例: Eランク vs Aランク):**
+  - 明らかに絶望したり、驚いたりする。「まさか初戦で当たるとは…」「正直、厳しい相手」
+  - しかし、挑戦者として「胸を借りるつもりで全力でぶつかりたい」「一矢報いたい」と闘志も見せる。
+- **実力が拮抗している相手と当たった場合 (例: Cランク vs Cランク):**
+  - 「ここが最初の山場になる」「厳しい戦いになることは覚悟している」と、相手への敬意を示す。
+  - 「最高の試合をしたい」と、ライバルとの対戦を心待ちにしている様子を見せる。
 
 ### 指示
-- チームの背景（例：王者、古豪、ライバル）を考慮したコメントにしてください。
-- 対戦相手への敬意と、自チームの闘志の両方を含めてください。
-- 全ての注目カードについて、両校の主将のコメントを生成してください。
+- 上記の思考パターンに基づき、各カードの両主将のコメントを生成してください。
+- チームの背景（例：王者、古豪）も少しだけコメントに反映させてください。
 
 ### 出力形式 (JSON配列)
 [
@@ -9005,7 +9021,7 @@ ${notableMatchups.map(m => `- ${m.team1} vs ${m.team2}`).join('\n')}
 
         if (interviews && Array.isArray(interviews)) {
             interviewContent.innerHTML = interviews.map(iv => `
-                <div class="p-4 bg-gray-50 rounded-lg">
+                <div class.p-4 bg-gray-50 rounded-lg">
                     <h4 class="font-bold text-lg text-gray-800">${iv.team} 主将</h4>
                     <p class="mt-1 text-gray-700">「${iv.captain_comment}」</p>
                 </div>
@@ -9021,7 +9037,7 @@ ${notableMatchups.map(m => `- ${m.team1} vs ${m.team2}`).join('\n')}
     document.getElementById('close-interview-btn').onclick = () => {
         interviewModal.classList.add('hidden');
         document.getElementById('lottery-modal').classList.add('hidden');
-        SoundManager.stopBgm(); // ▼▼▼ この行を追加 ▼▼▼
+        SoundManager.stopBgm();
         createNewTournament(false, 'summer', teamPositions);
     };
 }
