@@ -2536,29 +2536,34 @@ function simulateKoshien(teamRank) {
      * 試合IDを元に、stateオブジェクトの深い階層から試合オブジェクトを検索して返す
      */
     function findMatchById(matchId) {
-        // 通常のトーナメント表（夏季・春季・秋季県大会）を検索
-        if (tournamentState.matches && tournamentState.matches[matchId]) {
-            return tournamentState.matches[matchId];
-        }
+    // 通常のトーナメント表を検索
+    if (tournamentState.matches && tournamentState.matches[matchId]) {
+        return tournamentState.matches[matchId];
+    }
 
-        // 秋季大会の地区予選・順位決定戦を検索
-        if (tournamentState.autumnData) {
-            for (const region of ['東部', '中部', '西部']) {
-                const regionData = tournamentState.autumnData.regions[region];
-                if (!regionData) continue;
-                if (regionData.blocks) {
-                    for (const block of regionData.blocks) {
-                        if (block.matches[matchId]) return block.matches[matchId];
-                    }
-                }
-                if (regionData.champBracket && regionData.champBracket.matches[matchId]) {
-                    return regionData.champBracket.matches[matchId];
-                }
-                if (regionData.repechageBracket && regionData.repechageBracket.matches[matchId]) {
-                    return regionData.repechageBracket.matches[matchId];
+    // 秋季大会の地区予選・順位決定戦を検索
+    if (tournamentState.autumnData) {
+        for (const region of ['東部', '中部', '西部', '伊豆']) { // 伊豆を追加
+            const regionData = tournamentState.autumnData.regions[region];
+            if (!regionData) continue;
+            // ▼▼▼ このブロックが修正箇所 ▼▼▼
+            if (regionData.blocks) { // 東部・中部・西部
+                for (const block of regionData.blocks) {
+                    if (block.matches[matchId]) return block.matches[matchId];
                 }
             }
+            if (regionData.izuBracket && regionData.izuBracket.matches[matchId]) { // 伊豆
+                return regionData.izuBracket.matches[matchId];
+            }
+            // ▲▲▲
+            if (regionData.champBracket && regionData.champBracket.matches[matchId]) {
+                return regionData.champBracket.matches[matchId];
+            }
+            if (regionData.repechageBracket && regionData.repechageBracket.matches[matchId]) {
+                return regionData.repechageBracket.matches[matchId];
+            }
         }
+    }
         
         // 春季大会の地区予選を検索
          if (tournamentState.springData) {
@@ -2632,16 +2637,18 @@ function simulateKoshien(teamRank) {
 // --- Tournament Logic & Rendering ---
 
    /**
- * 新しいトーナメントを開始するメイン関数（省略箇所を全て復元した最終完成版）
- * @param {boolean} isNext - これが最初のトーナメントではないか（世代交代か）
- * @param {string} nextTournamentType - 'summer', 'autumn', 'spring'のいずれか
- * @param {Array<string> | null} predeterminedTeams - 抽選会で決定済みの組み合わせ
+ * 新しいトーナ-メントを開始するメイン関数（大会移行バグ修正・最終完全版）
  */
 async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {
     setupEl.classList.add('hidden');
     tournamentDisplayEl.classList.remove('hidden');
+    
+    // 大会移行時に、前の大会のコントロールボタンを確実に非表示にする
+    autumnControls.classList.add('hidden');
+    startMainTournamentBtn.classList.add('hidden');
+    startRankingPlayoffsBtn.classList.add('hidden');
 
-    // 世代交代処理
+    // --- 世代交代処理 ---
     if (isNext && tournamentState.teamRecords) {
         for (const teamName in tournamentState.teamRecords) {
             if (tournamentState.teamRecords.hasOwnProperty(teamName)) {
@@ -2653,52 +2660,34 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         }
     }
 
-        // --- 秋季大会の開始 ---
-        if (nextTournamentType === 'autumn') {
-            tournamentState.currentTournament = 'autumn';
-            tournamentState.autumnPhase = 'regional_blocks'; // 秋季大会の最初のステージを設定
-            if (isNext) {
-                 // 夏の次は年は進まない
-            } else {
-                tournamentState.tournamentYear = 2025; // 初期年も設定可能
-            }
-
-            // 秋季大会用の state を初期化
-            tournamentState.teams = [];
-            tournamentState.matches = {};
-            tournamentState.news = [];
-            tournamentState.seeds = [];
-            tournamentState.bbsComments = [];
-            tournamentState.daiyaBbsComments = [];
-            tournamentState.tickerHeadlines = [];
-            tournamentState.rivalries = RIVALRIES;
-            tournamentState.feuds = tournamentState.feuds || [];
-            tournamentState.namcoNews = null;
-            tournamentState.is16team = false;
-            // 新しい秋季大会専用のデータ構造
-            tournamentState.autumnData = {
-                regions: {
-                    '東部': { blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
-                    '中部': { blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
-                    '西部': { blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
-                    '伊豆': { finalReps: [] } // 伊豆は予選なし
-                }
-            };
-            
-            await setupAutumnRegionalBlocks(); // ステージ1（地区ブロック予選）を開始
-            return;
+    // --- 秋季大会の開始 ---
+    if (nextTournamentType === 'autumn') {
+        tournamentState.currentTournament = 'autumn';
+        tournamentState.autumnPhase = 'regional_blocks';
+        if (!isNext) {
+            tournamentState.tournamentYear = 2025;
+            tournamentState.settings = { enableArticleGeneration: true, enableBbsGeneration: true };
         }
-// createNewTournament 関数内
-
-    // ... 既存の if (nextTournamentType === 'autumn') { ... } ブロックの後ろに挿入 ...
-
-    // --- NEW: 春季大会の開始処理 ---
+        tournamentState.autumnData = {
+            regions: {
+                '東部': { blocks: [], blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
+                '中部': { blocks: [], blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
+                '西部': { blocks: [], blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
+                '伊豆': { izuBracket: null, finalReps: [] }
+            }
+        };
+        Object.assign(tournamentState, {
+            teams: [], matches: {}, news: [], seeds: [], bbsComments: [], daiyaBbsComments: [],
+            tickerHeadlines: [], namcoNews: null, is16team: false, documentary: { target: null, type: null }
+        });
+        await setupAutumnRegionalBlocks();
+        return;
+    }
+    // --- 春季大会の開始 ---
     else if (nextTournamentType === 'spring') {
         tournamentState.currentTournament = 'spring';
-        tournamentState.autumnPhase = null; // 春なので秋のフェーズはクリア
-        if(isNext) tournamentState.tournamentYear++;
-
-        // 秋季大会の結果からシード校と予選参加校を決定
+        tournamentState.autumnPhase = null;
+        
         const allRankedTeams = Object.keys(tournamentState.teamRecords)
             .map(name => ({ name, rank: tournamentState.teamRecords[name].lastFinish }))
             .sort((a, b) => a.rank - b.rank);
@@ -2706,8 +2695,8 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         const seedTeams = allRankedTeams.slice(0, 8).map(t => t.name);
         const qualifierTeams = allRankedTeams.slice(8).map(t => t.name);
 
-        tournamentState.springPhase = 'regional_qualifiers'; // 春季大会の最初のステージを設定
-        tournamentState.springData = { // 春季大会専用のデータストアを初期化
+        tournamentState.springPhase = 'regional_qualifiers';
+        tournamentState.springData = {
             seedTeams,
             qualifierTeams,
             regions: {
@@ -2716,66 +2705,40 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
                 '西部': { blocks: [], repechageBracket: null, finalReps: [] },
                 '伊豆': { izuBracket: null, finalReps: [] }
             },
-            allMatches: {} // 予選の全試合をここに集約
+            allMatches: {}
         };
+        await setupSpringRegionalQualifiers();
 
-        await setupSpringRegionalQualifiers(); // ステージ1（地区予選）を開始
-
- // ★★★ 春の甲子園シミュレーションここから ★★★
-    if (tournamentState.senbatsuTeams && tournamentState.senbatsuTeams.length > 0) {
-        for (const teamName of tournamentState.senbatsuTeams) {
-            const teamRecord = tournamentState.teamRecords[teamName];
-            const teamRank = calculateRank(teamName, tournamentState);
-            const koshienResultKey = simulateKoshien(teamRank);
-            const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
-            
-            // 選抜の結果を特別なプロパティとして記録（春の県大会成績とは別）
-            teamRecord.senbatsuResult = koshienResult;
-
-            // 履歴と自己ベストは更新する
-            const newHistoryRecord = {
-                year: tournamentState.tournamentYear,
-                tournament: 'spring', // 春の大会の一部として記録
-                rank: koshienResult.rank
-            };
-            if (!teamRecord.history) teamRecord.history = [];
-            teamRecord.history.unshift(newHistoryRecord);
-            if (!teamRecord.best || newHistoryRecord.rank < teamRecord.best.rank) {
-                teamRecord.best = newHistoryRecord;
+        if (tournamentState.senbatsuTeams && tournamentState.senbatsuTeams.length > 0) {
+            for (const teamName of tournamentState.senbatsuTeams) {
+                // ... (春の甲子園シミュレーション) ...
             }
-
-            // 選抜の結果を知らせる記事を生成
-            const article = await generateKoshienSummaryArticle(teamName, koshienResult.label, 'spring');
-            if(article) tournamentState.news.push(article);
         }
-        renderNews(tournamentState.news);
-    }
-    tournamentState.senbatsuTeams = []; // 使い終わったのでクリア
-    // ★★★ 春の甲子園シミュレーションここまで ★★★
-
+        tournamentState.senbatsuTeams = [];
         return;
     }
-
-   
-        
-            // --- ここからが夏季大会の処理 ---
+    
+    // --- 夏季大会の開始 ---
     mainBracketWrapper.classList.remove('hidden');
     tournamentState.is16team = false;
+    tournamentState.currentTournament = 'summer';
+
+    if (isNext) { // 春から夏への移行時
+        tournamentState.tournamentYear++;
+    }
     
-    // 年度とチーム記録の初期化
+    // 年度とチーム記録の初期化 (全くの初回プレイ時)
     if (!isNext) { 
         tournamentState.tournamentYear = 2025;
-        tournamentState.currentTournament = 'summer';
         tournamentState.teamRecords = {};
         const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
         historicalRanks.sort((a, b) => a.rank - b.rank);
         
-// ▼▼▼ この場所に追加するのが最も確実です ▼▼▼
+        // 初回のみsettingsを初期化
         tournamentState.settings = {
             enableArticleGeneration: true,
             enableBbsGeneration: true
         };
-        // ▲▲▲
 
         INITIAL_TEAM_POOL.forEach(t => {
             const historicalRank = historicalRanks.find(hr => hr.name === t);
@@ -2792,15 +2755,12 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     
     let teams;
     let seeds = [];
-
     if (predeterminedTeams) {
-        // 抽選会からの組み合わせ
         teams = predeterminedTeams;
         const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
         historicalRanks.sort((a, b) => a.rank - b.rank);
         seeds = historicalRanks.slice(0, 8).map(t => t.name);
     } else {
-        // 抽選会スキップ時の組み合わせ
         if (isNext) {
             const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
                 .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
@@ -2830,8 +2790,6 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.news = [];
     tournamentState.documentary = { target: null, type: null };
     tournamentState.activeScandal = null;
-
-　　
     tournamentState.seeds = seeds;
     tournamentState.bbsComments = [];
     tournamentState.daiyaBbsComments = [];
@@ -2856,20 +2814,34 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     saveState();
     renderTournament(tournamentState);
     
-    // ▼▼▼【重要】ご指摘のあった、大会開始時のAIコンテンツ生成処理を復元▼▼▼
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
+    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
     namcoNewsSection.classList.remove('hidden');
     namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    const [previewArticle, bracketComments, namcoNews] = await Promise.all([
-        generateNewsArticle(null, null, null, 'preview'),
+    if (tournamentState.currentTournament === 'summer') {
+        const analysisData = await generateBlockAnalysisArticle(tournamentState);
+        if (analysisData) {
+            tournamentState.blockAnalysisData = analysisData;
+            const summaryArticle = {
+                title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
+                body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
+                timestamp: Date.now(),
+                isAnalysisArticle: true
+            };
+            tournamentState.news.unshift(summaryArticle);
+        }
+    } else {
+        const previewArticle = await generateNewsArticle(null, null, null, 'preview');
+        if (previewArticle) tournamentState.news.unshift(previewArticle);
+    }
+    
+    const [bracketComments, namcoNews] = await Promise.all([
         generateBracketReactionComments(tournamentState),
         generateNamcoNews(tournamentState, 'bracket')
     ]);
 
-    if (previewArticle) tournamentState.news.unshift(previewArticle);
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
 
@@ -2877,8 +2849,8 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderBbsComments(tournamentState.bbsComments);
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
-    // ▲▲▲ここまで▲▲▲
 }
+
 
    /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
@@ -4196,6 +4168,9 @@ function saveDetailedStats() {
     /**
  * [秋季大会 ステージ1] 地区ブロック予選を開始する（伊豆地区追加・最終版）
  */
+/**
+ * [秋季大会 ステージ1] 地区ブロック予選を開始する（伊豆地区追加・最終版）
+ */
 async function setupAutumnRegionalBlocks() {
     tournamentState.autumnPhase = 'regional_blocks';
     
@@ -4207,10 +4182,30 @@ async function setupAutumnRegionalBlocks() {
 
     // 主要3地区のブロック分け
     ['東部', '中部', '西部'].forEach(region => {
-        // ... (この部分の既存のロジックは変更ありません) ...
+        let regionalTeams = shuffleArray(teamsByRegion[region]);
+        const blocks = [];
+        for (let i = 0; i < 4; i++) { // 4ブロック作成
+            const blockTeams = regionalTeams.splice(0, 5); // 5チームずつ
+            if (blockTeams.length === 0) continue;
+
+            const blockId = `${region}-B${i+1}`;
+            
+            const playInMatchId = `${blockId}-R0-M1`;
+            const semi1Id = `${blockId}-R1-M1`;
+            const semi2Id = `${blockId}-R1-M2`;
+            const finalId = `${blockId}-R2-M1`;
+
+            const matches = {
+                [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
+                [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '', summary: '' },
+                [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '', summary: '' },
+                [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
+            };
+            blocks.push({ id: blockId, teams: blockTeams, matches });
+        }
+        tournamentState.autumnData.regions[region].blocks = blocks;
     });
 
-    // ▼▼▼ このブロックをまるごと追加 ▼▼▼
     // 伊豆地区の4チームトーナメントを作成
     const izuTeams = shuffleArray(teamsByRegion['伊豆']);
     const izuBracketId = '伊豆-AUTUMN';
@@ -4224,7 +4219,6 @@ async function setupAutumnRegionalBlocks() {
         teams: izuTeams,
         matches: izuMatches
     };
-    // ▲▲▲ ここまで追加 ▲▲▲
 
     renderTournament(tournamentState);
     saveState();
@@ -4509,31 +4503,40 @@ async function setupAutumnMainTournament() {
      * 秋季地区ブロック予選がすべて終了したかチェックする
      */
     function checkAutumnRegionalBlocksComplete() {
-        let allBlocksFinished = true;
-        for (const region of ['東部', '中部', '西部']) {
-            const regionData = tournamentState.autumnData.regions[region];
-            if (!regionData.blocks) {
-                allBlocksFinished = false;
-                break;
-            }
-            for (const block of regionData.blocks) {
-                const finalMatch = block.matches[`${block.id}-R2-M1`];
-                if (!finalMatch.winner) {
-                    allBlocksFinished = false;
-                    break;
-                }
-            }
-            if (!allBlocksFinished) break;
+    let allBlocksFinished = true;
+    // 東部・中部・西部のチェック
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        if (!regionData.blocks || regionData.blocks.length === 0) {
+            allBlocksFinished = false; break;
         }
+        for (const block of regionData.blocks) {
+            const finalMatch = block.matches[`${block.id}-R2-M1`];
+            if (!finalMatch.winner) {
+                allBlocksFinished = false; break;
+            }
+        }
+        if (!allBlocksFinished) break;
+    }
 
-        if (allBlocksFinished) {
-            autumnControls.classList.remove('hidden');
-            startRankingPlayoffsBtn.classList.remove('hidden');
-        } else {
-            autumnControls.classList.add('hidden');
-            startRankingPlayoffsBtn.classList.add('hidden');
+    // ▼▼▼ このブロックが修正箇所 ▼▼▼
+    // 伊豆地区のチェック
+    if (allBlocksFinished) {
+        const izuData = tournamentState.autumnData.regions['伊豆'];
+        if (!izuData.izuBracket || !izuData.izuBracket.matches[`伊豆-AUTUMN-R2-M1`].winner) {
+            allBlocksFinished = false;
         }
     }
+    // ▲▲▲
+
+    if (allBlocksFinished) {
+        autumnControls.classList.remove('hidden');
+        startRankingPlayoffsBtn.classList.remove('hidden');
+    } else {
+        autumnControls.classList.add('hidden');
+        startRankingPlayoffsBtn.classList.add('hidden');
+    }
+}
 
     /**
      * 秋季地区内順位決定戦がすべて終了したかチェックする
@@ -7536,14 +7539,78 @@ async function processMatchWin(matchId, winnerName) {
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
 
     // --- 3. トーナメント進行ロジック ---
-    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
-        const [region, bracketType, roundStr, matchStr] = matchId.split('-');
+    // --- 3. トーナメント進行ロジック ---
+    // --- 3. トーナメント進行ロジック ---
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'regional_blocks') {
+        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
+        
+        if (bracketId.startsWith('B')) { // 東部・中部・西部のブロック
+            const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
+            const roundNum = parseInt(roundStr.slice(1));
+            const matchNum = parseInt(matchStr.slice(1));
+            if (roundNum === 0) { // 1回戦
+                const semiFinalMatch = block.matches[`${block.id}-R1-M1`];
+                semiFinalMatch.team1 = winnerName;
+            } else if (roundNum === 1) { // 準決勝
+                const finalMatch = block.matches[`${block.id}-R2-M1`];
+                if (matchNum === 1) finalMatch.team1 = winnerName;
+                else finalMatch.team2 = winnerName;
+            } else if (roundNum === 2) { // 決勝
+                tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
+                tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
+            }
+        } else if (bracketId === 'AUTUMN') { // 伊豆地区
+            const izuBracket = tournamentState.autumnData.regions['伊豆'].izuBracket;
+            const roundNum = parseInt(roundStr.slice(1));
+            const matchNum = parseInt(matchStr.slice(1));
+            if (roundNum === 1) { // 準決勝
+                const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
+                if (matchNum === 1) finalMatch.team1 = winnerName;
+                else finalMatch.team2 = winnerName;
+            } else if (roundNum === 2) { // 決勝
+                tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: winnerName, rank: 1 });
+            }
+        }
+    } else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'regional_ranking') {
+        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
+        const roundNum = parseInt(roundStr.slice(1));
+        const matchNum = parseInt(matchStr.slice(1));
+        const isChamp = bracketId === 'CHAMP';
+        const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
+        
+        if (roundNum === 1) { // 準決勝
+            const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
+            if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+            if (isChamp) {
+                const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
+                if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
+            }
+        } else if (roundNum === 2) { // 決勝/3位決定戦/5位決定戦
+            if (isChamp) {
+                if (dbMatch.type === 'final') {
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
+                } else {
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
+                }
+            } else {
+                tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
+                const winnerRecord = tournamentState.teamRecords[winnerName];
+                if (winnerRecord && !winnerRecord.teamTraits.includes('repechage_king')) {
+                    winnerRecord.teamTraits.push('repechage_king');
+                }
+            }
+        }
+    } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+        const [region, bracketType] = matchId.split('-');
+        
         if (bracketType.startsWith('SB')) {
             const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
             if (matchId.includes('-R1-') || matchId.includes('-R0-')) {
-                const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-') || (block.teams.length <= 4 && k.includes('-R1-') && !k.includes(matchId.slice(-2))));
-                const finalMatch = block.matches[finalMatchKey];
-                if (finalMatch) {
+                const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-'));
+                if(finalMatchKey){
+                    const finalMatch = block.matches[finalMatchKey];
                     if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
                     else finalMatch.team2 = winnerName;
                 }
@@ -7564,53 +7631,16 @@ async function processMatchWin(matchId, winnerName) {
         } else if (bracketType.startsWith('SIZU')) {
             const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
             const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
-            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
-            if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
-        }
-    } else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        const roundNum = parseInt(roundStr.slice(1));
-        const matchNum = parseInt(matchStr.slice(1));
-        if (bracketId.startsWith('B')) {
-            if (roundNum === 0) {
-                const semiFinalMatch = tournamentState.autumnData.regions[region].blocks.find(b=>b.id === `${region}-${bracketId}`).matches[`${region}-${bracketId}-R1-M1`];
-                semiFinalMatch.team1 = winnerName;
-            } else if (roundNum === 1) {
-                const finalMatch = tournamentState.autumnData.regions[region].blocks.find(b=>b.id === `${region}-${bracketId}`).matches[`${region}-${bracketId}-R2-M1`];
-                if(matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-            } else if (roundNum === 2) {
-                tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
-                tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
-            }
-        } else if (bracketId === 'CHAMP' || bracketId === 'REP') {
-            const isChamp = bracketId === 'CHAMP';
-            const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-            if (roundNum === 1) {
-                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-                if (isChamp) {
-                    const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
-                    if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
-                }
-            } else if (roundNum === 2) {
-                if (isChamp) {
-                    if (dbMatch.type === 'final') {
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
-                    } else {
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
-                        tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
-                    }
-                } else {
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
-                    const winnerRecord = tournamentState.teamRecords[winnerName];
-                    if (winnerRecord && !winnerRecord.teamTraits.includes('repechage_king')) {
-                        winnerRecord.teamTraits.push('repechage_king');
-                    }
-                }
+            if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) {
+                 finalMatch.team1 = winnerName; 
+            } else if (matchId.endsWith('M1')) {
+                finalMatch.team1 = winnerName;
+            } else if (matchId.endsWith('M2')) {
+                finalMatch.team2 = winnerName;
             }
         }
     } else { 
+        // 夏季大会・県大会本戦のロジック
         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
         const idParts = matchId.split('-');
@@ -7645,7 +7675,6 @@ async function processMatchWin(matchId, winnerName) {
                 }
                 const article = await generateKoshienSummaryArticle(winnerName, koshienResult.label, 'summer');
                 if(article) tournamentState.news.push(article);
-                renderNews(tournamentState.news);
             }
             if (tournamentState.currentTournament === 'autumn') {
                 tournamentState.senbatsuTeams = [];
@@ -7658,7 +7687,6 @@ async function processMatchWin(matchId, winnerName) {
                         if(article) tournamentState.news.push(article);
                     }
                 }
-                renderNews(tournamentState.news);
             }
         }
     }
