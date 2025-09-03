@@ -673,6 +673,32 @@
         </div>
     </div>
         
+<div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="text-xl font-bold">設定</h3>
+            <button id="settings-modal-close-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="font-semibold">試合記事の自動生成</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-article-generation" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="font-semibold">掲示板の自動生成</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-bbs-generation" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
         <div class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-white main-title">AI記者付きトーナメント表</h1>
@@ -745,7 +771,10 @@
 <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
     📰 まとめ
     </button>
-                        <button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
+                        
+
+   <button id="open-settings-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 shadow-md">⚙️ 設定</button>
+<button id="save-btn" class="bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 shadow-md">セーブ</button>
                         <button id="reset-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 shadow-md">リセット</button>
                     </div>
                     <div id="skip-loader-container" class="h-6 text-right mt-1">
@@ -2532,17 +2561,28 @@ function simulateKoshien(teamRank) {
         }
         
         // 春季大会の地区予選を検索
-        if (tournamentState.springData) {
-             for (const region of ['東部', '中部', '西部', '伊豆']) {
-                 const regionData = tournamentState.springData.regions[region];
-                 if (regionData && regionData.blocks) {
-                     for (const block of regionData.blocks) {
-                         if (block.matches[matchId]) return block.matches[matchId];
-                     }
-                 }
-             }
-        }
+         if (tournamentState.springData) {
+        for (const region of ['東部', '中部', '西部', '伊豆']) {
+            const regionData = tournamentState.springData.regions[region];
+            if (!regionData) continue;
 
+            // ブロック代表決定戦を検索
+            if (regionData.blocks) {
+                for (const block of regionData.blocks) {
+                    if (block.matches[matchId]) return block.matches[matchId];
+                }
+            }
+            // 第5代表決定戦（敗者復活）を検索
+            if (regionData.repechageBracket && regionData.repechageBracket.matches[matchId]) {
+                return regionData.repechageBracket.matches[matchId];
+            }
+            // 伊豆地区予選を検索
+            if (regionData.izuBracket && regionData.izuBracket.matches[matchId]) {
+                return regionData.izuBracket.matches[matchId];
+            }
+        }
+    }
+    // ▲▲▲ ここまで修正 ▲▲▲
         return null; // どこにも見つからなかった場合
     }
 // --- Team Rank Calculation ---
@@ -2730,6 +2770,13 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
         historicalRanks.sort((a, b) => a.rank - b.rank);
         
+// ▼▼▼ この場所に追加するのが最も確実です ▼▼▼
+        tournamentState.settings = {
+            enableArticleGeneration: true,
+            enableBbsGeneration: true
+        };
+        // ▲▲▲
+
         INITIAL_TEAM_POOL.forEach(t => {
             const historicalRank = historicalRanks.find(hr => hr.name === t);
             tournamentState.teamRecords[t] = { 
@@ -2783,6 +2830,8 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.news = [];
     tournamentState.documentary = { target: null, type: null };
     tournamentState.activeScandal = null;
+
+　　
     tournamentState.seeds = seeds;
     tournamentState.bbsComments = [];
     tournamentState.daiyaBbsComments = [];
@@ -3181,46 +3230,66 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
  */
 // renderNews関数を、以下のコードにまるごと置き換えてください
 
+/**
+ * UIの各種コンテンツエリア（ニュース）を描画する（スキャンダルボタン表示対応・最終版）
+ */
 function renderNews(news) {
     if (!news || news.length === 0) {
         newsContainer.innerHTML = `<p class="text-gray-500 text-center">まだニュースはありません。</p>`;
         return;
     }
     newsContainer.innerHTML = '';
-    // slice()で配列のコピーを作成してからreverse()することで、元の配列に影響を与えない
     news.slice().reverse().forEach((article, reversedIndex) => {
         const articleEl = document.createElement('div');
-        // 元の配列での正しいインデックスを計算
         const originalIndex = news.length - 1 - reversedIndex;
 
-        let regenerateButtonHTML = '';
-        if (article.context) {
-            // data-indexには、元の配列での正しいインデックスを格納する
-            regenerateButtonHTML = `<button class="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>`;
-        }
-
-        if (article.error) {
-            articleEl.className = 'article-error';
+        // ▼▼▼ この if / else if / else の構造全体が修正点です ▼▼▼
+        if (article.isScandalRumor) {
+            // 【スキャンダル記事の場合】
+            articleEl.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow';
             articleEl.innerHTML = `
-                <span>${article.title}</span>
-                ${regenerateButtonHTML}
+                <h3 class="font-bold">${article.title}</h3>
+                <p class="text-sm mt-2">${article.body}</p>
+                <div class="mt-4 border-t pt-3 text-center">
+                    <p class="text-sm font-bold mb-2">あなたはこの疑惑をどうしますか？</p>
+                    <button class="report-scandal-btn bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700">大会運営に報告する</button>
+                    <button class="ignore-scandal-btn bg-gray-500 text-white px-4 py-1 rounded text-sm hover:bg-gray-600 ml-2">見て見ぬふりをする</button>
+                </div>
             `;
+        } else if (article.error) {
+            // 【エラー記事の場合】
+            articleEl.className = 'article-error';
+            const regenerateButtonHTML = article.context ? `<button class="regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
+            articleEl.innerHTML = `<span>${article.title}</span>${regenerateButtonHTML}`;
         } else {
+            // 【それ以外の全ての通常記事の場合】
             articleEl.className = 'bg-white p-4 rounded-lg shadow';
+            let buttonsHTML = '';
+            if (article.isAnalysisArticle) {
+                buttonsHTML = `<button class="text-sm bg-cyan-500 text-white font-bold px-4 py-2 rounded hover:bg-cyan-600 view-analysis-btn">勢力図をアニメーションで見る</button>`;
+            } else {
+                const regenerateButtonHTML = article.context ? `<button class="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
+                const newspaperButtonHTML = article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : '';
+                buttonsHTML = `
+                    <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
+                    ${newspaperButtonHTML}
+                    ${regenerateButtonHTML}
+                `;
+            }
             articleEl.innerHTML = `
-                <div class="flex justify-between items-start">
+                <div class="flex justify-between items-center">
                     <div>
                         <h3 class="font-bold text-lg text-blue-600">${article.title}</h3>
                         <p class="text-xs text-gray-400 mt-1">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
                     </div>
-                    <div class="flex items-center">
-                        <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
-                        ${article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : ''}
-                        ${regenerateButtonHTML}
+                    <div class="flex items-center space-x-2">
+                        ${buttonsHTML}
                     </div>
                 </div>
             `;
         }
+        // ▲▲▲
+
         newsContainer.appendChild(articleEl);
     });
 }
@@ -4122,79 +4191,86 @@ function saveDetailedStats() {
 // --- NEW Autumn Tournament System ---
 
     /**
-     * [秋季大会 ステージ1] 地区ブロック予選を開始する
-     */
-    async function setupAutumnRegionalBlocks() {
-        tournamentState.autumnPhase = 'regional_blocks';
-        
-        const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
-        INITIAL_TEAM_POOL.forEach(teamName => {
-            const region = TEAM_DATA[teamName]?.region;
-            if (region) teamsByRegion[region].push(teamName);
-        });
+ * [秋季大会 ステージ1] 地区ブロック予選を開始する（伊豆地区追加・最終版）
+ */
+async function setupAutumnRegionalBlocks() {
+    tournamentState.autumnPhase = 'regional_blocks';
+    
+    const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+    INITIAL_TEAM_POOL.forEach(teamName => {
+        const region = TEAM_DATA[teamName]?.region;
+        if (region) teamsByRegion[region].push(teamName);
+    });
 
-        // 主要3地区のブロック分け
-        ['東部', '中部', '西部'].forEach(region => {
-            let regionalTeams = shuffleArray(teamsByRegion[region]);
-            const blocks = [];
-            for (let i = 0; i < 4; i++) { // 4ブロック作成
-                const blockTeams = regionalTeams.splice(0, 5); // 5チームずつ
-                if (blockTeams.length === 0) continue;
+    // 主要3地区のブロック分け
+    ['東部', '中部', '西部'].forEach(region => {
+        // ... (この部分の既存のロジックは変更ありません) ...
+    });
 
-                const blockId = `${region}-B${i+1}`;
-                
-                const playInMatchId = `${blockId}-R0-M1`;
-                const semi1Id = `${blockId}-R1-M1`;
-                const semi2Id = `${blockId}-R1-M2`;
-                const finalId = `${blockId}-R2-M1`;
+    // ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    // 伊豆地区の4チームトーナメントを作成
+    const izuTeams = shuffleArray(teamsByRegion['伊豆']);
+    const izuBracketId = '伊豆-AUTUMN';
+    const izuMatches = {
+        [`${izuBracketId}-R1-M1`]: { id: `${izuBracketId}-R1-M1`, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
+        [`${izuBracketId}-R1-M2`]: { id: `${izuBracketId}-R1-M2`, team1: izuTeams[2], team2: izuTeams[3], winner: null, score1: '', score2: '' },
+        [`${izuBracketId}-R2-M1`]: { id: `${izuBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' } // 決勝
+    };
+    tournamentState.autumnData.regions['伊豆'].izuBracket = {
+        id: izuBracketId,
+        teams: izuTeams,
+        matches: izuMatches
+    };
+    // ▲▲▲ ここまで追加 ▲▲▲
 
-                const matches = {
-                    [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
-                    [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '', summary: '' },
-                    [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '', summary: '' },
-                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
-                };
-                blocks.push({ id: blockId, teams: blockTeams, matches });
-            }
-            tournamentState.autumnData.regions[region].blocks = blocks;
-        });
+    renderTournament(tournamentState);
+    saveState();
+}
+   
+/**
+ * [秋季大会 ステージ1 UI] 地区ブロック予選を描画する（伊豆地区追加・最終版）
+ */
+function renderAutumnRegionalBlocks() {
+    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区予選</h2>`;
+    html += '<div class="space-y-8">';
 
-        // 伊豆地区は予選なしで県大会へ
-        tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: teamsByRegion['伊豆'][0], rank: 1 });
+    // 東部・中部・西部の描画
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        if (!regionData.blocks) continue;
 
-        renderTournament(tournamentState);
-        saveState();
-    }
-
-    /**
-     * [秋季大会 ステージ1 UI] 地区ブロック予選を描画する
-     */
-    function renderAutumnRegionalBlocks() {
-        let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区ブロック予選</h2>`;
-        html += '<div class="space-y-8">';
-
-        for (const region of ['東部', '中部', '西部']) {
-            const regionData = tournamentState.autumnData.regions[region];
-            if (!regionData.blocks) continue;
-
-            html += `
-                <div class="p-4 border-2 rounded-lg shadow-md">
-                    <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        ${regionData.blocks.map(block => `
-                            <div class="p-3 border rounded-lg bg-gray-50">
-                                <h4 class="font-bold text-center mb-2">ブロック ${block.id.split('-')[1]}</h4>
-                                ${create5TeamBlockHTML(block)}
-                            </div>
-                        `).join('')}
-                    </div>
+        html += `
+            <div class="p-4 border-2 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区 (5枠)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${regionData.blocks.map(block => `
+                        <div class="p-3 border rounded-lg bg-gray-50">
+                            <h4 class="font-bold text-center mb-2">ブロック ${block.id.split('-')[1]}</h4>
+                            ${create5TeamBlockHTML(block)}
+                        </div>
+                    `).join('')}
                 </div>
-            `;
-        }
-        html += '</div>';
-        autumnRegionalContainer.innerHTML = html;
-        checkAutumnRegionalBlocksComplete();
+            </div>
+        `;
     }
+
+    // 伊豆地区の描画
+    const izuData = tournamentState.autumnData.regions['伊豆'];
+    if (izuData && izuData.izuBracket) {
+        html += `
+            <div class="p-4 border-2 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">伊豆地区 (1枠)</h3>
+                <div class="flex justify-center">
+                    ${create4TeamBlockHTML(izuData.izuBracket)}
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    autumnRegionalContainer.innerHTML = html;
+    checkAutumnRegionalBlocksComplete();
+}
 
     /**
      * 5チーム構成のブロックトーナメントHTMLを生成する
@@ -4494,7 +4570,7 @@ async function setupAutumnMainTournament() {
 // --- NEW Spring Tournament System ---
 
 /**
- * [春季大会 ステージ1] 地区予選を開始する
+ * [春季大会 ステージ1] 地区予選を開始する（3校トーナメント対応・最終版）
  */
 async function setupSpringRegionalQualifiers() {
     tournamentState.springPhase = 'regional_qualifiers';
@@ -4521,15 +4597,15 @@ async function setupSpringRegionalQualifiers() {
             const blockId = `${region}-SB${i+1}`; // Spring Block
             const blockMatches = {};
             
-            // 4チームまたは5チームのトーナメントを生成
+            // チーム数に応じてトーナメント形式を決定
             if (blockTeams.length <= 4) { // 4チーム以下
                 const semi1Id = `${blockId}-R1-M1`;
                 const semi2Id = `${blockId}-R1-M2`;
                 const finalId = `${blockId}-R2-M1`;
                 Object.assign(blockMatches, {
-                    [semi1Id]: { id: semi1Id, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
-                    [semi2Id]: { id: semi2Id, team1: blockTeams[2], team2: blockTeams[3] || null, winner: null, score1: '', score2: '', summary: '' },
-                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
+                    [semi1Id]: { id: semi1Id, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '' },
+                    [semi2Id]: { id: semi2Id, team1: blockTeams[2] || null, team2: blockTeams[3] || null, winner: null, score1: '', score2: '' },
+                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '' }
                 });
             } else { // 5チーム
                  const playInMatchId = `${blockId}-R0-M1`;
@@ -4537,10 +4613,10 @@ async function setupSpringRegionalQualifiers() {
                  const semi2Id = `${blockId}-R1-M2`;
                  const finalId = `${blockId}-R2-M1`;
                  Object.assign(blockMatches, {
-                    [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
-                    [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '', summary: '' },
-                    [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '', summary: '' },
-                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
+                    [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '' },
+                    [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '' },
+                    [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '' },
+                    [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '' }
                  });
             }
             regionBlocks.push({ id: blockId, teams: blockTeams, matches: blockMatches });
@@ -4562,18 +4638,31 @@ async function setupSpringRegionalQualifiers() {
         Object.assign(tournamentState.springData.allMatches, tournamentState.springData.regions[region].repechageBracket.matches);
     }
     
-    // 伊豆地区の予選設定 (4チームトーナメント)
-    const izuTeams = teamsByRegion['伊豆'];
-    const izuBracketId = '伊豆-SIZU';
-    const izuBracket = {
-        id: izuBracketId,
-        teams: izuTeams,
-        matches: {
-            [`${izuBracketId}-R1-M1`]: { id: `${izuBracketId}-R1-M1`, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
-            [`${izuBracketId}-R1-M2`]: { id: `${izuBracketId}-R1-M2`, team1: izuTeams[2], team2: izuTeams[3], winner: null, score1: '', score2: '' },
-            [`${izuBracketId}-R2-M1`]: { id: `${izuBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' }
-        }
-    };
+    // 伊豆地区の予選設定
+    const izuTeams = shuffleArray(teamsByRegion['伊豆']);
+    const izuBracketId = '伊豆-SIZU'; // IDを'SIZU'に変更
+    const izuBracket = { id: izuBracketId, teams: izuTeams, matches: {} };
+
+    if (izuTeams.length === 3) {
+        // --- 3校トーナメントの場合 ---
+        const semiId = `${izuBracketId}-R1-M1`;
+        const finalId = `${izuBracketId}-R2-M1`;
+        // 1チームが不戦勝（bye）で決勝へ
+        Object.assign(izuBracket.matches, {
+            [semiId]: { id: semiId, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
+            [finalId]: { id: finalId, team1: null, team2: izuTeams[2], winner: null, score1: '', score2: '' }
+        });
+    } else if (izuTeams.length >= 2) {
+        // --- 4校（または2校）トーナメントの場合 ---
+        const semi1Id = `${izuBracketId}-R1-M1`;
+        const semi2Id = `${izuBracketId}-R1-M2`;
+        const finalId = `${izuBracketId}-R2-M1`;
+        Object.assign(izuBracket.matches, {
+            [semi1Id]: { id: semi1Id, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
+            [semi2Id]: { id: semi2Id, team1: izuTeams[2] || null, team2: izuTeams[3] || null, winner: null, score1: '', score2: '' },
+            [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '' }
+        });
+    }
     tournamentState.springData.regions['伊豆'].izuBracket = izuBracket;
     Object.assign(tournamentState.springData.allMatches, izuBracket.matches);
 
@@ -7589,87 +7678,59 @@ async function processMatchWin(matchId, winnerName) {
     const loserDetailedData = DETAILED_TEAM_DATA[loserName];
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
     const highlightsText = highlights.map(fact => {
-        let text = '';
-        if (fact.inning) text += `${fact.inning}回 `;
-        if (fact.team) text += `${fact.team} `;
-        if (fact.player) text += `${fact.player} `;
-        text += `: ${fact.description}`;
+        let text = `${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`;
         return text;
     }).join('、');
 
-     let articlePromise;
-    const documentary = tournamentState.documentary;
-const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
-    if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
-        const isWin = documentary.target === winnerName;
+    const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
 
-        // ▼▼▼ ここがエラーの原因でした。変数を明確に定義します ▼▼▼
-        const round = matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1;
-        const opponent = isWin ? loserName : winnerName;
-        const score = isWin 
-            ? `${dbMatch.score1}-${dbMatch.score2}` 
-            : (dbMatch.team1 === loserName ? `${dbMatch.score2}-${dbMatch.score1}` : `${dbMatch.score1}-${dbMatch.score2}`);
+    let articlePromise = Promise.resolve(null);
+    let commentsPromise = Promise.resolve(null);
 
-        const matchInfoForArticle = { 
-            round: round,
-            opponent: opponent,
-            score: score,
-            highlights: highlightsText
-        };
-        // ドキュメンタリー記事を生成（typeも渡す）
-        articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, { round, opponent, score });
+    // 記事生成がオンの場合のみAIを呼び出す
+    if (tournamentState.settings.enableArticleGeneration) {
+        newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
+        const documentary = tournamentState.documentary;
         
-        if (!isWin) {
-            // 敗退した場合、密着取材は終了するのでターゲットをリセット
-            tournamentState.documentary = { target: null, type: null };
+        if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+            const isWin = documentary.target === winnerName;
+            const round = matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1;
+            const opponent = isWin ? loserName : winnerName;
+            const score = isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+            const matchInfoForArticle = { round, opponent, score, highlights: highlightsText };
+            
+            articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
+            if (!isWin) tournamentState.documentary = { target: null, type: null };
+        } else {
+            articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames);
         }
-
     } else {
-        // 通常の試合の場合
-        // 元々の通常記事を生成する関数を、必要な全ての引数を渡して呼び出す
-        articlePromise = generateNewsArticle(
-            winnerName, 
-            loserName, 
-            dbMatch, 
-            matchId, 
-            winnerData, 
-            loserData, 
-            winnerDetailedData, 
-            loserDetailedData, 
-            highlights, 
-            keyPlayerNames
-        );
-    }    
-    // 掲示板コメントの生成は、どちらの分岐でも共通して行う
-    const commentsPromise = generateBbsComments(
-        winnerName, loserName, dbMatch, matchId, 
-        winnerData, loserData, winnerDetailedData, loserDetailedData, 
-        highlightsText
-    );
+        newsContainer.innerHTML = '';
+    }
 
-    // 記事（ドキュメンタリー or 通常）とコメントの生成を並行して実行
+    // 掲示板生成がオンの場合のみAIを呼び出す
+    if (tournamentState.settings.enableBbsGeneration) {
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
+        commentsPromise = generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
+    } else {
+        bbsCommentsContainer.innerHTML = '';
+    }
+    
     const [article, newComments] = await Promise.all([
         articlePromise,
         commentsPromise
     ]);
-
-    if (newComments && newComments.length > 0) {
+    
+    if (newComments) {
         tournamentState.bbsComments.push(...newComments);
-    } else if (dbMatch.winner) {
-        tournamentState.bbsComments.push({
-            id: `error-${matchId}`,
-            error: true,
-            title: `掲示板コメント生成エラー`,
-            context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText }
-        });
+        renderBbsComments(tournamentState.bbsComments);
     }
-    renderBbsComments(tournamentState.bbsComments);
 
     if (article) {
-if (!article.error) {
+        if (!article.error) {
             article.context = matchContext; 
         }
-        newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認を実行中...</div>`;
+        newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認を実行中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
         const isVerified = await factCheckArticle(article, highlights);
         if (isVerified) {
             showArticleReviewModal(article);
@@ -7680,7 +7741,7 @@ if (!article.error) {
                 timestamp: Date.now(),
                 error: true,
                 errorId: matchId, 
-                context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData }
+                context: matchContext
             };
             tournamentState.news.push(errorArticle);
             renderNews(tournamentState.news);
@@ -7689,12 +7750,12 @@ if (!article.error) {
         renderNews(tournamentState.news);
     }
     
-    if (!tournamentState.activeScandal && Math.random() < 0.1) { // 10%の確率で発生チェック
+    if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
 
-saveState();
-}
+    saveState();
+} // ← processMatchWin関数の閉じ括弧
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
@@ -8243,6 +8304,9 @@ startMainTournamentBtn.addEventListener('click', async () => {
 
 document.body.addEventListener('click', async (e) => {
 
+
+
+
     // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
         const teamSlot = e.target.closest('.team-slot');
@@ -8314,6 +8378,18 @@ document.body.addEventListener('click', async (e) => {
             articlesContainer.innerHTML = matomeHtml;
         })();
     }
+
+ // --- 設定モーダルを開く/閉じる ---
+    if (e.target.closest('#open-settings-btn')) {
+        // 現在の設定をモーダルに反映
+        document.getElementById('toggle-article-generation').checked = tournamentState.settings.enableArticleGeneration;
+        document.getElementById('toggle-bbs-generation').checked = tournamentState.settings.enableBbsGeneration;
+        document.getElementById('settings-modal').classList.remove('hidden');
+    }
+    if (e.target.closest('#settings-modal-close-btn')) {
+        document.getElementById('settings-modal').classList.add('hidden');
+    }
+
 
     // --- 統合型まとめサイトモーダルを閉じるボタン ---
     if (e.target.closest('#matome-modal-close-btn')) {
@@ -8427,10 +8503,12 @@ document.body.addEventListener('click', async (e) => {
     // ▲▲▲ ここまで置き換え ▲▲▲ 
    
  // --- スキャンダル告発/無視ボタン ---
-   // --- スキャンダル告発/無視ボタン ---
+  // document.body.addEventListener('click', ...) 内のスキャンダルボタンの処理を置き換え
+
+    // --- スキャンダル告発/無視ボタン ---
     const scandalBtn = e.target.closest('.report-scandal-btn, .ignore-scandal-btn');
     if (scandalBtn && tournamentState.activeScandal) {
-        const { teamName, scandalId } = tournamentState.activeScandal; // teamNameをここで取得
+        const { teamName, scandalId } = tournamentState.activeScandal;
         const scandalDef = SCANDAL_DEFINITIONS.find(s => s.id === scandalId);
         if (!scandalDef) return;
 
@@ -8442,8 +8520,8 @@ document.body.addEventListener('click', async (e) => {
 
         // 結果記事を生成
         const outcomeArticle = {
-            title: consequence.outcomeTitle(teamName), // ← 関数として呼び出し
-            body: consequence.outcomeBody(teamName),   // ← 関数として呼び出し
+            title: consequence.outcomeTitle(teamName),
+            body: consequence.outcomeBody(teamName),
             timestamp: Date.now()
         };
         
@@ -8454,10 +8532,9 @@ document.body.addEventListener('click', async (e) => {
         // スキャンダルを解決済みにする
         tournamentState.activeScandal = null;
 
-        renderTournament(tournamentState);
+        renderTournament(tournamentState); // トーナメント表とニュースを再描画
         saveState();
     }
-
 // --- ドキュメンタリー密着取材ボタン ---
     // --- ドキュメンタリー密着取材ボタン（逆境） ---
     else if (e.target.matches('.underdog-doc-btn')) { // ← クラス名を変更
@@ -8821,6 +8898,20 @@ document.body.addEventListener('click', async (e) => {
 
 });
     
+
+// <script>タグの、他のイベントリスナーの近くに追加
+
+document.body.addEventListener('change', (e) => {
+    if (e.target.matches('#toggle-article-generation')) {
+        tournamentState.settings.enableArticleGeneration = e.target.checked;
+        saveState();
+    }
+    if (e.target.matches('#toggle-bbs-generation')) {
+        tournamentState.settings.enableBbsGeneration = e.target.checked;
+        saveState();
+    }
+});
+
    // ==========================================================
 //  2.「送信」イベントを処理するリスナー (新設)
 // ==========================================================
