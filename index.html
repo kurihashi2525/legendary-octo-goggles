@@ -2662,29 +2662,39 @@ function simulateKoshien(teamRank) {
 /**
  * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
  */
+/**
+ * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
+ */
 async function playBlockAnimation(blockId) {
     // タブのアクティブ表示を更新
     document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
-        btn.classList.toggle('bg-cyan-500', btn.dataset.block === blockId);
-        btn.classList.toggle('text-white', btn.dataset.block === blockId);
-        btn.classList.toggle('bg-gray-700', btn.dataset.block !== blockId);
-        btn.classList.toggle('text-gray-400', btn.dataset.block !== blockId);
+        const isActive = btn.dataset.block === blockId;
+        btn.classList.toggle('bg-cyan-500', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('bg-gray-700', !isActive);
+        btn.classList.toggle('text-gray-400', !isActive);
     });
 
     const stage = document.getElementById('analysis-stage');
     const narrationTextEl = document.getElementById('analysis-narration-text');
     const analysisData = tournamentState.blockAnalysisData;
+
+    if (!analysisData || !analysisData[blockId]) {
+        stage.innerHTML = `<p class="text-center text-gray-500">分析データを読み込めませんでした。</p>`;
+        narrationTextEl.textContent = '';
+        return;
+    }
     const narration = analysisData[blockId];
+    
+    // ... (以降のコードは変更ありません) ...
     const blockTeams = tournamentState.teams.slice(
         (blockId.charCodeAt(0) - 65) * 16, 
         (blockId.charCodeAt(0) - 64) * 16
     );
 
-    // いったんクリア
     stage.innerHTML = '';
     narrationTextEl.textContent = '';
     
-    // ラウンドごとのカラムを作成
     stage.innerHTML = `
         <div id="r1-col" class="round-column"></div>
         <div id="r2-col" class="round-column"></div>
@@ -2692,7 +2702,6 @@ async function playBlockAnimation(blockId) {
         <div id="r4-col" class="round-column"></div>
     `;
 
-    // 1回戦のチームを配置
     for(let i = 0; i < 8; i++) {
         const matchupEl = document.createElement('div');
         matchupEl.className = 'analysis-matchup';
@@ -2704,24 +2713,20 @@ async function playBlockAnimation(blockId) {
         stage.querySelector('#r1-col').appendChild(matchupEl);
     }
     
-    // 2回戦以降のプレースホルダーを配置
     for(let i = 0; i < 4; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
     for(let i = 0; i < 2; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
     stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
 
-    // アニメーション開始
     await new Promise(r => setTimeout(r, 100));
     document.querySelectorAll('.analysis-team').forEach((el, i) => {
         setTimeout(() => el.classList.add('show'), i * 50);
     });
 
-    // ナレーションをタイプライター風に表示
     for (let i = 0; i < narration.length; i++) {
         narrationTextEl.textContent += narration[i];
         await new Promise(r => setTimeout(r, 50));
     }
     
-    // ナレーション内のチーム名をハイライト
     blockTeams.forEach(team => {
         if (narration.includes(team)) {
             document.querySelectorAll(`.analysis-team[data-team-name="${team}"]`).forEach(el => {
@@ -2730,8 +2735,6 @@ async function playBlockAnimation(blockId) {
         }
     });
 }
-// ▲▲▲ ここまで ▲▲▲
-
 // ▼▼▼ この関数をまるごと追加してください ▼▼▼
 /**
  * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる（データ分析強化版）
@@ -8520,14 +8523,24 @@ document.body.addEventListener('click', async (e) => {
         await processMatchWin(matchId, winnerName);
     }
 
-// --- 勢力図分析を見るボタン ---
+// --- 「勢力図をアニメーションで見る」ボタン（モーダルを開く） ---
     else if (e.target.matches('.view-analysis-btn')) {
         document.getElementById('analysis-modal').classList.remove('hidden');
         currentBlock = 'A'; // 初期表示はAブロック
         playBlockAnimation(currentBlock);
     }
-    // ▲▲▲
-
+    // --- 【新しく追加】勢力図モーダル内のタブボタン ---
+    else if (e.target.matches('.analysis-block-tab-btn')) {
+        const blockId = e.target.dataset.block;
+        if (blockId && blockId !== currentBlock) {
+            currentBlock = blockId;
+            playBlockAnimation(currentBlock);
+        }
+    }
+    // --- 勢力図モーダルを閉じるボタン ---
+    else if (e.target.matches('#analysis-modal-close-btn')) {
+        document.getElementById('analysis-modal').classList.add('hidden');
+    }
     // --- 試合詳細入力ボタン ---
     else if (e.target.matches('.details-btn')) {
         openDetailsModal(e.target.dataset.matchId);
