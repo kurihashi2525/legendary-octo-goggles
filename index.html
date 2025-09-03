@@ -12,6 +12,75 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* ▼▼▼ 勢力図分析アニメーション用のCSS（レイアウト修正版）▼▼▼ */
+#analysis-stage {
+    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 2rem; /* 内側に余白を追加 */
+}
+.round-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: 100%;
+}
+.analysis-matchup {
+    margin: 10px 0;
+    position: relative;
+}
+.analysis-team {
+    padding: 4px 10px;
+    background-color: rgba(0, 183, 255, 0.2);
+    border: 1px solid rgba(0, 183, 255, 0.7);
+    color: #e0f2fe;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin: 4px 0;
+    transition: all 0.5s ease-in-out;
+    opacity: 0;
+    width: 150px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* ▼▼▼ 以下の2行を削除、またはコメントアウト ▼▼▼ */
+    /* position: absolute; */
+    /* ▲▲▲ */
+}
+.analysis-team.show {
+    opacity: 1;
+}
+.analysis-team.highlight {
+    background-color: rgba(255, 204, 0, 0.4);
+    border-color: rgba(255, 204, 0, 1);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
+}
+
+/* 勝ち上がり線のスタイル */
+.matchup-connector {
+    position: absolute;
+    top: 50%;
+    right: -20px;
+    width: 20px;
+    height: 2px;
+    background-color: rgba(0, 183, 255, 0.5);
+}
+.round-connector {
+    position: absolute;
+    top: 25%;
+    right: -30px;
+    width: 2px;
+    height: 50%;
+    background-color: rgba(0, 183, 255, 0.5);
+}
+/* ▲▲▲ ここまで ▲▲▲ */
+
 /* まとめサイトのロゴスタイル */
 .matome-site-logo-container {
     position: relative;
