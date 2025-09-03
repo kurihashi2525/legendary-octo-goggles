@@ -3231,7 +3231,8 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
 // renderNews関数を、以下のコードにまるごと置き換えてください
 
 /**
- * UIの各種コンテンツエリア（ニュース）を描画する（スキャンダルボタン表示対応・最終版）
+ * UIの各種コンテンツエリア（ニュース）を描画する（全機能対応・最終版）
+ * @param {Array} news - 表示するニュース記事の配列
  */
 function renderNews(news) {
     if (!news || news.length === 0) {
@@ -3239,11 +3240,11 @@ function renderNews(news) {
         return;
     }
     newsContainer.innerHTML = '';
+    
     news.slice().reverse().forEach((article, reversedIndex) => {
         const articleEl = document.createElement('div');
         const originalIndex = news.length - 1 - reversedIndex;
 
-        // ▼▼▼ この if / else if / else の構造全体が修正点です ▼▼▼
         if (article.isScandalRumor) {
             // 【スキャンダル記事の場合】
             articleEl.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow';
@@ -3262,20 +3263,25 @@ function renderNews(news) {
             const regenerateButtonHTML = article.context ? `<button class="regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
             articleEl.innerHTML = `<span>${article.title}</span>${regenerateButtonHTML}`;
         } else {
-            // 【それ以外の全ての通常記事の場合】
+            // 【それ以外の全ての通常記事・特殊記事の場合】
             articleEl.className = 'bg-white p-4 rounded-lg shadow';
             let buttonsHTML = '';
+
             if (article.isAnalysisArticle) {
+                // 【勢力図分析記事の場合】
                 buttonsHTML = `<button class="text-sm bg-cyan-500 text-white font-bold px-4 py-2 rounded hover:bg-cyan-600 view-analysis-btn">勢力図をアニメーションで見る</button>`;
             } else {
+                // 【その他の記事の場合】
                 const regenerateButtonHTML = article.context ? `<button class="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
                 const newspaperButtonHTML = article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : '';
+                
                 buttonsHTML = `
                     <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
                     ${newspaperButtonHTML}
                     ${regenerateButtonHTML}
                 `;
             }
+
             articleEl.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
@@ -3288,12 +3294,9 @@ function renderNews(news) {
                 </div>
             `;
         }
-        // ▲▲▲
-
         newsContainer.appendChild(articleEl);
     });
 }
-
     function renderBbsComments(comments) {
     if (!comments || comments.length === 0) {
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
