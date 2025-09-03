@@ -1067,6 +1067,27 @@
     </div>
 </div>
 
+<div id="analysis-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden flex flex-col items-center justify-center z-[250] p-4 font-sans">
+    <div class="w-full max-w-6xl h-full flex flex-col">
+        <div class="flex-shrink-0 flex justify-between items-center mb-4">
+            <div id="analysis-block-tabs" class="flex space-x-1 p-1 bg-gray-800 rounded-lg">
+                <button class="analysis-block-tab-btn px-4 py-2 rounded-md text-sm font-bold transition-colors" data-block="A">Aブロック</button>
+                <button class="analysis-block-tab-btn px-4 py-2 rounded-md text-sm font-bold transition-colors" data-block="B">Bブロック</button>
+                <button class="analysis-block-tab-btn px-4 py-2 rounded-md text-sm font-bold transition-colors" data-block="C">Cブロック</button>
+                <button class="analysis-block-tab-btn px-4 py-2 rounded-md text-sm font-bold transition-colors" data-block="D">Dブロック</button>
+            </div>
+            <button id="analysis-modal-close-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+        </div>
+        
+        <div id="analysis-stage" class="flex-grow bg-gray-900 rounded-lg relative overflow-hidden">
+            </div>
+
+        <div id="analysis-narration-box" class="flex-shrink-0 h-28 mt-4 bg-gray-800 border-t-2 border-cyan-500 rounded-b-lg p-4 overflow-y-auto">
+            <p id="analysis-narration-text" class="text-white text-lg leading-relaxed whitespace-pre-wrap"></p>
+        </div>
+    </div>
+</div>
+
 <div id="interview-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-[300]">
     <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 m-4 animate-fade-in-up">
         <h3 class="text-2xl font-bold text-gray-900 mb-4 border-b pb-2">抽選会後 主将インタビュー</h3>
@@ -3269,18 +3290,9 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
     return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">${content}${footer}</div>`;
 }
 
-    /**
-     * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
-     */
-   /**
- * UIの各種コンテンツエリア（ニュース、掲示板など）を描画する関数群
- * （再生成ボタンを常時表示するように修正）
- */
-// renderNews関数を、以下のコードにまるごと置き換えてください
-
+    
 /**
  * UIの各種コンテンツエリア（ニュース）を描画する（全機能対応・最終版）
- * @param {Array} news - 表示するニュース記事の配列
  */
 function renderNews(news) {
     if (!news || news.length === 0) {
@@ -3294,7 +3306,6 @@ function renderNews(news) {
         const originalIndex = news.length - 1 - reversedIndex;
 
         if (article.isScandalRumor) {
-            // 【スキャンダル記事の場合】
             articleEl.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow';
             articleEl.innerHTML = `
                 <h3 class="font-bold">${article.title}</h3>
@@ -3306,23 +3317,18 @@ function renderNews(news) {
                 </div>
             `;
         } else if (article.error) {
-            // 【エラー記事の場合】
             articleEl.className = 'article-error';
             const regenerateButtonHTML = article.context ? `<button class="regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
             articleEl.innerHTML = `<span>${article.title}</span>${regenerateButtonHTML}`;
         } else {
-            // 【それ以外の全ての通常記事・特殊記事の場合】
             articleEl.className = 'bg-white p-4 rounded-lg shadow';
             let buttonsHTML = '';
 
             if (article.isAnalysisArticle) {
-                // 【勢力図分析記事の場合】
                 buttonsHTML = `<button class="text-sm bg-cyan-500 text-white font-bold px-4 py-2 rounded hover:bg-cyan-600 view-analysis-btn">勢力図をアニメーションで見る</button>`;
             } else {
-                // 【その他の記事の場合】
                 const regenerateButtonHTML = article.context ? `<button class="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded hover:bg-yellow-200 ml-2 regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
                 const newspaperButtonHTML = article.isNewspaper ? `<button class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 ml-2 newspaper-view-btn" data-index="${originalIndex}">新聞を読む</button>` : '';
-                
                 buttonsHTML = `
                     <button class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 news-article-btn" data-index="${originalIndex}">本文</button>
                     ${newspaperButtonHTML}
@@ -3345,7 +3351,9 @@ function renderNews(news) {
         newsContainer.appendChild(articleEl);
     });
 }
-    function renderBbsComments(comments) {
+    
+
+function renderBbsComments(comments) {
     if (!comments || comments.length === 0) {
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
         return;
@@ -8441,6 +8449,14 @@ document.body.addEventListener('click', async (e) => {
 
         await processMatchWin(matchId, winnerName);
     }
+
+// --- 勢力図分析を見るボタン ---
+    else if (e.target.matches('.view-analysis-btn')) {
+        document.getElementById('analysis-modal').classList.remove('hidden');
+        currentBlock = 'A'; // 初期表示はAブロック
+        playBlockAnimation(currentBlock);
+    }
+    // ▲▲▲
 
     // --- 試合詳細入力ボタン ---
     else if (e.target.matches('.details-btn')) {
