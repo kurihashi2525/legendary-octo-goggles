@@ -9724,36 +9724,40 @@ document.body.addEventListener('click', async (e) => {
 
     // ▼▼▼ 既存の「.retry-btn」の else if ブロックを、以下の内容にまるごと置き換える ▼▼▼
     // --- AI記事の再生成ボタン（エラー記事・成功記事の両方に対応） ---
+    // --- AI記事の再生成ボタン（成功した記事用） ---
     const regenerateBtn = e.target.closest('.regenerate-btn');
     if (regenerateBtn) {
         const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
         const originalArticle = tournamentState.news[articleIndex];
-
         if (!originalArticle || !originalArticle.context) {
             alert("この記事は再生成できません。");
             return;
         }
-
-        // 再生成する記事の情報を一時的に保存
-        articleForRegeneration = {
-            index: articleIndex,
-            article: originalArticle
-        };
-
-        // フィードバックモーダルを開く
+        articleForRegeneration = { index: articleIndex, article: originalArticle };
         document.getElementById('feedback-include').value = '';
         document.getElementById('feedback-exclude').value = '';
         document.getElementById('feedback-modal').classList.remove('hidden');
     }
-    // ▲▲▲ ここまでが置き換え部分 ▲▲▲
+    
+    // --- AI記事の再生成ボタン（エラー記事用） ---
+    const retryBtn = e.target.closest('.retry-btn');
+    if (retryBtn) {
+        const articleIndex = parseInt(retryBtn.dataset.index, 10);
+        const originalArticle = tournamentState.news[articleIndex];
+        if (!originalArticle || !originalArticle.context) {
+            alert("この記事は再生成できません。");
+            return;
+        }
+        articleForRegeneration = { index: articleIndex, article: originalArticle };
+        document.getElementById('feedback-include').value = '';
+        document.getElementById('feedback-exclude').value = '';
+        document.getElementById('feedback-modal').classList.remove('hidden');
+    }
 
-
-    // ▼▼▼ このブロックを新たに追加 ▼▼▼
     // --- フィードバックモーダルの「この指示で再生成」ボタン ---
     const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
     if (feedbackSubmitBtn) {
         if (!articleForRegeneration) return;
-
         const { index, article } = articleForRegeneration;
         const context = article.context;
         
@@ -9765,13 +9769,13 @@ document.body.addEventListener('click', async (e) => {
             exclude: document.getElementById('feedback-exclude').value
         };
 
-        // 即座にモーダルを閉じ、裏で処理を開始
         document.getElementById('feedback-modal').classList.add('hidden');
         articleForRegeneration = null;
         
+        tournamentState.news.splice(index, 1);
+        renderNews(tournamentState.news);
         newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
-
-        // 非同期で再生成処理を実行
+        
         (async () => {
             const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = context;
             const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
@@ -9779,38 +9783,41 @@ document.body.addEventListener('click', async (e) => {
             let articlePromise;
             const documentary = tournamentState.documentary;
 
-            if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+            if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
                 const isWin = documentary.target === winnerName;
                 const matchInfo = { 
-                    round: matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1,
+                    round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
                     opponent: isWin ? loserName : winnerName,
-                    score: `${dbMatch.score1}-${dbMatch.score2}`,
+                    score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
                     highlights: highlights.map(h => h.description).join('、')
                 };
                 articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfo, userFeedback);
             } else {
-                articlePromise = generateNewsArticle(
-                    winnerName, loserName, dbMatch, matchId,
-                    winnerData, loserData, winnerDetailedData, loserDetailedData,
-                    highlights, keyPlayerNames, userFeedback
-                );
+                articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames, userFeedback);
             }
             
             const newArticle = await articlePromise;
-
-            tournamentState.news.splice(index, 1);
+            
+            const createErrorArticle = () => ({
+                title: "記事生成エラー",
+                body: "記事の再生成に失敗しました。元の試合データとの矛盾が含まれている可能性があります。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: matchId, 
+                context: context
+            });
 
             if (newArticle && !newArticle.error) {
                 newArticle.context = context;
                 const isVerified = await factCheckArticle(newArticle, highlights);
                 if (isVerified) {
-tournamentState.news.splice(index, 0, newArticle);
+                    tournamentState.news.splice(index, 0, newArticle);
                     showArticleReviewModal(newArticle);
                 } else {
-                    // エラー処理
+                    tournamentState.news.splice(index, 0, createErrorArticle());
                 }
             } else {
-                // エラー処理
+                tournamentState.news.splice(index, 0, createErrorArticle());
             }
             
             saveState();
