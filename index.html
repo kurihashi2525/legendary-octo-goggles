@@ -8418,6 +8418,9 @@ ${factListText}
 /**
  * 試合の勝者を処理する中心的関数（全てのロジックを統合した最終完成版）
  */
+/**
+ * 試合の勝者を処理する中心的関数（全機能統合・実行順序修正の最終版）
+ */
 async function processMatchWin(matchId, winnerName) {
     // --- 1. 試合データの特定と基本情報の設定 ---
     let dbMatch = findMatchById(matchId);
@@ -8437,32 +8440,25 @@ async function processMatchWin(matchId, winnerName) {
         dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
     }
 
+    // --- 2. 試合後のデータ更新（ティッカー、称号、スタメン記録など） ---
     const newHeadline = generateTickerHeadline({ winnerName, loserName, score1: dbMatch.score1, score2: dbMatch.score2 });
     if (newHeadline) {
         tournamentState.tickerHeadlines.unshift(newHeadline);
-        if (tournamentState.tickerHeadlines.length > 20) {
-            tournamentState.tickerHeadlines.pop();
-        }
+        if (tournamentState.tickerHeadlines.length > 20) tournamentState.tickerHeadlines.pop();
         updateTicker();
     }
     
-    // ▼▼▼【重要修正】スタメン情報の記録を、AI呼び出しの「前」に移動しました▼▼▼
     if (dbMatch.details && dbMatch.details.batting) {
         const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
-            tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey]
-                .filter(p => p.order && !p.order.toString().includes('sub'))
-                .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+            tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
         }
         const loserTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[loserName] && dbMatch.details.batting[loserTeamKey]) {
-            tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey]
-                .filter(p => p.order && !p.order.toString().includes('sub'))
-                .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+            tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
         }
     }
-    // ▲▲▲ここまで▲▲▲
-
+    
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
     const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
@@ -8473,48 +8469,66 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
 
-    // --- 2. チームデータの存在チェック（安全装置）---
+    // --- 3. AIコンテンツ生成の準備と実行 ---
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
-    if (!winnerData || !loserData) {
-        console.error(`チームデータが見つかりません。勝者: ${winnerName}, 敗者: ${loserName}`);
-        showAlert(`チームデータが見つかりませんでした。TEAM_DATA内のチーム名と、入力したチーム名（${winnerName}, ${loserName}）が完全に一致しているか確認してください。`);
-        return;
+    if (!winnerData || !loserData) { return; }
+
+    const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
+    const loserDetailedData = DETAILED_TEAM_DATA[loserName];
+    const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+    const highlightsText = highlights.map(fact => `${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('、');
+    const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
+
+    let articlePromise = Promise.resolve(null);
+    let commentsPromise = Promise.resolve(null);
+
+    if (tournamentState.settings.enableArticleGeneration) {
+        newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
+        const documentary = tournamentState.documentary;
+        
+        if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+            const isWin = documentary.target === winnerName;
+            const round = matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1;
+            const opponent = isWin ? loserName : winnerName;
+            const score = isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+            const matchInfoForArticle = { round, opponent, score, highlights: highlightsText };
+            
+            articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
+            if (!isWin) tournamentState.documentary = { target: null, type: null };
+        } else {
+            articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames);
+        }
     }
 
-    newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
-
-    // --- 3. トーナメント進行ロジック ---
-    // --- 3. トーナメント進行ロジック ---
-    // --- 3. トーナメント進行ロジック ---
-    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'regional_blocks') {
+    if (tournamentState.settings.enableBbsGeneration) {
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+        commentsPromise = generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
+    }
+    
+    // --- 4. トーナメント進行ロジック ---
+    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
         const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        
-        if (bracketId.startsWith('B')) { // 東部・中部・西部のブロック
+        if (bracketId.startsWith('B')) {
             const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
             const roundNum = parseInt(roundStr.slice(1));
             const matchNum = parseInt(matchStr.slice(1));
-            if (roundNum === 0) { // 1回戦
-                const semiFinalMatch = block.matches[`${block.id}-R1-M1`];
-                semiFinalMatch.team1 = winnerName;
-            } else if (roundNum === 1) { // 準決勝
+            if (roundNum === 0) block.matches[`${block.id}-R1-M1`].team1 = winnerName;
+            else if (roundNum === 1) {
                 const finalMatch = block.matches[`${block.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName;
-                else finalMatch.team2 = winnerName;
-            } else if (roundNum === 2) { // 決勝
+                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+            } else if (roundNum === 2) {
                 tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
                 tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
             }
-        } else if (bracketId === 'AUTUMN') { // 伊豆地区
+        } else if (bracketId === 'AUTUMN') {
             const izuBracket = tournamentState.autumnData.regions['伊豆'].izuBracket;
             const roundNum = parseInt(roundStr.slice(1));
             const matchNum = parseInt(matchStr.slice(1));
-            if (roundNum === 1) { // 準決勝
+            if (roundNum === 1) {
                 const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName;
-                else finalMatch.team2 = winnerName;
-            } else if (roundNum === 2) { // 決勝
+                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+            } else if (roundNum === 2) {
                 tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: winnerName, rank: 1 });
             }
         }
@@ -8524,62 +8538,50 @@ async function processMatchWin(matchId, winnerName) {
         const matchNum = parseInt(matchStr.slice(1));
         const isChamp = bracketId === 'CHAMP';
         const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-        
-        if (roundNum === 1) { // 準決勝
+        if (roundNum === 1) {
             const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
             if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
             if (isChamp) {
                 const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
                 if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
             }
-        } else if (roundNum === 2) { // 決勝/3位決定戦/5位決定戦
+        } else if (roundNum === 2) {
             if (isChamp) {
                 if (dbMatch.type === 'final') {
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 });
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 2 });
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 }, { team: loserName, rank: 2 });
                 } else {
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 });
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: loserName, rank: 4 });
+                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 }, { team: loserName, rank: 4 });
                 }
             } else {
                 tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
-                const winnerRecord = tournamentState.teamRecords[winnerName];
-                if (winnerRecord && !winnerRecord.teamTraits.includes('repechage_king')) {
-                    winnerRecord.teamTraits.push('repechage_king');
-                }
             }
         }
     } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
         const [region, bracketType] = matchId.split('-');
-        
         if (bracketType.startsWith('SB')) {
             const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
             if (matchId.includes('-R1-') || matchId.includes('-R0-')) {
                 const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-'));
-                if(finalMatchKey){
+                if (finalMatchKey) {
                     const finalMatch = block.matches[finalMatchKey];
-                    if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
-                    else finalMatch.team2 = winnerName;
+                    if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
                 }
             } else {
                 const repBracket = tournamentState.springData.regions[region].repechageBracket;
-                const repTeams = repBracket.teams;
-                repTeams.push(loserName);
-                if (repTeams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
-                if (repTeams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
-                if (repTeams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
-                if (repTeams.length === 4) repBracket.matches[`${repBracket.id}-R1-M2`].team2 = loserName;
+                repBracket.teams.push(loserName);
+                if (repBracket.teams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
+                if (repBracket.teams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
+                if (repBracket.teams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
+                if (repBracket.teams.length === 4) repBracket.matches[`${repBracket.id}-R1-M2`].team2 = loserName;
             }
         } else if (bracketType.startsWith('SREP')) {
-            const repBracket = tournamentState.springData.regions[region].repechageBracket;
-            const finalMatch = repBracket.matches[`${repBracket.id}-R2-M1`];
-            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
-            if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
+            const finalMatch = tournamentState.springData.regions[region].repechageBracket.matches[`${region}-SREP-R2-M1`];
+            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
         } else if (bracketType.startsWith('SIZU')) {
             const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
             const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
             if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) {
-                 finalMatch.team1 = winnerName; 
+                finalMatch.team1 = winnerName;
             } else if (matchId.endsWith('M1')) {
                 finalMatch.team1 = winnerName;
             } else if (matchId.endsWith('M2')) {
@@ -8587,14 +8589,12 @@ async function processMatchWin(matchId, winnerName) {
             }
         }
     } else { 
-        // 夏季大会・県大会本戦のロジック
         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
         const idParts = matchId.split('-');
         const side = idParts[0];
         if (side !== 'F') {
-            const roundStrMain = idParts[1];
-            const roundNum = parseInt(roundStrMain.slice(1));
+            const roundNum = parseInt(idParts[1].slice(1));
             const numTeamsInTournament = tournamentState.teams.length;
             const finalRound = Math.log2(numTeamsInTournament);
             if (roundNum < finalRound) {
@@ -8627,7 +8627,6 @@ async function processMatchWin(matchId, winnerName) {
                 tournamentState.senbatsuTeams = [];
                 const finalists = [winnerName, loserName];
                 for (const teamName of finalists) {
-                    const teamRank = calculateRank(teamName, tournamentState);
                     if (Math.random() < 0.70) { 
                         tournamentState.senbatsuTeams.push(teamName);
                         const article = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai');
@@ -8637,78 +8636,17 @@ async function processMatchWin(matchId, winnerName) {
             }
         }
     }
-
-    renderTournament(tournamentState);
-
-    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
-        const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
-        if (round1Matches.length === 8 && round1Matches.every(m => m.winner)) {
-            const confirmed = await showConfirm("1回戦がすべて終了しました。シード校が登場する2回戦に進みますか？");
-            if (confirmed) {
-                await setupSpringMainTournament_Round2();
-                return; 
-            }
-        }
-    }
-
-    // --- 4. AIコンテンツ生成と結果処理 ---
-    const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
-    const loserDetailedData = DETAILED_TEAM_DATA[loserName];
-    const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-    const highlightsText = highlights.map(fact => {
-        let text = `${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`;
-        return text;
-    }).join('、');
-
-    const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
-
-    let articlePromise = Promise.resolve(null);
-    let commentsPromise = Promise.resolve(null);
-
-    // 記事生成がオンの場合のみAIを呼び出す
-    if (tournamentState.settings.enableArticleGeneration) {
-        newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
-        const documentary = tournamentState.documentary;
-        
-        if (documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
-            const isWin = documentary.target === winnerName;
-            const round = matchId.includes('-R') ? parseInt(matchId.split('-')[1].slice(1)) : 1;
-            const opponent = isWin ? loserName : winnerName;
-            const score = isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
-            const matchInfoForArticle = { round, opponent, score, highlights: highlightsText };
-            
-            articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
-            if (!isWin) tournamentState.documentary = { target: null, type: null };
-        } else {
-            articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames);
-        }
-    } else {
-        newsContainer.innerHTML = '';
-    }
-
-    // 掲示板生成がオンの場合のみAIを呼び出す
-    if (tournamentState.settings.enableBbsGeneration) {
-        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
-        commentsPromise = generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
-    } else {
-        bbsCommentsContainer.innerHTML = '';
-    }
     
-    const [article, newComments] = await Promise.all([
-        articlePromise,
-        commentsPromise
-    ]);
+    // --- 5. AIコンテンツの処理と最終的な画面更新 ---
+    const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
     
     if (newComments) {
         tournamentState.bbsComments.push(...newComments);
-        renderBbsComments(tournamentState.bbsComments);
     }
-
     if (article) {
         if (!article.error) {
-            article.context = matchContext; 
+            article.context = matchContext;
         }
-        newsContainer.innerHTML = `<div class="loader">AIが記事を執筆完了。事実確認を実行中<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span></div>`;
         const isVerified = await factCheckArticle(article, highlights);
         if (isVerified) {
             showArticleReviewModal(article);
@@ -8722,18 +8660,26 @@ async function processMatchWin(matchId, winnerName) {
                 context: matchContext
             };
             tournamentState.news.push(errorArticle);
-            renderNews(tournamentState.news);
         }
-    } else {
-        renderNews(tournamentState.news);
     }
     
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
-
+    
+    renderTournament(tournamentState);
     saveState();
-} // ← processMatchWin関数の閉じ括弧
+
+    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
+        const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
+        if (round1Matches.length === 8 && round1Matches.every(m => m.winner)) {
+            const confirmed = await showConfirm("1回戦がすべて終了しました。シード校が登場する2回戦に進みますか？");
+            if (confirmed) {
+                await setupSpringMainTournament_Round2();
+            }
+        }
+    }
+}
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
