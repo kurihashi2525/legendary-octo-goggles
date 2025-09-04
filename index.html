@@ -2508,14 +2508,19 @@ async function generateMatomeSiteHtml() {
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
 
 /**
- * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
- * @param {object} matchContext - 試合の全コンテキスト情報
- * @returns {Promise<Array|null>} コメントオブジェクトの配列
+ * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（チーム背景情報追加・最終版）
  */
 async function generateGameMatchBbsComments(matchContext) {
     const { winnerName, loserName, dbMatch, highlightsText } = matchContext;
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     
+    // ▼▼▼ このブロックを新たに追加 ▼▼▼
+    const winnerData = TEAM_DATA[winnerName];
+    const loserData = TEAM_DATA[loserName];
+    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
+    // ▲▲▲
+
     const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
 以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を30個前後生成してください。
 
@@ -2526,15 +2531,19 @@ async function generateGameMatchBbsComments(matchContext) {
 - **試合ハイライト:** ${highlightsText || '特になし'}
 - **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
 
+### チームの背景
+- **${winnerName}**: ${winnerDynamicInfo}
+- **${loserName}**: ${loserDynamicInfo}
+
 ### 指示
 1.  **スレッドタイトル:** 試合結果が最も端的に伝わり、かつ少し煽り気味の面白いタイトルを考えてください。（例：【悲報】〇〇、あまりにも弱い【甲子園】）
 2.  **コメント生成:**
     - なんJ特有の口調（「～やで」「～ニキ」「草」「どうすんのこれ」など）やネットスラングを多用してください。
-    - 試合内容（特にハイライトやスコア）に具体的に言及してください。
-    - 勝者を称賛する声、敗者を煽る声、斜に構えた意見、全く関係ない雑談などをバランス良く混ぜてください。
+    - 試合内容やスコアだけでなく、**【チームの背景】**にも具体的に言及してください。（例：「さすが古豪やな」「セレ落ち軍団が王者食ったンゴｗｗｗ」）
+    - 勝者を称賛する声、敗者を煽る声、斜に構えた意見などをバランス良く混ぜてください。
 
-### 出力形式
-必ず以下のJSON形式で出力してください。
+### 出力形式【最重要】
+解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
 {
   "threadTitle": "（生成したスレッドタイトル）",
   "comments": [
@@ -2567,7 +2576,6 @@ async function generateGameMatchBbsComments(matchContext) {
         return null;
     }
 }
-
 
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
@@ -2771,7 +2779,7 @@ async function startDocumentary(type, teamName) {
     saveState();
 }
 
-/**
+//**
  * ドキュメンタリー調の記事をAIに生成させる（プロンプト最終調整版）
  */
 async function generateDocumentaryArticle(phase, type, teamName, matchData = null, userFeedback = null) {
@@ -2849,16 +2857,17 @@ ${finalFeedbackPrompt}
                 prompt += `
 ### 取材テーマ
 古豪「${teamName}」が ${matchData.opponent} との試合に ${matchData.score} で勝利しました。「名門復活への狼煙」となるこの一勝の価値を、感動的に描写してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. 勝利の瞬間、安堵と誇りの入り混じった表情で整列する選手たちを描写する。
-2. OB席が「よくやったぞ！」という歓声と拍手に包まれる様子を伝える。
-3. 監督に「伝統の粘り強さが出せた」という趣旨のコメントをさせる。
-4. 主将に、次戦への意気込みと共に「先輩たちが築いた歴史に、新たな1ページを刻みたい」と語らせる。
+1.  ユーザーが語る「試合の決め手」を物語の中心に据え、その場面を最もドラマチックに描写する。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、この勝利の価値をより高める。
+3.  監督に「伝統の粘り強さが出せた」という趣旨のコメントをさせる。
+4.  主将に、次戦への意気込みと共に「先輩たちが築いた歴史に、新たな1ページを刻みたい」と語らせる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -2866,17 +2875,18 @@ ${finalFeedbackPrompt}
                 title = `『${teamName}、夢、またも届かず』`;
                 prompt += `
 ### 取材テーマ
-古豪「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。復活を願った人々の期待と、それに応えられなかった選手たちの無念さを、切なく描いてください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+古豪「${teamName}」の夏が終わりを告げた。復活を願った人々の期待と、それに応えられなかった選手たちの無念さを描いてください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. 試合後、OBたちの厳しい叱咤と温かい労いの声が飛び交う、独特の雰囲気のスタンドを描写する。
-2. グラウンドに泣き崩れる選手たちと、彼らにかける言葉が見つからない監督の姿。
-3. 主将が涙ながらに「先輩たちに申し訳ない…」と語るインタビュー。
-4. 「彼らの挑戦は終わった。しかし、〇〇（校名）の野球部の灯が消えることはない。来年こそは、と誓う後輩たちの目が、確かに前を向いていた」と、未来への希望で締めくくる。
+1.  ユーザーが語る「試合の決め手」が、いかにしてチームの夢を打ち砕いたかを詳細に描写する。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、敗北の文脈をより深く描写する。
+3.  グラウンドに泣き崩れる選手たちと、彼らにかける言葉が見つからない監督の姿。
+4.  「彼らの挑戦は終わった。しかし、〇〇（校名）の野球部の灯が消えることはない」と、未来への希望で締めくくる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -2932,17 +2942,18 @@ ${finalFeedbackPrompt}
                 title = `エース快投！しかし、勝利の影に${teamName}の結束あり`;
                 prompt += `
 ### 取材テーマ
-「${teamName}」が ${matchData.opponent} に ${matchData.score} で勝利。メディアはエースの快投ばかりを報じるだろう。しかし、その裏にあった仲間たちのファインプレーや、チームの結束こそが真の勝因だったことを、あなたの視点で深く描写してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+「${teamName}」が勝利。メディアはエースの快投ばかりを報じるだろう。しかし、その裏にあった仲間たちのファインプレーやチームの結束こそが真の勝因だったことを、あなたの視点で深く描写してください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. エースの完璧な投球内容を簡潔に紹介する。
-2. しかし、と続け、**ハイライトにあった**、メディアが決して報じないであろう「名もなき選手のファインプレー」や「繋ぎのバッティング」を、試合のターニングポイントとして詳細に描写する。
-3. そのプレーをした選手に「エースを助けるのが俺たちの仕事ですから」と、誇らしげに語らせる。
-4. エースに「今日の勝利は、俺一人の力じゃない。みんなが守ってくれたおかげです」と、初めて仲間に感謝の言葉を述べさせる。
+1.  ユーザーが語る「試合の決め手」が、いかにチームの結束力を象徴するプレーだったかを物語の中心に据える。
+2.  エースの投球内容を簡潔に紹介しつつ、「しかし、この日の主役は彼だけではなかった」と続ける。
+3.  そのプレーをした選手に「エースを助けるのが俺たちの仕事ですから」と、誇らしげに語らせる。
+4.  エースに「今日の勝利は、俺一人の力じゃない。みんなが守ってくれたおかげです」と、初めて仲間に感謝の言葉を述べさせる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -2950,17 +2961,18 @@ ${finalFeedbackPrompt}
                 title = `英雄、あまりに早すぎる敗退。${teamName}の夏、終わる`;
                 prompt += `
 ### 取材テーマ
-絶対的エースを擁しながら、「${teamName}」は ${matchData.opponent} に ${matchData.score} で敗れました。エースが打たれ、仲間たちが涙する…。天才と仲間たちの、残酷で、しかし美しい夏の終わりを描いてください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+絶対的エースを擁しながら、「${teamName}」は敗れた。天才と仲間たちの、残酷で、しかし美しい夏の終わりを描いてください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. **ハイライトにあった**、エースが決勝点を浴びたシーンをスローモーションのように描写する。
-2. マウンドで呆然とするエースと、彼に駆け寄り「お前のせいじゃない」と声をかける仲間たちの姿を描く。
-3. 試合後、「全部、自分のせいです…」と涙を流すエースと、「俺たちが、あいつを守ってやれなかった…」と悔しがる野手たちの両方のコメントを紹介する。
-4. 「彼らはワンマンチームではなかった。勝つ時も、負ける時も、彼らは一つのチームだった」と締めくくる。
+1.  ユーザーが語る「試合の決め手」が、いかにして絶対的エースを打ち崩したのか、その一瞬を詳細に描写する。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れることで、敗北の衝撃を際立たせる。
+3.  マウンドで呆然とするエースと、彼に駆け寄り「お前のせいじゃない」と声をかける仲間たちの姿を描く。
+4.  「彼らはワンマンチームではなかった。勝つ時も、負ける時も、彼らは一つのチームだった」と締めくくる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -3015,17 +3027,18 @@ ${finalFeedbackPrompt}
                 title = `『${teamName}、王者の告白』第${matchData.round}章`;
                 prompt += `
 ### 取材テーマ
-「${teamName}」が、${matchData.opponent}との試合に ${matchData.score} で勝利しました。しかし、彼らにとってこの勝利は歓喜ではなく、「次へ進むための義務」でしかない。その独特の空気感を、以下のハイライトを基にリアルに描写してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+「${teamName}」が勝利。しかし彼らにとってこの勝利は歓喜ではなく、「次へ進むための義務」でしかない。その独特の空気感をリアルに描写してください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. 試合後、安堵の表情を浮かべるも、決して喜びを爆発させない選手たちの姿を描写する。
-2. **ハイライトを基に**、試合内容の反省点を冷静に監督にインタビューする。
-3. **ハイライトで活躍した**選手にも「今日のプレーで満足せず、次を見据えている」という趣旨のコメントをさせる。
-4. 記事の最後に「彼らの戦いは、まだ終わらない」という一文で、次なる戦いへの緊張感を煽る。
+1.  ユーザーが語る「試合の決め手」を引用し、それが王者としての力の証明であったことを示す。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、勝利が順当であったことを描写する。
+3.  試合後、安堵の表情を浮かべるも、決して喜びを爆発させない選手たちの姿。
+4.  監督に「今日のプレーで満足せず、次を見据えている」という趣旨の、冷静なコメントをさせる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -3033,17 +3046,18 @@ ${finalFeedbackPrompt}
                 title = `『${teamName}、王者の告白』最終章`;
                 prompt += `
 ### 取材テーマ
-絶対的王者「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。王国の崩壊の瞬間と、選手たちの初めて見せる涙、そして彼らが背負っていた重圧からの解放を、以下のハイライトを基に感傷的かつ克明に記録してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+絶対的王者「${teamName}」の夏が終わった。王国の崩壊の瞬間と、選手たちの初めて見せる涙、そして重圧からの解放を感傷的に記録してください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. 試合終了のサイレンが鳴り響く、球場の信じられないような静寂を描写する。
-2. **ハイライトを参考に**、グラウンドに泣き崩れる選手たち。特に、これまで常に気丈に振る舞ってきた主将の涙に焦点を当てる。
-3. **ハイライトで勝敗を分けたプレー**について、監督に敗戦の責任と、選手たちへの労いの言葉を語らせる。
-4. 「彼らは今日、初めてただの高校生に戻れたのかもしれない」というような、詩的な一文で締めくくる。
+1.  ユーザーが語る「試合の決め手」が、いかにして絶対王者の歯車を狂わせたのか、その瞬間を克明に描写する。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、この敗戦が歴史的な番狂わせであることを強調する。
+3.  試合終了のサイレンが鳴り響く、球場の信じられないような静寂を描写する。
+4.  これまで常に気丈に振る舞ってきた主将が、初めてグラウンドに泣き崩れる姿に焦点を当てる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -3102,19 +3116,18 @@ ${finalFeedbackPrompt}
                 title = `『${teamName}、魂の記録』第${matchData.round}章`;
                 prompt += `
 ### 取材テーマ
-「${teamName}」が、${matchData.opponent}との激闘を ${matchData.score} で制しました。この奇跡的な勝利が彼らにとってどれほど大きな意味を持つのか、以下のハイライトを基に感動的に描写してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+「${teamName}」が、奇跡的な勝利を収めた。この一勝が彼らにとってどれほど大きな意味を持つのか、感動的に描写してください。
+### 対戦相手「${matchData.opponent}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1. 勝利の瞬間の選手たちの様子を描写する（例：子供のように抱き合って泣いた）。
-2. **ハイライトで示された試合のターニングポイント**を、手に汗握るように振り返る。
-3.  **ユーザーが語る「試合の決め手」**に触れ、彼らの活躍を称える。
-4. 監督や主役選手の、喜びと感謝に満ちた勝利インタビューを挿入する。
-5. この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
-6. 「彼らの物語は、まだ終わらない」と、次の試合への期待感で締めくくる。
+1.  ユーザーが語る「試合の決め手」を、この試合で起きた奇跡の象徴として、最も感動的に描写する。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、この勝利がどれほどの金星であったかを伝える。
+3.  勝利の瞬間、子供のように抱き合って泣く選手たちの姿を描写する。
+4.  この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -3122,18 +3135,18 @@ ${finalFeedbackPrompt}
                 title = `『${teamName}、魂の記録』最終章`;
                 prompt += `
 ### 取材テーマ
-「${teamName}」の夏が、${matchData.opponent}に ${matchData.score} で敗れ、終わりを告げました。夢破れた彼らの姿と、それでも確かに残ったもの、そして彼らを見守った人々の想いを、以下のハイライトを基に描くドキュメンタリー最終章を作成してください。
-${charactersPrompt}
-### この試合の主なハイライト
-${matchData.highlights}
+「${teamName}」の夏が終わった。夢破れた彼らの姿と、それでも確かに残ったものを描くドキュメンタリー最終章。
+### 対戦相手「${teamName}」の背景
+${matchData.opponentInfo}
 ### ユーザーが語る試合の決め手
 ${matchData.summary || '特になし'}
+### この試合の主なハイライト
+${matchData.highlights}
 ### 構成案
-1.  **ユーザーが語る「試合の決め手」**に触れ、あと一歩及ばなかった彼らの奮闘を称える。
-2. 試合終了の瞬間、泣き崩れるも、やがて顔を上げる選手たちの姿を描写する。
-3. 監督や主将が、**ハイライトにあった悔しいプレー**にも触れつつ、この夏を振り返る最後のインタビューに答える。
-4. チームを支え続けたマネージャーや地元の人々の、選手たちへの温かい労いの言葉を挿入する。
-5. 3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
+1.  ユーザーが語る「試合の決め手」に触れ、あと一歩及ばなかった彼らの奮闘を称える。
+2.  対戦相手がどのようなチームであったか（【対戦相手の背景】を参照）に触れ、「よくやった」「悔しい」といった感情を増幅させる。
+3.  試合終了の瞬間、泣き崩れるも、やがて顔を上げ、相手にエールを送る選手たちの姿を描写する。
+4.  3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -8522,18 +8535,20 @@ async function processMatchWin(matchId, winnerName) {
         
         if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
             const isWin = documentary.target === winnerName;
-            const round = matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1;
-            const opponent = isWin ? loserName : winnerName;
-            const score = isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
-             const matchInfoForArticle = { 
-                round, 
-                opponent, 
-                score, 
+            const opponentName = isWin ? loserName : winnerName;
+            const opponentData = isWin ? loserData : winnerData; // 対戦相手のTEAM_DATAを取得
+
+            const matchInfoForArticle = { 
+                round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
+                opponent: opponentName,
+                score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
                 highlights: highlightsText,
-                summary: dbMatch.summary // ユーザーが入力した「試合の決め手」
+                summary: dbMatch.summary,
+                opponentInfo: opponentData.info // ★★★ 対戦相手の背景情報を追加 ★★★
             };
             
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
+            
             if (!isWin) tournamentState.documentary = { target: null, type: null };
         } else {
             articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames);
