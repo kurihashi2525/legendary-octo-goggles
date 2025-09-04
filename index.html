@@ -2852,6 +2852,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. 勝利の瞬間、安堵と誇りの入り混じった表情で整列する選手たちを描写する。
 2. OB席が「よくやったぞ！」という歓声と拍手に包まれる様子を伝える。
@@ -2868,6 +2870,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. 試合後、OBたちの厳しい叱咤と温かい労いの声が飛び交う、独特の雰囲気のスタンドを描写する。
 2. グラウンドに泣き崩れる選手たちと、彼らにかける言葉が見つからない監督の姿。
@@ -2932,6 +2936,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. エースの完璧な投球内容を簡潔に紹介する。
 2. しかし、と続け、**ハイライトにあった**、メディアが決して報じないであろう「名もなき選手のファインプレー」や「繋ぎのバッティング」を、試合のターニングポイントとして詳細に描写する。
@@ -2948,6 +2954,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. **ハイライトにあった**、エースが決勝点を浴びたシーンをスローモーションのように描写する。
 2. マウンドで呆然とするエースと、彼に駆け寄り「お前のせいじゃない」と声をかける仲間たちの姿を描く。
@@ -3011,6 +3019,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. 試合後、安堵の表情を浮かべるも、決して喜びを爆発させない選手たちの姿を描写する。
 2. **ハイライトを基に**、試合内容の反省点を冷静に監督にインタビューする。
@@ -3027,6 +3037,8 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. 試合終了のサイレンが鳴り響く、球場の信じられないような静寂を描写する。
 2. **ハイライトを参考に**、グラウンドに泣き崩れる選手たち。特に、これまで常に気丈に振る舞ってきた主将の涙に焦点を当てる。
@@ -3094,12 +3106,15 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
 1. 勝利の瞬間の選手たちの様子を描写する（例：子供のように抱き合って泣いた）。
 2. **ハイライトで示された試合のターニングポイント**を、手に汗握るように振り返る。
-3. 監督や主役選手の、喜びと感謝に満ちた勝利インタビューを挿入する。
-4. この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
-5. 「彼らの物語は、まだ終わらない」と、次の試合への期待感で締めくくる。
+3.  **ユーザーが語る「試合の決め手」**に触れ、彼らの活躍を称える。
+4. 監督や主役選手の、喜びと感謝に満ちた勝利インタビューを挿入する。
+5. この勝利を見届けた地元の人々の、我が事のような喜びの声を加える。
+6. 「彼らの物語は、まだ終わらない」と、次の試合への期待感で締めくくる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -3111,11 +3126,14 @@ ${finalFeedbackPrompt}
 ${charactersPrompt}
 ### この試合の主なハイライト
 ${matchData.highlights}
+### ユーザーが語る試合の決め手
+${matchData.summary || '特になし'}
 ### 構成案
-1. 試合終了の瞬間、泣き崩れるも、やがて顔を上げる選手たちの姿を描写する。
-2. 監督や主将が、**ハイライトにあった悔しいプレー**にも触れつつ、この夏を振り返る最後のインタビューに答える。
-3. チームを支え続けたマネージャーや地元の人々の、選手たちへの温かい労いの言葉を挿入する。
-4. 3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
+1.  **ユーザーが語る「試合の決め手」**に触れ、あと一歩及ばなかった彼らの奮闘を称える。
+2. 試合終了の瞬間、泣き崩れるも、やがて顔を上げる選手たちの姿を描写する。
+3. 監督や主将が、**ハイライトにあった悔しいプレー**にも触れつつ、この夏を振り返る最後のインタビューに答える。
+4. チームを支え続けたマネージャーや地元の人々の、選手たちへの温かい労いの言葉を挿入する。
+5. 3年生の引退と、彼らの想いが後輩たちへと受け継がれていくことを示唆して、物語を締めくくる。
 ${finalFeedbackPrompt}
 ### 出力形式: JSON {"title": "${title}", "body": "（記事本文）"}`;
                 break;
@@ -8507,7 +8525,13 @@ async function processMatchWin(matchId, winnerName) {
             const round = matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1;
             const opponent = isWin ? loserName : winnerName;
             const score = isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
-            const matchInfoForArticle = { round, opponent, score, highlights: highlightsText };
+             const matchInfoForArticle = { 
+                round, 
+                opponent, 
+                score, 
+                highlights: highlightsText,
+                summary: dbMatch.summary // ユーザーが入力した「試合の決め手」
+            };
             
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
             if (!isWin) tournamentState.documentary = { target: null, type: null };
