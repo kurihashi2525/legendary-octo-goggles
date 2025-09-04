@@ -2693,11 +2693,19 @@ async function startDocumentary(type, teamName) {
         m.id.includes('-R1-') && (m.team1 === teamName || m.team2 === teamName)
     );
     
-    let matchDataForArticle = { opponent: '不明', opponentRank: 'E', toughestRival: '不明', toughestRivalInfo: '' };
+    let matchDataForArticle = { 
+        opponent: '不明', opponentRank: 'E', opponentRecord: '情報なし',
+        toughestRival: '不明', toughestRivalRecord: '情報なし'
+    };
+
     if (firstMatch) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
         matchDataForArticle.opponent = opponentName;
         matchDataForArticle.opponentRank = calculateRank(opponentName, tournamentState);
+        
+        // ▼▼▼ ここからが新しい処理 ▼▼▼
+        // 相手の昨年の成績をTEAM_DATAから直接取得
+        matchDataForArticle.opponentRecord = TEAM_DATA[opponentName]?.last || '情報なし';
 
         const teamIndex = tournamentState.teams.indexOf(teamName);
         const blockIndex = Math.floor(teamIndex / 16);
@@ -2720,19 +2728,14 @@ async function startDocumentary(type, teamName) {
         
         if (toughestRivalName) {
             matchDataForArticle.toughestRival = toughestRivalName;
-            const rivalData = TEAM_DATA[toughestRivalName];
-            if (rivalData) {
-                // ▼▼▼ ここが新しい処理 ▼▼▼
-                // 長いinfoを、AIが扱いやすい短いサマリーに変換する
-                const infoSummary = rivalData.info.split('。')[0]; // 最初の文だけを抜き出す
-                matchDataForArticle.toughestRivalInfo = `(特徴サマリー: ${infoSummary}。)`;
-                // ▲▲▲
-            }
+            // 最強ライバルの昨年の成績もTEAM_DATAから直接取得
+            matchDataForArticle.toughestRivalRecord = TEAM_DATA[toughestRivalName]?.last || '情報なし';
         }
+        // ▲▲▲
     }
     
     const article = await generateDocumentaryArticle('intro', type, teamName, matchDataForArticle);
-
+    
     // ▲▲▲
 
     if (article) {
@@ -2792,17 +2795,17 @@ async function generateDocumentaryArticle(phase, type, teamName, matchData = nul
                     if (rankDiff >= 1) { // 格上
                         reactionPrompt = `
 5.  **【試練の初戦】**
-    初戦の相手が格上の「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちが「不足はない相手」「復活をアピールするには最高の相手だ」と闘志を燃やす。
+    初戦の相手が格上の「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。選手たちが「不足はない相手」「復活をアピールするには最高の相手だ」と闘志を燃やす。
 6.  **【監督の『建前』と『本音』】**
     監督は**選手たちの前で**、「挑戦者として、失うものは何もない。全力でぶつかるぞ」という趣旨で語る。
-    しかし記者の前では**二人きりで**、「ええ、面白い。ですが、本当の山場は**${matchData.toughestRival}**戦でしょう。彼ら${matchData.toughestRivalInfo}を倒す前に、チームの現在地を知るには最高の試合です」という趣旨で、冷静に先を見据える。`;
+    しかし記者の前では**二人きりで**、「本当の山場は**${matchData.toughestRival}**戦でしょう。彼らは昨年${matchData.toughestRivalRecord}。この初戦は、そこへ向けてチームがどれだけ成長できるかの試金石ですね」という趣旨で、冷静に先を見据える。`;
                     } else { // 同格か格下
                         reactionPrompt = `
 5.  **【油断という名の敵】**
-    初戦の相手が「${matchData.opponent}」(ランク:${opponentRank})に決定。「勝てる」という安堵の空気が選手たちの間に流れる。
+    初戦の相手が「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。「勝てる」という安堵の空気が選手たちの間に流れる。
 6.  **【監督の『建前』と『本音』】**
     その空気を察した監督が**選手たちの前で**、「油断が一番の敵だ。俺たちはまだ何も成し遂げていない」という趣旨で厳しく一喝する。
-    しかし、記者の前では**二人きりで**、「正直、ホッとしました。**${matchData.toughestRival}**（彼らは${matchData.toughestRivalInfo}）と当たるまでに、いくつか試合をこなしてチームの練度を上げたかったので」という趣旨で、安堵の理由が戦略的なものであることを明かす。`;
+    しかし、記者の前では**二人きりで**、「正直、ホッとしました。**${matchData.toughestRival}**（彼らは昨年${matchData.toughestRivalRecord}）と当たるまでに、いくつか試合をこなして練度を上げたかったので」という趣旨で、安堵の理由が戦略的なものであることを明かす。`;
                     }
                 }
                 prompt += `
@@ -2873,17 +2876,17 @@ ${finalFeedbackPrompt}
                     if (rankDiff >= 2) { // 絶望的な格上
                         reactionPrompt = `
 5.  **【試される『個』の力】**
-    初戦の相手が格上の強豪「${matchData.opponent}」(ランク:${opponentRank})に決定。野手たちが動揺する中、エースだけが「相手が誰であろうと、俺がゼロに抑えれば負けません」という趣旨のコメントで、静かに闘志を燃やす姿を描写する。
+    初戦の相手が格上の強豪「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。野手たちが動揺する中、エースだけが「相手が誰であろうと、俺がゼロに抑えるだけです」という趣旨のコメントで闘志を燃やす。
 6.  **【監督の『建前』と『本音』】**
-    監督は**選手たちの前で**、「最高の相手だ。我々には〇〇（エース名）がいる。彼を信じ、お前たちは自分の仕事をしろ」という趣旨のコメントで、エースへの絶対的な信頼を口にする。
-    しかし記者の前では**二人きりで**、「正直、最悪のクジです。彼（エース）の負担を考えれば、勝ち進んだ先の**${matchData.toughestRival}**（彼らは${matchData.toughestRivalInfo}）戦まで、他の選手たちに経験を積ませたかった」という趣旨のコメントで、チーム全体の成長を願う本音を漏らす。`;
+    監督は**選手たちの前で**、「最高の相手だ。我々には〇〇（エース名）がいる。彼を信じろ」という趣旨のコメントで、エースへの絶対的な信頼を口にする。
+    しかし記者の前では**二人きりで**、「正直、最悪のクジです。彼（エース）の負担を考えれば、勝ち進んだ先の**${matchData.toughestRival}**（昨年${matchData.toughestRivalRecord}）戦まで、他の選手に経験を積ませたかった」という趣旨のコメントで、チーム全体の成長を願う本音を漏らす。`;
                     } else { // 同格か格下
                         reactionPrompt = `
 5.  **【エース温存か、否か】**
-    初戦の相手が「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちの間に「この相手なら、エース抜きでも勝てるのでは？」という慢心が生まれる。
+    初戦の相手が「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。選手たちの間に「この相手なら、エース抜きでも勝てるのでは？」という慢心が生まれる。
 6.  **【監督の『賭け』】**
-    監督が**選手たちの前で**、「初戦、〇〇（エース名）は投げない。お前たちで勝ち上がってこい。できなければ、この夏はそこで終わりだ」という趣旨の、非情とも思える決断を下す。
-    記者の前では**二人きりで**、「これは賭けです。でも、**${matchData.toughestRival}**（彼らは${matchData.toughestRivalInfo}）と戦うことを見据えれば、ここで他の選手たちが覚醒してくれなければ、未来はないんですよ」という趣旨のコメントで、エースの将来とチームの未来を想う本音を語らせる。`;
+    監督が**選手たちの前で**、「初戦、〇〇（エース名）は投げない。お前たちで勝ち上がってこい」という趣旨の、非情とも思える決断を下す。
+    記者の前では**二人きりで**、「これは賭けです。でも、**${matchData.toughestRival}**（昨年${matchData.toughestRivalRecord}）と戦うことを見据えれば、ここで他の選手が覚醒しなければ未来はない」という趣旨のコメントで、エースの将来とチームの未来を想う本音を語らせる。`;
                     }
                 }
                 prompt += `
@@ -2953,16 +2956,16 @@ ${finalFeedbackPrompt}
                     if (rankDiff >= 0) { // 同格か格上
                         reactionPrompt = `
 5.  **【試される王国】**
-    初戦の相手がいきなり実力校「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちの間に走る緊張感を「歓迎すべき試練」として描写する。
+    初戦の相手がいきなり実力校「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。選手たちの間に走る緊張感を「歓迎すべき試練」として描写する。
 6.  **【監督の『建前』と『本音』】**
     監督は**選手たちの前で**、「初戦から最高の相手だ。挑戦者を受ける覚悟はできている」という趣旨で、チームのプライドを煽る。
-    しかし記者の前では**二人きりで**、「厳しい戦いになる。だが、このブロックの本命は我々と**${matchData.toughestRival}**。彼ら${matchData.toughestRivalInfo}を倒すためには、どこかで通らなければいけない道だ」という趣旨で、厳しい本音を語らせる。`;
+    しかし記者の前では**二人きりで**、「厳しい戦いになる。だが、このブロックの本命は我々と**${matchData.toughestRival}**。彼らは昨年${matchData.toughestRivalRecord}。倒すためには、どこかで通らなければいけない道だ」という趣旨で、厳しい本音を語らせる。`;
                     } else { // 格下
                         reactionPrompt = `
 5.  **【王者の静寂】**
-    初戦の相手が「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちは表情一つ変えず、淡々と次の練習の準備を始める。
+    初戦の相手が「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。選手たちは表情一つ変えず、淡々と次の練習の準備を始める。
 6.  **【監督の『建前』と『本音』】**
-    監督が**選手たちの前で**は「油断するな」という趣旨で引き締めつつ、記者の前では**二人きりで**、「初戦は問題ない。本当の勝負は**${matchData.toughestRival}**戦。彼らは${matchData.toughestRivalInfo}。そこが事実上の決勝戦になりますね」という趣旨で、先を見据えた分析を語らせる。`;
+    監督が**選手たちの前で**は「油断するな」という趣旨で引き締めつつ、記者の前では**二人きりで**、「初戦は問題ない。本当の勝負は**${matchData.toughestRival}**戦。彼らは昨年${matchData.toughestRivalRecord}の実力校だ。そこが事実上の決勝戦になるだろう」という趣旨で、先を見据えた分析を語らせる。`;
                     }
                 }
                 prompt += `
@@ -3032,20 +3035,20 @@ ${finalFeedbackPrompt}
                     if (rankDiff >= 2) { // 絶望的な格上
                         reactionPrompt = `
 3.  **【残酷な現実、そして監督の『建前』】**
-    初戦の相手が格上の強豪「${matchData.opponent}」(ランク:${opponentRank})に決定。絶望と沈黙に包まれる選手たち。
+    初戦の相手が格上の強豪「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。絶望と沈黙に包まれる選手たち。
     その重い空気の中、監督が**選手たちの前で**「これは試練だ。だが、歴史を創るチャンスでもある」という趣旨の力強い言葉でチームを奮い立たせる。
 4.  **【監督室の『本音』】**
     記者が二人きりで監督に心境を聞くと、「いや、正直しんどいですよ…笑っちゃいましたもん、まさか〇〇（相手校名）と当たるなんて…」という趣旨の、人間味あふれる弱音や本音を漏らす。`;
                     } else if (rankDiff >= 1) { // 少し格上
                         reactionPrompt = `
 3.  **【挑戦者たち】**
-    初戦の相手が、格上の「${matchData.opponent}」(ランク:${opponentRank})に決定。選手たちが「不足はない相手」「一泡吹かせてやる」と闘志を燃やす。
+    初戦の相手が、格上の「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。選手たちが「不足はない相手」「一泡吹かせてやる」と闘志を燃やす。
 4.  **【監督の戦略】**
     監督は**選手たちの前で**「良い顔つきになったな」と彼らの士気を高めつつ、記者の前では**二人きりで**、「正直、勝率は3割もないでしょう。でも、高校野球は何が起こるか分からない」という趣旨で、冷静な分析と本音を語る。`;
                     } else { // 同格か格下
                         reactionPrompt = `
 3.  **【運命の初戦】**
-    初戦の相手が実力の近い「${matchData.opponent}」(ランク:${opponentRank})に決定。「勝てる！」と少し浮足立つ選手たち。
+    初戦の相手が実力の近い「${matchData.opponent}」(昨年度: ${matchData.opponentRecord})に決定。「勝てる！」と少し浮足立つ選手たち。
 4.  **【監督の『建前』と『本音』】**
     監督が**選手たちの前で**「油断が一番の敵だ」と厳しく一喝する一方、記者の前では**二人きりで**、「最高のクジを引きました。ここを勝てば、間違いなくチームは波に乗れる」という趣旨で、安堵とプレッシャーが入り混じった本音を語る。`;
                     }
