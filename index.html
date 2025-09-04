@@ -9804,6 +9804,7 @@ document.body.addEventListener('click', async (e) => {
                 newArticle.context = context;
                 const isVerified = await factCheckArticle(newArticle, highlights);
                 if (isVerified) {
+tournamentState.news.splice(index, 0, newArticle);
                     showArticleReviewModal(newArticle);
                 } else {
                     // エラー処理
