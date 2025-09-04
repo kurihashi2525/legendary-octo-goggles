@@ -2486,7 +2486,10 @@ async function generateMatomeSiteHtml() {
 
         // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
         // ▼▼▼ このブロックが修正の核心です ▼▼▼
-        
+         // ▼▼▼ このブロックが修正の核心です ▼▼▼
+        const linkHref = article.type === 'real' ? `href="${article.url}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"';
+        const dataAttributes = `data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}" data-match-id="${article.matchId || ''}"`;
+
         return `
             <a ${linkHref} class="matome-article-link block p-3 rounded-lg hover:bg-gray-100 transition-colors" ${dataAttributes}>
                 <div class="flex items-center text-xs text-gray-500">
