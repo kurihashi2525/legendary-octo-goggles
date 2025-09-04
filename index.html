@@ -2517,7 +2517,7 @@ async function generateGameMatchBbsComments(matchContext) {
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     
     const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
-以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を10個前後生成してください。
+以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を30個前後生成してください。
 
 ### 試合結果データ
 - **勝利チーム:** ${winnerName}
