@@ -2779,9 +2779,7 @@ async function startDocumentary(type, teamName) {
     saveState();
 }
 
-//**
- * ドキュメンタリー調の記事をAIに生成させる（プロンプト最終調整版）
- */
+
 async function generateDocumentaryArticle(phase, type, teamName, matchData = null, userFeedback = null) {
     const teamMasterData = TEAM_DATA[teamName];
     let prompt = `あなたは、情熱的で人間ドラマを描くのが得意なドキュメンタリー番組の記者です。あなたは今、高校野球チーム「${teamName}」に密着取材しています。`;
