@@ -2485,19 +2485,21 @@ async function generateMatomeSiteHtml() {
         const color = categoryColors[article.category] || "bg-gray-100 text-gray-800";
 
         // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
+        // ▼▼▼ このブロックが修正の核心です ▼▼▼
+        const linkHref = article.type === 'real' ? `href="${article.url}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"';
+        const dataAttributes = `data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}" data-match-id="${article.matchId || ''}"`;
+
         return `
-            <a href="${article.url || '#'}" target="_blank" rel="noopener noreferrer" class="matome-article-entry flex items-center p-4">
-                <div class="flex-grow">
-                    <div><span class="category-tag">${article.category}</span></div>
-                    <h4 class="article-title mt-1">${article.headline}</h4>
-                    <div class="article-meta mt-2">
-                        <span>${time}</span> | <span>コメント: ${commentCount} 💬</span>
-                    </div>
+            <a ${linkHref} class="matome-article-link block p-3 rounded-lg hover:bg-gray-100 transition-colors" ${dataAttributes}>
+                <div class="flex items-center text-xs text-gray-500">
+                    <span class="font-bold py-0.5 px-2 rounded-full ${color}">${article.category}</span>
+                    <span class="ml-auto">${time}</span>
                 </div>
-                <div class="ml-4 text-gray-300 text-2xl">></div>
+                <p class="font-bold text-gray-800 mt-2 text-base">${article.headline}</p>
+                <div class="text-right text-xs text-gray-500 mt-1">コメント: ${commentCount} 💬</div>
             </a>
         `;
-        // ▲▲▲ ここまで修正 ▲▲▲
+        // ▲▲▲
     }).join('');
 }
 
@@ -8355,52 +8357,40 @@ function updateInningState(teamKey, inningIndex) {
  * @param {Array} facts - createHighlightsTextから生成された元の事実オブジェクトの配列
  * @returns {boolean} - 矛盾がなければtrue、あればfalseを返す
  */
+/**
+ * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
+ */
 async function factCheckArticle(article, facts) {
- // ▼▼▼ この安全装置がクラッシュを防ぎます ▼▼▼
+    // ▼▼▼ この安全装置がクラッシュを防ぎます ▼▼▼
     if (!article || !article.body) {
         console.error("事実確認エラー: 記事データ、または記事の本文がありません。");
         return false; // 不完全な記事は「矛盾あり」とみなして処理を中断
     }
-    // AIが読みやすいように、事実リストをテキストに変換
-    const factListText = facts.map(fact => {
-        let text = `- `;
-        if (fact.inning) text += `${fact.inning}回 `;
-        if (fact.team) text += `${fact.team} `;
-        if (fact.player) text += `${fact.player} `;
-        text += `: ${fact.description}`;
-        return text;
-    }).join('\n');
+    // ▲▲▲
 
-    const prompt = `あなたは、非常に厳格で注意深い「事実確認（ファクトチェッカー）」です。
-以下の【事実リスト】と【AI記者が書いた記事】を比較し、記事の内容が事実に忠実かどうかを判定してください。
+    const factListText = facts.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
 
+    const prompt = `あなたは厳格なファクトチェッカーです。以下の【事実リスト】と【記事】を比較し、記事に事実と異なる記述がないか判定してください。
 ### 事実リスト
 ${factListText}
-
-### AI記者が書いた記事
+### 記事
 **タイトル:** ${article.title}
 **本文:** ${article.body.replace(/\\n/g, '\n')}
-
-### あなたの仕事
-記事が、事実リストの内容と**完全に一致**しているか？選手名、チーム名、イニング、プレー内容などの重要な情報に**一切の矛盾がない**か？
-あなたの答えは、以下のいずれか一つだけにしてください。
-- **はい** (矛盾がない場合)
-- **いいえ** (一つでも矛盾がある場合)
-
-説明や理由は一切不要です。「はい」か「いいえ」の二文字だけで回答してください。`;
+### 指示
+記事の内容が、事実リストと**著しく矛盾している場合のみ「いいえ」**と答えてください。表現の僅かな違いは許容します。あなたの答えは「はい」か「いいえ」の二文字だけでお願いします。`;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const aiResponse = result.candidates[0].content.parts[0].text.trim();
-            console.log("事実確認AIの応答:", aiResponse); // デバッグ用にコンソールに応答を表示
-            return aiResponse.includes('はい'); // 応答に「はい」が含まれていればtrue
+            console.log("事実確認AIの応答:", aiResponse);
+            return aiResponse.includes('はい');
         }
-        return false; // よく分からない応答の場合は、安全のためfalse（矛盾あり）と判断
+        return false;
     } catch (error) {
         console.error("事実確認AIの呼び出しに失敗しました:", error);
-        return false; // エラー時も安全のためfalseと判断
+        return false;
     }
 }
 
@@ -9725,7 +9715,8 @@ document.body.addEventListener('click', async (e) => {
     // ▼▼▼ 既存の「.retry-btn」の else if ブロックを、以下の内容にまるごと置き換える ▼▼▼
     // --- AI記事の再生成ボタン（エラー記事・成功記事の両方に対応） ---
     // --- AI記事の再生成ボタン（成功した記事用） ---
-    const regenerateBtn = e.target.closest('.regenerate-btn');
+     // --- AI記事の再生成ボタン（成功・失敗記事の両方に対応） ---
+    const regenerateBtn = e.target.closest('.regenerate-btn, .retry-btn');
     if (regenerateBtn) {
         const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
         const originalArticle = tournamentState.news[articleIndex];
@@ -9739,22 +9730,7 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('feedback-modal').classList.remove('hidden');
     }
     
-    // --- AI記事の再生成ボタン（エラー記事用） ---
-    const retryBtn = e.target.closest('.retry-btn');
-    if (retryBtn) {
-        const articleIndex = parseInt(retryBtn.dataset.index, 10);
-        const originalArticle = tournamentState.news[articleIndex];
-        if (!originalArticle || !originalArticle.context) {
-            alert("この記事は再生成できません。");
-            return;
-        }
-        articleForRegeneration = { index: articleIndex, article: originalArticle };
-        document.getElementById('feedback-include').value = '';
-        document.getElementById('feedback-exclude').value = '';
-        document.getElementById('feedback-modal').classList.remove('hidden');
-    }
-
-    // --- フィードバックモーダルの「この指示で再生成」ボタン ---
+    // --- フィードバックモーダルからの再生成実行ボタン ---
     const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
     if (feedbackSubmitBtn) {
         if (!articleForRegeneration) return;
@@ -9772,6 +9748,7 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('feedback-modal').classList.add('hidden');
         articleForRegeneration = null;
         
+        // 元の記事（またはエラー表示）を一旦削除
         tournamentState.news.splice(index, 1);
         renderNews(tournamentState.news);
         newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
@@ -9799,12 +9776,8 @@ document.body.addEventListener('click', async (e) => {
             const newArticle = await articlePromise;
             
             const createErrorArticle = () => ({
-                title: "記事生成エラー",
-                body: "記事の再生成に失敗しました。元の試合データとの矛盾が含まれている可能性があります。",
-                timestamp: Date.now(),
-                error: true,
-                errorId: matchId, 
-                context: context
+                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
+                timestamp: Date.now(), error: true, errorId: matchId, context: context
             });
 
             if (newArticle && !newArticle.error) {
@@ -9826,7 +9799,6 @@ document.body.addEventListener('click', async (e) => {
             feedbackSubmitBtn.disabled = false;
         })();
     }
-
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
         document.getElementById('feedback-modal').classList.add('hidden');
