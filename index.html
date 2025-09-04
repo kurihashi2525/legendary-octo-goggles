@@ -2586,10 +2586,24 @@ async function generateRealNewsBbsComments(headline, category) {
     }
     
     const prompt = `${personaPrompt}
-以下の【${category}】のニュースヘッドラインに対して、${instructions}リアルな掲示板の反応（スレッド）を5～7個生成してください。
+
+以下の【${category}】のニュースヘッドラインについて、**リアルタイムでスレッドが進行していくかのように**、自然な流れで**15〜20個**の掲示板の反応を生成してください。
+
 ### ニュースヘッドライン
 ${headline}
-### 出力形式（JSON配列）: [{"personality": "1: 風吹けば名無し", "comment": "..."}]`;
+
+### スレッド進行の指示
+1.  **序盤 (1〜5レス):** スレ主の投稿に対し、即座に食いつく第一陣の反応。「マジか」「草」「また〇〇か」といった短いコメントが中心。
+2.  **中盤 (6〜15レス):** 少し冷静になった住民たちが、ニュースに対して様々な角度からコメントを始める。肯定、否定、煽り、全く関係ない脱線などを織り交ぜる。**「>>1」「>>5」のような安価（アンカー）を使って、他のコメントに返信するやり取りを必ず含めること。**
+3.  **終盤 (16レス以降):** ある程度議論が出尽くした後の、まとめのようなコメントや、飽きてきた住民による雑なコメントで締めくくる。
+
+### 出力形式（JSON配列）
+[
+    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
+    {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"},
+    {"personality": "3: 風吹けば名無し", "comment": "（住民3のコメント）"},
+    ...
+]`;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
@@ -9429,20 +9443,38 @@ document.body.addEventListener('click', async (e) => {
             if (result && result.comments) {
                 threadTitleEl.textContent = `【スレ】${result.title}`;
                 threadContentEl.innerHTML = ''; // ローダーを消す
-                result.comments.forEach(comment => {
+
+                                // --- ここからが「ライブ感」演出 ---
+                for (const comment of result.comments) {
                     const commentEl = document.createElement('div');
-                    commentEl.className = 'bbs-comment';
+                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
                     commentEl.innerHTML = `
                         <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
                         <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
                     `;
                     threadContentEl.appendChild(commentEl);
-                });
+                    
+                    // 少し遅れてフワッと表示させる
+                    setTimeout(() => {
+                        commentEl.classList.remove('opacity-0');
+                    }, 50);
+
+                    // 次のコメントが表示されるまで、ランダムな時間待つ
+                    const delay = Math.random() * 800 + 200; // 0.2秒から1.0秒
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    
+                    // 自動で一番下までスクロール
+                    threadContentEl.scrollTop = threadContentEl.scrollHeight;
+                }
+                // --- 演出ここまで ---
+
             } else {
                 threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
         })();
+        // ▲▲▲ ここまで書き換え ▲▲▲
     }
+
 
     // --- BBSスレッドから一覧に戻るボタン ---
     if (e.target.closest('#bbs-thread-back-btn')) {
