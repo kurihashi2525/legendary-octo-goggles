@@ -10120,20 +10120,34 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         setTimeout(() => { feedback.textContent = '' }, 2000);
     });
     loadFromCodeBtn.addEventListener('click', () => {
-        try {
-            const code = document.getElementById('load-code-input').value;
-            const binaryString = atob(code);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
-            const decompressed = pako.inflate(bytes, { to: 'string' });
-            const loadedState = JSON.parse(decompressed);
+    try {
+        const code = document.getElementById('load-code-input').value.trim(); // コピペ時の空白を除去
+        const binaryString = atob(code);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // ▼▼▼ 修正の核心 ▼▼▼
+        // 「inflate」を、圧縮方法と対になる「inflateRaw」に変更します
+        const decompressed = pako.inflateRaw(bytes, { to: 'string' });
+        // ▲▲▲
+        
+        const loadedState = JSON.parse(decompressed);
+        
+        // 読み込んだデータが正しいゲームデータか簡単なチェックを追加
+        if (loadedState && loadedState.tournamentYear) {
             tournamentState = loadedState;
             saveState();
             location.reload();
-        } catch (e) {
-            showAlert('データの読み込みに失敗しました。');
+        } else {
+            throw new Error("無効なセーブデータです。");
         }
-    });
+    } catch (e) {
+        console.error("データの読み込みに失敗:", e);
+        showAlert('データの読み込みに失敗しました。合い言葉が正しいか、もう一度確認してください。');
+    }
+});
     // アプリケーション起動
     initializeApp();
 </script>
