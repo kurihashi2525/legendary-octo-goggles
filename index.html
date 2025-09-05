@@ -10125,19 +10125,16 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         feedback.textContent = 'コピーしました！';
         setTimeout(() => { feedback.textContent = '' }, 2000);
     });
-    loadFromCode-btn.addEventListener('click', () => {
+    loadFromCodeBtn.addEventListener('click', () => {
     try {
         let code = document.getElementById('load-code-input').value.trim();
 
-        // ▼▼▼ 修正の核心 ▼▼▼
-        // 「Base64URL」形式から、元のBase64形式に戻す
+        // Base64URL形式から、元のBase64形式に戻す
         code = code.replace(/-/g, '+').replace(/_/g, '/');
-        // パディング（=）を復元する
         while (code.length % 4) {
             code += '=';
         }
-        // ▲▲▲
-
+        
         const binaryString = atob(code);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
