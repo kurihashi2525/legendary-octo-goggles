@@ -10107,35 +10107,46 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         loadTabContent.classList.remove('hidden'); saveTabContent.classList.add('hidden');
     });
     generateSaveCodeBtn.addEventListener('click', () => {
-        const jsonString = JSON.stringify(tournamentState);
-        const compressed = pako.deflate(jsonString);
-        const base64 = uint8ArrayToBase64(compressed);
-        document.getElementById('save-code-output').textContent = base64;
-        document.getElementById('save-code-area').classList.remove('hidden');
-    });
+    const jsonString = JSON.stringify(tournamentState);
+    const compressed = pako.deflate(jsonString);
+    let base64 = uint8ArrayToBase64(compressed);
+
+    // ▼▼▼ 修正の核心 ▼▼▼
+    // Base64を、URLやアプリで安全に扱える「Base64URL」形式に変換する
+    const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    // ▲▲▲
+
+    document.getElementById('save-code-output').textContent = base64url;
+    document.getElementById('save-code-area').classList.remove('hidden');
+});
     copySaveCodeBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(document.getElementById('save-code-output').textContent);
         const feedback = document.getElementById('copy-feedback');
         feedback.textContent = 'コピーしました！';
         setTimeout(() => { feedback.textContent = '' }, 2000);
     });
-    loadFromCodeBtn.addEventListener('click', () => {
+    loadFromCode-btn.addEventListener('click', () => {
     try {
-        const code = document.getElementById('load-code-input').value.trim(); // コピペ時の空白を除去
+        let code = document.getElementById('load-code-input').value.trim();
+
+        // ▼▼▼ 修正の核心 ▼▼▼
+        // 「Base64URL」形式から、元のBase64形式に戻す
+        code = code.replace(/-/g, '+').replace(/_/g, '/');
+        // パディング（=）を復元する
+        while (code.length % 4) {
+            code += '=';
+        }
+        // ▲▲▲
+
         const binaryString = atob(code);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-
-        // ▼▼▼ 修正の核心 ▼▼▼
-        // 「inflate」を、圧縮方法と対になる「inflateRaw」に変更します
-        const decompressed = pako.inflateRaw(bytes, { to: 'string' });
-        // ▲▲▲
         
+        const decompressed = pako.inflateRaw(bytes, { to: 'string' });
         const loadedState = JSON.parse(decompressed);
         
-        // 読み込んだデータが正しいゲームデータか簡単なチェックを追加
         if (loadedState && loadedState.tournamentYear) {
             tournamentState = loadedState;
             saveState();
