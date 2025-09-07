@@ -9511,8 +9511,7 @@ document.body.addEventListener('click', async (e) => {
         }
     }
     
-    // --- まとめサイト内の記事リンククリック ---
-    // --- まとめサイト内の記事リンククリック ---
+     // --- まとめサイト内の記事リンククリック ---
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
@@ -9520,17 +9519,18 @@ document.body.addEventListener('click', async (e) => {
         const type = matomeLink.dataset.type;
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
+        const threadId = matomeLink.dataset.threadId; // ★スレッドIDを取得
 
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
         const threadContentEl = document.getElementById('bbs-thread-content');
         
-        // 全てのタブコンテンツを隠し、BBSスレッド表示エリアを表示
         document.querySelectorAll('.matome-tab-content').forEach(content => content.classList.add('hidden'));
         threadDisplayArea.classList.remove('hidden');
 
         threadTitleEl.textContent = headline;
-        threadContentEl.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
+        threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを読み込んでいます...</div>`;
+        
         
         (async () => {
             let result;
