@@ -2592,11 +2592,13 @@ async function generateGameMatchBbsComments(matchContext) {
 /**
  * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（プロンプト分離・安定化版）
  */
+/**
+ * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（単独生成・最終版）
+ */
 async function generateBracketBbsThread(state) {
     const { teams, seeds, currentTournament } = state;
     const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
-    // --- 1. AIに渡すための、より詳細な組み合わせ分析情報を作成 ---
     let blockAnalysisText = '';
     const blocks = ['A', 'B', 'C', 'D'];
     
@@ -2611,59 +2613,61 @@ async function generateBracketBbsThread(state) {
         blockAnalysisText += `- **${blockName}ブロック:** ${teamDetails}\n`;
     });
     
-    // --- 2. まず、AIに「スレッドタイトルだけ」を生成させる ---
-    const titlePrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
-${tournamentName}の組み合わせが決定しました。以下の組み合わせ情報を読んで、最も衝撃的で「スレが伸びそう」な事実を一つ見つけ出し、それを元に最高の**スレッドタイトル**を一つだけ生成してください。
+    const randomFanTeam = teams[Math.floor(Math.random() * teams.length)];
+    const fanTeamIndex = teams.indexOf(randomFanTeam);
+    const opponentIndex = fanTeamIndex % 2 === 0 ? fanTeamIndex + 1 : fanTeamIndex - 1;
+    const opponentName = teams[opponentIndex];
+    
+    const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
+${tournamentName}の組み合わせが決定しました。以下の詳細な組み合わせ情報を元に、読者の興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を10個前後生成してください。
 
 ### 組み合わせと各チームの情報
 ${blockAnalysisText}
 
-### スレッドタイトル生成の指示
-- 昨年の上位校や現在の高評価チームが固まった「死のブロック」を煽る。
-- 1回戦から強豪同士が激突するカードを強調する。
-- なんJ民が好きそうな、少し大げさで面白いタイトルにする。（例：「【超絶悲報】静岡大会、Aブロックだけガチでレベルがおかしいｗｗｗ」）
+### あなたのタスク
+1.  **スレッドタイトル生成:**
+    -   上記の組み合わせ情報から、最も衝撃的で「伸びそう」な事実を一つ見つけ出し、それを元に煽り気味のタイトルを生成してください。（例：「【超悲報】夏の高校野球静岡大会、Aブロックだけレベルがおかしいと話題にｗｗｗ」）
+
+2.  **コメント生成（以下の視点を混ぜること）:**
+    -   **鳥の目（ブロック間格差）:** 最も過酷な「死のブロック」と、逆に楽な「天国ブロック」を指摘する。
+    -   **虫の目（1回戦の注目カード）:** 1回戦から強豪同士が激突するカードを具体的に指摘する。
+    -   **魚の目（中盤戦の展望）:** 各ブロックを勝ち上がった場合、準々決勝あたりでどの強豪同士が激突するかを予測する。
+    -   **ダークホースの特定:** 組み合わせに恵まれた中堅校などを「勝ち上がりそう」なダークホースとして挙げる。
+    -   **【特別指示】特定のチームのファン:** あなたは**「${randomFanTeam}」**の熱狂的なファンだ。初戦の相手**「${opponentName}」**との組み合わせに対して、贔屓目で感情的なコメントを一つ生成する。
 
 ### 出力形式【最重要】
 解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
-{ "threadTitle": "（あなたが生成した最高のスレッドタイトル）" }`;
+{
+  "threadTitle": "（生成したスレッドタイトル）",
+  "comments": [
+    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
+    {"personality": "${randomFanTeam}のOB", "comment": "（ファンとしてのコメント）"}
+  ]
+}`;
 
     try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: titlePrompt }] }] });
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
-        
-         if (result.candidates?.[0]?.content?.parts?.[0]) {
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
             const rawText = result.candidates[0].content.parts[0].text;
-            const titleJson = parseJsonFromText(rawText);
-
-            // 【調査機 1A】
-            console.log('【調査機1A】タイトル生成AIの応答:', titleJson);
-            alert('【調査機1A】タイトルAIの応答をコンソールで確認してください。');
-            
-            if (titleJson && titleJson.threadTitle) {
-                const comments = await generateBracketReactionComments(state);
-
-                // 【調査機 1B】
-                console.log('【調査機1B】コメント生成AIの応答:', comments);
-                alert('【調査機1B】コメントAIの応答をコンソールで確認してください。');
-
-                const finalThreadObject = {
+            const bbsJson = parseJsonFromText(rawText);
+            if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
+                return {
                     id: `bracket-${currentTournament}-${state.tournamentYear}`,
-                    title: titleJson.threadTitle,
-                    comments: comments,
+                    title: bbsJson.threadTitle,
+                    comments: bbsJson.comments.map(c => ({
+                        id: crypto.randomUUID(),
+                        personality: c.personality,
+                        text: c.comment,
+                        timestamp: Date.now()
+                    })),
                     timestamp: Date.now()
                 };
-
-                // 【調査機 1C】
-                console.log('【調査機1C】最終的に返されるスレッドオブジェクト:', finalThreadObject);
-                alert('【調査機1C】最終的なスレッドオブジェクトをコンソールで確認してください。');
-                
-                return finalThreadObject;
             }
         }
-        throw new Error("AIがスレッドタイトルを生成できませんでした。");
+        throw new Error("AI response format error.");
     } catch (error) {
         console.error("AI bracket BBS thread generation failed:", error);
-        alert('【調査機エラー】generateBracketBbsThread関数でエラーが発生しました。');
         return null;
     }
 }
