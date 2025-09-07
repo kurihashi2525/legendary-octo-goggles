@@ -2590,39 +2590,33 @@ async function generateGameMatchBbsComments(matchContext) {
 }
 
 /**
- * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（ランダムファン視点統合・最終版）
+ * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（プロンプト修正・最終版）
  */
 async function generateBracketBbsThread(state) {
     const { teams, seeds, currentTournament } = state;
     const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
-    // --- AIに渡すための、より詳細な組み合わせ分析情報を作成 ---
     let blockAnalysisText = '';
     const blocks = ['A', 'B', 'C', 'D'];
     
     blocks.forEach((blockName, i) => {
         const blockTeams = teams.slice(i * 16, (i + 1) * 16);
         if (blockTeams.length === 0) return;
-
         const teamDetails = blockTeams.map(teamName => {
             const rankDescription = getRankDescription(calculateRank(teamName, state));
             const lastResult = TEAM_DATA[teamName]?.last || '情報なし'; 
             return `${teamName}(${rankDescription}, 昨年:${lastResult})`;
         }).join(' | ');
-
         blockAnalysisText += `- **${blockName}ブロック:** ${teamDetails}\n`;
     });
     
-    // ▼▼▼ このブロックを新たに追加 ▼▼▼
-    // --- ランダムなファンを一人選出 ---
     const randomFanTeam = teams[Math.floor(Math.random() * teams.length)];
     const fanTeamIndex = teams.indexOf(randomFanTeam);
     const opponentIndex = fanTeamIndex % 2 === 0 ? fanTeamIndex + 1 : fanTeamIndex - 1;
     const opponentName = teams[opponentIndex];
-    // ▲▲▲
-
+    
     const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
-${tournamentName}の組み合わせが決定しました。以下の詳細な組み合わせ情報を元に、読者の興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を30個前後生成してください。
+${tournamentName}の組み合わせが決定しました。以下の詳細な組み合わせ情報を元に、読者の興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を28個前後生成してください。
 
 ### 組み合わせと各チームの情報
 ${blockAnalysisText}
@@ -2674,7 +2668,6 @@ ${blockAnalysisText}
         return null;
     }
 }
-
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -9532,28 +9525,32 @@ document.body.addEventListener('click', async (e) => {
         threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを読み込んでいます...</div>`;
         
         
-        (async () => {
-            let result;
+         (async () => {
+            let result = null;
 
-            // ▼▼▼ この if-else ブロックが今回の修正の核心です ▼▼▼
+            // ▼▼▼ この if ブロックのロジックを修正 ▼▼▼
             if (type === 'game' && matchId) {
                 // 【ゲーム内記事の場合】
-                const match = findMatchById(matchId);
+                const match = findMatchById(matchId); // ★★★ まず試合IDで試合データを取得する ★★★
                 if (match && match.winner) {
-                    const context = { /* ... */ };
+                    const context = {
+                        winnerName: match.winner,
+                        loserName: match.team1 === match.winner ? match.team2 : match.team1,
+                        dbMatch: match, // ★★★ 取得した試合データを渡す ★★★
+                        highlightsText: createHighlightsText(match, match.winner).highlights.map(h => h.description).join('、')
+                    };
                     result = await generateGameMatchBbsComments(context);
                 }
-            } else if (type === 'real') {
-                // 【現実のニュースの場合】
+            } 
+            // ▲▲▲
+            
+            else if (type === 'real') {
                 const comments = await generateRealNewsBbsComments(headline, category);
                 if (comments) result = { title: headline, comments: comments };
             } 
-            // ★★★ この else if ブロックを新たに追加 ★★★
             else if (type === 'bbs_thread' && threadId) {
-                // 【組み合わせスレの場合】
                 const foundThread = tournamentState.matomeThreads.find(t => t.id === threadId);
                 if (foundThread) {
-                    // AIに再生成を依頼せず、保存されたデータをそのまま使う
                     result = {
                         title: foundThread.title,
                         comments: foundThread.comments
