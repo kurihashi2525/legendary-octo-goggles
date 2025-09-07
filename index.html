@@ -2419,26 +2419,24 @@ function formatRecordToString(record) {
  * 本格的なまとめサイトのHTMLを、サーバーと通信して生成する（複数カテゴリ対応・最終版）
  * @returns {Promise<string>} 生成されたHTML文字列
  */
+/**
+ * 本格的なまとめサイトのHTMLを、現実と架空のニュースを融合させて生成する（全機能統合・最終版）
+ */
 async function generateMatomeSiteHtml() {
     let articles = [];
     
-    // --- 1. 強化されたサーバー機能に、現実のニュースをまとめてリクエスト ---
+    // --- 1. サーバーから現実のニュースを取得 ---
     try {
         const response = await fetch('/.netlify/functions/get-news');
-        if (!response.ok) {
-            throw new Error(`サーバーエラー: ${response.status}`);
-        }
-        const realNewsArticles = await response.json();
-        articles.push(...realNewsArticles);
-
+        if (!response.ok) throw new Error(`サーバーエラー: ${response.status}`);
+        articles.push(...(await response.json()));
     } catch (e) {
         console.error("サーバーからのニュース取得に失敗しました:", e);
         articles.push({ headline: "【速報】ニュースサーバー、ダウン中", type: 'real', timestamp: Date.now(), category: 'システム' });
     }
 
-    // --- 2. ゲーム内のニュースを取得 ---
-    const gameNewsList = tournamentState.news || [];
-    gameNewsList.filter(n => n.context && n.context.dbMatch).slice(-5).forEach(gameNews => {
+    // --- 2. ゲーム内の試合結果ニュースを追加 ---
+    (tournamentState.news || []).filter(n => n.context && n.context.dbMatch).slice(-5).forEach(gameNews => {
         const { winnerName, loserName, dbMatch } = gameNews.context;
         const winnerRank = calculateRank(winnerName, tournamentState);
         const loserRank = calculateRank(loserName, tournamentState);
@@ -2460,46 +2458,35 @@ async function generateMatomeSiteHtml() {
         });
     });
 
-const matomeThreads = tournamentState.matomeThreads || [];
-    matomeThreads.forEach(thread => {
+    // --- 3. 保存された「まとめサイト用スレッド」を追加 ---
+    (tournamentState.matomeThreads || []).forEach(thread => {
         articles.push({
             headline: thread.title,
-            type: 'bbs_thread', // 新しいタイプ
-            threadId: thread.id, // スレッドを特定するためのID
+            type: 'bbs_thread',
+            threadId: thread.id,
             timestamp: thread.timestamp,
             category: '高校野球'
         });
     });
 
-    // --- 3. 全記事をタイムスタンプでソートしてHTMLを生成 ---
+    // --- 4. 全記事をソートしてHTMLを生成 ---
     articles.sort((a, b) => b.timestamp - a.timestamp);
 
     if (articles.length === 0) {
         return '<p class="text-center text-gray-500">まだ表示できるニュースがありません。</p>';
     }
 
-    const categoryColors = {
-        "高校野球": "bg-green-100 text-green-800",
-        "スポーツ": "bg-blue-100 text-blue-800",
-        "エンタメ": "bg-pink-100 text-pink-800",
-        "国内": "bg-indigo-100 text-indigo-800",
-        "国際": "bg-teal-100 text-teal-800",
-        "経済": "bg-yellow-100 text-yellow-800",
-        "IT": "bg-purple-100 text-purple-800",
-        "科学": "bg-gray-200 text-gray-800",
-        "主要": "bg-red-100 text-red-800",
-    };
+    const categoryColors = { /* ... (変更なし) ... */ };
 
     return articles.map(article => {
         const time = new Date(article.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
         const commentCount = Math.floor(Math.random() * 800) + 50;
         const color = categoryColors[article.category] || "bg-gray-100 text-gray-800";
 
-        // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
         // ▼▼▼ このブロックが修正の核心です ▼▼▼
-         // ▼▼▼ このブロックが修正の核心です ▼▼▼
         const linkHref = article.type === 'real' ? `href="${article.url}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"';
-        const dataAttributes = `data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}" data-match-id="${article.matchId || ''}"`;
+        // data-thread-id を正しく設定するように修正
+        const dataAttributes = `data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}" data-match-id="${article.matchId || ''}" data-thread-id="${article.threadId || ''}"`;
 
         return `
             <a ${linkHref} class="matome-article-link block p-3 rounded-lg hover:bg-gray-100 transition-colors" ${dataAttributes}>
@@ -3898,7 +3885,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.feuds = tournamentState.feuds || [];
     tournamentState.namcoNews = null;
 
-    const round1Setup = teams.reduce((acc, team, i) => {
+     const round1Setup = teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
         else acc[acc.length - 1].team2 = team;
         return acc;
@@ -3911,53 +3898,43 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
 
-    saveState();
-    renderTournament(tournamentState);
-    
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
     newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
     namcoNewsSection.classList.remove('hidden');
     namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    if (tournamentState.currentTournament === 'summer') {
-        const analysisData = await generateBlockAnalysisArticle(tournamentState);
-        if (analysisData) {
-            tournamentState.blockAnalysisData = analysisData;
-            const summaryArticle = {
-                title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
-                body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
-                timestamp: Date.now(),
-                isAnalysisArticle: true
-            };
-            tournamentState.news.unshift(summaryArticle);
-        }
-    } else {
+    let analysisDataPromise = tournamentState.currentTournament === 'summer' ? generateBlockAnalysisArticle(tournamentState) : Promise.resolve(null);
+    
+    const [analysisData, bracketComments, namcoNews, bracketThread] = await Promise.all([
+        analysisDataPromise,
+        generateBracketReactionComments(tournamentState),
+        generateNamcoNews(tournamentState, 'bracket'),
+        generateBracketBbsThread(tournamentState)
+    ]);
+
+    if (analysisData) {
+        tournamentState.blockAnalysisData = analysisData;
+        tournamentState.news.unshift({
+            title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
+            body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
+            timestamp: Date.now(), isAnalysisArticle: true
+        });
+    } else if (tournamentState.currentTournament !== 'summer') {
         const previewArticle = await generateNewsArticle(null, null, null, 'preview');
         if (previewArticle) tournamentState.news.unshift(previewArticle);
     }
     
-    const [bracketComments, namcoNews] = await Promise.all([
-        generateBracketReactionComments(tournamentState),
-        generateNamcoNews(tournamentState, 'bracket')
-    ]);
-
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
+    if (bracketThread) tournamentState.matomeThreads.unshift(bracketThread);
 
-    renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments);
-    renderNamcoNews(tournamentState.namcoNews);
-const bracketThread = await generateBracketBbsThread(tournamentState);
-    if (bracketThread) {
-        if (!tournamentState.matomeThreads) {
-            tournamentState.matomeThreads = [];
-        }
-        tournamentState.matomeThreads.unshift(bracketThread); // 新しいスレを先頭に追加
-    }
+    // ▼▼▼ この2行の順番が核心です ▼▼▼
+    // 全てのデータが揃った最終的な状態で、画面を更新し、セーブする
+    renderTournament(tournamentState);
     saveState();
+    // ▲▲▲
 }
-
 
    /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
@@ -5573,6 +5550,8 @@ async function setupAutumnMainTournament() {
         const matchId = `${side}-R1-M${matchNum}`;
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
+
+
 
     renderTournament(tournamentState);
     saveState();
@@ -9510,9 +9489,8 @@ document.body.addEventListener('click', async (e) => {
         e.preventDefault();
         const headline = matomeLink.dataset.headline;
         const type = matomeLink.dataset.type;
-        const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
-        const threadId = matomeLink.dataset.threadId; // ★スレッドIDを取得
+        const threadId = matomeLink.dataset.threadId;
 
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
@@ -9523,7 +9501,7 @@ document.body.addEventListener('click', async (e) => {
 
         threadTitleEl.textContent = headline;
         threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを読み込んでいます...</div>`;
-        
+                
         
          (async () => {
             let result = null;
@@ -9548,8 +9526,9 @@ document.body.addEventListener('click', async (e) => {
                 const comments = await generateRealNewsBbsComments(headline, category);
                 if (comments) result = { title: headline, comments: comments };
             } 
-            else if (type === 'bbs_thread' && threadId) {
-                const foundThread = tournamentState.matomeThreads.find(t => t.id === threadId);
+             else if (type === 'bbs_thread' && threadId) {
+                // 【組み合わせスレの場合】
+                const foundThread = (tournamentState.matomeThreads || []).find(t => t.id === threadId);
                 if (foundThread) {
                     result = {
                         title: foundThread.title,
@@ -9557,8 +9536,7 @@ document.body.addEventListener('click', async (e) => {
                     };
                 }
             }
-            // ★★★
-            // ▲▲▲ ここまで修正 ▲▲▲
+            // ▲▲▲
 
             // --- 結果の描画処理 (変更なし) ---
             if (result && result.comments) {
