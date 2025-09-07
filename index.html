@@ -2631,26 +2631,39 @@ ${blockAnalysisText}
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: titlePrompt }] }] });
         const result = await response.json();
         
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
+         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const rawText = result.candidates[0].content.parts[0].text;
             const titleJson = parseJsonFromText(rawText);
+
+            // 【調査機 1A】
+            console.log('【調査機1A】タイトル生成AIの応答:', titleJson);
+            alert('【調査機1A】タイトルAIの応答をコンソールで確認してください。');
             
-            // --- 3. タイトル生成に成功したら、次に「コメントだけ」を生成させる ---
             if (titleJson && titleJson.threadTitle) {
-                // 既に安定して動作している、メイン画面の掲示板コメント生成関数を再利用する
                 const comments = await generateBracketReactionComments(state);
-                
-                return {
+
+                // 【調査機 1B】
+                console.log('【調査機1B】コメント生成AIの応答:', comments);
+                alert('【調査機1B】コメントAIの応答をコンソールで確認してください。');
+
+                const finalThreadObject = {
                     id: `bracket-${currentTournament}-${state.tournamentYear}`,
                     title: titleJson.threadTitle,
-                    comments: comments, // ★ map処理を削除し、直接代入
+                    comments: comments,
                     timestamp: Date.now()
                 };
+
+                // 【調査機 1C】
+                console.log('【調査機1C】最終的に返されるスレッドオブジェクト:', finalThreadObject);
+                alert('【調査機1C】最終的なスレッドオブジェクトをコンソールで確認してください。');
+                
+                return finalThreadObject;
             }
         }
         throw new Error("AIがスレッドタイトルを生成できませんでした。");
     } catch (error) {
         console.error("AI bracket BBS thread generation failed:", error);
+        alert('【調査機エラー】generateBracketBbsThread関数でエラーが発生しました。');
         return null;
     }
 }
@@ -3924,6 +3937,10 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         generateBracketBbsThread(tournamentState)
     ]);
 
+// 【調査機 2】
+    console.log('【調査機2】createNewTournamentが受け取ったスレッド:', bracketThread);
+    alert('【調査機2】生成されたスレッドをコンソールで確認してください。');
+
     if (analysisData) {
         tournamentState.blockAnalysisData = analysisData;
         tournamentState.news.unshift({
@@ -3936,6 +3953,11 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
     if (bracketThread) tournamentState.matomeThreads.unshift(bracketThread);
+
+// 【調査機 3】
+        console.log('【調査機3】Stateに保存されたmatomeThreads:', tournamentState.matomeThreads);
+        alert('【調査機3】State保存後のmatomeThreadsをコンソールで確認してください。');
+    }
 
     renderNews(tournamentState.news);
     renderBbsComments(tournamentState.bbsComments);
@@ -9533,15 +9555,24 @@ document.body.addEventListener('click', async (e) => {
                 if (comments) result = { title: headline, comments: comments };
             } 
             else if (type === 'bbs_thread' && threadId) {
-                const foundThread = tournamentState.matomeThreads.find(t => t.id === threadId);
-                if (foundThread) {
-                    result = {
-                        title: foundThread.title,
-                        comments: foundThread.comments
-                    };
-                }
+            // 【調査機 4A】
+            alert('【調査機4A】組み合わせスレがクリックされました。');
+            console.log('【調査機4B】クリック時のmatomeThreads:', tournamentState.matomeThreads);
+            console.log('【調査機4C】探しているthreadId:', threadId);
+            
+            const foundThread = (tournamentState.matomeThreads || []).find(t => t.id === threadId);
+            
+            // 【調査機 4D】
+            console.log('【調査機4D】findの結果 (foundThread):', foundThread);
+            alert('【調査機4D】findの結果をコンソールで確認してください。');
+            
+            if (foundThread) {
+                result = {
+                    title: foundThread.title,
+                    comments: foundThread.comments
+                };
             }
-            // ★★★
+        }            // ★★★
             // ▲▲▲ ここまで修正 ▲▲▲
 
             // --- 結果の描画処理 (変更なし) ---
