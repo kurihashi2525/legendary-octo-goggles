@@ -9538,25 +9538,29 @@ document.body.addEventListener('click', async (e) => {
             // ▼▼▼ この if-else ブロックが今回の修正の核心です ▼▼▼
             if (type === 'game' && matchId) {
                 // 【ゲーム内記事の場合】
-                // index.html内に新設した generateGameMatchBbsComments 関数を直接呼び出す
                 const match = findMatchById(matchId);
                 if (match && match.winner) {
-                    const context = {
-                        winnerName: match.winner,
-                        loserName: match.team1 === match.winner ? match.team2 : match.team1,
-                        dbMatch: match,
-                        highlightsText: createHighlightsText(match, match.winner).highlights.map(h => h.description).join('、')
-                    };
+                    const context = { /* ... */ };
                     result = await generateGameMatchBbsComments(context);
                 }
             } else if (type === 'real') {
                 // 【現実のニュースの場合】
-                // index.html内に新設した generateRealNewsBbsComments 関数を直接呼び出す
                 const comments = await generateRealNewsBbsComments(headline, category);
-                if (comments) {
-                    result = { title: headline, comments: comments };
+                if (comments) result = { title: headline, comments: comments };
+            } 
+            // ★★★ この else if ブロックを新たに追加 ★★★
+            else if (type === 'bbs_thread' && threadId) {
+                // 【組み合わせスレの場合】
+                const foundThread = tournamentState.matomeThreads.find(t => t.id === threadId);
+                if (foundThread) {
+                    // AIに再生成を依頼せず、保存されたデータをそのまま使う
+                    result = {
+                        title: foundThread.title,
+                        comments: foundThread.comments
+                    };
                 }
             }
+            // ★★★
             // ▲▲▲ ここまで修正 ▲▲▲
 
             // --- 結果の描画処理 (変更なし) ---
