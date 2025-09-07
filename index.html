@@ -2590,13 +2590,13 @@ async function generateGameMatchBbsComments(matchContext) {
 }
 
 /**
- * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（プロンプト修正・安定化版）
+ * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（プロンプト分離・安定化版）
  */
 async function generateBracketBbsThread(state) {
     const { teams, seeds, currentTournament } = state;
     const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
-    // AIに渡すための、より詳細な組み合わせ分析情報を作成
+    // --- 1. AIに渡すための、より詳細な組み合わせ分析情報を作成 ---
     let blockAnalysisText = '';
     const blocks = ['A', 'B', 'C', 'D'];
     
@@ -2611,8 +2611,8 @@ async function generateBracketBbsThread(state) {
         blockAnalysisText += `- **${blockName}ブロック:** ${teamDetails}\n`;
     });
     
-    // ▼▼▼ このプロンプト全体を、よりシンプルで確実なものに修正 ▼▼▼
-    const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
+    // --- 2. まず、AIに「スレッドタイトルだけ」を生成させる ---
+    const titlePrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
 ${tournamentName}の組み合わせが決定しました。以下の組み合わせ情報を読んで、最も衝撃的で「スレが伸びそう」な事実を一つ見つけ出し、それを元に最高の**スレッドタイトル**を一つだけ生成してください。
 
 ### 組み合わせと各チームの情報
@@ -2626,29 +2626,24 @@ ${blockAnalysisText}
 ### 出力形式【最重要】
 解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
 { "threadTitle": "（あなたが生成した最高のスレッドタイトル）" }`;
-    // ▲▲▲
 
     try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: titlePrompt }] }] });
         const result = await response.json();
+        
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const rawText = result.candidates[0].content.parts[0].text;
             const titleJson = parseJsonFromText(rawText);
             
-            // タイトルが正しく生成された場合のみ、コメントを生成する
+            // --- 3. タイトル生成に成功したら、次に「コメントだけ」を生成させる ---
             if (titleJson && titleJson.threadTitle) {
-                // generateBracketReactionComments を再利用してコメント部分だけを生成
+                // 既に安定して動作している、メイン画面の掲示板コメント生成関数を再利用する
                 const comments = await generateBracketReactionComments(state);
                 
                 return {
                     id: `bracket-${currentTournament}-${state.tournamentYear}`,
                     title: titleJson.threadTitle,
-                    comments: comments.map(c => ({ // personalityとtextを正しくマッピング
-                        id: c.id,
-                        personality: c.personality,
-                        text: c.text,
-                        timestamp: c.timestamp
-                    })),
+                    comments: comments, // ★ map処理を削除し、直接代入
                     timestamp: Date.now()
                 };
             }
@@ -2659,7 +2654,6 @@ ${blockAnalysisText}
         return null;
     }
 }
-
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
