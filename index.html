@@ -2595,21 +2595,27 @@ async function generateGameMatchBbsComments(matchContext) {
 /**
  * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（単独生成・最終版）
  */
+/**
+ * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（ハイスペック分析版）
+ */
 async function generateBracketBbsThread(state) {
     const { teams, seeds, currentTournament } = state;
     const tournamentName = tournamentNameMap[currentTournament] || '大会';
 
+    // --- AIに渡すための、より詳細な組み合わせ分析情報を作成 ---
     let blockAnalysisText = '';
     const blocks = ['A', 'B', 'C', 'D'];
     
     blocks.forEach((blockName, i) => {
         const blockTeams = teams.slice(i * 16, (i + 1) * 16);
         if (blockTeams.length === 0) return;
+
         const teamDetails = blockTeams.map(teamName => {
             const rankDescription = getRankDescription(calculateRank(teamName, state));
             const lastResult = TEAM_DATA[teamName]?.last || '情報なし'; 
             return `${teamName}(${rankDescription}, 昨年:${lastResult})`;
         }).join(' | ');
+
         blockAnalysisText += `- **${blockName}ブロック:** ${teamDetails}\n`;
     });
     
@@ -2671,6 +2677,7 @@ ${blockAnalysisText}
         return null;
     }
 }
+
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -3928,10 +3935,12 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     });
 
     // --- 3. 画面描画とAIコンテンツの生成 ---
+    // --- 3. 画面描画とAIコンテンツの生成 ---
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
     newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
     
+    // まずトーナメント表を先に描画
     renderTournament(tournamentState);
 
     const [analysisData, bracketComments, namcoNews, bracketThread] = await Promise.all([
@@ -3941,10 +3950,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         generateBracketBbsThread(tournamentState)
     ]);
 
-// 【調査機 2】
-    console.log('【調査機2】createNewTournamentが受け取ったスレッド:', bracketThread);
-    alert('【調査機2】生成されたスレッドをコンソールで確認してください。');
-
+    // 生成されたコンテンツをStateに追加
     if (analysisData) {
         tournamentState.blockAnalysisData = analysisData;
         tournamentState.news.unshift({
@@ -3954,21 +3960,26 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         });
     }
     
-    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
-    if (namcoNews) tournamentState.namcoNews = namcoNews;
-    if (bracketThread) tournamentState.matomeThreads.unshift(bracketThread);
+    if (bracketComments && bracketComments.length > 0) {
+        tournamentState.bbsComments.push(...bracketComments);
+    }
+    if (namcoNews) {
+        tournamentState.namcoNews = namcoNews;
+    }
+    if (bracketThread) {
+        // tournamentState.matomeThreads がなければ初期化
+        if (!tournamentState.matomeThreads) {
+            tournamentState.matomeThreads = [];
+        }
+        tournamentState.matomeThreads.unshift(bracketThread);
+    }
 
-// 【調査機 3】
-        console.log('【調査機3】Stateに保存されたmatomeThreads:', tournamentState.matomeThreads);
-        alert('【調査機3】State保存後のmatomeThreadsをコンソールで確認してください。');
-    
-
+    // AIコンテンツを画面に反映し、最終的な状態を保存
     renderNews(tournamentState.news);
     renderBbsComments(tournamentState.bbsComments);
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
 }
-
    /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
  */
@@ -9515,6 +9526,7 @@ document.body.addEventListener('click', async (e) => {
     }
     
      // --- まとめサイト内の記事リンククリック ---
+    // --- まとめサイト内の記事リンククリック ---
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
@@ -9522,7 +9534,7 @@ document.body.addEventListener('click', async (e) => {
         const type = matomeLink.dataset.type;
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
-        const threadId = matomeLink.dataset.threadId; // ★スレッドIDを取得
+        const threadId = matomeLink.dataset.threadId;
 
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
@@ -9532,59 +9544,38 @@ document.body.addEventListener('click', async (e) => {
         threadDisplayArea.classList.remove('hidden');
 
         threadTitleEl.textContent = headline;
-        threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを読み込んでいます...</div>`;
+        threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを生成中です...</div>`;
         
-        
-         (async () => {
+        (async () => {
             let result = null;
 
-            // ▼▼▼ この if ブロックのロジックを修正 ▼▼▼
             if (type === 'game' && matchId) {
-                // 【ゲーム内記事の場合】
-                const match = findMatchById(matchId); // ★★★ まず試合IDで試合データを取得する ★★★
+                const match = findMatchById(matchId);
                 if (match && match.winner) {
                     const context = {
                         winnerName: match.winner,
                         loserName: match.team1 === match.winner ? match.team2 : match.team1,
-                        dbMatch: match, // ★★★ 取得した試合データを渡す ★★★
+                        dbMatch: match,
                         highlightsText: createHighlightsText(match, match.winner).highlights.map(h => h.description).join('、')
                     };
                     result = await generateGameMatchBbsComments(context);
                 }
-            } 
-            // ▲▲▲
-            
-            else if (type === 'real') {
+            } else if (type === 'real') {
                 const comments = await generateRealNewsBbsComments(headline, category);
-                if (comments) result = { title: headline, comments: comments };
+                if (comments) {
+                    result = { title: headline, comments: comments };
+                }
             } 
-            else if (type === 'bbs_thread' && threadId) {
-            // 【調査機 4A】
-            alert('【調査機4A】組み合わせスレがクリックされました。');
-            console.log('【調査機4B】クリック時のmatomeThreads:', tournamentState.matomeThreads);
-            console.log('【調査機4C】探しているthreadId:', threadId);
-            
-            const foundThread = (tournamentState.matomeThreads || []).find(t => t.id === threadId);
-            
-            // 【調査機 4D】
-            console.log('【調査機4D】findの結果 (foundThread):', foundThread);
-            alert('【調査機4D】findの結果をコンソールで確認してください。');
-            
-            if (foundThread) {
-                result = {
-                    title: foundThread.title,
-                    comments: foundThread.comments
-                };
+            else if (type === 'bracket_thread_placeholder') {
+                // 組み合わせスレがクリックされたら、毎回AIに生成を依頼する
+                result = await generateBracketBbsThread(tournamentState);
             }
-        }            // ★★★
-            // ▲▲▲ ここまで修正 ▲▲▲
 
-            // --- 結果の描画処理 (変更なし) ---
             if (result && result.comments) {
                 threadTitleEl.textContent = `【スレ】${result.title}`;
                 threadContentEl.innerHTML = ''; // ローダーを消す
 
-                                // --- ここからが「ライブ感」演出 ---
+                // --- 「ライブ感」演出 ---
                 for (const comment of result.comments) {
                     const commentEl = document.createElement('div');
                     commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
@@ -9607,14 +9598,12 @@ document.body.addEventListener('click', async (e) => {
                     threadContentEl.scrollTop = threadContentEl.scrollHeight;
                 }
                 // --- 演出ここまで ---
-
+                
             } else {
                 threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
         })();
-        // ▲▲▲ ここまで書き換え ▲▲▲
     }
-
 
     // --- BBSスレッドから一覧に戻るボタン ---
     if (e.target.closest('#bbs-thread-back-btn')) {
