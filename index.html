@@ -7581,7 +7581,7 @@ ${teamInfoPromptPart}
     /**
      * リトライ機能付きでバックエンドAPI(Netlify Function)を呼び出す
      */
-    async function fetchWithRetry(payload, maxRetries = 3) {
+    async function fetchWithRetry(payload, maxRetries = 10) {
         const functionUrl = '/.netlify/functions/generateApiContent'; // Netlify Functionのエンドポイント
         let lastError;
 
