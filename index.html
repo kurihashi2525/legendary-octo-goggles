@@ -2829,8 +2829,9 @@ async function startDocumentary(type, teamName) {
     if (firstMatch) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
         matchDataForArticle.opponent = opponentName;
-        matchDataForArticle.opponentRank = calculateRank(opponentName, tournamentState);
-matchDataForArticle.opponentRankDesc = getRankDescription(opponentRank); // ランクを「名門」などに変換
+        const opponentRank = calculateRank(opponentName, tournamentState); // ランクを一度変数に保存
+        matchDataForArticle.opponentRank = opponentRank; // オブジェクトに代入
+matchDataForArticle.opponentRankDesc = getRankDescription(opponentRank); 
         
         // ▼▼▼ ここからが新しい処理 ▼▼▼
         // 相手の昨年の成績をTEAM_DATAから直接取得
