@@ -2522,7 +2522,7 @@ async function generateGameMatchBbsComments(matchContext) {
     // ▲▲▲
 
     const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
-以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を25個前後生成してください。
+以下の試合結果について、ユーザーの興味を引くような「スレッドタイトル」と、そのスレッド内での「なんJ民たちのリアルな反応」を34個前後生成してください。
 
 ### 試合結果データ
 - **勝利チーム:** ${winnerName}
@@ -2538,7 +2538,7 @@ async function generateGameMatchBbsComments(matchContext) {
 ### 指示
 1.  **スレッドタイトル:** 試合結果が最も端的に伝わり、かつ少し煽り気味の面白いタイトルを考えてください。（例：【悲報】〇〇、あまりにも弱い【ボロ負け】）
 2.  **コメント生成:**
-    - なんJ特有の口調（「～やで」「～ニキ」「草」「どうすんのこれ」や大松が空気を読まない発言をする、など）やネットスラングを多用してください。
+    - なんJ特有の口調（「～やで」「～ニキ」「草」「どうすんのこれ」や巨人小笠原スレの不謹慎ネタや大松が空気を読まない発言をする、など）やネットスラングを多用してください。
     - 試合内容やスコアだけでなく、**【チームの背景】**にも具体的に言及してください。（例：「さすが古豪やな」「セレ落ち軍団が王者食ったンゴｗｗｗ」）
     - 勝者を称賛する声、敗者を煽る声、斜に構えた意見などをバランス良く混ぜてください。スレと関係ないアスキーアートの荒らしもいても構いません。
     - とんでもない負けとかは煽り散らかしてください。
@@ -10134,23 +10134,12 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         loadTabContent.classList.remove('hidden'); saveTabContent.classList.add('hidden');
     });
     generateSaveCodeBtn.addEventListener('click', () => {
-    try {
         const jsonString = JSON.stringify(tournamentState);
-        // ▼▼▼ 修正の核心 ▼▼▼
-        // pako.deflateRaw を使用して、より互換性の高い形式で圧縮
-        const compressed = pako.deflateRaw(jsonString);
-        // ▲▲▲
-        
-        let base64 = uint8ArrayToBase64(compressed);
-        const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        
-        document.getElementById('save-code-output').textContent = base64url;
+        const compressed = pako.deflate(jsonString);
+        const base64 = uint8ArrayToBase64(compressed);
+        document.getElementById('save-code-output').textContent = base64;
         document.getElementById('save-code-area').classList.remove('hidden');
-    } catch (e) {
-        console.error("合い言葉の生成に失敗:", e);
-        showAlert("合い言葉の生成に失敗しました。");
-    }
-});
+    });
     copySaveCodeBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(document.getElementById('save-code-output').textContent);
         const feedback = document.getElementById('copy-feedback');
@@ -10158,38 +10147,20 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         setTimeout(() => { feedback.textContent = '' }, 2000);
     });
     loadFromCodeBtn.addEventListener('click', () => {
-    try {
-        let code = document.getElementById('load-code-input').value.trim();
-        code = code.replace(/-/g, '+').replace(/_/g, '/');
-        while (code.length % 4) {
-            code += '=';
-        }
-        
-        const binaryString = atob(code);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        
-        // ▼▼▼ 修正の核心 ▼▼▼
-        // pako.inflateRaw を使用して、セーブ時と完全に同じ形式で展開
-        const decompressed = pako.inflateRaw(bytes, { to: 'string' });
-        // ▲▲▲
-
-        const loadedState = JSON.parse(decompressed);
-        
-        if (loadedState && loadedState.tournamentYear) {
+        try {
+            const code = document.getElementById('load-code-input').value;
+            const binaryString = atob(code);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+            const decompressed = pako.inflate(bytes, { to: 'string' });
+            const loadedState = JSON.parse(decompressed);
             tournamentState = loadedState;
             saveState();
             location.reload();
-        } else {
-            throw new Error("無効なセーブデータです。");
+        } catch (e) {
+            showAlert('データの読み込みに失敗しました。');
         }
-    } catch (e) {
-        console.error("データの読み込みに失敗:", e);
-        showAlert('データの読み込みに失敗しました。合い言葉が正しいか、もう一度確認してください。');
-    }
-});
+    });
     // アプリケーション起動
     initializeApp();
 </script>
