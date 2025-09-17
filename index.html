@@ -2767,15 +2767,24 @@ async function startDocumentary(type, teamName) {
     // ▲▲▲
 
     if (article) {
-        tournamentState.news.push(article);
-    } else {
-        tournamentState.news.push({
-            title: "記事生成エラー",
-            body: `「${teamName}」のドキュメンタリー記事生成に失敗しました。`,
-            timestamp: Date.now(),
-            error: true
-        });
-    }
+        tournamentState.news.push(article);
+    } else {
+        // 失敗した場合、再生成に必要な情報を「context」として保存する
+        tournamentState.news.push({
+            title: "ドキュメンタリー記事生成エラー",
+            body: `「${teamName}」のドキュメンタリー記事の生成に失敗しました。`,
+            timestamp: Date.now(),
+            error: true,
+            // ★★★ ここからが重要 ★★★
+            context: {
+                isDocumentary: true, // ドキュメンタリーであるという目印
+                type: type,
+                teamName: teamName,
+                matchData: matchDataForArticle
+            }
+            // ★★★ ここまで ★★★
+        });
+    }
     renderNews(tournamentState.news);
     saveState();
 }
@@ -9825,88 +9834,110 @@ document.body.addEventListener('click', async (e) => {
     // --- AI記事の再生成ボタン（成功した記事用） ---
      // --- AI記事の再生成ボタン（成功・失敗記事の両方に対応） ---
     const regenerateBtn = e.target.closest('.regenerate-btn, .retry-btn');
-    if (regenerateBtn) {
-        const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
-        const originalArticle = tournamentState.news[articleIndex];
-        if (!originalArticle || !originalArticle.context) {
-            alert("この記事は再生成できません。");
-            return;
-        }
-        articleForRegeneration = { index: articleIndex, article: originalArticle };
-        document.getElementById('feedback-include').value = '';
-        document.getElementById('feedback-exclude').value = '';
-        document.getElementById('feedback-modal').classList.remove('hidden');
-    }
+    if (regenerateBtn) {
+        const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
+        const originalArticle = tournamentState.news[articleIndex];
+        if (!originalArticle || !originalArticle.context) {
+            alert("この記事は再生成できません。");
+            return;
+        }
+        articleForRegeneration = { index: articleIndex, article: originalArticle };
+        document.getElementById('feedback-include').value = '';
+        document.getElementById('feedback-exclude').value = '';
+        document.getElementById('feedback-modal').classList.remove('hidden');
+    }
     
     // --- フィードバックモーダルからの再生成実行ボタン ---
-    const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
-    if (feedbackSubmitBtn) {
-        if (!articleForRegeneration) return;
-        const { index, article } = articleForRegeneration;
-        const context = article.context;
-        
-        feedbackSubmitBtn.textContent = '生成中...';
-        feedbackSubmitBtn.disabled = true;
+    // ▼▼▼ このブロックで、既存の該当箇所を置き換えてください ▼▼▼
 
-        const userFeedback = {
-            include: document.getElementById('feedback-include').value,
-            exclude: document.getElementById('feedback-exclude').value
-        };
+    // --- フィードバックモーダルからの再生成実行ボタン ---
+    const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
+    if (feedbackSubmitBtn) {
+        // 1. 再生成の対象となる記事データを取得
+        if (!articleForRegeneration) return;
+        const { index, article } = articleForRegeneration;
+        const context = article.context;
+        
+        // 2. UIを準備 (ボタンを無効化し、ローダーを表示)
+        feedbackSubmitBtn.textContent = '生成中...';
+        feedbackSubmitBtn.disabled = true;
+        const userFeedback = {
+            include: document.getElementById('feedback-include').value,
+            exclude: document.getElementById('feedback-exclude').value
+        };
+        document.getElementById('feedback-modal').classList.add('hidden');
+        articleForRegeneration = null;
+        tournamentState.news.splice(index, 1);
+        renderNews(tournamentState.news);
+        newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
+        
+        // 3. 非同期でAIの再生成処理を開始
+        (async () => {
+            let articlePromise;
+            const documentary = tournamentState.documentary;
 
-        document.getElementById('feedback-modal').classList.add('hidden');
-        articleForRegeneration = null;
-        
-        // 元の記事（またはエラー表示）を一旦削除
-        tournamentState.news.splice(index, 1);
-        renderNews(tournamentState.news);
-        newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
-        
-        (async () => {
-            const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = context;
-            const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-            
-            let articlePromise;
-            const documentary = tournamentState.documentary;
+            // ★★★ ここで再生成の種類を判断します ★★★
+            if (context.isDocumentary) {
+                // 【パターンA】失敗したのが「ドキュメンタリーの序章」だった場合
+                const { type, teamName, matchData } = context;
+                articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
+            
+            } else {
+                // 【パターンB】失敗したのが「通常の試合記事」だった場合
+                const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = context;
+                const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
 
-            if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
-                const isWin = documentary.target === winnerName;
-                const matchInfo = { 
-                    round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
-                    opponent: isWin ? loserName : winnerName,
-                    score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
-                    highlights: highlights.map(h => h.description).join('、')
-                };
-                articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfo, userFeedback);
-            } else {
-                articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames, userFeedback);
-            }
-            
-            const newArticle = await articlePromise;
-            
-            const createErrorArticle = () => ({
-                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true, errorId: matchId, context: context
-            });
+                if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+                    // 【パターンB-1】その試合が、進行中のドキュメンタリーの一部だった場合
+                    const isWin = documentary.target === winnerName;
+                    const matchInfo = {
+                        round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
+                        opponent: isWin ? loserName : winnerName,
+                        score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
+                        highlights: highlights.map(h => h.description).join('、')
+                    };
+                    articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfo, userFeedback);
+                } else {
+                    // 【パターンB-2】ドキュメンタリーとは無関係の、ただの試合記事だった場合
+                    articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames, userFeedback);
+                }
+            }
+            
+            // 4. AIからの応答を待ち、結果を処理する
+            const newArticle = await articlePromise;
+            
+            const createErrorArticle = () => ({
+                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
+                timestamp: Date.now(), error: true, errorId: context.matchId || 'documentary', context: context
+            });
 
-            if (newArticle && !newArticle.error) {
-                newArticle.context = context;
-                const isVerified = await factCheckArticle(newArticle, highlights);
-                if (isVerified) {
-                    tournamentState.news.splice(index, 0, newArticle);
-                    showArticleReviewModal(newArticle);
-                } else {
-                    tournamentState.news.splice(index, 0, createErrorArticle());
+            if (newArticle && !newArticle.error) {
+                newArticle.context = context;
+                
+                let isVerified = true; // ドキュメンタリー記事は事実確認をスキップ
+                if (!context.isDocumentary) {
+                    isVerified = await factCheckArticle(newArticle, createHighlightsText(context.dbMatch, context.winnerName).highlights);
                 }
-            } else {
-                tournamentState.news.splice(index, 0, createErrorArticle());
-            }
-            
-            saveState();
-            renderNews(tournamentState.news);
-            feedbackSubmitBtn.textContent = 'この指示で再生成';
-            feedbackSubmitBtn.disabled = false;
-        })();
-    }
+
+                if (isVerified) {
+                    tournamentState.news.splice(index, 0, newArticle);
+                    showArticleReviewModal(newArticle);
+                } else {
+                    tournamentState.news.splice(index, 0, createErrorArticle());
+                }
+            } else {
+                tournamentState.news.splice(index, 0, createErrorArticle());
+            }
+            
+            // 5. 最終的な状態を保存し、UIを元に戻す
+            saveState();
+            renderNews(tournamentState.news);
+            feedbackSubmitBtn.textContent = 'この指示で再生成';
+            feedbackSubmitBtn.disabled = false;
+        })();
+    }
+    
+// ▲▲▲ ここまで置き換え ▲▲▲
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
         document.getElementById('feedback-modal').classList.add('hidden');
