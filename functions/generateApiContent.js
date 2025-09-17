@@ -5,8 +5,7 @@ exports.handler = async function(event, context) {
   const apiKey = process.env.GOOGLE_API_KEY;
 
   // ストリーミング用のエンドポイント
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}`;
-
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?key=${apiKey}`;
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
