@@ -8,7 +8,10 @@ exports.handler = async function(event, context) {
   const apiKey = process.env.GOOGLE_API_KEY;
 
   // ▼▼▼ この行を修正 ▼▼▼
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+ // netlify/functions/generateApiContent.js の修正箇所
+
+// 最新の安定版である「2.5 Flash」モデルを指定します。
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   // ▲▲▲ この行を修正 ▲▲▲
 
   try {
