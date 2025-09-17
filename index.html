@@ -2460,17 +2460,6 @@ async function generateMatomeSiteHtml() {
         });
     });
 
-const matomeThreads = tournamentState.matomeThreads || [];
-    matomeThreads.forEach(thread => {
-        articles.push({
-            headline: thread.title,
-            type: 'bbs_thread', // 新しいタイプ
-            threadId: thread.id, // スレッドを特定するためのID
-            timestamp: thread.timestamp,
-            category: '高校野球'
-        });
-    });
-
     // --- 3. 全記事をタイムスタンプでソートしてHTMLを生成 ---
     articles.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -2589,84 +2578,6 @@ async function generateGameMatchBbsComments(matchContext) {
     }
 }
 
-/**
- * トーナメント組み合わせ決定時に、なんJまとめサイト風のスレッド（タイトル＋コメント）を丸ごと生成する（プロンプト分離・安定化版）
- */
-async function generateBracketBbsThread(state) {
-    const { teams, seeds, currentTournament } = state;
-    const tournamentName = tournamentNameMap[currentTournament] || '大会';
-
-    // --- 1. AIに渡すための、より詳細な組み合わせ分析情報を作成 ---
-    let blockAnalysisText = '';
-    const blocks = ['A', 'B', 'C', 'D'];
-    
-    blocks.forEach((blockName, i) => {
-        const blockTeams = teams.slice(i * 16, (i + 1) * 16);
-        if (blockTeams.length === 0) return;
-        const teamDetails = blockTeams.map(teamName => {
-            const rankDescription = getRankDescription(calculateRank(teamName, state));
-            const lastResult = TEAM_DATA[teamName]?.last || '情報なし'; 
-            return `${teamName}(${rankDescription}, 昨年:${lastResult})`;
-        }).join(' | ');
-        blockAnalysisText += `- **${blockName}ブロック:** ${teamDetails}\n`;
-    });
-    
-    // --- 2. まず、AIに「スレッドタイトルだけ」を生成させる ---
-    const titlePrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」のまとめサイト管理人です。
-${tournamentName}の組み合わせが決定しました。以下の組み合わせ情報を読んで、最も衝撃的で「スレが伸びそう」な事実を一つ見つけ出し、それを元に最高の**スレッドタイトル**を一つだけ生成してください。
-
-### 組み合わせと各チームの情報
-${blockAnalysisText}
-
-### スレッドタイトル生成の指示
-- 昨年の上位校や現在の高評価チームが固まった「死のブロック」を煽る。
-- 1回戦から強豪同士が激突するカードを強調する。
-- なんJ民が好きそうな、少し大げさで面白いタイトルにする。（例：「【超絶悲報】静岡大会、Aブロックだけガチでレベルがおかしいｗｗｗ」）
-
-### 出力形式【最重要】
-解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
-{ "threadTitle": "（あなたが生成した最高のスレッドタイトル）" }`;
-
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: titlePrompt }] }] });
-        const result = await response.json();
-        
-         if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const rawText = result.candidates[0].content.parts[0].text;
-            const titleJson = parseJsonFromText(rawText);
-
-            // 【調査機 1A】
-            console.log('【調査機1A】タイトル生成AIの応答:', titleJson);
-            alert('【調査機1A】タイトルAIの応答をコンソールで確認してください。');
-            
-            if (titleJson && titleJson.threadTitle) {
-                const comments = await generateBracketReactionComments(state);
-
-                // 【調査機 1B】
-                console.log('【調査機1B】コメント生成AIの応答:', comments);
-                alert('【調査機1B】コメントAIの応答をコンソールで確認してください。');
-
-                const finalThreadObject = {
-                    id: `bracket-${currentTournament}-${state.tournamentYear}`,
-                    title: titleJson.threadTitle,
-                    comments: comments,
-                    timestamp: Date.now()
-                };
-
-                // 【調査機 1C】
-                console.log('【調査機1C】最終的に返されるスレッドオブジェクト:', finalThreadObject);
-                alert('【調査機1C】最終的なスレッドオブジェクトをコンソールで確認してください。');
-                
-                return finalThreadObject;
-            }
-        }
-        throw new Error("AIがスレッドタイトルを生成できませんでした。");
-    } catch (error) {
-        console.error("AI bracket BBS thread generation failed:", error);
-        alert('【調査機エラー】generateBracketBbsThread関数でエラーが発生しました。');
-        return null;
-    }
-}
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -2819,7 +2730,6 @@ async function startDocumentary(type, teamName) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
         matchDataForArticle.opponent = opponentName;
         matchDataForArticle.opponentRank = calculateRank(opponentName, tournamentState);
-matchDataForArticle.opponentRankDesc = getRankDescription(opponentRank); // ランクを「名門」などに変換
         
         // ▼▼▼ ここからが新しい処理 ▼▼▼
         // 相手の昨年の成績をTEAM_DATAから直接取得
@@ -3192,7 +3102,7 @@ ${finalFeedbackPrompt}
 「${teamName}」が抱える困難な状況と、それでも夢を諦めない彼らの姿を描く。
 ${charactersPrompt}
 ### 構成案
-1.  **【チームの現在地】**: 記者がチームの元を訪れる場面から始める。練習の様子などを描写し、監督や選手にインタビューし、チームが抱える具体的なハンデ（例：${teamMasterData.info}）と、それに対する彼らの想いを明らかにする。
+1.  **【チームの現在地】**: 記者がチームの元を訪れる場面から始める。監督や選手にインタビューし、チームが抱える具体的なハンデ（例：${teamMasterData.info}）と、それに対する彼らの想いを明らかにする。
 2.  **【地域との絆】**: チームを支える地元の人々（例：商店街の店主、OBなど）にも話を聞き、地域にとってこのチームがどのような存在であるかを描写する。
 ${reactionPrompt}
 5.  **【決意表明】**: 最後に、主将が大会へ向かう決意を語り、締めくくる。
@@ -3738,18 +3648,16 @@ async function generateBlockAnalysisArticle(state) {
    /**
  * 新しいトーナ-メントを開始するメイン関数（大会移行バグ修正・最終完全版）
  */
-/**
- * 新しいトーナメントを開始するメイン関数（全機能統合・最終版）
- */
 async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {
-    // --- 1. 画面の初期化と大会基本設定 ---
     setupEl.classList.add('hidden');
     tournamentDisplayEl.classList.remove('hidden');
     
+    // 大会移行時に、前の大会のコントロールボタンを確実に非表示にする
     autumnControls.classList.add('hidden');
     startMainTournamentBtn.classList.add('hidden');
     startRankingPlayoffsBtn.classList.add('hidden');
 
+    // --- 世代交代処理 ---
     if (isNext && tournamentState.teamRecords) {
         for (const teamName in tournamentState.teamRecords) {
             if (tournamentState.teamRecords.hasOwnProperty(teamName)) {
@@ -3808,63 +3716,75 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
             },
             allMatches: {}
         };
-        
-        // ▼▼▼ ここからが復元されたコードブロックです ▼▼▼
-        if (tournamentState.senbatsuTeams && tournamentState.senbatsuTeams.length > 0) {
-            for (const teamName of tournamentState.senbatsuTeams) {
-                const teamRank = calculateRank(teamName, tournamentState);
-                const koshienResultKey = simulateKoshien(teamRank);
-                const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
-                
-                const teamRecord = tournamentState.teamRecords[teamName];
-                if (teamRecord) {
-                    teamRecord.lastFinish = koshienResult.rank;
-                    const newHistoryRecord = { 
-                        year: tournamentState.tournamentYear, 
-                        tournament: 'spring_koshien',
-                        rank: koshienResult.rank 
-                    };
-                    teamRecord.history.unshift(newHistoryRecord);
-                    if (!teamRecord.best || newHistoryRecord.rank < teamRecord.best.rank) {
-                        teamRecord.best = newHistoryRecord;
-                    }
-                }
-                
-                const article = await generateKoshienSummaryArticle(teamName, koshienResult.label, 'spring');
-                if (article) {
-                    tournamentState.news.push(article);
+        await setupSpringRegionalQualifiers();
+
+         if (tournamentState.senbatsuTeams && tournamentState.senbatsuTeams.length > 0) {
+        for (const teamName of tournamentState.senbatsuTeams) {
+            // チームの実力（ランク）を取得
+            const teamRank = calculateRank(teamName, tournamentState);
+            // ランクに基づき、甲子園での成績を確率的に決定
+            const koshienResultKey = simulateKoshien(teamRank);
+            const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
+            
+            // チームの公式記録を更新
+            const teamRecord = tournamentState.teamRecords[teamName];
+            if (teamRecord) {
+                teamRecord.lastFinish = koshienResult.rank; // 最終成績を甲子園のものに更新
+                const newHistoryRecord = { 
+                    year: tournamentState.tournamentYear, 
+                    tournament: 'spring_koshien', // 春の甲子園という特別な記録
+                    rank: koshienResult.rank 
+                };
+                teamRecord.history.unshift(newHistoryRecord);
+                // これまでの最高成績より良ければ更新
+                if (!teamRecord.best || newHistoryRecord.rank < teamRecord.best.rank) {
+                    teamRecord.best = newHistoryRecord;
                 }
             }
+            
+            // 結果を元にニュース記事をAIに生成させる
+            const article = await generateKoshienSummaryArticle(teamName, koshienResult.label, 'spring');
+            if (article) {
+                tournamentState.news.push(article);
+            }
         }
-        tournamentState.senbatsuTeams = [];
-        // ▲▲▲ ここまで ▲▲▲
-        
-        await setupSpringRegionalQualifiers();
-        return;
     }
-    
-    // --- 2. 夏季大会のトーナメントデータ作成 ---
-    mainBracketWrapper.classList.remove('hidden');
-    tournamentState.currentTournament = 'summer';
-    tournamentState.is16team = false;
+    // ▲▲▲
 
-    if (isNext) {
+    tournamentState.senbatsuTeams = [];
+    return;
+}    
+    // --- 夏季大会の開始 ---
+    mainBracketWrapper.classList.remove('hidden');
+    tournamentState.is16team = false;
+    tournamentState.currentTournament = 'summer';
+
+    if (isNext) { // 春から夏への移行時
         tournamentState.tournamentYear++;
     }
     
+    // 年度とチーム記録の初期化 (全くの初回プレイ時)
     if (!isNext) { 
         tournamentState.tournamentYear = 2025;
         tournamentState.teamRecords = {};
-        tournamentState.settings = { enableArticleGeneration: true, enableBbsGeneration: true };
         const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
         historicalRanks.sort((a, b) => a.rank - b.rank);
+        
+        // 初回のみsettingsを初期化
+        tournamentState.settings = {
+            enableArticleGeneration: true,
+            enableBbsGeneration: true
+        };
+
         INITIAL_TEAM_POOL.forEach(t => {
             const historicalRank = historicalRanks.find(hr => hr.name === t);
             tournamentState.teamRecords[t] = { 
                 wins: 0, losses: 0, best: null, history: [],
                 lastFinish: historicalRank ? historicalRank.rank : 64, 
-                previousRank: null, teamTraits: [], 
-                previousStarters: null, roster: null
+                previousRank: null,
+                teamTraits: [], 
+                previousStarters: null,
+                roster: null,
             };
         });
     }
@@ -3878,13 +3798,16 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         seeds = historicalRanks.slice(0, 8).map(t => t.name);
     } else {
         if (isNext) {
-            const lastTournamentTeams = Object.keys(tournamentState.teamRecords).map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] })).sort((a, b) => a.lastFinish - b.lastFinish);
+            const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
+                .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
+                .sort((a, b) => a.lastFinish - b.lastFinish);
             seeds = lastTournamentTeams.slice(0, 8).map(t => t.name);
         } else {
             const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
             historicalRanks.sort((a, b) => a.rank - b.rank);
             seeds = historicalRanks.slice(0, 8).map(t => t.name);
         }
+
         const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seeds.includes(t));
         const shuffledNonSeeds = shuffleArray(nonSeeds);
         teams = Array(64).fill(null);
@@ -3897,6 +3820,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         }
     }
     
+    // トーナメントデータの作成
     tournamentState.teams = teams;
     tournamentState.matches = {};
     tournamentState.news = [];
@@ -3905,14 +3829,14 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.seeds = seeds;
     tournamentState.bbsComments = [];
     tournamentState.daiyaBbsComments = [];
-    tournamentState.tickerHeadlines = [];
+    tournamentState.tickerHeadlines = []; 
     tournamentState.rivalries = RIVALRIES;
     tournamentState.feuds = tournamentState.feuds || [];
     tournamentState.namcoNews = null;
-    tournamentState.matomeThreads = tournamentState.matomeThreads || [];
 
     const round1Setup = teams.reduce((acc, team, i) => {
-        if (i % 2 === 0) acc.push({ team1: team, team2: null }); else acc[acc.length - 1].team2 = team;
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
         return acc;
     }, []);
 
@@ -3923,47 +3847,46 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
 
-    // --- 3. 画面描画とAIコンテンツの生成 ---
+    saveState();
+    renderTournament(tournamentState);
+    
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
     newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の勢力図を分析中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-    
-    renderTournament(tournamentState);
+    namcoNewsSection.classList.remove('hidden');
+    namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    const [analysisData, bracketComments, namcoNews, bracketThread] = await Promise.all([
-        tournamentState.currentTournament === 'summer' ? generateBlockAnalysisArticle(tournamentState) : Promise.resolve(null),
+    if (tournamentState.currentTournament === 'summer') {
+        const analysisData = await generateBlockAnalysisArticle(tournamentState);
+        if (analysisData) {
+            tournamentState.blockAnalysisData = analysisData;
+            const summaryArticle = {
+                title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
+                body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
+                timestamp: Date.now(),
+                isAnalysisArticle: true
+            };
+            tournamentState.news.unshift(summaryArticle);
+        }
+    } else {
+        const previewArticle = await generateNewsArticle(null, null, null, 'preview');
+        if (previewArticle) tournamentState.news.unshift(previewArticle);
+    }
+    
+    const [bracketComments, namcoNews] = await Promise.all([
         generateBracketReactionComments(tournamentState),
-        generateNamcoNews(tournamentState, 'bracket'),
-        generateBracketBbsThread(tournamentState)
+        generateNamcoNews(tournamentState, 'bracket')
     ]);
 
-// 【調査機 2】
-    console.log('【調査機2】createNewTournamentが受け取ったスレッド:', bracketThread);
-    alert('【調査機2】生成されたスレッドをコンソールで確認してください。');
-
-    if (analysisData) {
-        tournamentState.blockAnalysisData = analysisData;
-        tournamentState.news.unshift({
-            title: `${tournamentState.tournamentYear}年度 夏季大会、組み合わせ決定！`,
-            body: `各ブロックの勢力図分析が完了しました。下のボタンから、未来的なアニメーションとAIによる解説をお楽しみください。`,
-            timestamp: Date.now(), isAnalysisArticle: true
-        });
-    }
-    
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
-    if (bracketThread) tournamentState.matomeThreads.unshift(bracketThread);
-
-// 【調査機 3】
-        console.log('【調査機3】Stateに保存されたmatomeThreads:', tournamentState.matomeThreads);
-        alert('【調査機3】State保存後のmatomeThreadsをコンソールで確認してください。');
-    }
 
     renderNews(tournamentState.news);
     renderBbsComments(tournamentState.bbsComments);
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
 }
+
 
    /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
@@ -6987,87 +6910,119 @@ ${specialNarrativeContext}
     }
 
    /**
- * AIに組み合わせ決定時の掲示板の反応を生成させる（全大会ハイスペック分析対応・最終版）
- */
-/**
- * AIに組み合わせ決定時の掲示板の反応を生成させる（ランダムファン視点統合・最終版）
+ * AIに組み合わせ決定時の掲示板の反応を生成させる
+ * ★★★ 春・夏・秋の大会進行度に応じて指示を切り替える完成版 ★★★
  */
 async function generateBracketReactionComments(state) {
-    const { teams, seeds, currentTournament, autumnPhase, springPhase, autumnData } = state;
-    if (teams.length < 8) return [];
+    const { teams, seeds } = state;
+    // チーム数が少ない場合はコメントを生成しない
+    if (teams.length < 8) return []; 
 
-    let analysisText = '';
-    let commentDirections = '';
+    let analysis = ''; // 組み合わせ分析を入れる変数
+    let commentDirections = ''; // AIへの指示を入れる変数
 
-    // --- ランダムなファンを一人選出し、その情報を生成 ---
-    const randomFanTeam = teams[Math.floor(Math.random() * teams.length)];
-    const fanTeamIndex = teams.indexOf(randomFanTeam);
-    // 相手はトーナメント表で隣のチーム
-    const opponentIndex = fanTeamIndex % 2 === 0 ? fanTeamIndex + 1 : fanTeamIndex - 1;
-    const opponentName = teams[opponentIndex];
-    
-    const fanCommentInstruction = `
-- **【特別指示】特定のチームのファン:**
-  - あなたは**「${randomFanTeam}」**の熱狂的なファン（OBや地元民など）です。
-  - あなたのチームの初戦の相手は**「${opponentName}」**に決まりました。
-  - この組み合わせに対して、**あなたのチームを贔屓した、楽観的または悲観的な、感情のこもったコメント**を一つ生成してください。（例：「ワイの${randomFanTeam}、初戦は${opponentName}か。もろたで工藤！」「${randomFanTeam}ファンやけど、初戦から${opponentName}はキツいンゴ…」）`;
-
-    // --- 大会ごとの分析ロジック ---
-    if (currentTournament === 'autumn' && autumnPhase === 'main') {
+    // --- 1. 秋季大会の処理 ---
+    if (state.currentTournament === 'autumn' && state.autumnPhase === 'main') {
         const pots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-        teams.forEach(team => {
+        state.teams.forEach(team => {
             for (const region of ['東部', '中部', '西部', '伊豆']) {
-                const rep = autumnData.regions[region].finalReps.find(r => r.team === team);
+                const rep = state.autumnData.regions[region].finalReps.find(r => r.team === team);
                 if (rep) {
                     pots[rep.rank].push(`${team}(${region}${rep.rank}位)`);
                     break;
                 }
             }
         });
-        analysisText = `秋季県大会の組み合わせが決定！\n- ポット1(地区1位): ${pots[1].join(', ')}\n- ポット2(地区2位): ${pots[2].join(', ')}\n...`;
-        commentDirections = `- **ポット制への反応:** 「地区1位と敗者復活組がいきなり当たるのか！」など、秋季大会ならではの組み合わせへのコメント。\n- **新チームへの期待と不安:** 「あの強豪も世代交代でどうなるか」といったコメント。\n${fanCommentInstruction}`;
-    } 
-    else if (currentTournament === 'spring') {
-        if (springPhase === 'main_round1') {
-            const qualifierWinners = teams.filter(team => !seeds.includes(team));
-            analysisText = `春季県大会1回戦、予選を勝ち上がった16校の組み合わせが決定！`;
-            commentDirections = `- **予選突破組への評価:** 「予選で〇〇を倒した△△は本物か」といった、勝ち上がってきたチームへの期待や分析。\n${fanCommentInstruction}`;
-        } else { // main_round2_onwards
-            analysisText = `春季県大会、シード校が登場！`;
-            commentDirections = `- **シード校 vs 予選突破組:** 「いきなりシードの〇〇と当たるとかクジ運なさすぎだろ」といったコメント。\n- **夏の大会への展望:** 「ここで勝つチームが夏の甲子園に一番近い」など、夏を見据えたコメント。\n${fanCommentInstruction}`;
+        
+        analysis = `秋季県大会の組み合わせが決定！
+- ポット1(地区1位): ${pots[1].join(', ')}
+- ポット2(地区2位): ${pots[2].join(', ')}
+- ポット3(地区3位): ${pots[3].join(', ')}
+- ポット4(地区4位): ${pots[4].join(', ')}
+- ポット5(敗者復活): ${pots[5].join(', ')}`;
+
+        commentDirections = `
+- 「地区1位と敗者復活組がいきなり当たるのか！」「地区間のレベル差が試されるな」といったポット制や地区対決に関する反応。
+- ポット1の強豪校がどこに入るか、そのブロックの他のチームへの同情。
+- 自分の応援するチームがどのポットから、どのブロックに入ったかに対する一喜一憂。`;
+
+    // --- 2. 春季大会の処理 ---
+    } else if (state.currentTournament === 'spring') {
+        
+        // --- 2A. 地区予選 ---
+        if (state.springPhase === 'regional_qualifiers') {
+            analysis = `春季地区予選の組み合わせが決定！県大会本戦への出場権16枠をかけた戦いが始まる。`;
+            commentDirections = `
+- 「うちの地区、激戦区すぎだろ…」「県大会出るの大変だな」といった、地区予選の厳しさに関するコメント。
+- シード校以外の有力校がどの地区にいるかについての言及。「〇〇と△△が同じ地区とかマジかよ」など。
+- 無名校にとってはチャンスであることへの期待や感想。`;
+        } 
+        // --- 2B. 県大会1回戦 ---
+        else if (state.springPhase === 'main_round1') {
+            analysis = `春季県大会1回戦、予選を勝ち上がった16校の組み合わせが決定！シード校への挑戦権を掴むのはどこだ。`;
+            commentDirections = `
+- 「予選突破組同士の潰し合いか、面白いな」「ここ勝てばシード校とやれるのか」といった、1回戦ならではの反応。
+- 地区予選を勝ち上がってきた勢いのあるチームへの注目。「予選で〇〇を倒した△△、どこまで行くか楽しみ」など。
+- どのチームがシード校を脅かす存在になりそうかという予想。`;
+        } 
+        // --- 2C. 県大会2回戦 (シード校登場) ---
+        else if (state.springPhase === 'main_round2') {
+            const numBlocks = Math.ceil(teams.length / 16);
+            let blockAnalyses = [];
+            for(let i=0; i<numBlocks; i++){
+                const blockName = String.fromCharCode(65+i);
+                const blockTeams = teams.slice(i*16, (i+1)*16);
+                if(blockTeams.length === 0) continue;
+                const isStrong = (team) => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity;
+                const strongTeams = blockTeams.filter(isStrong);
+                blockAnalyses.push(`- ${blockName}ブロック: 有力校 ${strongTeams.length}チーム (${strongTeams.join(', ')})`);
+            }
+            analysis = `春季県大会2回戦、シード校と予選突破校の組み合わせが決定！\n${blockAnalyses.join('\n')}`;
+            commentDirections = `
+- 「シード校 vs 予選突破組」という構図への期待感。「〇〇（シード校）といきなり当たるとかクジ運なさすぎだろ」など。
+- 有力校が固まった「死のブロック」への反応。「Aブロック、事実上の決勝戦じゃねえか」など。
+- シード校が順当に勝つか、予選を勝ち上がったチームが「ジャイキリ」を起こすかという予想。`;
         }
-    } 
-    else { // 夏季大会
+
+    // --- 3. 夏季大会 (および上記以外のケース) の処理 ---
+    } else {
+        const numBlocks = Math.ceil(teams.length / 16);
         let blockAnalyses = [];
-        const blocks = ['A', 'B', 'C', 'D'];
-        blocks.forEach((blockName, i) => {
-            const blockTeams = teams.slice(i * 16, (i + 1) * 16);
-            if (blockTeams.length === 0) return;
-            const teamDetails = blockTeams.map(teamName => {
-                return `${teamName}(${getRankDescription(calculateRank(teamName, state))}, 昨年:${TEAM_DATA[teamName]?.last})`;
-            }).join(' | ');
-            blockAnalyses.push(`- **${blockName}ブロック:** ${teamDetails}`);
-        });
-        analysisText = `夏の選手権、組み合わせが決定！\n${blockAnalyses.join('\n')}`;
-        commentDirections = `- **鳥の目（ブロック間格差の分析）:** 最も過酷な「死のブロック」と、逆に楽な「天国ブロック」を指摘する。\n- **虫の目（1回戦の注目カード分析）:** 1回戦から強豪同士が激突するカードを具体的に指摘する。\n- **魚の目（中盤戦の展望分析）:** 準々決勝あたりでどの強豪同士が激突するかを予測する。\n- **ダークホースの特定:** 組み合わせに恵まれたチームを「勝ち上がりそう」なダークホースとして挙げる。\n${fanCommentInstruction}`;
+        for(let i=0; i<numBlocks; i++){
+            const blockName = String.fromCharCode(65+i);
+            const blockTeams = teams.slice(i*16, (i+1)*16);
+            if(blockTeams.length === 0) continue;
+            const isStrong = (team) => seeds.includes(team) || DETAILED_TEAM_DATA[team] || TEAM_DATA[team].popularity || TEAM_DATA[team].best.includes('甲子園');
+            const strongTeams = blockTeams.filter(isStrong);
+            blockAnalyses.push(`- ${blockName}ブロック: 有力校 ${strongTeams.length}チーム (${strongTeams.join(', ')})`);
+        }
+        analysis = `夏の選手権、組み合わせが決定！\n${blockAnalyses.join('\n')}`;
+        commentDirections = `
+- 「ここのブロックやばすぎる」「死のブロックだな」といった、有力校が固まったブロックへの反応。
+- 「〇〇は決勝までフリーパスかよ」といった、有力校が少ないブロックへの反応。
+- 自分の応援するチームが厳しいブロックに入ったことへの絶望や、楽なブロックに入ったことへの期待。
+- 3年生最後の夏、という文脈でのドラマへの期待。`;
     }
 
-    const prompt = `あなたは、匿名掲示板に集う、非常に分析能力の高い高校野球ファン（なんJ民）です。
-以下のトーナメントの組み合わせと、各チームの情報を読んで、ファンらしいリアルな短いコメントを5～7個生成してください。
+    // --- プロンプトの組み立て ---
+    const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+以下のトーナメントの組み合わせ分析を読んで、ファンらしいリアルな短いコメントを5～7個生成してください。
 
-### 組み合わせと各チームの情報
-${analysisText}
+### 組み合わせ分析
+${analysis}
 
 ### コメントの方向性
 ${commentDirections}
 
-### 出力形式【最重要】
-解説や前置きは一切不要です。必ず以下のJSON配列形式"のみ"で出力してください。
+### 出力形式
+必ず以下のJSON配列形式で出力してください。
 [
-  {"personality": "野球通のファン", "comment": "（コメント本文）"},
-  {"personality": "${randomFanTeam}のOB", "comment": "（コメント本文）"}
+  {"personality": "匿名ファン", "comment": "（コメント本文）"},
+  {"personality": "野球通", "comment": "（コメント本文）"},
+  {"personality": "悲観的なファン", "comment": "（コメント本文）"}
 ]`;
 
+    // --- AIへのリクエストと結果の処理 ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -7084,12 +7039,13 @@ ${commentDirections}
                 }));
             }
         }
-        throw new Error("AIからの応答が、正しい配列形式ではありません。");
+        throw new Error("AIからの応答が予期した形式ではありません。");
     } catch (error) {
         console.error("AI組み合わせ反応コメントの生成に失敗しました:", error);
         return [];
     }
 }
+    
 /**
  * Takes a user's comment and generates multiple AI fan replies to it.
  */
@@ -9510,7 +9466,8 @@ document.body.addEventListener('click', async (e) => {
         }
     }
     
-     // --- まとめサイト内の記事リンククリック ---
+    // --- まとめサイト内の記事リンククリック ---
+    // --- まとめサイト内の記事リンククリック ---
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
@@ -9518,61 +9475,43 @@ document.body.addEventListener('click', async (e) => {
         const type = matomeLink.dataset.type;
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
-        const threadId = matomeLink.dataset.threadId; // ★スレッドIDを取得
 
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
         const threadContentEl = document.getElementById('bbs-thread-content');
         
+        // 全てのタブコンテンツを隠し、BBSスレッド表示エリアを表示
         document.querySelectorAll('.matome-tab-content').forEach(content => content.classList.add('hidden'));
         threadDisplayArea.classList.remove('hidden');
 
         threadTitleEl.textContent = headline;
-        threadContentEl.innerHTML = `<div class="loader text-center py-8">スレッドを読み込んでいます...</div>`;
+        threadContentEl.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
         
-        
-         (async () => {
-            let result = null;
+        (async () => {
+            let result;
 
-            // ▼▼▼ この if ブロックのロジックを修正 ▼▼▼
+            // ▼▼▼ この if-else ブロックが今回の修正の核心です ▼▼▼
             if (type === 'game' && matchId) {
                 // 【ゲーム内記事の場合】
-                const match = findMatchById(matchId); // ★★★ まず試合IDで試合データを取得する ★★★
+                // index.html内に新設した generateGameMatchBbsComments 関数を直接呼び出す
+                const match = findMatchById(matchId);
                 if (match && match.winner) {
                     const context = {
                         winnerName: match.winner,
                         loserName: match.team1 === match.winner ? match.team2 : match.team1,
-                        dbMatch: match, // ★★★ 取得した試合データを渡す ★★★
+                        dbMatch: match,
                         highlightsText: createHighlightsText(match, match.winner).highlights.map(h => h.description).join('、')
                     };
                     result = await generateGameMatchBbsComments(context);
                 }
-            } 
-            // ▲▲▲
-            
-            else if (type === 'real') {
+            } else if (type === 'real') {
+                // 【現実のニュースの場合】
+                // index.html内に新設した generateRealNewsBbsComments 関数を直接呼び出す
                 const comments = await generateRealNewsBbsComments(headline, category);
-                if (comments) result = { title: headline, comments: comments };
-            } 
-            else if (type === 'bbs_thread' && threadId) {
-            // 【調査機 4A】
-            alert('【調査機4A】組み合わせスレがクリックされました。');
-            console.log('【調査機4B】クリック時のmatomeThreads:', tournamentState.matomeThreads);
-            console.log('【調査機4C】探しているthreadId:', threadId);
-            
-            const foundThread = (tournamentState.matomeThreads || []).find(t => t.id === threadId);
-            
-            // 【調査機 4D】
-            console.log('【調査機4D】findの結果 (foundThread):', foundThread);
-            alert('【調査機4D】findの結果をコンソールで確認してください。');
-            
-            if (foundThread) {
-                result = {
-                    title: foundThread.title,
-                    comments: foundThread.comments
-                };
+                if (comments) {
+                    result = { title: headline, comments: comments };
+                }
             }
-        }            // ★★★
             // ▲▲▲ ここまで修正 ▲▲▲
 
             // --- 結果の描画処理 (変更なし) ---
