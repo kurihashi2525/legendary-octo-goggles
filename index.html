@@ -801,7 +801,14 @@
         <div id="tournament-display" class="hidden">
             <div id="autumn-regional-blocks-container" class="display-card hidden"></div>
             <div id="autumn-ranking-playoffs-container" class="display-card hidden"></div>
-            
+            <button id="skip-autumn-blocks-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 shadow-md hidden">地区ブロック予選をスキップ</button>
+<button id="skip-autumn-ranking-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 shadow-md hidden">地区順位決定戦をスキップ</button>
+<button id="skip-autumn-main-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 shadow-md hidden">県大会本戦をスキップ</button>
+<button id="skip-spring-qualifiers-btn" class="bg-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-600 shadow-md hidden">春季地区予選をスキップ</button>
+<button id="skip-spring-round1-btn" class="bg-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-600 shadow-md hidden">春季県大会1回戦をスキップ</button>
+<button id="skip-spring-main-btn" class="bg-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-teal-600 shadow-md hidden">春季県大会2回戦以降をスキップ</button>
+
+
             <div id="autumn-controls" class="text-center my-4 hidden">
                 <button id="start-ranking-playoffs-btn" class="bg-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-purple-700 shadow-md hidden">
                     地区内順位決定戦へ進む
@@ -809,10 +816,10 @@
                 <button id="start-main-tournament-btn" class="bg-teal-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-teal-700 shadow-md hidden">
                     県大会本戦へ進む
                 </button>
+
             </div>
 
             
-
 
 <div id="region-map-section" class="display-card hidden scorebook-font">
                  <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">地区別 勝ち残り状況</h2>
@@ -836,6 +843,10 @@
                         <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
                         <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
                         <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
+<button id="skip-r4-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準々決勝スキップ</button>
+<button id="skip-r5-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準決勝スキップ</button>
+<button id="skip-final-btn" class="hidden bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md">決勝スキップ</button>
+
                         <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
 <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
     📰 まとめ
@@ -1410,15 +1421,27 @@ const SCANDAL_DEFINITIONS = [
     const skipR1Btn = document.getElementById('skip-r1-btn');
     const skipR2Btn = document.getElementById('skip-r2-btn');
     const skipR3Btn = document.getElementById('skip-r3-btn');
-    const skipLoader = document.getElementById('skip-loader');
 
+    const skipLoader = document.getElementById('skip-loader');
+const skipR4Btn = document.getElementById('skip-r4-btn');
+const skipR5Btn = document.getElementById('skip-r5-btn');
+const skipFinalBtn = document.getElementById('skip-final-btn');
     // Autumn Tournament UI
     const autumnRegionalContainer = document.getElementById('autumn-regional-blocks-container');
     const autumnRankingContainer = document.getElementById('autumn-ranking-playoffs-container');
     const autumnControls = document.getElementById('autumn-controls');
     const startRankingPlayoffsBtn = document.getElementById('start-ranking-playoffs-btn');
     const startMainTournamentBtn = document.getElementById('start-main-tournament-btn');
-
+// ▼▼▼ ここから3行追加 ▼▼▼
+const skipAutumnBlocksBtn = document.getElementById('skip-autumn-blocks-btn');
+const skipAutumnRankingBtn = document.getElementById('skip-autumn-ranking-btn');
+const skipAutumnMainBtn = document.getElementById('skip-autumn-main-btn');
+// ▲▲▲ ここまで追加 ▲▲▲
+// ▼▼▼ ここから3行追加 ▼▼▼
+const skipSpringQualifiersBtn = document.getElementById('skip-spring-qualifiers-btn');
+const skipSpringRound1Btn = document.getElementById('skip-spring-round1-btn');
+const skipSpringMainBtn = document.getElementById('skip-spring-main-btn');
+// ▲▲▲ ここまで追加 ▲▲▲
     // Modals
     const newsModal = document.getElementById('news-modal');
     const modalBg = document.getElementById('modal-bg');
@@ -3970,62 +3993,245 @@ function updateTournamentFinishRecords() {
 function renderTournament(data) {
         let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
 
+    // UI要素を一度すべて非表示に初期化
     mainBracketWrapper.classList.add('hidden');
     autumnRegionalContainer.classList.add('hidden');
     autumnRankingContainer.classList.add('hidden');
+    autumnControls.classList.add('hidden');
+    // 全ての秋季・春季スキップボタンを隠す
+    [skipAutumnBlocksBtn, skipAutumnRankingBtn, skipAutumnMainBtn, skipSpringQualifiersBtn, skipSpringRound1Btn, skipSpringMainBtn, startRankingPlayoffsBtn, startMainTournamentBtn].forEach(btn => btn?.classList.add('hidden'));
     
-// ★★★ 春季大会ロジック開始 ★★★
+    // --- 大会種別に応じて表示を切り替え ---
     if (data.currentTournament === 'spring') {
+        autumnControls.classList.remove('hidden'); // 春季大会中もコントロール用の親コンテナは表示
+
         switch(data.springPhase) {
             case 'regional_qualifiers':
                 tournamentNameString = '春季大会 地区予選';
-                autumnRegionalContainer.classList.remove('hidden'); // 秋のコンテナを流用
+                autumnRegionalContainer.classList.remove('hidden');
                 renderSpringRegionalQualifiers();
+                skipSpringQualifiersBtn.classList.remove('hidden'); // ★地区予選スキップボタンを表示
+                checkSpringQualifiersComplete();
                 break;
             case 'main_round1':
                 tournamentNameString = '春季大会 県大会1回戦';
                 mainBracketWrapper.classList.remove('hidden');
                 renderMainBracket(data);
+                skipSpringRound1Btn.classList.remove('hidden'); // ★県大会1回戦スキップボタンを表示
                 break;
             case 'main_round2_onwards':
-                tournamentNameString = '春季大会 県大会'; // シンプルに
+                tournamentNameString = '春季大会 県大会';
                 mainBracketWrapper.classList.remove('hidden');
                 renderMainBracket(data);
+                skipSpringMainBtn.classList.remove('hidden'); // ★県大会2回戦以降スキップボタンを表示
                 break;
         }
-    } 
-    // ★★★ 春季大会ロジック終了 ★★★
-        else if (data.currentTournament === 'autumn') {   
+    } else if (data.currentTournament === 'autumn') {
+        // ▼▼▼ ここからが修正箇所 ▼▼▼
+        autumnControls.classList.remove('hidden'); // ★秋季大会中は、親コンテナを常に表示する
+
         switch(data.autumnPhase) {
-            case 'regional_blocks': 
+            case 'regional_blocks':
                 tournamentNameString = '秋季大会 地区ブロック予選';
                 autumnRegionalContainer.classList.remove('hidden');
-                renderAutumnRegionalBlocks(); // 修正済み
+                renderAutumnRegionalBlocks();
+                skipAutumnBlocksBtn.classList.remove('hidden'); // ★ブロック予選スキップボタンを表示
+                checkAutumnRegionalBlocksComplete(); // 完了していれば進行ボタンも表示
                 break;
-            case 'regional_ranking': 
-                tournamentNameString = '秋季大会 地区内順位決定戦';
+            case 'regional_ranking':
+                tournamentNameString = '秋季大会 地区 第5代表決定トーナメント';
                 autumnRankingContainer.classList.remove('hidden');
-                renderAutumnRankingTournaments(); // 修正済み
+                renderAutumnRankingTournaments();
+                skipAutumnRankingBtn.classList.remove('hidden'); // ★順位決定戦スキップボタンを表示
+                checkAutumnRankingTournamentsComplete(); // 完了していれば進行ボタンも表示
                 break;
-            case 'main': 
+            case 'main':
                 tournamentNameString = '秋季大会 県大会本戦';
                 mainBracketWrapper.classList.remove('hidden');
                 renderMainBracket(data);
+                skipAutumnMainBtn.classList.remove('hidden'); // ★県大会本戦スキップボタンを表示
                 break;
         }
-    } else {
+        // ▲▲▲ 修正箇所ここまで ▲▲▲
+    } else { // Summer
         mainBracketWrapper.classList.remove('hidden');
         renderMainBracket(data);
     }
-    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${tournamentNameString}`;
 
+    // --- 共通の描画処理 ---
+    tournamentYearDisplay.textContent = `${data.tournamentYear}年度 ${tournamentNameString}`;
     renderRegionMap(data);
     renderNews(data.news || []);
     renderBbsComments(data.bbsComments || []);
     renderDaiyaBbsComments(data.daiyaBbsComments || []);
     renderNamcoNews(data.namcoNews);
-    checkTournamentProgress();
+    checkTournamentProgress(); // 夏大会のスキップボタン表示制御
     updateTicker();
+}
+/**
+ * [秋季大会] 地区ブロック予選をスキップする
+ */
+async function skipAutumnRegionalBlocks() {
+    skipAutumnBlocksBtn.disabled = true;
+    skipAutumnBlocksBtn.textContent = '進行中...';
+
+    // 全ての地区の全ブロックの試合を処理
+    for (const region of ['東部', '中部', '西部', '伊豆']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        
+        const blocks = regionData.izuBracket ? [regionData.izuBracket] : regionData.blocks;
+
+        for (const block of blocks) {
+            // ブロック内の全試合IDを取得
+            const matchIds = Object.keys(block.matches);
+            for (const matchId of matchIds) {
+                const match = block.matches[matchId];
+                // チームがセットされていて、まだ勝者が決まっていない試合を処理
+                if (match.team1 && match.team2 && !match.winner) {
+                    const { team1, team2 } = match;
+                    const rank1 = calculateRank(team1, tournamentState);
+                    const rank2 = calculateRank(team2, tournamentState);
+                    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+                    
+                    const winnerName = (rankValues[rank1] >= rankValues[rank2]) ? team1 : team2;
+                    const loserName = winnerName === team1 ? team2 : team1;
+
+                    const [winnerScore, loserScore] = generateAutoScore(rank1, rank2);
+                    match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
+                    match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
+                    
+                    // processMatchWinを呼び出して勝者を次に進める
+                    await processMatchWin(matchId, winnerName);
+                }
+            }
+        }
+    }
+    
+    // 全て終わったら、自動で次のステージへ
+    await setupAutumnRankingTournaments();
+    skipAutumnBlocksBtn.disabled = false;
+    skipAutumnBlocksBtn.textContent = '地区ブロック予選をスキップ';
+}
+
+/**
+ * [秋季大会] 地区順位決定戦（敗者復活戦）をスキップする
+ */
+async function skipAutumnRankingTournaments() {
+    skipAutumnRankingBtn.disabled = true;
+    skipAutumnRankingBtn.textContent = '進行中...';
+
+    for (const region of ['東部', '中部', '西部']) {
+        const repBracket = tournamentState.autumnData.regions[region].repechageBracket;
+        if (!repBracket) continue;
+        
+        const matchIds = Object.keys(repBracket.matches);
+        for (const matchId of matchIds) {
+            const match = repBracket.matches[matchId];
+            if (match.team1 && match.team2 && !match.winner) {
+                const { team1, team2 } = match;
+                const rank1 = calculateRank(team1, tournamentState);
+                const rank2 = calculateRank(team2, tournamentState);
+                const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+                
+                const winnerName = (rankValues[rank1] >= rankValues[rank2]) ? team1 : team2;
+                
+                const [winnerScore, loserScore] = generateAutoScore(rank1, rank2);
+                match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
+                match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
+
+                await processMatchWin(matchId, winnerName);
+            }
+        }
+    }
+
+    // 自動で県大会本戦へ
+    await setupAutumnMainTournament();
+    skipAutumnRankingBtn.disabled = false;
+    skipAutumnRankingBtn.textContent = '地区順位決定戦をスキップ';
+}
+
+/**
+ * [秋季大会] 県大会本戦をスキップする
+ */
+async function skipAutumnMainTournament() {
+    skipAutumnMainBtn.disabled = true;
+    skipAutumnMainBtn.textContent = '進行中...';
+
+    // 秋季県大会は16チームトーナメント（4ラウンド）
+    await skipRound(1); // 1回戦 (ベスト8決定)
+    await skipRound(2); // 準々決勝 (ベスト4決定)
+    await skipRound(3); // 準決勝 (決勝進出決定)
+    await skipFinal();  // 決勝
+
+    skipAutumnMainBtn.disabled = false;
+    skipAutumnMainBtn.textContent = '県大会本戦をスキップ';
+}
+
+/**
+ * [春季大会] 地区予選をスキップする
+ */
+async function skipSpringQualifiers() {
+    skipSpringQualifiersBtn.disabled = true;
+    skipSpringQualifiersBtn.textContent = '進行中...';
+
+    const allQualifierMatches = Object.values(tournamentState.springData.allMatches);
+
+    // 予選の全試合をループ処理
+    for (const match of allQualifierMatches) {
+        // チームがまだセットされていない試合はスキップ
+        if (!match.team1 || !match.team2 || match.winner) continue;
+        
+        const { team1, team2 } = match;
+        const rank1 = calculateRank(team1, tournamentState);
+        const rank2 = calculateRank(team2, tournamentState);
+        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+        
+        const winnerName = (rankValues[rank1] >= rankValues[rank2]) ? team1 : team2;
+        
+        const [winnerScore, loserScore] = generateAutoScore(rank1, rank2);
+        match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
+        match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
+
+        await processMatchWin(match.id, winnerName);
+    }
+
+    // 自動で県大会1回戦へ
+    await setupSpringMainTournament_Round1();
+    skipSpringQualifiersBtn.disabled = false;
+    skipSpringQualifiersBtn.textContent = '春季地区予選をスキップ';
+}
+
+/**
+ * [春季大会] 県大会1回戦をスキップする
+ */
+async function skipSpringMainRound1() {
+    skipSpringRound1Btn.disabled = true;
+    skipSpringRound1Btn.textContent = '進行中...';
+
+    // 1回戦は8試合
+    await skipRound(1); 
+    
+    // 自動で県大会2回戦へ
+    await setupSpringMainTournament_Round2();
+    skipSpringRound1Btn.disabled = false;
+    skipSpringRound1Btn.textContent = '春季県大会1回戦をスキップ';
+}
+
+/**
+ * [春季大会] 県大会2回戦以降をスキップする
+ */
+async function skipSpringMainTournament() {
+    skipSpringMainBtn.disabled = true;
+    skipSpringMainBtn.textContent = '進行中...';
+
+    // 2回戦以降はベスト16トーナメントと同じ
+    await skipRound(1); // 2回戦 (ベスト8決定)
+    await skipRound(2); // 準々決勝 (ベスト4決定)
+    await skipRound(3); // 準決勝 (決勝進出決定)
+    await skipFinal();  // 決勝
+
+    skipSpringMainBtn.disabled = false;
+    skipSpringMainBtn.textContent = '春季県大会2回戦以降をスキップ';
 }
 
     /**
@@ -4473,34 +4679,90 @@ function renderRegionMap(data) {
      * スキップボタンの表示・非表示を制御する
      */
     function checkTournamentProgress() {
-        if (tournamentState.is16team || !tournamentState.matches || Object.keys(tournamentState.matches).length === 0 || tournamentState.currentTournament === 'autumn') {
-            skipR1Btn.classList.add('hidden');
-            skipR2Btn.classList.add('hidden');
-            skipR3Btn.classList.add('hidden');
-            generateSummaryBtn.classList.add('hidden');
-            return;
-        }
+    // ボタン要素の取得
+    const skipR1Btn = document.getElementById('skip-r1-btn');
+    const skipR2Btn = document.getElementById('skip-r2-btn');
+    const skipR3Btn = document.getElementById('skip-r3-btn');
+    const skipR4Btn = document.getElementById('skip-r4-btn');
+    const skipR5Btn = document.getElementById('skip-r5-btn');
+    const skipFinalBtn = document.getElementById('skip-final-btn');
+    const generateSummaryBtn = document.getElementById('generate-summary-btn');
 
-        const matchIds = Object.keys(tournamentState.matches);
-        const getRoundStatus = (roundNumber) => {
-            const roundMatchIds = matchIds.filter(id => id.includes(`-R${roundNumber}-M`));
-            const played = roundMatchIds.filter(id => tournamentState.matches[id] && tournamentState.matches[id].winner).length;
-            const total = 64 / Math.pow(2, roundNumber);
-            return { total, played };
-        };
-
-        const r1 = getRoundStatus(1);
-        const r2 = getRoundStatus(2);
-        const r3 = getRoundStatus(3);
-        const r4 = getRoundStatus(4);
-
-        skipR1Btn.classList.toggle('hidden', r1.played > 0);
-        skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
-        skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
-
-        const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
-        generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
+    // 夏の大会以外では、全てのスキップボタンを非表示にする
+    if (tournamentState.is16team || !tournamentState.matches || Object.keys(tournamentState.matches).length === 0 || tournamentState.currentTournament !== 'summer') {
+        [skipR1Btn, skipR2Btn, skipR3Btn, skipR4Btn, skipR5Btn, skipFinalBtn, generateSummaryBtn].forEach(btn => btn?.classList.add('hidden'));
+        return;
     }
+
+    const matchIds = Object.keys(tournamentState.matches);
+
+    // ▼▼▼ ここが修正されたヘルパー関数 ▼▼▼
+    const getRoundStatus = (roundNumber) => {
+        // 現在の試合データから、そのラウンドでプレイ済みの試合数を数える
+        const played = matchIds.filter(id => id.includes(`-R${roundNumber}-M`) && tournamentState.matches[id]?.winner).length;
+        
+        // ★変更点：総試合数は、常に64チームトーナメントとして計算する
+        const total = 64 / Math.pow(2, roundNumber);
+        
+        return { total, played };
+    };
+    // ▲▲▲ 修正ここまで ▲▲▲
+
+    const r1 = getRoundStatus(1);
+    const r2 = getRoundStatus(2);
+    const r3 = getRoundStatus(3);
+    const r4 = getRoundStatus(4); // 準々決勝
+    const r5 = getRoundStatus(5); // 準決勝
+    const finalMatch = tournamentState.matches['F-R1-M1'];
+
+    // この表示/非表示の切り替えロジックは、getRoundStatusが修正されたことで正常に動作するようになります
+    skipR1Btn.classList.toggle('hidden', r1.played > 0);
+    skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
+    skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
+    skipR4Btn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0));
+    skipR5Btn.classList.toggle('hidden', !(r4.played === r4.total && r5.played === 0));
+    skipFinalBtn.classList.toggle('hidden', !(r5.played === r5.total && (!finalMatch || !finalMatch.winner)));
+
+    const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
+    generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
+}
+/**
+ * 決勝戦を自動でスキップする
+ */
+async function skipFinal() {
+    const finalMatch = tournamentState.matches['F-R1-M1'];
+    if (!finalMatch || !finalMatch.team1 || !finalMatch.team2 || finalMatch.winner) return;
+
+    const btn = document.getElementById('skip-final-btn');
+    if(btn) btn.disabled = true;
+    
+    const { team1, team2 } = finalMatch;
+    const rank1 = calculateRank(team1, tournamentState);
+    const rank2 = calculateRank(team2, tournamentState);
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    
+    let winnerName, loserName;
+    // ランク差が2以上ある場合、95%の確率でランク上位が勝利
+    const upsetChance = Math.abs(rankValues[rank1] - rankValues[rank2]) >= 2 ? 0.05 : 0.45;
+
+    if (Math.random() < upsetChance) { // 番狂わせ
+        winnerName = rankValues[rank1] < rankValues[rank2] ? team1 : team2;
+    } else { // 順当
+        winnerName = rankValues[rank1] >= rankValues[rank2] ? team1 : team2;
+    }
+    loserName = winnerName === team1 ? team2 : team1;
+
+    const winnerRank = calculateRank(winnerName, tournamentState);
+    const loserRank = calculateRank(loserName, tournamentState);
+    const [winnerScore, loserScore] = generateAutoScore(winnerRank, loserRank);
+
+    finalMatch.score1 = (finalMatch.team1 === winnerName) ? winnerScore : loserScore;
+    finalMatch.score2 = (finalMatch.team2 === winnerName) ? winnerScore : loserScore;
+
+    await processMatchWin('F-R1-M1', winnerName);
+
+    if(btn) btn.classList.add('hidden');
+}
 
     function checkBest8Decided(){} // checkTournamentProgressに統合
 // --- 試合詳細モーダル関連の関数（高機能版） ---
@@ -5338,104 +5600,66 @@ function create5TeamBlockHTML(blockData) {
      * [秋季大会 ステージ2] 地区内順位決定戦を開始する
      */
     async function setupAutumnRankingTournaments() {
-        tournamentState.autumnPhase = 'regional_ranking';
+    tournamentState.autumnPhase = 'regional_ranking';
 
-        for (const region of ['東部', '中部', '西部']) {
-            const regionData = tournamentState.autumnData.regions[region];
-            
-            // 上位校トーナメント（1位～4位決定戦）
-            const champBracketId = `${region}-CHAMP`;
-            const champTeams = shuffleArray(regionData.blockWinners);
-            regionData.champBracket = {
-                id: champBracketId,
-                teams: champTeams,
-                matches: {
-                    [`${champBracketId}-R1-M1`]: { id: `${champBracketId}-R1-M1`, team1: champTeams[0], team2: champTeams[1], winner: null, score1: '', score2: '', summary: '', type: 'semi' },
-                    [`${champBracketId}-R1-M2`]: { id: `${champBracketId}-R1-M2`, team1: champTeams[2], team2: champTeams[3], winner: null, score1: '', score2: '', summary: '', type: 'semi' },
-                    [`${champBracketId}-R2-M1`]: { id: `${champBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '', type: 'final' }, // 1位決定戦
-                    [`${champBracketId}-R2-M2`]: { id: `${champBracketId}-R2-M2`, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '', type: 'third' }  // 3位決定戦
-                }
-            };
-
-            // 第5代表決定トーナメント（敗者復活）
-            const repechageBracketId = `${region}-REP`;
-            const repTeams = shuffleArray(regionData.blockRunnersUp);
-            regionData.repechageBracket = {
-                id: repechageBracketId,
-                teams: repTeams,
-                matches: {
-                    [`${repechageBracketId}-R1-M1`]: { id: `${repechageBracketId}-R1-M1`, team1: repTeams[0], team2: repTeams[1], winner: null, score1: '', score2: '', summary: '' },
-                    [`${repechageBracketId}-R1-M2`]: { id: `${repechageBracketId}-R1-M2`, team1: repTeams[2], team2: repTeams[3], winner: null, score1: '', score2: '', summary: '' },
-                    [`${repechageBracketId}-R2-M1`]: { id: `${repechageBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' } // 5位決定戦
-                }
-            };
-        }
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
         
-        renderTournament(tournamentState);
-        saveState();
-    }
+        // 重要な変更：上位校トーナメントは廃止し、敗者復活戦のみを行う
+        regionData.champBracket = null; // 不要になったのでクリア
 
+        // ブロック準優勝したチームで、第5代表決定トーナメントを組む
+        const repechageBracketId = `${region}-REP`;
+        const repTeams = shuffleArray(regionData.blockRunnersUp);
+        regionData.repechageBracket = {
+            id: repechageBracketId,
+            teams: repTeams,
+            matches: {
+                [`${repechageBracketId}-R1-M1`]: { id: `${repechageBracketId}-R1-M1`, team1: repTeams[0], team2: repTeams[1], winner: null, score1: '', score2: '', summary: '' },
+                [`${repechageBracketId}-R1-M2`]: { id: `${repechageBracketId}-R1-M2`, team1: repTeams[2], team2: repTeams[3], winner: null, score1: '', score2: '', summary: '' },
+                [`${repechageBracketId}-R2-M1`]: { id: `${repechageBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' } // 5位決定戦
+            }
+        };
+    }
+    
+    renderTournament(tournamentState);
+    saveState();
+}
     /**
      * [秋季大会 ステージ2 UI] 地区内順位決定戦を描画する
      */
    // 【修正対象3】
 function renderAutumnRankingTournaments() {
-    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区内順位決定戦</h2>`;
+    let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区 第5代表決定トーナメント</h2>`;
     html += '<div class="space-y-8">';
     
     for (const region of ['東部', '中部', '西部']) {
-         const regionData = tournamentState.autumnData.regions[region];
-         if (!regionData.champBracket) continue;
+        const regionData = tournamentState.autumnData.regions[region];
+        if (!regionData.repechageBracket) continue;
 
-         const champ = regionData.champBracket;
-         const rep = regionData.repechageBracket;
-         
-         const champSemi1 = champ.matches[`${champ.id}-R1-M1`];
-         const champSemi2 = champ.matches[`${champ.id}-R1-M2`];
-         champ.matches[`${champ.id}-R2-M1`].team1 = champSemi1.winner;
-         champ.matches[`${champ.id}-R2-M1`].team2 = champSemi2.winner;
-         champ.matches[`${champ.id}-R2-M2`].team1 = champSemi1.winner === champSemi1.team1 ? champSemi1.team2 : champSemi1.team1;
-         champ.matches[`${champ.id}-R2-M2`].team2 = champSemi2.winner === champSemi2.team1 ? champSemi2.team2 : champSemi2.team1;
-
-         const repSemi1 = rep.matches[`${rep.id}-R1-M1`];
-         const repSemi2 = rep.matches[`${rep.id}-R1-M2`];
-         rep.matches[`${rep.id}-R2-M1`].team1 = repSemi1.winner;
-         rep.matches[`${rep.id}-R2-M1`].team2 = repSemi2.winner;
-         
-         html += `
+        const rep = regionData.repechageBracket;
+        
+        const repSemi1 = rep.matches[`${rep.id}-R1-M1`];
+        const repSemi2 = rep.matches[`${rep.id}-R1-M2`];
+        rep.matches[`${rep.id}-R2-M1`].team1 = repSemi1.winner;
+        rep.matches[`${rep.id}-R2-M1`].team2 = repSemi2.winner;
+        
+        html += `
             <div class="p-4 border-2 rounded-lg shadow-md">
                 <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区</h3>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div>
-                        <h4 class="font-bold text-center text-lg mb-2">上位校トーナメント (1～4位)</h4>
-                        <div class="flex items-center justify-center space-x-4">
-                            <div class="space-y-4">
-                                ${createMatchHTML(champSemi1.id, champSemi1.team1, champSemi1.team2, champSemi1, [])}
-                                ${createMatchHTML(champSemi2.id, champSemi2.team1, champSemi2.team2, champSemi2, [])}
-                            </div>
-                            <div class="space-y-4">
-                                <p class="text-center font-semibold">1位決定戦</p>
-                                ${createMatchHTML(champ.matches[`${champ.id}-R2-M1`].id, champ.matches[`${champ.id}-R2-M1`].team1, champ.matches[`${champ.id}-R2-M1`].team2, champ.matches[`${champ.id}-R2-M1`], [])}
-                                <p class="text-center font-semibold">3位決定戦</p>
-                                ${createMatchHTML(champ.matches[`${champ.id}-R2-M2`].id, champ.matches[`${champ.id}-R2-M2`].team1, champ.matches[`${champ.id}-R2-M2`].team2, champ.matches[`${champ.id}-R2-M2`], [])}
-                            </div>
+                <div class="flex items-center justify-center space-x-4">
+                    <div class="space-y-4">
+                        ${createMatchHTML(repSemi1.id, repSemi1.team1, repSemi1.team2, repSemi1, [])}
+                        
+                        ${createMatchHTML(repSemi2.id, repSemi2.team1, repSemi2.team2, repSemi2, [])}
                         </div>
-                    </div>
                     <div>
-                        <h4 class="font-bold text-center text-lg mb-2">第5代表決定トーナメント</h4>
-                        <div class="flex items-center justify-center space-x-4">
-                            <div class="space-y-4">
-                                ${createMatchHTML(repSemi1.id, repSemi1.team1, repSemi1.team2, repSemi1, [])}
-                                ${createMatchHTML(repSemi2.id, repSemi2.team1, repSemi2.team2, repSemi2, [])}
-                            </div>
-                            <div>
-                                ${createMatchHTML(rep.matches[`${rep.id}-R2-M1`].id, rep.matches[`${rep.id}-R2-M1`].team1, rep.matches[`${rep.id}-R2-M1`].team2, rep.matches[`${rep.id}-R2-M1`], [])}
-                            </div>
-                        </div>
+                        <p class="text-center font-semibold">代表決定戦</p>
+                        ${createMatchHTML(rep.matches[`${rep.id}-R2-M1`].id, rep.matches[`${rep.id}-R2-M1`].team1, rep.matches[`${rep.id}-R2-M1`].team2, rep.matches[`${rep.id}-R2-M1`], [])}
                     </div>
                 </div>
             </div>
-         `;
+        `;
     }
     html += '</div>';
     autumnRankingContainer.innerHTML = html;
@@ -5445,67 +5669,43 @@ function renderAutumnRankingTournaments() {
      * [秋季大会 ステージ3] 県大会本戦を開始する
      */
    // 【修正対象4】
+/**
+ * [秋季大会 ステージ3] 県大会本戦を開始する（組み合わせロジックを修正した完全版）
+ */
 async function setupAutumnMainTournament() {
     tournamentState.autumnPhase = 'main';
     tournamentState.is16team = true;
 
-    const allReps = [];
-    for (const region of ['東部', '中部', '西部', '伊豆']) {
-        tournamentState.autumnData.regions[region].finalReps.forEach(rep => {
-            allReps.push({ ...rep, region });
-        });
-    }
-    
-    const qualifiedTeamNames = allReps.map(r => r.team);
-    INITIAL_TEAM_POOL.forEach(teamName => {
-        if (!qualifiedTeamNames.includes(teamName) && tournamentState.teamRecords[teamName]) {
-            tournamentState.teamRecords[teamName].lastFinish = 32;
-        }
-    });
+    // --- 代表チームのリストを作成 ---
+    const finalReps = [];
+    // 1. 伊豆地区の代表
+    const izuWinner = tournamentState.autumnData.regions['伊豆'].finalReps[0];
+    if (izuWinner) finalReps.push(izuWinner.team);
 
-    const pots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-    allReps.forEach(rep => {
-        if (pots[rep.rank]) pots[rep.rank].push(rep);
-    });
-    
-    for (const potNum in pots) {
-        pots[potNum] = shuffleArray(pots[potNum]);
-    }
-
-    const matchups = [];
-    let remainingTeams = [...allReps];
-    const sortedPots = Object.keys(pots).sort((a,b) => parseInt(a) - parseInt(b));
-
-    for (const potNum of sortedPots) {
-        const teamsInPot = remainingTeams.filter(t => t.rank === parseInt(potNum));
-        for (const teamA of teamsInPot) {
-            if (!remainingTeams.some(t => t.team === teamA.team)) continue;
-
-            let opponent = null;
-            for (let i = sortedPots.length - 1; i >= 0; i--) {
-                const opponentPotNum = sortedPots[i];
-                const candidates = remainingTeams.filter(t => t.rank === parseInt(opponentPotNum) && t.region !== teamA.region && t.team !== teamA.team);
-                if (candidates.length > 0) {
-                    opponent = candidates[0];
-                    break;
-                }
-            }
-            if (!opponent) {
-                opponent = remainingTeams.find(t => t.team !== teamA.team);
-            }
-            
-            if (opponent) {
-                matchups.push({ team1: teamA.team, team2: opponent.team });
-                remainingTeams = remainingTeams.filter(t => t.team !== teamA.team && t.team !== opponent.team);
-            }
+    // 2. 主要3地区の代表
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        // 2-1. ブロック優勝した4チーム
+        finalReps.push(...regionData.blockWinners);
+        // 2-2. 敗者復活戦を勝ち上がった1チーム
+        const repFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`];
+        if (repFinal.winner) {
+            finalReps.push(repFinal.winner);
         }
     }
 
-    tournamentState.teams = matchups.flatMap(m => [m.team1, m.team2]);
+    // --- トーナメントデータを作成 ---
+    tournamentState.teams = shuffleArray(finalReps); // 16チームをシャッフル
     tournamentState.matches = {};
-    tournamentState.seeds = pots[1].map(p => p.team);
-    
-    matchups.forEach((match, index) => { // ★修正点
+    tournamentState.seeds = []; //秋季県大会はシードなし
+
+    const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
+        if (i % 2 === 0) acc.push({ team1: team, team2: null });
+        else acc[acc.length - 1].team2 = team;
+        return acc;
+    }, []);
+
+    round1Setup.forEach((match, index) => {
         const side = index < 4 ? 'L' : 'R';
         const matchNum = index < 4 ? index + 1 : index - 3;
         const matchId = `${side}-R1-M${matchNum}`;
@@ -5515,6 +5715,7 @@ async function setupAutumnMainTournament() {
     renderTournament(tournamentState);
     saveState();
 
+    // --- 記事生成などの後続処理 (変更なし) ---
     const currentTournamentName = "秋季県大会本戦";
     newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
@@ -5577,34 +5778,32 @@ async function setupAutumnMainTournament() {
      * 【修正版】秋季地区内順位決定戦がすべて終了したかチェックする
      */
     function checkAutumnRankingTournamentsComplete() {
-        let allRankingsFinished = true;
-        for (const region of ['東部', '中部', '西部']) {
-            const regionData = tournamentState.autumnData.regions[region];
-            if (!regionData.champBracket || !regionData.repechageBracket) {
-                allRankingsFinished = false;
-                break;
-            }
-
-            const champFinal = regionData.champBracket.matches[`${region}-CHAMP-R2-M1`]; // 1位/2位
-            const thirdPlaceMatch = regionData.champBracket.matches[`${region}-CHAMP-R2-M2`]; // ★これが抜けていました
-            const repechageFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`]; // 5位
-
-            // 1位, 3位, 5位決定戦のすべてが終わっているかチェック
-            if (!champFinal.winner || !thirdPlaceMatch.winner || !repechageFinal.winner) {
-                allRankingsFinished = false;
-                break;
-            }
+    let allRankingsFinished = true;
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        if (!regionData.repechageBracket) {
+            allRankingsFinished = false;
+            break;
         }
-        
-        if (allRankingsFinished) {
-            autumnControls.classList.remove('hidden');
-            startRankingPlayoffsBtn.classList.add('hidden'); // 前のボタンは隠す
-            startMainTournamentBtn.classList.remove('hidden');
-        } else {
-            autumnControls.classList.add('hidden');
-            startMainTournamentBtn.classList.add('hidden');
+
+        const repechageFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`]; // 5位決定戦
+
+        // 敗者復活戦の決勝がすべて終わっているかチェック
+        if (!repechageFinal.winner) {
+            allRankingsFinished = false;
+            break;
         }
     }
+    
+    if (allRankingsFinished) {
+        autumnControls.classList.remove('hidden');
+        startRankingPlayoffsBtn.classList.add('hidden');
+        startMainTournamentBtn.classList.remove('hidden');
+    } else {
+        autumnControls.classList.add('hidden');
+        startMainTournamentBtn.classList.add('hidden');
+    }
+}
 // --- NEW Spring Tournament System ---
 
 /**
@@ -8622,30 +8821,35 @@ async function processMatchWin(matchId, winnerName) {
             }
         }
     } else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'regional_ranking') {
+        // ▼▼▼ ここからが修正されたロジック ▼▼▼
         const [region, bracketId, roundStr, matchStr] = matchId.split('-');
         const roundNum = parseInt(roundStr.slice(1));
         const matchNum = parseInt(matchStr.slice(1));
         const isChamp = bracketId === 'CHAMP';
         const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-        if (roundNum === 1) {
+
+        if (roundNum === 1) { // 準決勝
             const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
             if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
             if (isChamp) {
                 const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
                 if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
             }
-        } else if (roundNum === 2) {
+        } else if (roundNum === 2) { // 決勝 or 順位決定戦
             if (isChamp) {
-                if (dbMatch.type === 'final') {
+                // `dbMatch.type` に頼らず、matchNum で判断する
+                if (matchNum === 1) { // 1位決定戦 (M1)
                     tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 }, { team: loserName, rank: 2 });
-                } else {
+                } else { // 3位決定戦 (M2)
                     tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 }, { team: loserName, rank: 4 });
                 }
-            } else {
+            } else { // 敗者復活トーナメント決勝 (5位決定戦)
                 tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
             }
         }
-    } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+        // ▲▲▲ 修正ロジックここまで ▲▲▲  
+
+ } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
         const [region, bracketType] = matchId.split('-');
         if (bracketType.startsWith('SB')) {
             const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
@@ -9315,7 +9519,51 @@ startMainTournamentBtn.addEventListener('click', async () => {
         const confirmed = await showConfirm("3回戦を自動で進行しますか？");
         if (confirmed) skipRound(3);
     });
+
+skipR4Btn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("準々決勝を自動で進行しますか？");
+    if (confirmed) skipRound(4);
+});
+
+skipR5Btn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("準決勝を自動で進行しますか？");
+    if (confirmed) skipRound(5);
+});
+
+skipFinalBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("決勝戦を自動で進行しますか？");
+    if (confirmed) skipFinal();
+});
+skipAutumnBlocksBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("秋季地区ブロック予選をすべて自動で進行しますか？");
+    if (confirmed) skipAutumnRegionalBlocks();
+});
+
+skipAutumnRankingBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("秋季地区の第5代表決定戦をすべて自動で進行しますか？");
+    if (confirmed) skipAutumnRankingTournaments();
+});
+
+skipAutumnMainBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("秋季県大会本戦をすべて自動で進行しますか？");
+    if (confirmed) skipAutumnMainTournament();
+});
     
+skipSpringQualifiersBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("春季地区予選をすべて自動で進行しますか？");
+    if (confirmed) skipSpringQualifiers();
+});
+
+skipSpringRound1Btn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("春季県大会1回戦を自動で進行しますか？");
+    if (confirmed) skipSpringMainRound1();
+});
+
+skipSpringMainBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("春季県大会2回戦以降をすべて自動で進行しますか？");
+    if (confirmed) skipSpringMainTournament();
+});
+
     generateSummaryBtn.addEventListener('click', async () => {
         generateSummaryBtn.disabled = true;
         generateSummaryBtn.textContent = '記事を生成中...';
