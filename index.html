@@ -2610,7 +2610,8 @@ async function generateMatomeSiteHtml() {
  * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★善戦評価ロジック・最終版）
  */
 async function generateGameMatchBbsComments(matchContext) {
-    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, nextOpponent, nextOpponentJourney } = matchContext;
+    // 引数に lineupChanges を追加
+    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     
     // ★勝者と敗者のランクをここで計算
@@ -2628,10 +2629,20 @@ const winnerData = TEAM_DATA[winnerName];
         ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` 
         : '';
 
-    const prompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」の百戦錬磨の野球ファンです。
-以下の試合データを多角的に分析し、玄人たちのリアルな会話を40個前後生成してください。
+    const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
+以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
 
-### データ1：試合結果
+### 参考情報：高校野球における背番号の意味
+- **[#1]**: チームの絶対的エース投手。
+- **[#2-9]**: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
+- **[#10], [#11]**: エースに次ぐ控え投手。
+- **[#12]以降**: 控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれる。
+
+### データ1：前試合からのスタメン変更
+- **${winnerName}**: ${winnerLineupChanges || '情報なし'}
+- **${loserName}**: ${loserLineupChanges || '情報なし'}
+
+### データ2：試合結果
 - **勝利:** ${winnerName} (ランク: ${winnerRank})
 - **敗北:** ${loserName} (ランク: ${loserRank})
 - **スコア:** ${score}
@@ -6234,6 +6245,55 @@ async function setupSpringMainTournament_Round2() {
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
 /**
+ * 前試合と今試合のスタメンを比較し、変更点を要約する
+ * @param {string} teamName - 分析対象のチーム名
+ * @param {object} dbMatch - 現在の試合オブジェクト
+ * @returns {string} - 変更点をまとめた短いテキスト
+ */
+function analyzeLineupChanges(teamName, dbMatch) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord || !teamRecord.previousStarters) {
+        return "今大会初戦のため、比較なし。";
+    }
+
+    const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
+    const previousStarters = teamRecord.previousStarters;
+    const currentStarters = dbMatch.details.batting[teamKey].filter(p => p.order && !p.order.toString().includes('sub'));
+
+    if (previousStarters.length === 0 || currentStarters.length === 0) return "比較データなし。";
+    
+    let changes = [];
+    const prevPlayerMap = new Map(previousStarters.map(p => [p.name, p]));
+    const currentPlayerMap = new Map(currentStarters.map(p => [p.name, p]));
+
+    // 1. スタメンから外れた選手を検出
+    for (const prevPlayer of previousStarters) {
+        if (!currentPlayerMap.has(prevPlayer.name)) {
+            changes.push(`${prevPlayer.order}番の${prevPlayer.name}がスタメン落ち`);
+        }
+    }
+
+    // 2. 新しくスタメンに入った選手や、打順が変わった選手を検出
+    for (const currPlayer of currentStarters) {
+        const prevPlayer = prevPlayerMap.get(currPlayer.name);
+        if (!prevPlayer) {
+            changes.push(`${currPlayer.order}番に${currPlayer.name}が新しくスタメン入り`);
+        } else {
+            if (currPlayer.order !== prevPlayer.order) {
+                changes.push(`${currPlayer.name}が${prevPlayer.order}番から${currPlayer.order}番に打順変更`);
+            }
+        }
+    }
+    
+    if (changes.length === 0) {
+        return "前試合からスタメン変更なし。";
+    }
+    
+    // AIに渡す情報が多すぎないよう、主な変更点に絞る
+    return `主な変更点: ${changes.slice(0, 3).join('、')}。`;
+}
+
+/**
  * 打席結果の文字列を、シミュレーションで使える日本語とデータに変換する
  */
 function translatePlay(atBatString) {
@@ -6717,7 +6777,7 @@ function getSubstitutionDescription(player) {
 }
 
 /**
- * 試合の個人成績をAIプロンプト用のテキスト形式（ボックススコア風）にフォーマットする
+ * 試合の個人成績をAIプロンプト用のテキスト形式（★背番号付きボックススコア）にフォーマットする
  * @param {object} dbMatch - 試合オブジェクト
  * @returns {string} - フォーマットされたテキスト
  */
@@ -6737,7 +6797,6 @@ function formatPlayerStatsForPrompt(dbMatch) {
 
         let output = `\n**${teamName} (${isWinner ? '勝者' : '敗者'})**\n`;
 
-        // 打順で選手をソート
         const sortedBatters = battingOrder.sort((a, b) => {
             const orderA = parseFloat(a.order.replace('-sub', '.'));
             const orderB = parseFloat(b.order.replace('-sub', '.'));
@@ -6747,20 +6806,22 @@ function formatPlayerStatsForPrompt(dbMatch) {
         sortedBatters.forEach(player => {
             if (!player.name) return;
             const stats = gameStats[player.name];
-            // 試合に出場していない選手は表示しない
             if (!stats || !stats.played) return; 
 
             const orderDisplay = player.order.includes('sub') ? `  - ${player.sub_type || '代'}` : `${player.order}.`;
-            // 例: "1. 橋本 (中): 4打数2安打 1打点 1本塁打"
+            // ★ここを変更: 選手名の前に背番号を追加
+            const playerIdentifier = `[#${player.number}] ${player.name}`; 
             const statsLine = `${stats.ab}打数${stats.h}安打 ${stats.rbi}打点` + (stats.hr > 0 ? ` ${stats.hr}本塁打` : '');
             
-            output += `${orderDisplay} ${player.name} (${player.pos}): ${statsLine}\n`;
+            output += `${orderDisplay} ${playerIdentifier} (${player.pos}): ${statsLine}\n`;
         });
         
         pitchingData.forEach(pitcher => {
             if (!pitcher.name || !pitcher.innings) return;
-             // 例: "- 投手: 田中 (9回 1失点 8奪三振 2四死球)"
-            output += `- 投手: ${pitcher.name} (${pitcher.innings}回 ${pitcher.runs}失点 ${pitcher.strikeouts}奪三振 ${pitcher.walks}四死球)\n`;
+            // ★ここも変更: 投手名の前に背番号を追加 (打撃データから背番号を検索)
+            const pitcherData = sortedBatters.find(b => b.name === pitcher.name);
+            const pitcherIdentifier = pitcherData ? `[#${pitcherData.number}] ${pitcher.name}` : pitcher.name;
+            output += `- 投手: ${pitcherIdentifier} (${pitcher.innings}回 ${pitcher.runs}失点 ${pitcher.strikeouts}奪三振 ${pitcher.walks}四死球)\n`;
         });
 
         return output;
@@ -6768,7 +6829,6 @@ function formatPlayerStatsForPrompt(dbMatch) {
 
     return formatTeamStats('team1') + formatTeamStats('team2');
 }
-
 /**
  * 試合の詳細データから、AIプロンプト用の個人成績ハイライトを生成する（★投手分析強化版）
  * @param {object} dbMatch - 試合オブジェクト
@@ -6887,7 +6947,15 @@ function extractKeyPerformances(dbMatch) {
  * @param {object|null} userFeedback - ユーザーからの追加指示
  * @returns {Promise<object|null>}
  */
-async function generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText, keyPlayerNames, userFeedback = null) {    
+async function generateNewsArticle(matchContext, userFeedback = null) {
+    // --- 1. 受け取った「取材ファイル(matchContext)」から必要な情報を取り出す ---
+    const { 
+        winnerName, loserName, dbMatch, matchId,
+        winnerData, loserData, winnerDetailedData, loserDetailedData, 
+        winnerLineupChanges, loserLineupChanges, 
+        winnerJourney, loserJourney
+    } = matchContext;
+    
  let prompt = '';
     // --- 1. 大会展望記事の生成ロジック ---
     if (matchId === 'preview') {
@@ -7044,8 +7112,7 @@ return;
     const loserRecord = tournamentState.teamRecords[loserName];
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
-　　const winnerJourney = getCurrentTournamentPerformance(winnerName, matchId);
-    const loserJourney = getCurrentTournamentPerformance(loserName, matchId);
+　　
     const winnerCoach = winnerData.coach;
     const loserCoach = loserData.coach;
     const battingFirstTeam = dbMatch.team1;
@@ -7106,24 +7173,14 @@ return;
     
 
     // --- 詳細データがある場合 (Aルート) ---
+    
+
+    // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
-        
         // --- 準備フェーズ ---
-
-        // 1. createHighlightsTextから「事実リストの配列」と「選手名リスト」を受け取る
         const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-
-        // 2. 「事実リストの配列」を、AIが読みやすいテキスト形式に変換する
-        const factListText = highlights.map(fact => {
-            let text = `- `;
-            if (fact.inning) text += `${fact.inning}回 `;
-            if (fact.team) text += `${fact.team} `;
-            if (fact.player) text += `${fact.player} `;
-            text += `: ${fact.description}`;
-            return text;
-        }).join('\n');
+        const factListText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
         
-        // 3. 選手名リストを元に、選手をチーム分けして、プロンプト用の「注目選手」セクションを作成する
         const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         const winnerPlayersInGame = new Set(
             (dbMatch.details.batting?.[winnerKey] || []).map(p => p.name)
@@ -7136,147 +7193,74 @@ return;
             if (playerNames.length === 0) return '特になし';
             return playerNames.map(playerName => {
                 const detailedInfo = detailedTeamData?.players.find(p => p.name === playerName);
-                if (detailedInfo) {
-                    return `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}`;
-                } else {
-                    return `- **${playerName}**`;
-                }
+                return detailedInfo ? `- **${detailedInfo.name} (${detailedInfo.year}年・${detailedInfo.position})**: ${detailedInfo.desc}` : `- **${playerName}**`;
             }).join('\n');
         };
         const winnerPlayersPrompt = formatPlayerList(winnerKeyPlayers, winnerName, winnerDetailedData);
         const loserPlayersPrompt = formatPlayerList(loserKeyPlayers, loserName, loserDetailedData);
-
-        // 4. スタメン変更を分析する (省略なし)
-        let lineupChangesText = '両チームともに前試合からのスタメン変更はなし。';
-        const changes = [];
-        for (const teamName of [winnerName, loserName]) {
-            const teamRecord = tournamentState.teamRecords[teamName];
-            const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
-            const currentStarters = dbMatch.details?.batting?.[teamKey];
-            if (teamRecord && teamRecord.previousStarters && currentStarters) {
-                const changedPlayers = [];
-                for (let i = 1; i <= 9; i++) {
-                    const prev = teamRecord.previousStarters.find(p => parseInt(p.order) === i);
-                    const curr = currentStarters.find(p => parseInt(p.order) === i);
-                    if (prev && curr && prev.name !== curr.name) {
-                        changedPlayers.push(`${i}番(${curr.pos})に${curr.name}を起用`);
-                    }
-                }
-                if (changedPlayers.length > 0) {
-                    changes.push(`${teamName}は${changedPlayers.join('、')}といった変更を加えた。`);
-                }
-            }
-        }
-        if (changes.length > 0) lineupChangesText = changes.join(' ');
         
-        // 5. イニングスコアをテキスト形式に変換
-        let inningScoreText = '';
-        if (dbMatch.details?.inningScore) {
-            const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
-            const loserKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
-            if (dbMatch.details.inningScore[winnerKey]?.length > 0) {
-                inningScoreText += `- ${winnerName}: ${dbMatch.details.inningScore[winnerKey].map(s => s || '0').join('-')}\n`;
-                inningScoreText += `- ${loserName}: ${dbMatch.details.inningScore[loserKey].map(s => s || '0').join('-')}`;
-            }
-        }
+        // ★★★ ここが重要：関数内部での分析は不要になり、渡された情報をそのまま使う ★★★
+        const lineupChangesText = `- ${winnerName}: ${winnerLineupChanges}\n- ${loserName}: ${loserLineupChanges}`;
         
-// --- 5. 試合中の守備変更を分析 ---
-    if (dbMatch.details.positionChanges) {
-        dbMatch.details.positionChanges.forEach(change => {
-            const teamName = dbMatch[change.teamKey];
-            // ★もし主軸選手がマウンドに上がったら、それは大事件
-            if (change.newPos === '投' || change.newPos === '投手') {
-                 highlights.push({
-                    type: 'strategy',
-                    inning: change.inning,
-                    team: teamName,
-                    player: change.playerName,
-                    description: `主軸の${change.playerName}が${change.inning}回からマウンドに上がるという大胆な采配`
-                });
-                keyPlayerNames.add(change.playerName);
-            }
-        });
-    }
+        const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+        const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
+        const winnerCoach = winnerData.coach;
+        const loserCoach = loserData.coach;
 
         // --- プロンプト作成フェーズ ---
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
-あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。野球以外の話題(プログラミング等)には一切触れないでください。
+あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
 ---
 ### **【最重要】この記事の唯一の事実情報源**
-以下は、この試合で実際に起きた出来事を、**正しい時系列で**リスト化した「事実リスト」です。あなたの記事は、**必ずこのリストに書かれている情報に厳密に基づいて**執筆されなければなりません。
-**【厳重注意】事実リストに書かれていない出来事（例：三者凡退、好プレー、凡退の内容など）を、絶対に創作・推測してはいけません。**
 ${factListText}
+---
 ### **参考情報：補足**
-
-- 前試合からのスタメン変更: ${lineupChangesText}
-- ユーザーによる試合の決め手: ${dbMatch.summary || 'なし'}
+- **前試合からのスタメン変更**:
+${lineupChangesText}
+- **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ---
 ### **参考情報：チームと選手のプロフィール**
-以下は、記事をより豊かにするための参考情報です。事実リストと矛盾しない範囲でのみ使用してください。
 - **${winnerName}**: ${winnerDynamicInfo}
 - **今大会の軌跡**: ${winnerJourney}
   - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
-  - **主な選手プロフィール**:
-${formatPlayerList(winnerKeyPlayers, winnerName, winnerDetailedData)}
+  - **主な選手プロフィール**:\n${winnerPlayersPrompt}
 - **${loserName}**: ${loserDynamicInfo}
- - **今大会の軌跡**: ${loserJourney}
+  - **今大会の軌跡**: ${loserJourney}
   - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
-  - **主な選手プロフィール**:
-${formatPlayerList(loserKeyPlayers, loserName, loserDetailedData)}
-
+  - **主な選手プロフィール**:\n${loserPlayersPrompt}
 ---
 ### **執筆指示**
-1.  まず、「事実リスト」を熟読し、試合の全体像（勝敗、スコア、試合展開）を把握してください。
-2.  次に、その試合展開の中で、どの選手のどのプレーが重要だったかを判断してください。
-3.  「参考情報」を元に、それらの選手やチームの背景を肉付けし、物語性のある記事を作成してください。
-4.  **【厳重注意】**: 「参考情報」に書かれている選手の前評判と、「事実リスト」に書かれている実際の打順や結果が異なる場合は、**必ず「事実リスト」を優先**してください。
-- **監督の采配**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
-- **インタビューコメント**: 試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
-- **物語の連続性**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。`;
-
-        // ▼▼▼ ここからがユーザーフィードバックを反映させる追加ブロックです ▼▼▼
-        let feedbackPrompt = '';
-        if (userFeedback) {
-            if (userFeedback.include && userFeedback.include.trim() !== '') {
-                feedbackPrompt += `\n- **【最重要指示】** 以下の要素を必ず記事の中心に据えて、最もドラマチックに描写してください：\n${userFeedback.include}\n`;
-            }
-            if (userFeedback.exclude && userFeedback.exclude.trim() !== '') {
-                feedbackPrompt += `\n- **【厳禁事項】** 以下の要素や表現は、絶対に記事に含めないでください：\n${userFeedback.exclude}\n`;
-            }
-        }
-        
-        prompt += `
+1.  「事実リスト」を厳密に基に、試合の物語を再構築してください。
+2.  **【監督の采配】**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
+3.  **【物語の連続性】**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。
+4.  試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
+---
 ### 編集長からの追加指示
-${feedbackPrompt || '特になし'}
-        
+${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
+${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedback.exclude}\n` : '特になし'}
+---
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。
-{
-    "title": "（ここに記事のタイトル）",
-    "body": "（ここに記事の本文）"
-}`;
-        // ▲▲▲ ここまでが追加ブロックです ▲▲▲
-    }
+{"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
+
+    } 
     // --- 詳細データがない場合 (Bルート) ---
     else {
+        // (こちらのルートは元々シンプルなので、大きな変更はありません)
+        const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
+        const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
+        const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+        const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
         prompt = `あなたは、高校野球専門のAI記者です。
 以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
 ### 試合情報
-- **大会**: ${currentTournamentName}
-- **先攻**: ${battingFirstTeam}
-- **後攻**: ${battingSecondTeam}
 - **勝利チーム**: ${winnerName} (${winnerRankDesc})
 - **敗北チーム**: ${loserName} (${loserRankDesc})
 - **スコア**: ${winnerScore} - ${loserScore}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
-### チームの背景
-- **${winnerName}**: ${winnerDynamicInfo}
-- **${loserName}**: ${loserDynamicInfo}
 ### 執筆指示
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
-- 事実の厳守: 勝敗や先攻・後攻の情報を間違えないでください。
 - 試合結果を客観的に伝えてください。
-- 想像で選手のコメントなどを入れず、事実に基づいた内容にしてください。
 - 記事のタイトルと本文をJSON形式で出力してください。`;
     }
 
@@ -7298,7 +7282,7 @@ ${feedbackPrompt || '特になし'}
         return { 
             title: "記事生成エラー", body: "AI記者との通信に失敗しました。", 
             timestamp: Date.now(), error: true, errorId: matchId,
-            context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, summary: dbMatch.summary }
+            context: matchContext // ★再生成のためにcontext全体を保存
         };
     }
 }
@@ -9170,8 +9154,9 @@ async function processMatchWin(matchId, winnerName) {
             
             if (!isWin) tournamentState.documentary = { target: null, type: null };
         } else {
-            articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames);
-        }
+        // ★呼び出し方を他のAIと統一し、matchContextをそのまま渡す★
+        articlePromise = generateNewsArticle(matchContext);
+            }
     }
 
     if (tournamentState.settings.enableBbsGeneration) {
@@ -10133,12 +10118,18 @@ document.body.addEventListener('click', async (e) => {
             if (type === 'game' && matchId) {
                 const match = findMatchById(matchId);
                 // 詳細データがある場合のみ、高度な分析を行う
-                if (match && match.winner && match.details) {
-                    // ★ここですべての情報を収集する★
-                    const playerStatsText = formatPlayerStatsForPrompt(match);
-                    const playByPlayText = generatePlayByPlayText(match); // ★試合経過を追加
-                    const winnerJourney = getCurrentTournamentPerformance(match.winner, matchId);
-                    const nextOpponentInfo = findNextOpponent(match.winner, matchId);
+                if (match && match.winner && match.details) { 
+    const playerStatsText = formatPlayerStatsForPrompt(match);
+    const playByPlayText = generatePlayByPlayText(match);
+    const winnerJourney = getCurrentTournamentPerformance(match.winner, matchId);
+    const nextOpponentInfo = findNextOpponent(match.winner, matchId);
+    
+    // ★ここからが変更点★
+    // 勝者と敗者、両チームのスタメン変更を分析
+    const loserName = match.team1 === match.winner ? match.team2 : match.team1;
+    const winnerLineupChanges = analyzeLineupChanges(match.winner, match);
+    const loserLineupChanges = analyzeLineupChanges(loserName, match);
+    // ★変更点はここまで★
                     let nextOpponentJourney = null;
                     if (nextOpponentInfo && nextOpponentInfo.opponentName && !['（未定）', '優勝'].includes(nextOpponentInfo.opponentName)) {
                         nextOpponentJourney = getCurrentTournamentPerformance(nextOpponentInfo.opponentName, matchId);
@@ -10151,7 +10142,10 @@ document.body.addEventListener('click', async (e) => {
                         playByPlayText: playByPlayText, // ★試合経過をコンテキストに追加
                         winnerJourney: winnerJourney,
                         nextOpponent: nextOpponentInfo,
-                        nextOpponentJourney: nextOpponentJourney
+                        nextOpponentJourney: nextOpponentJourney,
+        // ★分析結果をコンテキストに追加★
+        winnerLineupChanges: winnerLineupChanges,
+        loserLineupChanges: loserLineupChanges
                     };
                     result = await generateGameMatchBbsComments(context);
                 } else if (match && match.winner) {
