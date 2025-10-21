@@ -2614,6 +2614,10 @@ async function generateGameMatchBbsComments(matchContext) {
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     
     // ★勝者と敗者のランクをここで計算
+const winnerData = TEAM_DATA[winnerName];
+    const loserData = TEAM_DATA[loserName];
+    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
 
@@ -2631,6 +2635,11 @@ async function generateGameMatchBbsComments(matchContext) {
 - **勝利:** ${winnerName} (ランク: ${winnerRank})
 - **敗北:** ${loserName} (ランク: ${loserRank})
 - **スコア:** ${score}
+- **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
+
+### チームの背景
+- **${winnerName}**: ${winnerDynamicInfo}
+- **${loserName}**: ${loserDynamicInfo}
 
 ### データ2：この試合の個人成績 (最終結果)
 ${playerStatsText || '詳細な個人成績データはありません。'}
