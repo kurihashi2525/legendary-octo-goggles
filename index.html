@@ -8901,14 +8901,15 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
 }
 
 /**
- * トーナメント表をたどり、次の対戦相手の情報を特定する（★未定の場合の対戦カードも調査する最終版）
+ * トーナメント表をたどり、次の対戦相手の情報を特定する（★タイプミスを修正した最終版）
  * @param {string} teamName - チーム名
  * @param {string} currentMatchId - そのチームが勝利した現在の試合ID
  * @returns {object|null} - 次の対戦相手に関する詳細情報
  */
 function findNextOpponent(teamName, currentMatchId) {
     const allMatches = tournamentState.matches;
-    if (!allMatches || !allMessages[currentMatchId]) return null;
+    // ★★★ ここが修正箇所： allMessages -> allMatches に修正 ★★★
+    if (!allMatches || !allMatches[currentMatchId]) return null;
 
     const idParts = currentMatchId.split('-');
     const side = idParts[0];
@@ -8949,7 +8950,6 @@ function findNextOpponent(teamName, currentMatchId) {
             roundName: roundName
         };
     } else {
-        // ★★★ ここからが新しいロジック ★★★
         // 相手が未定の場合、その相手を決める試合を探しに行く
         const feederMatchNumber = matchNum % 2 === 1 ? matchNum + 1 : matchNum - 1;
         const feederMatchId = `${side}-R${roundNum}-M${feederMatchNumber}`;
@@ -8959,7 +8959,7 @@ function findNextOpponent(teamName, currentMatchId) {
             return {
                 opponentName: '（未定）',
                 roundName: roundName,
-                decidingMatch: { // 新しいプロパティを追加
+                decidingMatch: {
                     team1: feederMatch.team1,
                     rank1: calculateRank(feederMatch.team1, tournamentState),
                     team2: feederMatch.team2,
@@ -8967,13 +8967,10 @@ function findNextOpponent(teamName, currentMatchId) {
                 }
             };
         }
-        // ★★★ 新しいロジックはここまで ★★★
         
-        // それでも見つからない場合は、従来通り「未定」を返す
         return { opponentName: '（未定）', opponentRank: '?', roundName: roundName };
     }
 }
-
 
 /**
  * 複数走者に対応した走塁入力欄のHTMLを生成する
