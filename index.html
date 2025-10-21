@@ -2610,12 +2610,13 @@ async function generateMatomeSiteHtml() {
  * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★善戦評価ロジック・最終版）
  */
 async function generateGameMatchBbsComments(matchContext) {
-    // 引数に lineupChanges を追加
-    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
+    // contextから必要な基本情報を取り出す
+    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, loserJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     
-    // ★勝者と敗者のランクをここで計算
-const winnerData = TEAM_DATA[winnerName];
+    // ★★★ ここからが修正箇所 ★★★
+    // この関数内で、プロンプトに必要な情報を改めて生成する
+    const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
@@ -2628,7 +2629,7 @@ const winnerData = TEAM_DATA[winnerName];
     const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) 
         ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` 
         : '';
-
+    // ★★★ 修正箇所はここまで ★★★
     const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
 以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
 
@@ -2652,10 +2653,10 @@ const winnerData = TEAM_DATA[winnerName];
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
 
-### データ2：この試合の個人成績 (最終結果)
+### データ3：この試合の個人成績 (最終結果)
 ${playerStatsText || '詳細な個人成績データはありません。'}
 
-### データ3：この試合の主な流れ (プレーバイプレー)
+### データ4：この試合の主な流れ (プレーバイプレー)
 ${playByPlayText || '詳細な試合経過データはありません。'}
 
 ### 参考情報：トーナメント全体の状況
@@ -4017,10 +4018,11 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
             tournamentState.news.unshift(summaryArticle);
         }
     } else {
-        const previewArticle = await generateNewsArticle(null, null, null, 'preview');
-        if (previewArticle) tournamentState.news.unshift(previewArticle);
-    }
-    
+        // ★展望記事用の簡易contextを作成して渡す
+    const previewContext = { matchId: 'preview' };
+    const previewArticle = await generateNewsArticle(previewContext);
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+}    
     const [bracketComments, namcoNews] = await Promise.all([
         generateBracketReactionComments(tournamentState),
         generateNamcoNews(tournamentState, 'bracket')
@@ -5836,10 +5838,9 @@ async function setupAutumnMainTournament() {
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
 
     const [previewArticle, bracketComments] = await Promise.all([
-        generateNewsArticle(null, null, null, 'preview', null, null),
-        generateBracketReactionComments(tournamentState)
-    ]);
-
+        generateNewsArticle({ matchId: 'preview' }), // ★簡易contextを渡す
+    generateBracketReactionComments(tournamentState)
+]);
     if (previewArticle) tournamentState.news.unshift(previewArticle);
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     
@@ -6176,8 +6177,11 @@ async function setupSpringMainTournament_Round1() {
     
     // 展望記事などを生成...
     newsContainer.innerHTML = `<div class="loader">AI記者が県大会1回戦の展望記事を執筆中...</div>`;
-    const previewArticle = await generateNewsArticle(null, null, null, 'preview');
-    if(previewArticle) tournamentState.news.unshift(previewArticle);
+    // ★展望記事用の簡易contextを作成して渡す
+    const previewContext = { matchId: 'preview' };
+    const previewArticle = await generateNewsArticle(previewContext);
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+
     renderNews(tournamentState.news);
     saveState();
 }
@@ -6236,14 +6240,66 @@ async function setupSpringMainTournament_Round2() {
 
     // 2回戦の展望記事を生成
     newsContainer.innerHTML = `<div class="loader">AI記者が県大会2回戦の展望記事を執筆中...</div>`;
-    const previewArticle = await generateNewsArticle(null, null, null, 'preview');
-    if(previewArticle) tournamentState.news.unshift(previewArticle);
+    // ★展望記事用の簡易contextを作成して渡す
+    const previewContext = { matchId: 'preview' };
+    const previewArticle = await generateNewsArticle(previewContext);
+    if (previewArticle) tournamentState.news.unshift(previewArticle);
+    if(previewArticle) 
+        tournamentState.news.unshift(previewArticle);
+    
+
     renderNews(tournamentState.news);
     saveState();
 }
 
+
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
+/**
+ * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔（★ハイライト情報生成を追加）
+ * @param {string} matchId - 対象の試合ID
+ * @param {string} winnerName - 勝者名
+ * @returns {object} - AIに渡すための全ての情報が詰まったオブジェクト
+ */
+function createMatchContext(matchId, winnerName) {
+    const dbMatch = findMatchById(matchId);
+    if (!dbMatch) return null;
+
+    const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
+    const nextOpponentInfo = findNextOpponent(winnerName, matchId);
+    let nextOpponentJourney = null;
+    if (nextOpponentInfo && nextOpponentInfo.opponentName && !['（未定）', '優勝'].includes(nextOpponentInfo.opponentName)) {
+        nextOpponentJourney = getCurrentTournamentPerformance(nextOpponentInfo.opponentName, matchId);
+    }
+
+    // ★★★ ここからが変更点 ★★★
+    // この時点でハイライト情報も生成してしまう
+    const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+    // ★★★ 変更点はここまで ★★★
+
+    const context = {
+        winnerName,
+        loserName,
+        dbMatch,
+        matchId,
+        winnerData: TEAM_DATA[winnerName],
+        loserData: TEAM_DATA[loserName],
+        winnerDetailedData: DETAILED_TEAM_DATA[winnerName],
+        loserDetailedData: DETAILED_TEAM_DATA[loserName],
+        playerStatsText: dbMatch.details ? formatPlayerStatsForPrompt(dbMatch) : null,
+        playByPlayText: dbMatch.details ? generatePlayByPlayText(dbMatch) : null,
+        winnerJourney: getCurrentTournamentPerformance(winnerName, matchId),
+        loserJourney: getCurrentTournamentPerformance(loserName, matchId),
+        winnerLineupChanges: dbMatch.details ? analyzeLineupChanges(winnerName, dbMatch) : "比較データなし",
+        loserLineupChanges: dbMatch.details ? analyzeLineupChanges(loserName, dbMatch) : "比較データなし",
+        nextOpponent: nextOpponentInfo,
+        nextOpponentJourney: nextOpponentJourney,
+        // ★★★ 生成したハイライト情報をcontextに追加 ★★★
+        highlights: highlights,
+        keyPlayerNames: keyPlayerNames
+    };
+    return context;
+}
 /**
  * 前試合と今試合のスタメンを比較し、変更点を要約する
  * @param {string} teamName - 分析対象のチーム名
@@ -6954,7 +7010,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
         winnerData, loserData, winnerDetailedData, loserDetailedData, 
         winnerLineupChanges, loserLineupChanges, 
         winnerJourney, loserJourney
-    } = matchContext;
+    } = matchContext || {};
     
  let prompt = '';
     // --- 1. 大会展望記事の生成ロジック ---
@@ -7098,8 +7154,8 @@ ${notablePlayersText}
             console.error("AI preview article generation failed:", error);
             return { title: "展望記事生成エラー", body: "AI記者との通信に失敗しました。", timestamp: Date.now(), error: true, errorId: `preview-${Date.now()}` };
         }
-return;
-    }
+}
+
 
     // --- 2. 試合後記事の生成ロジック ---
 
@@ -7328,20 +7384,24 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
     }
 
 /**
- * AIに掲示板のコメントを生成させるメイン関数（準備フェーズを記事AIと統一した最終版）
+ * AIに掲示板のコメントを生成させるメイン関数（★context共有方式に統一した最終版）
+ * @param {object} matchContext - 試合の全コンテキストデータ
+ * @returns {Promise<Array|null>} 生成されたコメントオブジェクトの配列
  */
-async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText) {
+async function generateBbsComments(matchContext) {
+    // --- 1. 受け取った「取材ファイル(matchContext)」から必要な情報を取り出す ---
+    const { 
+        winnerName, loserName, dbMatch, matchId, 
+        winnerData, loserData
+    } = matchContext;
     
-    // --- 準備フェーズ (generateNewsArticleと完全に同じロジック) ---
+    // --- 2. AIへの指示を作成するために必要な情報を準備する ---
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
     const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-    const winnerRecord = tournamentState.teamRecords[winnerName];
-    const loserRecord = tournamentState.teamRecords[loserName];
-    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, winnerRecord);
-    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, loserRecord);
-    let currentTournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
+    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
     let specialNarrativeContext = '';
     
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main' && matchId.includes('-R1-')) {
@@ -7353,30 +7413,21 @@ async function generateBbsComments(winnerName, loserName, dbMatch, matchId, winn
 
     let prompt = '';
 
-
-// --- Aルート：詳細入力がある場合 ---
+    // --- 3. 記事の方向性を決定し、AIへの指示書(プロンプト)を作成する ---
     if (dbMatch.details) {
-        // ▼▼▼ この関数の中で、自分でハイライトを生成する ▼▼▼
+        // 詳細データがある場合 (Aルート)
         const { highlights } = createHighlightsText(dbMatch, winnerName);
-        const highlightsText = highlights.map(fact => {
-            let text = '';
-            if (fact.inning) text += `${fact.inning}回 `;
-            if (fact.team) text += `${fact.team} `;
-            if (fact.player) text += `${fact.player} `;
-            text += `: ${fact.description}`;
-            return text;
-        }).join('、');
-        // ▲▲▲ ▲▲▲
-
+        const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
+        
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
-- **ユーザーが語る試合の決め手**: ${dbMatch.summary || '特になし'}
+- ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
 ### 試合の主なハイライト
-- ${highlightsText}
+${highlightsText}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
@@ -7388,39 +7439,33 @@ ${specialNarrativeContext}
 - **ライバル校のファン**: 「試合のハイライト」の選手を自チームの選手と比較してください。
 - **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
 ### 出力形式
-### 出力形式【最重要】
-解説や前置きは一切不要です。必ず以下のJSON配列形式"のみ"で出力してください。
-[
-  {"personality": "（キャラクター名）", "comment": "（生成したコメント）"},
-  {"personality": "（キャラクター名）", "comment": "（生成したコメント）"}
-]`;
+【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
+[ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
     } else {
-        // Bルート：詳細なハイライトがない場合
+        // 詳細データがない場合 (Bルート)
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
-- **ユーザーが語る試合の決め手**: ${dbMatch.summary || '特になし'}
+- ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
 ${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
-- **上から目線の野球解説者**: 試合結果だけを見て、順当な結果か、意外な結果かを分析してください。
+- **上から目線の野球解説者**: 順当な結果か、意外な結果かを分析してください。
 - **アンチ**: 負けたチームや、スコアが僅差だったチームを批判してください。
 - **ライバル校のファン**: 試合結果を見て、自チームとの力関係を測るようなコメントをしてください。
 - **単なる野球好き**: スコアを見て、接戦だったか、一方的だったかなどの感想を述べてください。
-### 出力形式【最重要】
-解説や前置きは一切不要です。必ず以下のJSON配列形式"のみ"で出力してください。
-[
-  {"personality": "（キャラクター名）", "comment": "（生成したコメント）"},
-  {"personality": "（キャラクター名）", "comment": "（生成したコメント）"}
-]`;
-}
-    // --- AIへのリクエスト (変更なし) ---
+### 出力形式
+【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
+[ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
+    }
+
+    // --- 4. AIへリクエストを送信し、結果を整形して返す ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -7444,7 +7489,7 @@ ${specialNarrativeContext}
             id: `error-${matchId}-bbs`,
             error: true,
             title: `掲示板コメント生成エラー`,
-            context: { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText }
+            context: matchContext // ★エラー時に再生成できるよう、context全体を保存
         }];
     }
 }
@@ -9119,18 +9164,15 @@ async function processMatchWin(matchId, winnerName) {
     }
 
     // --- 3. AIコンテンツ生成の準備と実行 ---
-    const winnerData = TEAM_DATA[winnerName];
-    const loserData = TEAM_DATA[loserName];
-    if (!winnerData || !loserData) { return; }
+    // --- 3. AIコンテンツ生成の準備と実行 ---
+const matchContext = createMatchContext(matchId, winnerName);
+if (!matchContext) {
+    console.error("AIコンテンツ生成に必要なmatchContextの作成に失敗しました。");
+    return; // AI処理を中断
+}
 
-    const winnerDetailedData = DETAILED_TEAM_DATA[winnerName];
-    const loserDetailedData = DETAILED_TEAM_DATA[loserName];
-    const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-    const highlightsText = highlights.map(fact => `${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('、');
-    const matchContext = { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData };
-
-    let articlePromise = Promise.resolve(null);
-    let commentsPromise = Promise.resolve(null);
+let articlePromise = Promise.resolve(null);
+let commentsPromise = Promise.resolve(null);
 
     if (tournamentState.settings.enableArticleGeneration) {
         newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
@@ -9160,10 +9202,10 @@ async function processMatchWin(matchId, winnerName) {
     }
 
     if (tournamentState.settings.enableBbsGeneration) {
-        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
-        commentsPromise = generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
-    }
-    
+    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+    // ★matchContextを渡すだけのシンプルな呼び出しに修正
+    commentsPromise = generateBbsComments(matchContext);
+}    
     // --- 4. トーナメント進行ロジック ---
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
         const [region, bracketId, roundStr, matchStr] = matchId.split('-');
@@ -9301,30 +9343,32 @@ async function processMatchWin(matchId, winnerName) {
     }
     
     // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
+const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
+
+if (newComments) {
+    tournamentState.bbsComments.push(...newComments);
+}
+if (article) {
+    if (!article.error) {
+        article.context = matchContext;
+    }
+    // ★★★ ここが修正点：matchContextからハイライト情報を取り出して渡す ★★★
+    const isVerified = await factCheckArticle(article, matchContext.highlights);
     
-    if (newComments) {
-        tournamentState.bbsComments.push(...newComments);
+    if (isVerified) {
+        showArticleReviewModal(article);
+    } else {
+        const errorArticle = {
+            title: "記事生成エラー（事実矛盾の可能性）",
+            body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
+            timestamp: Date.now(),
+            error: true,
+            errorId: matchId, 
+            context: matchContext
+        };
+        tournamentState.news.push(errorArticle);
     }
-    if (article) {
-        if (!article.error) {
-            article.context = matchContext;
-        }
-        const isVerified = await factCheckArticle(article, highlights);
-        if (isVerified) {
-            showArticleReviewModal(article);
-        } else {
-            const errorArticle = {
-                title: "記事生成エラー（事実矛盾の可能性）",
-                body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
-                timestamp: Date.now(),
-                error: true,
-                errorId: matchId, 
-                context: matchContext
-            };
-            tournamentState.news.push(errorArticle);
-        }
-    }
+}
     
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
@@ -10494,14 +10538,14 @@ document.body.addEventListener('click', async (e) => {
     // ▼▼▼ このブロックで、既存の該当箇所を置き換えてください ▼▼▼
 
     // --- フィードバックモーダルからの再生成実行ボタン ---
+    // --- フィードバックモーダルからの再生成実行ボタン ---
     const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
     if (feedbackSubmitBtn) {
-        // 1. 再生成の対象となる記事データを取得
         if (!articleForRegeneration) return;
         const { index, article } = articleForRegeneration;
         const context = article.context;
         
-        // 2. UIを準備 (ボタンを無効化し、ローダーを表示)
+        // UIを準備
         feedbackSubmitBtn.textContent = '生成中...';
         feedbackSubmitBtn.disabled = true;
         const userFeedback = {
@@ -10514,53 +10558,36 @@ document.body.addEventListener('click', async (e) => {
         renderNews(tournamentState.news);
         newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
         
-        // 3. 非同期でAIの再生成処理を開始
+        // 非同期でAIの再生成処理を開始
         (async () => {
             let articlePromise;
-            const documentary = tournamentState.documentary;
-
-            // ★★★ ここで再生成の種類を判断します ★★★
+            
+            // ★★★ ここからが修正箇所 ★★★
+            // 再生成する記事がドキュメンタリーかどうかを context の中身で判断する
             if (context.isDocumentary) {
-                // 【パターンA】失敗したのが「ドキュメンタリーの序章」だった場合
+                // 【ドキュメンタリー記事の場合】
+                // context から必要な情報を取り出し、専用の関数を呼び出す
                 const { type, teamName, matchData } = context;
                 articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
             
             } else {
-                // 【パターンB】失敗したのが「通常の試合記事」だった場合
-                const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData } = context;
-                const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
-
-                if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
-                    // 【パターンB-1】その試合が、進行中のドキュメンタリーの一部だった場合
-                    const isWin = documentary.target === winnerName;
-                    const matchInfo = {
-                        round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
-                        opponent: isWin ? loserName : winnerName,
-                        score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
-                        highlights: highlights.map(h => h.description).join('、')
-                    };
-                    articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfo, userFeedback);
-                } else {
-                    // 【パターンB-2】ドキュメンタリーとは無関係の、ただの試合記事だった場合
-                    articlePromise = generateNewsArticle(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlights, keyPlayerNames, userFeedback);
-                }
+                // 【通常の試合記事の場合】
+                articlePromise = generateNewsArticle(context, userFeedback);
             }
-            
-            // 4. AIからの応答を待ち、結果を処理する
+            // ★★★ 修正箇所はここまで ★★★
+
             const newArticle = await articlePromise;
             
+            // (以降の createErrorArticle や UI更新処理は、ご提示のコードのままで問題ありません)
             const createErrorArticle = () => ({
                 title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true, errorId: context.matchId || 'documentary', context: context
+                timestamp: Date.now(), error: true, errorId: context.matchId || 'error', 
+                context: context
             });
 
             if (newArticle && !newArticle.error) {
                 newArticle.context = context;
-                
-                let isVerified = true; // ドキュメンタリー記事は事実確認をスキップ
-                if (!context.isDocumentary) {
-                    isVerified = await factCheckArticle(newArticle, createHighlightsText(context.dbMatch, context.winnerName).highlights);
-                }
+                const isVerified = context.isDocumentary ? true : await factCheckArticle(newArticle, createHighlightsText(context.dbMatch, context.winnerName).highlights);
 
                 if (isVerified) {
                     tournamentState.news.splice(index, 0, newArticle);
@@ -10572,14 +10599,12 @@ document.body.addEventListener('click', async (e) => {
                 tournamentState.news.splice(index, 0, createErrorArticle());
             }
             
-            // 5. 最終的な状態を保存し、UIを元に戻す
             saveState();
             renderNews(tournamentState.news);
             feedbackSubmitBtn.textContent = 'この指示で再生成';
             feedbackSubmitBtn.disabled = false;
         })();
-    }
-    
+    }    
 // ▲▲▲ ここまで置き換え ▲▲▲
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
