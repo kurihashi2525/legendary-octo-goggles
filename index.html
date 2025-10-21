@@ -2623,12 +2623,24 @@ async function generateGameMatchBbsComments(matchContext) {
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
 
-    const nextOpponentText = nextOpponent 
-        ? `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})。` 
-        : '次の相手は未定。';
+    // ★★★ ここからが修正箇所 ★★★
+    // 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
+    let nextOpponentText = '次の相手は未定やな。'; // デフォルト (なんJ風の語尾)
+    if (nextOpponent) {
+        // パターン1: 対戦相手が決まっている場合
+        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})か。`;
+        } 
+        // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
+        else if (nextOpponent.decidingMatch) {
+            const dm = nextOpponent.decidingMatch;
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者やな。`;
+        }
+    }
     const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) 
         ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` 
         : '';
+    // ★★★ 修正箇所はここまで ★★★
     // ★★★ 修正箇所はここまで ★★★
     const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
 以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
@@ -7264,11 +7276,21 @@ ${notablePlayersText}
         const winnerCoach = winnerData.coach;
         const loserCoach = loserData.coach;
 
-        // --- プロンプト作成フェーズ ---
-// 1. 次の対戦相手に関するテキストを準備
-        const nextOpponentText = nextOpponent 
-            ? `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})と対戦する。` 
-            : '次の対戦相手は未定。';
+        // 1. 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
+        let nextOpponentText = '次の対戦相手は未定。'; // デフォルト
+        if (nextOpponent) {
+            // パターン1: 対戦相手が決まっている場合
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(${nextOpponent.opponentRank}ランク)と対戦する。`;
+            } 
+            // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
+            else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者と対戦する。`;
+            }
+            // パターン3: それ以外の未定の場合 (この場合はデフォルトのまま)
+        }
+        // ★★★ 修正箇所はここまで ★★★
 
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
@@ -8879,21 +8901,20 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
 }
 
 /**
- * トーナメント表をたどり、次の対戦相手の情報を特定する
+ * トーナメント表をたどり、次の対戦相手の情報を特定する（★未定の場合の対戦カードも調査する最終版）
  * @param {string} teamName - チーム名
  * @param {string} currentMatchId - そのチームが勝利した現在の試合ID
- * @returns {{opponentName: string, opponentRank: string, roundName: string} | null}
+ * @returns {object|null} - 次の対戦相手に関する詳細情報
  */
 function findNextOpponent(teamName, currentMatchId) {
     const allMatches = tournamentState.matches;
-    if (!allMatches || !allMatches[currentMatchId]) return null;
+    if (!allMatches || !allMessages[currentMatchId]) return null;
 
     const idParts = currentMatchId.split('-');
     const side = idParts[0];
 
-    // 決勝戦に勝利した場合、次の相手はいない
     if (side === 'F') {
-        return { opponentName: '優勝', opponentRank: '', roundName: '大会終了' };
+        return { opponentName: '優勝', roundName: '大会終了' };
     }
 
     const roundNum = parseInt(idParts[1].slice(1));
@@ -8901,16 +8922,11 @@ function findNextOpponent(teamName, currentMatchId) {
     const numTeams = tournamentState.teams.length;
     const finalRound = Math.log2(numTeams);
 
-    let nextMatchId;
-    let roundName;
-
-    // 現在のラウンドが準決勝の場合、次は決勝
+    let nextMatchId, roundName;
     if (roundNum === finalRound - 1) {
         nextMatchId = 'F-R1-M1';
         roundName = '決勝';
-    } 
-    // それ以前のラウンドの場合
-    else if (roundNum < finalRound - 1) {
+    } else if (roundNum < finalRound - 1) {
         const nextRoundNum = roundNum + 1;
         nextMatchId = `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
         const roundNameMap = { [finalRound - 1]: "準決勝", [finalRound - 2]: "準々決勝" };
@@ -8922,13 +8938,9 @@ function findNextOpponent(teamName, currentMatchId) {
     const nextMatch = allMatches[nextMatchId];
     if (!nextMatch) return null;
 
-    // 次の試合オブジェクトから、自分以外のチーム名を探す
     let opponentName = null;
-    if (nextMatch.team1 && nextMatch.team1 !== teamName) {
-        opponentName = nextMatch.team1;
-    } else if (nextMatch.team2 && nextMatch.team2 !== teamName) {
-        opponentName = nextMatch.team2;
-    }
+    if (nextMatch.team1 && nextMatch.team1 !== teamName) opponentName = nextMatch.team1;
+    else if (nextMatch.team2 && nextMatch.team2 !== teamName) opponentName = nextMatch.team2;
 
     if (opponentName) {
         return {
@@ -8937,14 +8949,30 @@ function findNextOpponent(teamName, currentMatchId) {
             roundName: roundName
         };
     } else {
-        // 対戦相手がまだ決まっていない場合
-        return {
-            opponentName: '（未定）',
-            opponentRank: '?',
-            roundName: roundName
-        };
+        // ★★★ ここからが新しいロジック ★★★
+        // 相手が未定の場合、その相手を決める試合を探しに行く
+        const feederMatchNumber = matchNum % 2 === 1 ? matchNum + 1 : matchNum - 1;
+        const feederMatchId = `${side}-R${roundNum}-M${feederMatchNumber}`;
+        const feederMatch = allMatches[feederMatchId];
+
+        if (feederMatch && feederMatch.team1 && feederMatch.team2) {
+            return {
+                opponentName: '（未定）',
+                roundName: roundName,
+                decidingMatch: { // 新しいプロパティを追加
+                    team1: feederMatch.team1,
+                    rank1: calculateRank(feederMatch.team1, tournamentState),
+                    team2: feederMatch.team2,
+                    rank2: calculateRank(feederMatch.team2, tournamentState)
+                }
+            };
+        }
+        // ★★★ 新しいロジックはここまで ★★★
+        
+        // それでも見つからない場合は、従来通り「未定」を返す
+        return { opponentName: '（未定）', opponentRank: '?', roundName: roundName };
     }
-}  
+}
 
 
 /**
