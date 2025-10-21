@@ -7004,12 +7004,13 @@ function extractKeyPerformances(dbMatch) {
  * @returns {Promise<object|null>}
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
-    // --- 1. 受け取った「取材ファイル(matchContext)」から必要な情報を取り出す ---
+    // --- 1. contextから必要な情報を取り出す ---
     const { 
         winnerName, loserName, dbMatch, matchId,
         winnerData, loserData, winnerDetailedData, loserDetailedData, 
         winnerLineupChanges, loserLineupChanges, 
-        winnerJourney, loserJourney
+        winnerJourney, loserJourney,
+        nextOpponent // ★★★ 次の対戦相手の情報をここで受け取ります ★★★
     } = matchContext || {};
     
  let prompt = '';
@@ -7264,8 +7265,20 @@ ${notablePlayersText}
         const loserCoach = loserData.coach;
 
         // --- プロンプト作成フェーズ ---
+// 1. 次の対戦相手に関するテキストを準備
+        const nextOpponentText = nextOpponent 
+            ? `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})と対戦する。` 
+            : '次の対戦相手は未定。';
+
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
+---
+### **参考情報：高校野球における背番号の意味**
+- **[#1]**: チームの絶対的エース投手。その投球がチームの運命を左右する。
+- **[#2-9]**: 基本的にレギュラーの野手陣。一桁番号はチームの中心選手である証。
+- **[#10], [#11]**: エースに次ぐ控え投手。
+- **[#12]以降**: ベンチ入りした控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれるサプライズ枠。
+---
 ---
 ### **【最重要】この記事の唯一の事実情報源**
 ${factListText}
@@ -7290,6 +7303,8 @@ ${lineupChangesText}
 2.  **【監督の采配】**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
 3.  **【物語の連続性】**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。
 4.  試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
+5.  **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
+6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
