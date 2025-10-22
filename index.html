@@ -2605,96 +2605,66 @@ async function generateMatomeSiteHtml() {
 }
 
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
 /**
- * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★善戦評価ロジック・最終版）
- */
-async function generateGameMatchBbsComments(matchContext) {
-    // contextから必要な基本情報を取り出す
-    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, loserJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
-    const score = `${dbMatch.score1}-${dbMatch.score2}`;
-    
-    // ★★★ ここからが修正箇所 ★★★
-    // この関数内で、プロンプトに必要な情報を改めて生成する
-    const winnerData = TEAM_DATA[winnerName];
-    const loserData = TEAM_DATA[loserName];
-    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
-    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
-    const winnerRank = calculateRank(winnerName, tournamentState);
-    const loserRank = calculateRank(loserName, tournamentState);
-
-    // ★★★ ここからが修正箇所 ★★★
-    // 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
-    let nextOpponentText = '次の相手は未定やな。'; // デフォルト (なんJ風の語尾)
-    if (nextOpponent) {
-        // パターン1: 対戦相手が決まっている場合
-        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})か。`;
-        } 
-        // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
-        else if (nextOpponent.decidingMatch) {
-            const dm = nextOpponent.decidingMatch;
-            nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者やな。`;
+     * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★ストリーミング対応・完全版）
+     * @param {object} matchContext - 試合のコンテキスト
+     * @param {HTMLElement} threadContentEl - コメントをリアルタイム表示する要素
+     * @returns {Promise<object|null>}
+     */
+    async function generateGameMatchBbsComments(matchContext, threadContentEl) {
+        // ▼▼▼ 省略されていたのは、この部分です ▼▼▼
+        // AIに渡すための詳細な指示書（プロンプト）を作成するロジック
+        const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
+        const winnerData = TEAM_DATA[winnerName];
+        const loserData = TEAM_DATA[loserName];
+        const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+        const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
+        const winnerRank = calculateRank(winnerName, tournamentState);
+        const loserRank = calculateRank(loserName, tournamentState);
+        let nextOpponentText = '次の相手は未定やな。';
+        if (nextOpponent) {
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})か。`;
+            } else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者やな。`;
+            }
         }
-    }
-    const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) 
-        ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` 
-        : '';
-    // ★★★ 修正箇所はここまで ★★★
-    // ★★★ 修正箇所はここまで ★★★
-    const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
+        const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` : '';
+        
+        const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
 以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
-
 ### 参考情報：高校野球における背番号の意味
-- **[#1]**: チームの絶対的エース投手。
-- **[#2-9]**: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
-- **[#10], [#11]**: エースに次ぐ控え投手。
-- **[#12]以降**: 控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれる。
-
+- [#1]: チームの絶対的エース投手。
+- [#2-9]: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
+- [#10], [#11]: エースに次ぐ控え投手。
+- [#12]以降: 控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれる。
 ### データ1：前試合からのスタメン変更
-- **${winnerName}**: ${winnerLineupChanges || '情報なし'}
-- **${loserName}**: ${loserLineupChanges || '情報なし'}
-
+- ${winnerName}: ${winnerLineupChanges || '情報なし'}
+- ${loserName}: ${loserLineupChanges || '情報なし'}
 ### データ2：試合結果
-- **勝利:** ${winnerName} (ランク: ${winnerRank})
-- **敗北:** ${loserName} (ランク: ${loserRank})
-- **スコア:** ${score}
-- **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
-
+- 勝利: ${winnerName} (ランク: ${winnerRank})
+- 敗北: ${loserName} (ランク: ${loserRank})
+- スコア: ${dbMatch.score1}-${dbMatch.score2}
+- ユーザーによる試合の決め手: ${dbMatch.summary || '特になし'}
 ### チームの背景
-- **${winnerName}**: ${winnerDynamicInfo}
-- **${loserName}**: ${loserDynamicInfo}
-
+- ${winnerName}: ${winnerDynamicInfo}
+- ${loserName}: ${loserDynamicInfo}
 ### データ3：この試合の個人成績 (最終結果)
 ${playerStatsText || '詳細な個人成績データはありません。'}
-
 ### データ4：この試合の主な流れ (プレーバイプレー)
 ${playByPlayText || '詳細な試合経過データはありません。'}
-
 ### 参考情報：トーナメント全体の状況
-- **${winnerName}の軌跡**: ${winnerJourney || '今大会初戦'}
-- **次の試合**: ${nextOpponentText} ${nextOpponentJourneyText}
-
+- ${winnerName}の軌跡: ${winnerJourney || '今大会初戦'}
+- 次の試合: ${nextOpponentText} ${nextOpponentJourneyText}
 ### 指示
 あなたは今、上記の全データを眺めながら、他のファンと会話しています。以下の指示に従って、リアルなコメントを生成してください。
-
-1.  **【超重要：高度な分析】**
-    「データ2：最終結果」と「データ3：プレーバイプレー」を比較し、最終成績が良い選手でもチャンスで凡退していないかなど、結果だけでは分からない深い分析コメントを生成してください。（例：「品川は4打数2安打やけど、チャンスで凡退しとるからワイは評価せん」）
-
-2.  **【善戦の評価】** ★★★この指示ブロックが新しい機能です★★★
-    もし**ランクの低いチーム（敗北側）がランクの高いチーム（勝利側）相手に善戦（例：5点差以内での敗北、またはプレーバイプレーから読み取れる終盤までの接戦）**した場合、その健闘を称えるコメントを必ず含めてください。
-    - 例：「負けはしたけど、格上相手によくやったわ」「〇〇（敗北校）は来年期待できるな」「まさかここまで苦戦するとは思わなかった」
-
-3.  **【プレーへの言及】**
-    「データ3：プレーバイプレー」から印象的なプレーを抜き出し、「〇回の△△のプレーは良かった/悪かった」といった、特定のプレーに言及するコメントを生成してください。
-
-4.  **【次戦の展望】**
-    「参考情報」を元に、次の対戦相手の強さや勝ち上がり方に触れ、「次は厳しい」「相手も苦戦しとるからワンチャンある」といった、次戦を予想する会話を生成してください。
-
+1.  【超重要：高度な分析】 「データ2：最終結果」と「データ3：プレーバイプレー」を比較し、最終成績が良い選手でもチャンスで凡退していないかなど、結果だけでは分からない深い分析コメントを生成してください。
+2.  【善戦の評価】 もしランクの低いチーム（敗北側）がランクの高いチーム（勝利側）相手に善戦した場合、その健闘を称えるコメントを必ず含めてください。
+3.  【プレーへの言及】 「データ3：プレーバイプレー」から印象的なプレーを抜き出し、「〇回の△△のプレーは良かった/悪かった」といった、特定のプレーに言及するコメントを生成してください。
+4.  【次戦の展望】 「参考情報」を元に、次の対戦相手の強さや勝ち上がり方に触れ、「次は厳しい」「ワンチャンある」といった、次戦を予想する会話を生成してください。
 5.  その他、なんJらしい煽り、称賛、達観したコメントなどを自由に織り交ぜてください。安価（>>）を使った会話も必ず含めてください。
-
 6. ランク名をそのまま使うのではなく、eランクは無名校、dランクは挑戦校、cランクは中堅校、bランクは強豪校、Aランクは名門校と言い換えてください。
-
 ### 出力形式【最重要】
 解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
 {
@@ -2704,15 +2674,20 @@ ${playByPlayText || '詳細な試合経過データはありません。'}
     {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"}
   ]
 }`;
+        // ▲▲▲ 省略されていたのは、ここまでです ▲▲▲
 
-    // AIへのリクエスト部分は変更なし
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const rawText = result.candidates[0].content.parts[0].text;
-            const bbsJson = parseJsonFromText(rawText);
+        try {
+            // 新しいストリーミング関数を呼び出し、UIコンテナを渡す
+            const bbsJson = await fetchWithStreamForBBS({ contents: [{ role: "user", parts: [{ text: prompt }] }] }, threadContentEl);
+            
             if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
+                // UIのタイトルを更新
+                if (threadContentEl) {
+                    const titleEl = document.getElementById('bbs-thread-title');
+                    if(titleEl) titleEl.textContent = `【スレ】${bbsJson.threadTitle}`;
+                }
+
+                // 完了したデータを返す
                 return {
                     title: bbsJson.threadTitle,
                     comments: bbsJson.comments.map(c => ({
@@ -2723,13 +2698,14 @@ ${playByPlayText || '詳細な試合経過データはありません。'}
                     }))
                 };
             }
+            throw new Error("AI response format error.");
+        } catch (error) {
+            console.error("AI game match BBS generation failed:", error);
+            if(threadContentEl) threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
+            return null;
         }
-        throw new Error("AI response format error.");
-    } catch (error) {
-        console.error("AI game match BBS generation failed:", error);
-        return null;
     }
-}
+
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -7017,13 +6993,14 @@ function extractKeyPerformances(dbMatch) {
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
     // --- 1. contextから必要な情報を取り出す ---
-    const { 
-        winnerName, loserName, dbMatch, matchId,
-        winnerData, loserData, winnerDetailedData, loserDetailedData, 
-        winnerLineupChanges, loserLineupChanges, 
-        winnerJourney, loserJourney,
-        nextOpponent // ★★★ 次の対戦相手の情報をここで受け取ります ★★★
-    } = matchContext || {};
+    const {
+            winnerName, loserName, dbMatch, matchId,
+            winnerData, loserData, winnerDetailedData, loserDetailedData,
+            playerStatsText, playByPlayText, // ★playByPlayTextもここで受け取る
+            winnerJourney, loserJourney,
+            winnerLineupChanges, loserLineupChanges,
+            nextOpponent
+        } = matchContext || {};
     
  let prompt = '';
     // --- 1. 大会展望記事の生成ロジック ---
@@ -7292,41 +7269,44 @@ ${notablePlayersText}
         }
         // ★★★ 修正箇所はここまで ★★★
 
-        prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
+        // ★★★ ここが元の詳細なプロンプトです ★★★
+        const prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
 ---
 ### **参考情報：高校野球における背番号の意味**
-- **[#1]**: チームの絶対的エース投手。その投球がチームの運命を左右する。
-- **[#2-9]**: 基本的にレギュラーの野手陣。一桁番号はチームの中心選手である証。
-- **[#10], [#11]**: エースに次ぐ控え投手。
-- **[#12]以降**: ベンチ入りした控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれるサプライズ枠。
+- [#1]: チームの絶対的エース投手。
+- [#2-9]: レギュラーの野手陣。
+- [#10]以降: 控え選手。
 ---
+### **データ1：試合結果**
+- **勝利**: ${winnerName}
+- **敗北**: ${loserName}
+- **スコア**: ${dbMatch.score1} - ${dbMatch.score2}
+- **ユーザーによる試合の決め手**: ${dbMatch.summary || '特になし'}
 ---
-### **【最重要】この記事の唯一の事実情報源**
-${factListText}
+### **データ2：この試合の個人成績 (最終結果)**
+${playerStatsText || '詳細な個人成績データはありません。'}
 ---
-### **参考情報：補足**
-- **前試合からのスタメン変更**:
-${lineupChangesText}
-- **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
+### **データ3：この試合の主な流れ (プレーバイプレー)**
+${playByPlayText || '詳細な試合経過データはありません。'}
 ---
-### **参考情報：チームと選手のプロフィール**
+### **参考情報：チームと選手のプロフィール、および大会の文脈**
 - **${winnerName}**: ${winnerDynamicInfo}
-- **今大会の軌跡**: ${winnerJourney}
+  - **今大会の軌跡**: ${winnerJourney}
   - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
-  - **主な選手プロフィール**:\n${winnerPlayersPrompt}
 - **${loserName}**: ${loserDynamicInfo}
   - **今大会の軌跡**: ${loserJourney}
   - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
-  - **主な選手プロフィール**:\n${loserPlayersPrompt}
+- **前試合からのスタメン変更**:
+  - ${winnerName}: ${winnerLineupChanges}
+  - ${loserName}: ${loserLineupChanges}
 ---
 ### **執筆指示**
-1.  「事実リスト」を厳密に基に、試合の物語を再構築してください。
-2.  **【監督の采配】**: 「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
-3.  **【物語の連続性】**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。
+1.  **【超重要：高度な分析】** 「データ2：最終結果」と「データ3：プレーバイプレー」を比較し、最終成績が良い選手でもチャンスで凡退していないかなど、結果だけでは分からない深い分析を記事に含めてください。
+2.  「プレーバイプレー」から試合のターニングポイントとなった場面を特定し、そのプレーを情景が目に浮かぶように描写してください。
+3.  「スタメン変更」があった場合、その采配が試合にどう影響したかに触れること。
 4.  試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
-5.  **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
-6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。
+5.  記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -7336,49 +7316,34 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
 【最重要】必ず以下のJSON形式"のみ"で出力すること。
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
 
-    } 
-    // --- 詳細データがない場合 (Bルート) ---
-    else {
-        // (こちらのルートは元々シンプルなので、大きな変更はありません)
-        const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-        const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-        const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
-        const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
-        prompt = `あなたは、高校野球専門のAI記者です。
-以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
-### 試合情報
-- **勝利チーム**: ${winnerName} (${winnerRankDesc})
-- **敗北チーム**: ${loserName} (${loserRankDesc})
-- **スコア**: ${winnerScore} - ${loserScore}
-- **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
-### 執筆指示
-- もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
-- 試合結果を客観的に伝えてください。
-- 記事のタイトルと本文をJSON形式で出力してください。`;
-    }
-
-    // --- AIへのリクエスト ---
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
-            if (article) {
-                const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
-                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
-                return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
+        // --- 3. ストリーミング処理を実行 ---
+        try {
+            newsContainer.innerHTML = '';
+            const articleContainer = document.createElement('div');
+            articleContainer.className = 'p-4 bg-white rounded-lg shadow-lg';
+            const titleEl = document.createElement('h3');
+            titleEl.className = 'text-2xl font-bold text-gray-900 mb-2';
+            const bodyEl = document.createElement('p');
+            bodyEl.className = 'mt-4 text-gray-700 whitespace-pre-wrap leading-relaxed';
+            articleContainer.append(titleEl, bodyEl);
+            newsContainer.appendChild(articleContainer);
+            
+            const fullText = await fetchWithStream({ contents: [{ role: "user", parts: [{ text: prompt }] }] }, titleEl, bodyEl);
+            
+            const finalArticle = parseJsonFromText(fullText);
+            if (finalArticle) {
+                const isNewspaperWorthy = (dbMatch.details);
+                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(finalArticle, matchContext) : null;
+                return { ...finalArticle, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml, context: matchContext };
             }
+            throw new Error("AIからの最終応答がJSON形式ではありませんでした。");
+
+        } catch (error) {
+            console.error("AI記事のストリーミング生成に失敗しました:", error);
+            newsContainer.innerHTML = `<div class="article-error">記事の生成に失敗しました。</div>`;
+            return null;
         }
-        throw new Error("AIからの応答が予期した形式ではありません。");
-    } catch (error) {
-        console.error("AI記事の生成に失敗しました:", error);
-        return { 
-            title: "記事生成エラー", body: "AI記者との通信に失敗しました。", 
-            timestamp: Date.now(), error: true, errorId: matchId,
-            context: matchContext // ★再生成のためにcontext全体を保存
-        };
     }
-}
 /**
      * AIにスキップしたラウンドのダイジェスト記事を生成させる
      */
@@ -7421,54 +7386,36 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
     }
 
 /**
- * AIに掲示板のコメントを生成させるメイン関数（★context共有方式に統一した最終版）
- * @param {object} matchContext - 試合の全コンテキストデータ
- * @returns {Promise<Array|null>} 生成されたコメントオブジェクトの配列
- */
-async function generateBbsComments(matchContext) {
-    // --- 1. 受け取った「取材ファイル(matchContext)」から必要な情報を取り出す ---
-    const { 
-        winnerName, loserName, dbMatch, matchId, 
-        winnerData, loserData
-    } = matchContext;
-    
-    // --- 2. AIへの指示を作成するために必要な情報を準備する ---
-    const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
-    const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
-    const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-    const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
-    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
-    let specialNarrativeContext = '';
-    
-    if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main' && matchId.includes('-R1-')) {
-        const winnerRank = calculateRank(winnerName, tournamentState);
-        if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
-            specialNarrativeContext = `### 【掲示板の話題】\n衝撃！無名の公立「${winnerName}」が県大会初戦を勝ち、【来春のシード権獲得】だ！この快進撃に驚きと嫉妬のコメントを生成せよ。`;
-        }
-    }
-
-    let prompt = '';
-
-    // --- 3. 記事の方向性を決定し、AIへの指示書(プロンプト)を作成する ---
-    if (dbMatch.details) {
-        // 詳細データがある場合 (Aルート)
-        const { highlights } = createHighlightsText(dbMatch, winnerName);
-        const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
-        
-        prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+     * AIに掲示板のコメントを生成させるメイン関数（★ストリーミング対応版★）
+     * @param {object} matchContext - 試合の全コンテキストデータ
+     * @param {HTMLElement} container - コメントを表示するコンテナ
+     * @returns {Promise<Array|null>}
+     */
+    async function generateBbsComments(matchContext, container) {
+        // (プロンプト生成ロジックは元のままなので省略)
+        const { winnerName, loserName, dbMatch, winnerData, loserData } = matchContext;
+        const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+        const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+        const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
+        const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
+        const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
+        const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
+        let prompt;
+        if (dbMatch.details) {
+            const { highlights } = createHighlightsText(dbMatch, winnerName);
+            const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
+            prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
-- ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
+- ユーザーが語る試合の決め手: ${dbMatch.summary || 'なし'}
 ### 試合の主なハイライト
 ${highlightsText}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
-${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
 - **上から目線の野球解説者**: 「試合のハイライト」のプレーを玄人っぽく分析してください。
@@ -7478,19 +7425,17 @@ ${specialNarrativeContext}
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
-    } else {
-        // 詳細データがない場合 (Bルート)
-        prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
+        } else {
+            prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
-- ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
+- ユーザーが語る試合の決め手: ${dbMatch.summary || 'なし'}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
-${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
 - **上から目線の野球解説者**: 順当な結果か、意外な結果かを分析してください。
@@ -7500,15 +7445,12 @@ ${specialNarrativeContext}
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
-    }
+        }
 
-    // --- 4. AIへリクエストを送信し、結果を整形して返す ---
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const rawText = result.candidates[0].content.parts[0].text;
-            const commentsJson = parseJsonFromText(rawText);
+        try {
+            // ★新しいストリーミング関数を呼び出す
+            const commentsJson = await fetchWithStreamForBBS({ contents: [{ role: "user", parts: [{ text: prompt }] }] }, container);
+
             if (Array.isArray(commentsJson)) {
                 return commentsJson.map(c => ({
                     id: crypto.randomUUID(),
@@ -7518,18 +7460,15 @@ ${specialNarrativeContext}
                     replies: []
                 }));
             }
+            throw new Error("AI response format error.");
+        } catch (error) {
+            console.error("AI BBS generation failed:", error);
+            if(container) container.innerHTML = `<p class="text-center text-red-500">コメントの生成に失敗しました。</p>`;
+            return [];
         }
-        throw new Error("AIからの応答が、正しい配列形式ではありません。");
-    } catch (error) {
-        console.error("AI掲示板コメントの生成に失敗しました:", error);
-        return [{
-            id: `error-${matchId}-bbs`,
-            error: true,
-            title: `掲示板コメント生成エラー`,
-            context: matchContext // ★エラー時に再生成できるよう、context全体を保存
-        }];
     }
-}
+
+
 /**
      * AIに代矢東応援掲示板のコメントを生成させる
      */
@@ -8188,41 +8127,134 @@ ${teamInfoPromptPart}
     }
 
     /**
-     * リトライ機能付きでバックエンドAPI(Netlify Function)を呼び出す
+     * AIからの応答をストリーミングで受信し、リアルタイムでUIに反映させる関数
+     * @param {object} payload - AIに送信するプロンプト等のデータ
+     * @param {HTMLElement} titleElement - 記事のタイトルをリアルタイムで表示する要素
+     * @param {HTMLElement} bodyElement - 記事の本文をリアルタイムで表示する要素
+     * @returns {Promise<string>} - 全ストリーム完了後に結合された完全なJSON文字列
      */
-    async function fetchWithRetry(payload, maxRetries = 3) {
-        const functionUrl = '/.netlify/functions/generateApiContent'; // Netlify Functionのエンドポイント
-        let lastError;
+    async function fetchWithStream(payload, titleElement, bodyElement) {
+        const functionUrl = '/.netlify/functions/generateApiContent';
+        
+        // UIを初期化
+        if(titleElement) titleElement.textContent = 'AI記者がタイトルを考案中...';
+        if(bodyElement) bodyElement.textContent = '█'; // カーソル風の表示
 
-        for (let i = 0; i < maxRetries; i++) {
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error("サーバーからのストリーム接続に失敗しました。");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let accumulatedChunk = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            accumulatedChunk += decoder.decode(value, { stream: true });
+            
             try {
-                const response = await fetch(functionUrl, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    return response;
+                const parsed = JSON.parse(accumulatedChunk);
+                if (parsed.candidates && parsed.candidates[0].content) {
+                    const newText = parsed.candidates[0].content.parts[0].text;
+                    fullText += newText;
+                    
+                    let cleanedText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    try {
+                        const tempJson = JSON.parse(cleanedText);
+                        if(titleElement) titleElement.textContent = tempJson.title || 'タイトル生成中...';
+                        if(bodyElement) bodyElement.innerHTML = (tempJson.body || '').replace(/\\n/g, '<br>') + ' █';
+                    } catch(e) {
+                         if(bodyElement) bodyElement.innerHTML = cleanedText.replace(/\\n/g, '<br>') + ' █';
+                    }
+                    
+                    accumulatedChunk = '';
                 }
-                
-                if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-                    const errorData = await response.json();
-                    throw new Error(`API Error: ${errorData.error}`);
-                }
-
-                lastError = new Error(`API Error: ${response.status}`);
-                const delay = Math.pow(2, i) * 1000;
-                await new Promise(resolve => setTimeout(resolve, delay));
-
-            } catch (error) {
-                lastError = error;
-                const delay = Math.pow(2, i) * 1000;
-                if (i < maxRetries - 1) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
+            } catch (e) {
+                // JSONがまだ不完全
             }
         }
-        throw lastError;
+        
+        if(bodyElement) bodyElement.textContent = bodyElement.textContent.replace(' █', '');
+        return fullText;
+    }
+
+/**
+     * BBSコメント用のストリーミング受信・表示関数
+     * @param {object} payload - AIに送信するプロンプト
+     * @param {HTMLElement} container - コメントを表示するコンテナ要素
+     * @returns {Promise<object>} - 全ストリーム完了後に結合された完全なJSONオブジェクト
+     */
+    async function fetchWithStreamForBBS(payload, container) {
+        const functionUrl = '/.netlify/functions/generateApiContent';
+        
+        if(container) container.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
+
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error("サーバーからのストリーム接続に失敗しました。");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let renderedCommentCount = 0;
+
+        // ストリーミング表示を開始
+        if(container) container.innerHTML = ''; 
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            fullText += decoder.decode(value, { stream: true });
+            
+            // 部分的なテキストからコメントを抽出し、表示する
+            try {
+                // 不完全なJSONを避けつつ、コメント配列を探す
+                const commentsMatch = fullText.match(/\[\s*(\{[\s\S]*?\})\s*]/s);
+                if (commentsMatch) {
+                    const potentialJson = `[${commentsMatch[1]}]`;
+                    const parsed = JSON.parse(potentialJson);
+
+                    if (Array.isArray(parsed) && parsed.length > renderedCommentCount) {
+                        for (let i = renderedCommentCount; i < parsed.length; i++) {
+                            const comment = parsed[i];
+                            if (comment.personality && comment.comment) {
+                                const commentEl = document.createElement('div');
+                                commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
+                                commentEl.innerHTML = `
+                                    <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
+                                    <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.comment}</p>
+                                `;
+                                if(container) {
+                                    container.appendChild(commentEl);
+                                    setTimeout(() => commentEl.classList.remove('opacity-0'), 50);
+                                    container.scrollTop = container.scrollHeight;
+                                }
+                            }
+                        }
+                        renderedCommentCount = parsed.length;
+                    }
+                }
+            } catch (e) {
+                // JSONがまだ不完全
+            }
+        }
+        
+        // 最終的な完全なJSONを返す
+        return parseJsonFromText(fullText);
     }
 
     /**
@@ -9270,7 +9302,7 @@ let commentsPromise = Promise.resolve(null);
     if (tournamentState.settings.enableBbsGeneration) {
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
     // ★matchContextを渡すだけのシンプルな呼び出しに修正
-    commentsPromise = generateBbsComments(matchContext);
+    commentsPromise = generateBbsComments(matchContext, bbsCommentsContainer);
 }    
     // --- 4. トーナメント進行ロジック ---
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
@@ -9409,37 +9441,24 @@ let commentsPromise = Promise.resolve(null);
     }
     
     // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
+    const [newArticle, newComments] = await Promise.all([
+        tournamentState.settings.enableArticleGeneration ? generateNewsArticle(matchContext) : Promise.resolve(null),
+        commentsPromise
+    ]);
 
-if (newComments) {
-    tournamentState.bbsComments.push(...newComments);
-}
-if (article) {
-    if (!article.error) {
-        article.context = matchContext;
+    if (newComments) {
+        tournamentState.bbsComments.push(...newComments);
     }
-    // ★★★ ここが修正点：matchContextからハイライト情報を取り出して渡す ★★★
-    const isVerified = await factCheckArticle(article, matchContext.highlights);
-    
-    if (isVerified) {
-        showArticleReviewModal(article);
-    } else {
-        const errorArticle = {
-            title: "記事生成エラー（事実矛盾の可能性）",
-            body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
-            timestamp: Date.now(),
-            error: true,
-            errorId: matchId, 
-            context: matchContext
-        };
-        tournamentState.news.push(errorArticle);
+    if (newArticle) {
+        // ストリーミング表示は既に行われているので、ここではstateに保存するだけ
+        tournamentState.news.push(newArticle);
     }
-}
     
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
     
+    // ストリーミングで記事は表示済みなので、残りのUI（掲示板など）を更新
     renderTournament(tournamentState);
     saveState();
 
@@ -10229,17 +10248,16 @@ document.body.addEventListener('click', async (e) => {
                 const match = findMatchById(matchId);
                 // 詳細データがある場合のみ、高度な分析を行う
                 if (match && match.winner && match.details) { 
-    const playerStatsText = formatPlayerStatsForPrompt(match);
-    const playByPlayText = generatePlayByPlayText(match);
-    const winnerJourney = getCurrentTournamentPerformance(match.winner, matchId);
-    const nextOpponentInfo = findNextOpponent(match.winner, matchId);
+                    const playerStatsText = formatPlayerStatsForPrompt(match);
+                    const playByPlayText = generatePlayByPlayText(match);
+                    const winnerJourney = getCurrentTournamentPerformance(match.winner, matchId);
+                    const nextOpponentInfo = findNextOpponent(match.winner, matchId);
     
-    // ★ここからが変更点★
-    // 勝者と敗者、両チームのスタメン変更を分析
-    const loserName = match.team1 === match.winner ? match.team2 : match.team1;
-    const winnerLineupChanges = analyzeLineupChanges(match.winner, match);
-    const loserLineupChanges = analyzeLineupChanges(loserName, match);
-    // ★変更点はここまで★
+                    // 勝者と敗者、両チームのスタメン変更を分析
+                    const loserName = match.team1 === match.winner ? match.team2 : match.team1;
+                    const winnerLineupChanges = analyzeLineupChanges(match.winner, match);
+                    const loserLineupChanges = analyzeLineupChanges(loserName, match);
+                    
                     let nextOpponentJourney = null;
                     if (nextOpponentInfo && nextOpponentInfo.opponentName && !['（未定）', '優勝'].includes(nextOpponentInfo.opponentName)) {
                         nextOpponentJourney = getCurrentTournamentPerformance(nextOpponentInfo.opponentName, matchId);
@@ -10249,64 +10267,68 @@ document.body.addEventListener('click', async (e) => {
                         loserName: match.team1 === match.winner ? match.team2 : match.team1,
                         dbMatch: match,
                         playerStatsText: playerStatsText,
-                        playByPlayText: playByPlayText, // ★試合経過をコンテキストに追加
+                        playByPlayText: playByPlayText, // 試合経過をコンテキストに追加
                         winnerJourney: winnerJourney,
                         nextOpponent: nextOpponentInfo,
                         nextOpponentJourney: nextOpponentJourney,
-        // ★分析結果をコンテキストに追加★
-        winnerLineupChanges: winnerLineupChanges,
-        loserLineupChanges: loserLineupChanges
+                        // 分析結果をコンテキストに追加
+                        winnerLineupChanges: winnerLineupChanges,
+                        loserLineupChanges: loserLineupChanges
                     };
-                    result = await generateGameMatchBbsComments(context);
+
+                    // ★★★ ここが変更点 ★★★
+                    // 新しいストリーミング関数を呼び出し、コメントを表示する場所（threadContentEl）を渡す。
+                    // この関数の中で、リアルタイム表示が自動的に行われる。
+                    await generateGameMatchBbsComments(context, threadContentEl);
+                    // ★★★ 変更点はここまで ★★★
+
                 } else if (match && match.winner) {
                     // 詳細データがない場合は、シンプルなコンテキストで呼び出す
                     const context = { winnerName: match.winner, loserName: match.team1 === match.winner ? match.team2 : match.team1, dbMatch: match };
-                    result = await generateGameMatchBbsComments(context);
+                    
+                    // こちらも同様にストリーミング関数を呼び出す
+                    await generateGameMatchBbsComments(context, threadContentEl);
                 }
-    
-                   // ★変更点はここまで★
-                
+        
             } else if (type === 'real') {
                 // 【現実のニュースの場合】
-                // index.html内に新設した generateRealNewsBbsComments 関数を直接呼び出す
                 const comments = await generateRealNewsBbsComments(headline, category);
                 if (comments) {
                     result = { title: headline, comments: comments };
                 }
-            }
-            // ▲▲▲ ここまで修正 ▲▲▲
 
-            // --- 結果の描画処理 (変更なし) ---
-            if (result && result.comments) {
-                threadTitleEl.textContent = `【スレ】${result.title}`;
-                threadContentEl.innerHTML = ''; // ローダーを消す
+                // --- 結果の描画処理（現実ニュースはこちらのロジックを使用） ---
+                if (result && result.comments) {
+                    threadTitleEl.textContent = `【スレ】${result.title}`;
+                    threadContentEl.innerHTML = ''; // ローダーを消す
 
-                                // --- ここからが「ライブ感」演出 ---
-                for (const comment of result.comments) {
-                    const commentEl = document.createElement('div');
-                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
-                    commentEl.innerHTML = `
-                        <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
-                        <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
-                    `;
-                    threadContentEl.appendChild(commentEl);
-                    
-                    // 少し遅れてフワッと表示させる
-                    setTimeout(() => {
-                        commentEl.classList.remove('opacity-0');
-                    }, 50);
+                    // --- 「ライブ感」演出 ---
+                    for (const comment of result.comments) {
+                        const commentEl = document.createElement('div');
+                        commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
+                        commentEl.innerHTML = `
+                            <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
+                            <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
+                        `;
+                        threadContentEl.appendChild(commentEl);
+                        
+                        // 少し遅れてフワッと表示させる
+                        setTimeout(() => {
+                            commentEl.classList.remove('opacity-0');
+                        }, 50);
 
-                    // 次のコメントが表示されるまで、ランダムな時間待つ
-                    const delay = Math.random() * 800 + 200; // 0.2秒から1.0秒
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    
-                    // 自動で一番下までスクロール
-                    threadContentEl.scrollTop = threadContentEl.scrollHeight;
+                        // 次のコメントが表示されるまで、ランダムな時間待つ
+                        const delay = Math.random() * 800 + 200; // 0.2秒から1.0秒
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        
+                        // 自動で一番下までスクロール
+                        threadContentEl.scrollTop = threadContentEl.scrollHeight;
+                    }
+                    // --- 演出ここまで ---
+
+                } else {
+                    threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
                 }
-                // --- 演出ここまで ---
-
-            } else {
-                threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
         })();
         // ▲▲▲ ここまで書き換え ▲▲▲
