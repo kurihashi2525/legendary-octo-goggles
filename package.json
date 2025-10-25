@@ -16,5 +16,8 @@
     "express": "^5.1.0",
     "node-fetch": "^2.6.7",
     "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@netlify/blobs": "^10.2.1"
   }
 }
