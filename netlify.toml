@@ -1,4 +1,9 @@
 # netlify.toml
+
+# --- 既存の設定 ---
 [build]
-  command = "npm install"
+  command = "npm ci"
   functions = "functions"
+
+[functions."*"]
+  timeout = 25
