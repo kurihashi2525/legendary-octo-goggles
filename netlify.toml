@@ -13,4 +13,4 @@
 
 # 以下のプラグイン設定は元のままでOKです (もし使っている場合)
 [[plugins]]
-  package = "@netlify/plugin-blobs"
+  package = "@netlify/blobs" # <-- '-plugin' を削除
