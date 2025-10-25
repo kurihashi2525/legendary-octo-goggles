@@ -1,7 +1,8 @@
 # netlify.toml
 
 [build]
-  command = "npm install"
+  # ★★★ npm ci に変更 ★★★
+  command = "npm ci"
   functions = "functions"
 
 [functions."*"]
