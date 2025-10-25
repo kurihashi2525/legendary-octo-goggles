@@ -1,9 +1,17 @@
 # netlify.toml
 
+# --- 既存の設定 ---
 [build]
-  # ★★★ npm ci に変更 ★★★
   command = "npm ci"
   functions = "functions"
 
 [functions."*"]
   timeout = 25
+# --- 既存の設定ここまで ---
+
+
+# ▼▼▼ このブロックを追記 ▼▼▼
+[functions]
+  # node_bundler を esbuild に設定し、依存関係をバンドルさせる
+  node_bundler = "esbuild"
+# ▲▲▲ 追記ここまで ▲▲▲
