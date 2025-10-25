@@ -1,68 +1,73 @@
 // functions/generateApiContent.js
+import { TransformStream } from 'node:stream/web';
+import fetch from 'node-fetch';
 
-// Googleからのストリーミングデータをクライアントに送信できる形式に変換するヘルパー
-const createTransformStream = () => {
-  return new TransformStream({
-    transform(chunk, controller) {
-      // 受け取ったデータチャンクをテキストとしてデコード
-      const text = new TextDecoder().decode(chunk);
-      // Googleからのストリーミングデータは "data: { ...JSON... }" という形式なので、
-      // "data: " の部分を取り除き、中身のJSONだけをクライアントに送る
-      const lines = text.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          // JSONデータ部分だけをエンコードしてキューに入れる
-          controller.enqueue(new TextEncoder().encode(line.substring(6)));
-        }
-      }
-    }
-  });
-};
+const createTransformStream = () => { /* ... (変更なし) ... */ };
 
-export default async (request) => {
+exports.handler = async function(event, context) {
+  // ★★★ デバッグログ追加 ★★★
+  console.log("generateApiContent function invoked.");
+  let apiKey; // スコープを広げる
+
   try {
-    // フロントエンドから送られてきたリクエストボディを取得
-    const requestBody = await request.json();
-    const apiKey = process.env.GOOGLE_API_KEY;
-    
-    // Google AIの「ストリーミング生成」用のAPIエンドポイントURL
+    const requestBody = JSON.parse(event.body || '{}');
+    apiKey = process.env.GOOGLE_API_KEY; // ★ここで代入
+
+    // ★★★ デバッグログ追加 ★★★
+    if (!apiKey) {
+        console.error("GOOGLE_API_KEY is missing or undefined!");
+        throw new Error("API Key is not configured.");
+    }
+    console.log("API Key loaded (first 5 chars):", apiKey.substring(0, 5)); // キーの一部だけ表示
+    console.log("Request body received:", JSON.stringify(requestBody).substring(0, 100) + "..."); // リクエストボディの一部を表示
+
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:streamGenerateContent?key=${apiKey}`;
 
-    // GoogleのAPIにストリーミングリクエストを送信
+    // ★★★ デバッグログ追加 ★★★
+    console.log("Calling Google API:", apiUrl);
     const geminiResponse = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
     });
 
-    // Googleからの応答がストリーミング可能でなければエラー
+    // ★★★ デバッグログ追加 ★★★
+    console.log("Google API response status:", geminiResponse.status);
+
     if (!geminiResponse.ok || !geminiResponse.body) {
       const errorBody = await geminiResponse.text();
+      // ★★★ デバッグログ追加 ★★★
+      console.error("Google API Error:", geminiResponse.status, errorBody);
       throw new Error(`Google API Error: ${geminiResponse.status} ${errorBody}`);
     }
 
-    // Googleからのストリームを、クライアントに送信できる形式に変換
+    // ★★★ デバッグログ追加 ★★★
+    console.log("Google API response OK. Starting stream transformation.");
     const transformStream = createTransformStream();
     const readableStream = geminiResponse.body.pipeThrough(transformStream);
 
-    // クライアントにストリーミング応答を返す
-    return new Response(readableStream, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // ★★★ デバッグログ追加 ★★★
+    console.log("Stream transformation complete. Returning response to client.");
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Transfer-Encoding': 'chunked'
+      },
+      body: readableStream,
+      isBase64Encoded: false
+    };
 
   } catch (error) {
-    console.error("Netlify Function Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-};
+    // ★★★ デバッグログ追加 ★★★
+    console.error("Error caught in Netlify function:", error);
+    // エラー発生時もAPIキーが読み込めているか確認
+    console.error("API Key check in catch (first 5 chars):", apiKey ? apiKey.substring(0, 5) : "Not loaded");
 
-// Netlifyにこの関数がストリーミングを優先することを伝える設定
-export const config = {
-  path: "/.netlify/functions/generateApiContent",
-  prefer_streaming: true,
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: error.message }),
+    };
+  }
 };
