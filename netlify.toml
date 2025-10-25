@@ -1,10 +1,16 @@
 # netlify.toml
 
 [build]
+  # ★★★ 依存関係をインストールするコマンドを追加 ★★★
   command = "npm install"
+  # ★★★ 正しい関数ディレクトリを指定 ★★★
   functions = "functions"
 
-# ▼▼▼ このブロックに書き換えてください ▼▼▼
+# ▼▼▼ 全ての関数に25秒のタイムアウトを設定 ▼▼▼
 [functions."*"]
   timeout = 25
-# ▲▲▲
+# ▲▲▲ 設定はここまで ▲▲▲
+
+# 以下のプラグイン設定は元のままでOKです (もし使っている場合)
+[[plugins]]
+  package = "@netlify/plugin-blobs"
