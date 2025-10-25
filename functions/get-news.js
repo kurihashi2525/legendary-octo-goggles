@@ -1,8 +1,7 @@
-// functions/get-news.js
+// functions/get-news.js (CommonJS version)
 
-import Parser from 'rss-parser';
+const Parser = require('rss-parser'); // import -> require
 
-// 取得したいニュースフィードのリスト
 const FEEDS = [
     { category: "主要", url: "https://news.yahoo.co.jp/rss/topics/top-picks.xml" },
     { category: "国内", url: "https://news.yahoo.co.jp/rss/topics/domestic.xml" },
@@ -14,15 +13,15 @@ const FEEDS = [
     { category: "科学", url: "https://news.yahoo.co.jp/rss/topics/science.xml" },
 ];
 
-export const handler = async (event, context) => {
-    console.log("Netlify Functionが【複数カテゴリニュース】の取得リクエストを受け取りました。");
-    
+// export const handler -> exports.handler
+exports.handler = async (event, context) => {
+    console.log("Netlify Functionが【複数カテゴリニュース】の取得リクエストを受け取りました。(CommonJS)");
+
     const parser = new Parser();
     let allArticles = [];
 
-    // Promise.allを使って、全てのフィードを並行して高速に取得
     try {
-        const feedPromises = FEEDS.map(feedInfo => 
+        const feedPromises = FEEDS.map(feedInfo =>
             parser.parseURL(feedInfo.url).then(feed => ({
                 category: feedInfo.category,
                 items: feed.items
@@ -31,15 +30,16 @@ export const handler = async (event, context) => {
 
         const results = await Promise.all(feedPromises);
 
-        // 取得した全記事を一つの配列にまとめる
         results.forEach(result => {
             if (result.items) {
-                result.items.slice(0, 4).forEach(item => { // 各カテゴリから最大4件
+                result.items.slice(0, 4).forEach(item => {
                     allArticles.push({
                         headline: item.title,
                         type: 'real',
                         category: result.category,
-                        timestamp: new Date(item.pubDate).getTime() || Date.now()
+                        timestamp: new Date(item.pubDate).getTime() || Date.now(),
+                        // まとめサイトでリンクを開けるようにURLを追加
+                        url: item.link
                     });
                 });
             }
