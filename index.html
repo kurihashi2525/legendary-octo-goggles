@@ -8272,11 +8272,11 @@ ${teamInfoPromptPart}
     }
 
     /**
-     * AIからの応答をストリーミングで受信し、リアルタイムでUIに反映させる関数
+     * AIからの応答をストリーミングで受信し、リアルタイムでUIに反映させる関数 (text/plain 対応版)
      * @param {object} payload - AIに送信するプロンプト等のデータ
-     * @param {HTMLElement} titleElement - 記事のタイトルをリアルタイムで表示する要素
-     * @param {HTMLElement} bodyElement - 記事の本文をリアルタイムで表示する要素
-     * @returns {Promise<string>} - 全ストリーム完了後に結合された完全なJSON文字列
+     * @param {HTMLElement | null} titleElement - 記事のタイトルをリアルタイムで表示する要素 (null可)
+     * @param {HTMLElement | null} bodyElement - 記事の本文をリアルタイムで表示する要素 (null可)
+     * @returns {Promise<object|null>} - 全ストリーム完了後に結合・パースされた完全なJSONオブジェクト、またはnull
      */
     async function fetchWithStream(payload, titleElement, bodyElement) {
         const functionUrl = '/.netlify/functions/generateApiContent';
@@ -8285,121 +8285,163 @@ ${teamInfoPromptPart}
         if(titleElement) titleElement.textContent = 'AI記者がタイトルを考案中...';
         if(bodyElement) bodyElement.textContent = '█'; // カーソル風の表示
 
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        try {
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
 
-        if (!response.ok || !response.body) {
-            throw new Error("サーバーからのストリーム接続に失敗しました。");
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let accumulatedChunk = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            accumulatedChunk += decoder.decode(value, { stream: true });
-            
-            try {
-                const parsed = JSON.parse(accumulatedChunk);
-                if (parsed.candidates && parsed.candidates[0].content) {
-                    const newText = parsed.candidates[0].content.parts[0].text;
-                    fullText += newText;
-                    
-                    let cleanedText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    try {
-                        const tempJson = JSON.parse(cleanedText);
-                        if(titleElement) titleElement.textContent = tempJson.title || 'タイトル生成中...';
-                        if(bodyElement) bodyElement.innerHTML = (tempJson.body || '').replace(/\\n/g, '<br>') + ' █';
-                    } catch(e) {
-                         if(bodyElement) bodyElement.innerHTML = cleanedText.replace(/\\n/g, '<br>') + ' █';
-                    }
-                    
-                    accumulatedChunk = '';
-                }
-            } catch (e) {
-                // JSONがまだ不完全
+            if (!response.ok || !response.body) {
+                // Networkタブでエラー詳細を確認しやすくするため、ステータスコードも含める
+                const errorText = await response.text();
+                console.error("fetchWithStream Error Status:", response.status, errorText);
+                throw new Error(`サーバーからのストリーム接続に失敗しました (Status: ${response.status})。`);
             }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const newText = decoder.decode(value, { stream: true });
+                fullText += newText; // 受け取ったテキストを単純に結合
+
+                // リアルタイムでUIを更新 (JSONパースは試みない)
+                // タイトルは最後に設定するので、ここでは本文のみ更新
+                if(bodyElement) {
+                    // JSON形式のメタ文字（```json や ```）が表示されるのを防ぐ
+                    const displayText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    bodyElement.innerHTML = displayText.replace(/\\n/g, '<br>') + ' █';
+                }
+            }
+            
+            // ストリーム完了後、最後にカーソルを消す
+            if(bodyElement) bodyElement.textContent = bodyElement.textContent.replace(' █', '');
+
+            // 最終的に受け取った全テキストからJSONをパースする
+            const finalJson = parseJsonFromText(fullText);
+
+            // パース成功後、タイトルを設定
+            if(finalJson && titleElement) {
+                 titleElement.textContent = finalJson.title || 'タイトル確定';
+            } else if (titleElement) {
+                 // パース失敗時でも、デフォルトタイトルなどを設定
+                 titleElement.textContent = '記事生成完了（タイトルエラー）';
+            }
+
+            // パース結果（JSONオブジェクトまたはnull）を返す
+            return finalJson;
+
+        } catch (error) {
+             console.error("fetchWithStream failed:", error);
+             if(titleElement) titleElement.textContent = 'エラー';
+             if(bodyElement) bodyElement.textContent = '記事の生成に失敗しました。';
+             return null; // エラー時はnullを返す
         }
-        
-        if(bodyElement) bodyElement.textContent = bodyElement.textContent.replace(' █', '');
-        return fullText;
     }
 
 /**
-     * BBSコメント用のストリーミング受信・表示関数
+     * BBSコメント用のストリーミング受信・表示関数 (text/plain 対応版)
      * @param {object} payload - AIに送信するプロンプト
      * @param {HTMLElement} container - コメントを表示するコンテナ要素
-     * @returns {Promise<object>} - 全ストリーム完了後に結合された完全なJSONオブジェクト
+     * @returns {Promise<object|null>} - 全ストリーム完了後に結合・パースされた完全なJSONオブジェクト、またはnull
      */
     async function fetchWithStreamForBBS(payload, container) {
         const functionUrl = '/.netlify/functions/generateApiContent';
         
-        if(container) container.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
+        if(container) container.innerHTML = `<div class="loader text-center py-8">AIが反応を生成中...</div>`;
 
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
+        try {
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
 
-        if (!response.ok || !response.body) {
-            throw new Error("サーバーからのストリーム接続に失敗しました。");
-        }
+            if (!response.ok || !response.body) {
+                const errorText = await response.text();
+                console.error("fetchWithStreamForBBS Error Status:", response.status, errorText);
+                throw new Error(`サーバーからのストリーム接続に失敗しました (Status: ${response.status})。`);
+            }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let renderedCommentCount = 0;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            let renderedCommentCount = 0; // 表示済みのコメント数カウンター
 
-        // ストリーミング表示を開始
-        if(container) container.innerHTML = ''; 
+            // ストリーミング表示を開始
+            if(container) container.innerHTML = ''; 
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            fullText += decoder.decode(value, { stream: true });
-            
-            // 部分的なテキストからコメントを抽出し、表示する
-            try {
-                // 不完全なJSONを避けつつ、コメント配列を探す
-                const commentsMatch = fullText.match(/\[\s*(\{[\s\S]*?\})\s*]/s);
-                if (commentsMatch) {
-                    const potentialJson = `[${commentsMatch[1]}]`;
-                    const parsed = JSON.parse(potentialJson);
+                fullText += decoder.decode(value, { stream: true });
+                
+                // ★★★ 部分的なテキストからコメントを抽出し、表示するロジック ★★★
+                // JSON配列の開始 '[' を探す
+                const startIndex = fullText.indexOf('[');
+                if (startIndex === -1) continue; // 配列が始まっていなければ次へ
 
-                    if (Array.isArray(parsed) && parsed.length > renderedCommentCount) {
-                        for (let i = renderedCommentCount; i < parsed.length; i++) {
-                            const comment = parsed[i];
-                            if (comment.personality && comment.comment) {
-                                const commentEl = document.createElement('div');
-                                commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
-                                commentEl.innerHTML = `
-                                    <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
-                                    <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.comment}</p>
-                                `;
-                                if(container) {
-                                    container.appendChild(commentEl);
-                                    setTimeout(() => commentEl.classList.remove('opacity-0'), 50);
-                                    container.scrollTop = container.scrollHeight;
-                                }
-                            }
-                        }
-                        renderedCommentCount = parsed.length;
+                // 現在までのテキストで、閉じカッコ ']' を探す
+                let potentialJsonArrayString = fullText.substring(startIndex);
+                let openBrackets = 0;
+                let closeBrackets = 0;
+                let lastValidIndex = -1;
+
+                // バランスの取れたカッコを探して、有効なJSON配列の可能性を探る
+                for(let i = 0; i < potentialJsonArrayString.length; i++) {
+                    if (potentialJsonArrayString[i] === '{') openBrackets++;
+                    if (potentialJsonArrayString[i] === '}') closeBrackets++;
+                    // 最後の閉じカッコで、かつカッコの数が合っていれば、そこまでが有効なJSON配列の可能性
+                    if (potentialJsonArrayString[i] === ']' && openBrackets === closeBrackets && openBrackets > 0) {
+                        lastValidIndex = i;
+                        break; // 最初の有効な配列が見つかったら抜ける
                     }
                 }
-            } catch (e) {
-                // JSONがまだ不完全
+
+                // 有効なJSON配列部分が見つかった場合のみパースを試みる
+                if (lastValidIndex !== -1) {
+                    const jsonToParse = potentialJsonArrayString.substring(0, lastValidIndex + 1);
+                    try {
+                        const parsedArray = JSON.parse(jsonToParse);
+                        if (Array.isArray(parsedArray) && parsedArray.length > renderedCommentCount) {
+                            // 新しく検出されたコメントを表示
+                            for (let i = renderedCommentCount; i < parsedArray.length; i++) {
+                                const comment = parsedArray[i];
+                                if (comment && comment.personality && comment.comment && container) {
+                                    const commentEl = document.createElement('div');
+                                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500 mb-2'; // マージン追加
+                                    commentEl.innerHTML = `
+                                        <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
+                                        <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.comment}</p>
+                                    `;
+                                    container.appendChild(commentEl);
+                                    // 少し遅れて表示
+                                    setTimeout(() => commentEl.classList.remove('opacity-0'), 50);
+                                    container.scrollTop = container.scrollHeight; // 自動スクロール
+                                }
+                            }
+                            renderedCommentCount = parsedArray.length; // 表示済みカウンターを更新
+                        }
+                    } catch (e) {
+                        // JSONがまだ不完全、または不正な形式。次のチャンクで完全になるのを待つ。
+                        // console.warn("Partial JSON, waiting for more data...");
+                    }
+                }
+                // ★★★ 抽出ロジックここまで ★★★
             }
+            
+            // 最終的に受け取った全テキストからJSONをパースして返す
+            return parseJsonFromText(fullText);
+
+        } catch (error) {
+             console.error("fetchWithStreamForBBS failed:", error);
+             if(container) container.innerHTML = `<p class="text-center text-red-500">コメントの生成に失敗しました。</p>`;
+             return null; // エラー時はnullを返す
         }
-        
-        // 最終的な完全なJSONを返す
-        return parseJsonFromText(fullText);
     }
 
     /**

@@ -1,55 +1,100 @@
-// functions/generateApiContent.js (Non-streaming test with node-fetch v2)
+// functions/generateApiContent.js (Refined stream handling with export default)
 const fetch = require('node-fetch');
+const { TransformStream } = require('node:stream/web');
+const { Readable } = require('stream');
 
-exports.handler = async function(event, context) {
-    console.log("generateApiContent (non-streaming test) invoked.");
+// ★★★ 修正版 createTransformStream ★★★
+// より堅牢にJSONチャンクを抽出・処理する
+const createTransformStream = () => {
+    let buffer = ''; // 不完全なチャンクを一時保存するバッファ
+    return new TransformStream({
+        transform(chunk, controller) {
+            const text = buffer + new TextDecoder().decode(chunk); // 前回の残り物と結合
+            const lines = text.split('\n');
+            buffer = lines.pop() || ''; // 最後の不完全な行を次のために保存
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonChunk = line.substring(6).trim(); // "data: " を削除
+                    if (jsonChunk) { // 空のチャンクは無視
+                        try {
+                            // Google AIからの各チャンクは独立したJSONオブジェクトを含むことがある
+                            // チャンク自体をエンキューするのではなく、チャンク内のテキスト部分を抽出して送る
+                            const parsedChunk = JSON.parse(jsonChunk);
+                            if (parsedChunk.candidates && parsedChunk.candidates[0].content) {
+                                 const contentPart = parsedChunk.candidates[0].content.parts[0].text;
+                                 // ★★★ JSONオブジェクトではなく、テキスト部分だけを送る ★★★
+                                 controller.enqueue(new TextEncoder().encode(contentPart));
+                            }
+                        } catch (e) {
+                            console.warn("Skipping invalid JSON chunk:", jsonChunk, e);
+                            // 不正なJSONチャンクは無視
+                        }
+                    }
+                }
+            }
+        },
+        flush(controller) {
+            // ストリーム終了時にバッファに残っているものを処理 (通常は空のはず)
+            if (buffer.startsWith('data: ')) {
+                const jsonChunk = buffer.substring(6).trim();
+                if (jsonChunk) {
+                     try {
+                         const parsedChunk = JSON.parse(jsonChunk);
+                         if (parsedChunk.candidates && parsedChunk.candidates[0].content) {
+                             const contentPart = parsedChunk.candidates[0].content.parts[0].text;
+                             controller.enqueue(new TextEncoder().encode(contentPart));
+                         }
+                     } catch (e) {
+                         console.warn("Skipping invalid JSON chunk at flush:", jsonChunk, e);
+                     }
+                }
+            }
+        }
+    });
+};
+// ★★★ 修正ここまで ★★★
+
+export default async (request, context) => {
+    console.log("generateApiContent (export default - refined stream) invoked.");
     let apiKey;
     try {
-        const requestBody = JSON.parse(event.body || '{}');
+        const requestBody = await request.json();
         apiKey = process.env.GOOGLE_API_KEY;
 
-        if (!apiKey) {
-            console.error("GOOGLE_API_KEY is missing!");
-            throw new Error("API Key is not configured.");
-        }
+        if (!apiKey) { throw new Error("API Key is not configured."); }
         console.log("API Key loaded (first 5):", apiKey.substring(0, 5));
-        console.log("Request body:", JSON.stringify(requestBody).substring(0, 100) + "...");
 
-        // *** ストリーミングではない GenerateContent エンドポイントを使用 ***
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:streamGenerateContent?key=${apiKey}`;
 
-        console.log("Calling Google API (non-streaming):", apiUrl);
         const geminiResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody), // Send the original payload
+            body: JSON.stringify(requestBody),
         });
-        console.log("Google API response status:", geminiResponse.status);
 
-        if (!geminiResponse.ok) {
+        if (!geminiResponse.ok || !geminiResponse.body) {
             const errorBody = await geminiResponse.text();
-            console.error("Google API Error:", geminiResponse.status, errorBody);
             throw new Error(`Google API Error: ${geminiResponse.status} ${errorBody}`);
         }
 
-        // *** 完全なJSON応答を取得 ***
-        const data = await geminiResponse.json();
-        console.log("Google API response received successfully.");
+        // ★★★ 修正版 createTransformStream を使用 ★★★
+        const nodeReadableStream = geminiResponse.body;
+        const webTransformStream = createTransformStream(); // 修正版を呼び出し
+        const webReadableStream = Readable.toWeb(nodeReadableStream).pipeThrough(webTransformStream);
+        // ★★★ 修正ここまで ★★★
 
-        // 完全なJSONを文字列にして返す (exports.handler の標準的な返し方)
-        return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data), // 完全なJSON文字列を返す
-            isBase64Encoded: false
-        };
+        // ★ Response オブジェクトで返す (ヘッダーを 'text/plain' に変更) ★
+        return new Response(webReadableStream, {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }, // テキストとして返す
+        });
 
     } catch (error) {
-        console.error("Error caught in Netlify function:", error);
-        return {
-            statusCode: 500,
+        console.error("Error in Netlify function:", error);
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: error.message }),
-        };
+        });
     }
 };
