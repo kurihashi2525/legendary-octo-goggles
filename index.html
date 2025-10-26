@@ -2657,7 +2657,7 @@ async function generateGameMatchBbsComments(matchContext) {
 
 
     const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
-以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
+以下の試合データを多角的に分析し、玄人たちのリアルな会話を30個前後生成してください。
 
 ### 参考情報：高校野球における背番号の意味
 - **[#1]**: チームの絶対的エース投手。
@@ -8956,48 +8956,6 @@ function updateInningState(teamKey, inningIndex) {
      }
 }
 
-/**
- * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
- * @param {object} article - AI記者が生成した記事オブジェクト
- * @param {Array} facts - createHighlightsTextから生成された元の事実オブジェクトの配列
- * @returns {boolean} - 矛盾がなければtrue、あればfalseを返す
- */
-/**
- * 生成された記事と元の「事実リスト」を比較し、内容が矛盾していないかAIに確認させる
- */
-async function factCheckArticle(article, facts) {
-    // ▼▼▼ この安全装置がクラッシュを防ぎます ▼▼▼
-    if (!article || !article.body) {
-        console.error("事実確認エラー: 記事データ、または記事の本文がありません。");
-        return false; // 不完全な記事は「矛盾あり」とみなして処理を中断
-    }
-    // ▲▲▲
-
-    const factListText = facts.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
-
-    const prompt = `あなたは厳格なファクトチェッカーです。以下の【事実リスト】と【記事】を比較し、記事に事実と異なる記述がないか判定してください。
-### 事実リスト
-${factListText}
-### 記事
-**タイトル:** ${article.title}
-**本文:** ${article.body.replace(/\\n/g, '\n')}
-### 指示
-記事の内容が、事実リストと**著しく矛盾している場合のみ「いいえ」**と答えてください。表現の僅かな違いは許容します。あなたの答えは「はい」か「いいえ」の二文字だけでお願いします。`;
-
-    try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const aiResponse = result.candidates[0].content.parts[0].text.trim();
-            console.log("事実確認AIの応答:", aiResponse);
-            return aiResponse.includes('はい');
-        }
-        return false;
-    } catch (error) {
-        console.error("事実確認AIの呼び出しに失敗しました:", error);
-        return false;
-    }
-}
 
 /**
      * 試合の勝者を処理する中心的関数。
@@ -9244,51 +9202,73 @@ let commentsPromise = Promise.resolve(null);
     }
     
     // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
+    const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
 
-if (newComments) {
-    tournamentState.bbsComments.push(...newComments);
-}
-if (article) {
-    if (!article.error) {
-        article.context = matchContext;
+    if (newComments) {
+        // エラーオブジェクトでないコメントのみを追加
+        const validComments = newComments.filter(comment => !comment.error);
+        if (validComments.length > 0) {
+            tournamentState.bbsComments.push(...validComments);
+        }
+        // エラーオブジェクトがあれば、それをニュースセクションに追加（再生成ボタン付きで）
+        const errorComment = newComments.find(comment => comment.error);
+        if (errorComment) {
+            // エラーコメントをニュース記事のような形式で追加
+            tournamentState.news.push({
+                title: errorComment.title || "掲示板コメント生成エラー",
+                body: "AIによる掲示板コメントの生成に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: errorComment.id || `error-${matchId}-bbs`, // エラーIDを設定
+                context: errorComment.context // 再生成に必要なcontextを保持
+            });
+        }
     }
-    // ★★★ ここが修正点：matchContextからハイライト情報を取り出して渡す ★★★
-    const isVerified = await factCheckArticle(article, matchContext.highlights);
-    
-    if (isVerified) {
-        showArticleReviewModal(article);
-    } else {
-        const errorArticle = {
-            title: "記事生成エラー（事実矛盾の可能性）",
-            body: "AI記者が生成した記事に、元の試合データとの矛盾が含まれている可能性があります。",
-            timestamp: Date.now(),
-            error: true,
-            errorId: matchId, 
-            context: matchContext
-        };
-        tournamentState.news.push(errorArticle);
+
+    if (article) {
+        if (!article.error) {
+            article.context = matchContext; // コンテキストを保存
+
+            // ▼▼▼ ここが変更点 ▼▼▼
+            // isVerified のチェックを削除し、直接 showArticleReviewModal を呼び出す
+            showArticleReviewModal(article);
+            // ▲▲▲ 変更点ここまで ▲▲▲
+
+        } else {
+            // エラー記事の場合はそのままニュースリストに追加
+             const errorArticle = {
+                title: article.title || "記事生成エラー",
+                body: article.body || "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: matchContext.matchId || 'error', // 記事のエラーIDは matchId を使うか、専用のIDを生成
+                context: matchContext // 再生成のために context を保存
+            };
+            tournamentState.news.push(errorArticle);
+        }
     }
-}
-    
-    if (!tournamentState.activeScandal && Math.random() < 0.1) {
+
+    // スキャンダルイベントのトリガー (アクティブなスキャンダルがない場合のみ)
+    if (!tournamentState.activeScandal && Math.random() < 0.1) { // 10%の確率で発生
         triggerScandalEvent(winnerName, loserName);
     }
-    
-    renderTournament(tournamentState);
-    saveState();
 
+    // 最終的な画面更新と状態保存
+    renderTournament(tournamentState); // トーナメント表、ニュース、BBSなどを再描画
+    saveState(); // 最新の状態をローカルストレージに保存
+
+    // 春季大会の場合、1回戦終了後に2回戦への進行を確認する
     if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
         const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
+        // 1回戦が全試合終了したかチェック (16チームトーナメントなので8試合)
         if (round1Matches.length === 8 && round1Matches.every(m => m.winner)) {
             const confirmed = await showConfirm("1回戦がすべて終了しました。シード校が登場する2回戦に進みますか？");
             if (confirmed) {
-                await setupSpringMainTournament_Round2();
+                await setupSpringMainTournament_Round2(); // 2回戦のセットアップ関数を呼び出す
             }
         }
     }
-}
-
+} // processMatchWin 関数の終了
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
  * スキャンダルイベントを発生させる
