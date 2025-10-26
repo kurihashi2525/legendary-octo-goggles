@@ -10418,74 +10418,66 @@ document.body.addEventListener('click', async (e) => {
     // --- フィードバックモーダルからの再生成実行ボタン ---
     // ▼▼▼ このブロックで、既存の該当箇所を置き換えてください ▼▼▼
 
-    // --- フィードバックモーダルからの再生成実行ボタン ---
-    // --- フィードバックモーダルからの再生成実行ボタン ---
-    const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
-    if (feedbackSubmitBtn) {
-        if (!articleForRegeneration) return;
-        const { index, article } = articleForRegeneration;
-        const context = article.context;
-        
-        // UIを準備
-        feedbackSubmitBtn.textContent = '生成中...';
-        feedbackSubmitBtn.disabled = true;
-        const userFeedback = {
-            include: document.getElementById('feedback-include').value,
-            exclude: document.getElementById('feedback-exclude').value
-        };
-        document.getElementById('feedback-modal').classList.add('hidden');
-        articleForRegeneration = null;
-        tournamentState.news.splice(index, 1);
-        renderNews(tournamentState.news);
-        newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
-        
-        // 非同期でAIの再生成処理を開始
-        (async () => {
-            let articlePromise;
-            
-            // ★★★ ここからが修正箇所 ★★★
-            // 再生成する記事がドキュメンタリーかどうかを context の中身で判断する
-            if (context.isDocumentary) {
-                // 【ドキュメンタリー記事の場合】
-                // context から必要な情報を取り出し、専用の関数を呼び出す
-                const { type, teamName, matchData } = context;
-                articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
-            
-            } else {
-                // 【通常の試合記事の場合】
-                articlePromise = generateNewsArticle(context, userFeedback);
-            }
-            // ★★★ 修正箇所はここまで ★★★
+   // --- フィードバックモーダルからの再生成実行ボタン ---
+    const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
+    if (feedbackSubmitBtn) {
+        if (!articleForRegeneration) return;
+        const { index, article } = articleForRegeneration;
+        const context = article.context;
 
-            const newArticle = await articlePromise;
-            
-            // (以降の createErrorArticle や UI更新処理は、ご提示のコードのままで問題ありません)
-            const createErrorArticle = () => ({
-                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true, errorId: context.matchId || 'error', 
-                context: context
-            });
+        // UIを準備
+        feedbackSubmitBtn.textContent = '生成中...';
+        feedbackSubmitBtn.disabled = true;
+        const userFeedback = {
+            include: document.getElementById('feedback-include').value,
+            exclude: document.getElementById('feedback-exclude').value
+        };
+        document.getElementById('feedback-modal').classList.add('hidden');
+        articleForRegeneration = null;
+        tournamentState.news.splice(index, 1); // 古い記事（またはエラー）を一旦削除
+        renderNews(tournamentState.news);
+        newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
 
-            if (newArticle && !newArticle.error) {
-                newArticle.context = context;
-                const isVerified = context.isDocumentary ? true : await factCheckArticle(newArticle, createHighlightsText(context.dbMatch, context.winnerName).highlights);
+        // 非同期でAIの再生成処理を開始
+        (async () => {
+            let articlePromise;
 
-                if (isVerified) {
-                    tournamentState.news.splice(index, 0, newArticle);
-                    showArticleReviewModal(newArticle);
-                } else {
-                    tournamentState.news.splice(index, 0, createErrorArticle());
-                }
-            } else {
-                tournamentState.news.splice(index, 0, createErrorArticle());
-            }
-            
-            saveState();
-            renderNews(tournamentState.news);
-            feedbackSubmitBtn.textContent = 'この指示で再生成';
-            feedbackSubmitBtn.disabled = false;
-        })();
-    }    
+            // 再生成する記事がドキュメンタリーかどうかを context の中身で判断する
+            if (context.isDocumentary) {
+                // 【ドキュメンタリー記事の場合】
+                const { type, teamName, matchData } = context;
+                articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
+
+            } else {
+                // 【通常の試合記事の場合】
+                articlePromise = generateNewsArticle(context, userFeedback);
+            }
+
+            const newArticle = await articlePromise;
+
+            const createErrorArticle = () => ({
+                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
+                timestamp: Date.now(), error: true, errorId: context.matchId || 'error',
+                context: context
+            });
+
+            if (newArticle && !newArticle.error) {
+                newArticle.context = context; // 新しい記事にもコンテキストを付与
+
+tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
+                showArticleReviewModal(newArticle); // 事実確認なしでレビューモーダル表示
+                // ▲▲▲ 変更点ここまで ▲▲▲
+
+            } else {
+                tournamentState.news.splice(index, 0, createErrorArticle()); // 元の位置にエラー記事を挿入
+            }
+
+            saveState();
+            renderNews(tournamentState.news);
+            feedbackSubmitBtn.textContent = 'この指示で再生成';
+            feedbackSubmitBtn.disabled = false;
+        })();
+    }
 // ▲▲▲ ここまで置き換え ▲▲▲
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
