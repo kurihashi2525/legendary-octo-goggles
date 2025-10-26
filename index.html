@@ -7189,7 +7189,9 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
 ### 執筆指示
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
 - 試合結果を客観的に伝えてください。
+- **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。** // ← ★★★ この指示を追加 ★★★
 - 記事のタイトルと本文をJSON形式で出力してください。`;
+        }
     }
 
     // --- AIへのリクエスト ---
@@ -7207,8 +7209,8 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
         throw new Error("AIからの応答が予期した形式ではありません。");
     } catch (error) {
         console.error("AI記事の生成に失敗しました:", error);
-        return { 
-            title: "記事生成エラー", body: "AI記者との通信に失敗しました。", 
+        return {
+            title: "記事生成エラー", body: "AI記者との通信に失敗しました。",
             timestamp: Date.now(), error: true, errorId: matchId,
             context: matchContext // ★再生成のためにcontext全体を保存
         };
