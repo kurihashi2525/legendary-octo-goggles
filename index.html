@@ -8958,49 +8958,94 @@ function updateInningState(teamKey, inningIndex) {
 
 
 /**
-     * 試合の勝者を処理する中心的関数。
-     * 状態を更新し、次の試合を準備し、AIコンテンツ生成をトリガーする。
-     */
-    // 【修正対象5】
-/**
-     * 【修正版】試合の勝者を処理する中心的関数
-     */
-    /**
- * 試合の勝者を処理する中心的関数（全ての機能を統合した最終完成版）
- */
-/**
- * 試合の勝者を処理する中心的関数（全てのロジックを統合した最終完成版）
- */
-/**
- * 試合の勝者を処理する中心的関数（全機能統合・実行順序修正の最終版）
+ * 試合の勝者を処理する中心的関数（全機能統合・実行順序修正・事実確認削除の最終版）
  */
 async function processMatchWin(matchId, winnerName) {
     // --- 1. 試合データの特定と基本情報の設定 ---
     let dbMatch = findMatchById(matchId);
     if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
-    
+
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     dbMatch.winner = winnerName;
-    
+
+    // トーナメント表からスコアとsummaryを読み取る
     const matchEl = document.querySelector(`.matchup[data-match-id="${matchId}"]`);
     if (matchEl) {
         const score1El = matchEl.querySelector('[data-team-pos="1"]');
         const score2El = matchEl.querySelector('[data-team-pos="2"]');
+        // スコアが入力されている場合のみdbMatchを更新
         if (score1El && score2El && score1El.value !== '' && score2El.value !== '') {
             dbMatch.score1 = score1El.value;
             dbMatch.score2 = score2El.value;
+        } else {
+            // スコアが空の場合、0-0などを仮で設定するか、エラー処理が必要かもしれません
+            // ここでは仮に 0-0 としますが、適切なデフォルト値やバリデーションを検討してください
+            dbMatch.score1 = '0';
+            dbMatch.score2 = '0';
         }
         dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
+    } else {
+        // matchElが見つからない場合もスコアを仮設定 (エラーハンドリング)
+        dbMatch.score1 = '0';
+        dbMatch.score2 = '0';
     }
+
+
+    // ▼▼▼ 修正箇所 ▼▼▼
+    // --- ★★★ 勝者を次のラウンドに進める処理を先に実行 ★★★ ---
+    // 秋季/春季の地区予選・順位決定戦「以外」の場合（つまり夏大会 or 秋/春の県大会本戦）
+    if (!(tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') &&
+        !(tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers'))
+    {
+        // 勝敗数を記録 (teamRecordsが存在する場合のみ)
+        if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
+        if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
+
+        const idParts = matchId.split('-');
+        const side = idParts[0];
+
+        // 決勝戦('F')以外の場合、次のラウンドへ進める
+        if (side !== 'F') {
+            const roundNum = parseInt(idParts[1].slice(1));
+            const numTeamsInTournament = tournamentState.teams.length; // 現在の大会のチーム数を取得
+            const finalRound = Math.log2(numTeamsInTournament); // 現在の大会の最終ラウンド数を計算
+
+            // 最終ラウンドより前のラウンドの場合のみ進行処理を行う
+            if (roundNum < finalRound) {
+                const matchNum = parseInt(idParts[2].slice(1));
+                const nextRoundNum = roundNum + 1;
+                let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+
+                // 次の試合オブジェクトがなければ作成
+                if (!tournamentState.matches[nextMatchId]) {
+                    tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+                }
+
+                // 勝者を次の試合の正しいスロット (team1 or team2) に書き込む
+                let slot;
+                if (nextRoundNum === finalRound) { // 次が決勝の場合
+                    slot = (side === 'L' ? 1 : 2); // 左ならteam1, 右ならteam2
+                } else { // 決勝以外の場合
+                    slot = (matchNum % 2 !== 0 ? 1 : 2); // 奇数試合ならteam1, 偶数試合ならteam2
+                }
+                tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
+            }
+        }
+        // 決勝戦終了時の処理は後続 (手順4の最後) に移動
+    }
+    // --- ★★★ 勝者進行処理ここまで ★★★ ---
+    // ▲▲▲ 修正箇所ここまで ▲▲▲
+
 
     // --- 2. 試合後のデータ更新（ティッカー、称号、スタメン記録など） ---
     const newHeadline = generateTickerHeadline({ winnerName, loserName, score1: dbMatch.score1, score2: dbMatch.score2 });
     if (newHeadline) {
         tournamentState.tickerHeadlines.unshift(newHeadline);
         if (tournamentState.tickerHeadlines.length > 20) tournamentState.tickerHeadlines.pop();
-        updateTicker();
+        updateTicker(); // ティッカー表示を更新
     }
-    
+
+    // 勝者と敗者の前回のスタメン情報を記録 (詳細データがある場合)
     if (dbMatch.details && dbMatch.details.batting) {
         const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
         if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
@@ -9011,264 +9056,295 @@ async function processMatchWin(matchId, winnerName) {
             tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
         }
     }
-    
+
+    // ジャイアントキリング称号の付与判定
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
     const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
+    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) { // ランク差が2以上あれば
         const winnerRecord = tournamentState.teamRecords[winnerName];
         if (winnerRecord && !winnerRecord.teamTraits.includes('giant_killer')) {
-            winnerRecord.teamTraits.push('giant_killer');
+            winnerRecord.teamTraits.push('giant_killer'); // 称号を追加
         }
     }
 
     // --- 3. AIコンテンツ生成の準備と実行 ---
-    // --- 3. AIコンテンツ生成の準備と実行 ---
-const matchContext = createMatchContext(matchId, winnerName);
-if (!matchContext) {
-    console.error("AIコンテンツ生成に必要なmatchContextの作成に失敗しました。");
-    return; // AI処理を中断
-}
+    // ★★★ この時点で findNextOpponent が正しい情報を取得できる ★★★
+    const matchContext = createMatchContext(matchId, winnerName);
+    if (!matchContext) {
+        console.error("AIコンテンツ生成に必要なmatchContextの作成に失敗しました。");
+        renderTournament(tournamentState); // とりあえず画面は更新
+        saveState();
+        return; // AI処理を中断
+    }
 
-let articlePromise = Promise.resolve(null);
-let commentsPromise = Promise.resolve(null);
+    let articlePromise = Promise.resolve(null);
+    let commentsPromise = Promise.resolve(null);
 
+    // 設定に応じてAI記事生成を開始
     if (tournamentState.settings.enableArticleGeneration) {
         newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
         const documentary = tournamentState.documentary;
-        
+
+        // ドキュメンタリー対象チームの試合かどうかで生成関数を切り替え
         if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
             const isWin = documentary.target === winnerName;
             const opponentName = isWin ? loserName : winnerName;
-            const opponentData = isWin ? loserData : winnerData; // 対戦相手のTEAM_DATAを取得
+            const opponentData = TEAM_DATA[opponentName]; // TEAM_DATAから相手情報を取得
 
-            const matchInfoForArticle = { 
+            const matchInfoForArticle = {
                 round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
                 opponent: opponentName,
-                score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
-                highlights: highlightsText,
+                score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`, // 勝者のスコアが先
+                highlights: matchContext.highlights, // createMatchContextで生成済みのものを使用
                 summary: dbMatch.summary,
-                opponentInfo: opponentData.info // ★★★ 対戦相手の背景情報を追加 ★★★
+                opponentInfo: opponentData?.info || '対戦相手の情報なし' // 相手の背景情報
             };
-            
+
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
-            
-            if (!isWin) tournamentState.documentary = { target: null, type: null };
+
+            if (!isWin) tournamentState.documentary = { target: null, type: null }; // 敗退したらドキュメンタリー終了
         } else {
-        // ★呼び出し方を他のAIと統一し、matchContextをそのまま渡す★
-        articlePromise = generateNewsArticle(matchContext);
-            }
+            // 通常の記事生成
+            articlePromise = generateNewsArticle(matchContext);
+        }
     }
 
+    // 設定に応じてAI掲示板コメント生成を開始
     if (tournamentState.settings.enableBbsGeneration) {
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
-    // ★matchContextを渡すだけのシンプルな呼び出しに修正
-    commentsPromise = generateBbsComments(matchContext);
-}    
-    // --- 4. トーナメント進行ロジック ---
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
+        commentsPromise = generateBbsComments(matchContext); // 修正済み関数を呼び出し
+    }
+
+    // --- 4. トーナメント進行ロジック (秋季・春季の特殊処理) ---
+    // ★★★ 上で実行済みの Summer/Main Tournament 以外の進行処理がここに来る ★★★
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+        // 秋季地区ブロック予選の勝者進行
         const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        if (bracketId.startsWith('B')) {
+        if (bracketId.startsWith('B')) { // 通常のブロック
             const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
-            const roundNum = parseInt(roundStr.slice(1));
-            const matchNum = parseInt(matchStr.slice(1));
-            if (roundNum === 0) block.matches[`${block.id}-R1-M1`].team1 = winnerName;
-            else if (roundNum === 1) {
-                const finalMatch = block.matches[`${block.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-            } else if (roundNum === 2) {
-                tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
-                tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
-            }
-        } else if (bracketId === 'AUTUMN') {
-            const izuBracket = tournamentState.autumnData.regions['伊豆'].izuBracket;
-            const roundNum = parseInt(roundStr.slice(1));
-            const matchNum = parseInt(matchStr.slice(1));
-            if (roundNum === 1) {
-                const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
-                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-            } else if (roundNum === 2) {
-                tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: winnerName, rank: 1 });
-            }
-        }
-    } else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'regional_ranking') {
-        // ▼▼▼ ここからが修正されたロジック ▼▼▼
-        const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        const roundNum = parseInt(roundStr.slice(1));
-        const matchNum = parseInt(matchStr.slice(1));
-        const isChamp = bracketId === 'CHAMP';
-        const bracket = isChamp ? tournamentState.autumnData.regions[region].champBracket : tournamentState.autumnData.regions[region].repechageBracket;
-
-        if (roundNum === 1) { // 準決勝
-            const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
-            if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-            if (isChamp) {
-                const thirdMatch = bracket.matches[`${bracket.id}-R2-M2`];
-                if (matchNum === 1) thirdMatch.team1 = loserName; else thirdMatch.team2 = loserName;
-            }
-        } else if (roundNum === 2) { // 決勝 or 順位決定戦
-            if (isChamp) {
-                // `dbMatch.type` に頼らず、matchNum で判断する
-                if (matchNum === 1) { // 1位決定戦 (M1)
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 1 }, { team: loserName, rank: 2 });
-                } else { // 3位決定戦 (M2)
-                    tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 3 }, { team: loserName, rank: 4 });
+            if (block) {
+                const roundNum = parseInt(roundStr.slice(1));
+                const matchNum = parseInt(matchStr.slice(1));
+                if (roundNum === 0) { // プレイインマッチ
+                    block.matches[`${block.id}-R1-M1`].team1 = winnerName;
+                } else if (roundNum === 1) { // 準決勝
+                    const finalMatch = block.matches[`${block.id}-R2-M1`];
+                    if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+                } else if (roundNum === 2) { // 決勝
+                    tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
+                    tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
                 }
-            } else { // 敗者復活トーナメント決勝 (5位決定戦)
+            }
+        } else if (bracketId === 'AUTUMN' && region === '伊豆') { // 伊豆地区
+             const izuBracket = tournamentState.autumnData.regions['伊豆'].izuBracket;
+             if(izuBracket){
+                const roundNum = parseInt(roundStr.slice(1));
+                const matchNum = parseInt(matchStr.slice(1));
+                if (roundNum === 1) { // 準決勝
+                    const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
+                    if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+                } else if (roundNum === 2) { // 決勝
+                    tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: winnerName, rank: 1 });
+                }
+             }
+        }
+        // 秋季地区順位決定戦の勝者進行
+        else if (tournamentState.autumnPhase === 'regional_ranking') {
+            const roundNum = parseInt(roundStr.slice(1));
+            const matchNum = parseInt(matchStr.slice(1));
+            const isChamp = bracketId === 'CHAMP'; // 本来は廃止されているが念のため
+            const bracket = tournamentState.autumnData.regions[region]?.repechageBracket; // 敗者復活のみ
+
+            if (bracket && roundNum === 1) { // 敗者復活1回戦
+                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`]; // 5位決定戦
+                if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+            } else if (bracket && roundNum === 2) { // 5位決定戦
                 tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
+                // 敗退チーム(loserName)の順位は記録しない (県大会に出られないため)
             }
         }
-        // ▲▲▲ 修正ロジックここまで ▲▲▲  
-
- } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+    } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+        // 春季地区予選の勝者進行
         const [region, bracketType] = matchId.split('-');
+        // 代表決定ブロック
         if (bracketType.startsWith('SB')) {
             const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
-            if (matchId.includes('-R1-') || matchId.includes('-R0-')) {
-                const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-'));
-                if (finalMatchKey) {
-                    const finalMatch = block.matches[finalMatchKey];
-                    if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+            if (block) {
+                // 準決勝以前の試合の場合、勝者を決勝に進める
+                if (matchId.includes('-R1-') || matchId.includes('-R0-')) {
+                    // 決勝戦のIDを見つける (R2-M1 or R1-M1 for 2/3 team blocks)
+                    const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-') || (Object.keys(block.matches).length <= 2 && k.includes('-R1-')));
+                    if (finalMatchKey) {
+                        const finalMatch = block.matches[finalMatchKey];
+                        // どっちの山から来たかで team1 or team2 に入れる
+                        if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
+                    }
+                } else { // 決勝戦の場合、敗者を敗者復活トーナメントに送る
+                    const repBracket = tournamentState.springData.regions[region].repechageBracket;
+                    repBracket.teams.push(loserName); // 敗者復活に参加するチームリストに追加
+                    // 敗者復活トーナメントの空きスロットに敗者をセット
+                    if (repBracket.teams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
+                    if (repBracket.teams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
+                    if (repBracket.teams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
+                    if (repBracket.teams.length === 4) repBracket.matches[`${repBracket.id}-R1-M2`].team2 = loserName;
                 }
-            } else {
-                const repBracket = tournamentState.springData.regions[region].repechageBracket;
-                repBracket.teams.push(loserName);
-                if (repBracket.teams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
-                if (repBracket.teams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
-                if (repBracket.teams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
-                if (repBracket.teams.length === 4) repBracket.matches[`${repBracket.id}-R1-M2`].team2 = loserName;
-            }
-        } else if (bracketType.startsWith('SREP')) {
-            const finalMatch = tournamentState.springData.regions[region].repechageBracket.matches[`${region}-SREP-R2-M1`];
-            if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
-        } else if (bracketType.startsWith('SIZU')) {
-            const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
-            const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
-            if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) {
-                finalMatch.team1 = winnerName;
-            } else if (matchId.endsWith('M1')) {
-                finalMatch.team1 = winnerName;
-            } else if (matchId.endsWith('M2')) {
-                finalMatch.team2 = winnerName;
             }
         }
-    } else { 
-        if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
-        if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
-        const idParts = matchId.split('-');
-        const side = idParts[0];
-        if (side !== 'F') {
-            const roundNum = parseInt(idParts[1].slice(1));
-            const numTeamsInTournament = tournamentState.teams.length;
-            const finalRound = Math.log2(numTeamsInTournament);
-            if (roundNum < finalRound) {
-                const matchNum = parseInt(idParts[2].slice(1));
-                const nextRoundNum = roundNum + 1;
-                let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
-                if (!tournamentState.matches[nextMatchId]) {
-                    tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
-                }
-                let slot = (nextRoundNum === finalRound) ? (side === 'L' ? 1 : 2) : (matchNum % 2 !== 0 ? 1 : 2);
-                tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
+        // 第5代表決定トーナメント (敗者復活)
+        else if (bracketType.startsWith('SREP')) {
+             const repBracket = tournamentState.springData.regions[region].repechageBracket;
+             if (repBracket){
+                const finalMatch = repBracket.matches[`${repBracket.id}-R2-M1`]; // 代表決定戦
+                 // 1回戦の勝者を代表決定戦に進める
+                if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
+                if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
+             }
+        }
+        // 伊豆地区予選
+        else if (bracketType.startsWith('SIZU')) {
+            const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
+            if(izuBracket){
+                const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`]; // 決勝戦
+                // 準決勝の勝者を決勝に進める
+                 if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) { // 3チームの場合の準決勝
+                     finalMatch.team1 = winnerName; // 不戦勝の team2 は setupSpringRegionalQualifiers で設定済み
+                 } else if (matchId.endsWith('M1')) { // 4チームの場合の準決勝1
+                     finalMatch.team1 = winnerName;
+                 } else if (matchId.endsWith('M2')) { // 4チームの場合の準決勝2
+                     finalMatch.team2 = winnerName;
+                 }
             }
-        } else {
-            updateTournamentFinishRecords();
-            if (tournamentState.currentTournament === 'summer') {
-                const winnerRecord = tournamentState.teamRecords[winnerName];
+        }
+    }
+    // 決勝戦終了時の後処理 (先に勝者進行処理を行ったため、ここでは最終成績記録と甲子園/センバツ処理のみ)
+    else if (matchId.startsWith('F-R1-M1')) {
+        updateTournamentFinishRecords(); // 全チームの最終順位を記録
+
+        if (tournamentState.currentTournament === 'summer') {
+            // 夏大会優勝 → 甲子園シミュレーション
+            const winnerRecord = tournamentState.teamRecords[winnerName];
+            if (winnerRecord) { // 念のため存在確認
                 const winnerRank = calculateRank(winnerName, tournamentState);
-                const koshienResultKey = simulateKoshien(winnerRank);
+                const koshienResultKey = simulateKoshien(winnerRank); // ランクに基づき甲子園の結果を決定
                 const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
-                winnerRecord.lastFinish = koshienResult.rank;
-                const newHistoryRecord = { year: tournamentState.tournamentYear, tournament: 'summer', rank: koshienResult.rank };
-                winnerRecord.history.unshift(newHistoryRecord);
+                winnerRecord.lastFinish = koshienResult.rank; // 最終成績を甲子園のものに更新
+                const newHistoryRecord = { year: tournamentState.tournamentYear, tournament: 'summer_koshien', rank: koshienResult.rank }; // 'summer_koshien' として記録
+                winnerRecord.history.unshift(newHistoryRecord); // 履歴に追加
+                // 最高成績も更新
                 if (!winnerRecord.best || newHistoryRecord.rank < winnerRecord.best.rank) {
                     winnerRecord.best = newHistoryRecord;
                 }
-                const article = await generateKoshienSummaryArticle(winnerName, koshienResult.label, 'summer');
-                if(article) tournamentState.news.push(article);
+                // 甲子園結果の記事生成を非同期で開始 (完了を待たない)
+                generateKoshienSummaryArticle(winnerName, koshienResult.label, 'summer')
+                    .then(koshienArticle => {
+                        if(koshienArticle) {
+                            tournamentState.news.push(koshienArticle);
+                            renderNews(tournamentState.news); // 記事ができたら再描画
+                            saveState(); // 保存
+                        }
+                    });
             }
-            if (tournamentState.currentTournament === 'autumn') {
-                tournamentState.senbatsuTeams = [];
-                const finalists = [winnerName, loserName];
-                for (const teamName of finalists) {
-                    if (Math.random() < 0.70) { 
-                        tournamentState.senbatsuTeams.push(teamName);
-                        const article = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai');
-                        if(article) tournamentState.news.push(article);
+        } else if (tournamentState.currentTournament === 'autumn') {
+            // 秋大会優勝/準優勝 → センバツ選出判定
+            tournamentState.senbatsuTeams = []; // リセット
+            const finalists = [winnerName, loserName];
+            const selectionPromises = finalists.map(async (teamName) => {
+                // 70%の確率で選出 (仮の確率)
+                if (Math.random() < 0.70) {
+                    tournamentState.senbatsuTeams.push(teamName);
+                    // 選出記事生成を非同期で開始
+                    const senbatsuArticle = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai'); // 'tokai' タイプで呼び出し
+                    if (senbatsuArticle) {
+                        tournamentState.news.push(senbatsuArticle);
                     }
                 }
-            }
-        }
-    }
-    
-    // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    const [article, newComments] = await Promise.all([articlePromise, commentsPromise]);
-
-    if (newComments) {
-        // エラーオブジェクトでないコメントのみを追加
-        const validComments = newComments.filter(comment => !comment.error);
-        if (validComments.length > 0) {
-            tournamentState.bbsComments.push(...validComments);
-        }
-        // エラーオブジェクトがあれば、それをニュースセクションに追加（再生成ボタン付きで）
-        const errorComment = newComments.find(comment => comment.error);
-        if (errorComment) {
-            // エラーコメントをニュース記事のような形式で追加
-            tournamentState.news.push({
-                title: errorComment.title || "掲示板コメント生成エラー",
-                body: "AIによる掲示板コメントの生成に失敗しました。",
-                timestamp: Date.now(),
-                error: true,
-                errorId: errorComment.id || `error-${matchId}-bbs`, // エラーIDを設定
-                context: errorComment.context // 再生成に必要なcontextを保持
             });
+            // 全ての選出記事生成が終わるのを待つ
+            await Promise.all(selectionPromises);
+            // 記事ができたら再描画・保存
+            renderNews(tournamentState.news);
+            saveState();
         }
     }
 
-    if (article) {
-        if (!article.error) {
-            article.context = matchContext; // コンテキストを保存
 
-            // ▼▼▼ ここが変更点 ▼▼▼
-            // isVerified のチェックを削除し、直接 showArticleReviewModal を呼び出す
-            showArticleReviewModal(article);
-            // ▲▲▲ 変更点ここまで ▲▲▲
+    // --- 5. AIコンテンツの処理と最終的な画面更新 ---
+    // AI処理の完了を待つ
+    const [generatedArticle, generatedComments] = await Promise.all([articlePromise, commentsPromise]);
 
+    // 生成された掲示板コメントを追加
+    if (generatedComments) {
+        // エラーでないコメントのみ追加
+        const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
+        if (validComments.length > 0) {
+            // BBSコメントをスレッド形式で追加するために tournamentState.bbsComments を更新
+             tournamentState.bbsComments.push({
+                 id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
+                 title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
+                 matchId: matchId, //どの試合のスレかわかるように
+                 comments: validComments, //AIが生成したコメント配列
+                 timestamp: Date.now()
+             });
+        }
+        // エラーがあった場合の処理 (エラー記事をニュースに追加)
+        const errorComment = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
+         if (errorComment) {
+             tournamentState.news.push({
+                 title: errorComment.title || "掲示板コメント生成エラー",
+                 body: "AIによる掲示板コメントの生成に失敗しました。",
+                 timestamp: Date.now(),
+                 error: true,
+                 errorId: `error-${matchId}-bbs`,
+                 context: errorComment.context
+             });
+         }
+    }
+
+    // 生成された記事を処理
+    if (generatedArticle) {
+        if (!generatedArticle.error) {
+             generatedArticle.context = matchContext; // コンテキストを記事に紐付け
+             // 事実確認をせず、直接レビューモーダル表示
+             showArticleReviewModal(generatedArticle);
+             // 注意: showArticleReviewModal は記事を直接 news 配列に追加しません。
+             // ユーザーがモーダルで「確定」を押したときに news 配列に追加されます。
         } else {
-            // エラー記事の場合はそのままニュースリストに追加
-             const errorArticle = {
-                title: article.title || "記事生成エラー",
-                body: article.body || "AI記者との通信に失敗しました。",
+            // エラー記事をニュースリストに追加
+            const errorArticle = {
+                title: generatedArticle.title || "記事生成エラー",
+                body: generatedArticle.body || "AI記者との通信に失敗しました。",
                 timestamp: Date.now(),
                 error: true,
-                errorId: matchContext.matchId || 'error', // 記事のエラーIDは matchId を使うか、専用のIDを生成
-                context: matchContext // 再生成のために context を保存
+                errorId: matchContext.matchId || 'error',
+                context: matchContext
             };
             tournamentState.news.push(errorArticle);
         }
     }
 
-    // スキャンダルイベントのトリガー (アクティブなスキャンダルがない場合のみ)
-    if (!tournamentState.activeScandal && Math.random() < 0.1) { // 10%の確率で発生
+    // スキャンダルイベントのトリガー
+    if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
 
     // 最終的な画面更新と状態保存
-    renderTournament(tournamentState); // トーナメント表、ニュース、BBSなどを再描画
-    saveState(); // 最新の状態をローカルストレージに保存
+    renderTournament(tournamentState);
+    saveState();
 
-    // 春季大会の場合、1回戦終了後に2回戦への進行を確認する
+    // 春季大会の場合、1回戦終了後に2回戦への進行を確認
     if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
         const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
-        // 1回戦が全試合終了したかチェック (16チームトーナメントなので8試合)
         if (round1Matches.length === 8 && round1Matches.every(m => m.winner)) {
             const confirmed = await showConfirm("1回戦がすべて終了しました。シード校が登場する2回戦に進みますか？");
             if (confirmed) {
-                await setupSpringMainTournament_Round2(); // 2回戦のセットアップ関数を呼び出す
+                await setupSpringMainTournament_Round2();
             }
         }
     }
 } // processMatchWin 関数の終了
+
+// processMatchWin 関数の終了
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
  * スキャンダルイベントを発生させる
