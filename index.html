@@ -5406,7 +5406,7 @@ function saveDetailedStats() {
                             gameStats.pa++;
                             if (!batterPlay.includes('四球') && !batterPlay.includes('死球') && !batterPlay.includes('犠')) gameStats.ab++;
                             
-                            const isHitWord = ['安', '本', '二', '三'].some(w => batterPlay.includes(w));
+                            const isHitWord = ['安', '二塁打', '三塁打', '本塁打'].some(w => batterPlay.includes(w));
                             if (isHitWord) gameStats.h++;
                             if (batterPlay.includes('本')) gameStats.hr++;
                             if (batterPlay.includes('点')) {
