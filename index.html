@@ -4033,42 +4033,54 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     namcoNewsSection.classList.remove('hidden');
     namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
 
-    // ▼▼▼ ここからが変更箇所 ▼▼▼
-    let analysisArticlePromise = Promise.resolve(null); // 記事生成Promiseの初期化
+    let analysisArticlePromise = Promise.resolve(null);
+    let bracketBbsPromise = Promise.resolve(null); // ★BBS生成Promiseの初期化★
 
     if (tournamentState.currentTournament === 'summer') {
-        // 以前の generateBlockAnalysisArticle 呼び出しを削除し、新しい関数を呼び出す
-        analysisArticlePromise = generateBracketAnalysisNewsArticle(tournamentState); // ★新しい関数に変更★
+        analysisArticlePromise = generateBracketAnalysisNewsArticle(tournamentState);
+        bracketBbsPromise = generateBracketBbsThread(tournamentState); // ★新しい関数を呼び出す★
 
     } else { // 秋季・春季大会の展望記事 (変更なし)
-        // ★展望記事用の簡易contextを作成して渡す
         const previewContext = { matchId: 'preview' };
-        analysisArticlePromise = generateNewsArticle(previewContext); // 既存の記事生成関数を使う
+        analysisArticlePromise = generateNewsArticle(previewContext);
+        // 秋季・春季は簡易的な反応コメントにする場合 ( generateBracketReactionComments を使う)
+        // bracketBbsPromise = generateBracketReactionComments(tournamentState);
+        // もし秋季・春季でも詳細なスレッドが欲しければ generateBracketBbsThread を呼んでも良い
     }
 
-    const [bracketComments, namcoNews, analysisArticle] = await Promise.all([
-        generateBracketReactionComments(tournamentState), // 掲示板コメント (変更なし)
-        generateNamcoNews(tournamentState, 'bracket'), // ナムコニュース (変更なし)
-        analysisArticlePromise // ★上で開始した記事生成Promiseの結果を待つ★
+    // ▼▼▼ Promise.all の中身を修正 ▼▼▼
+    const [namcoNews, analysisArticle, bracketBbsResult] = await Promise.all([
+        // generateBracketReactionComments の呼び出しを削除
+        generateNamcoNews(tournamentState, 'bracket'),
+        analysisArticlePromise,
+        bracketBbsPromise // ★新しいPromiseを追加★
     ]);
+    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // ★生成された記事をニュースの先頭に追加 (isAnalysisArticle フラグなし)★
+    // --- 生成されたコンテンツの処理 ---
+    // 記事の処理 (変更なし)
     if (analysisArticle && !analysisArticle.error) {
          tournamentState.news.unshift(analysisArticle);
     } else if (analysisArticle && analysisArticle.error) {
-        // エラー記事の場合も追加
         tournamentState.news.unshift(analysisArticle);
     }
 
+    // ▼▼▼ BBSスレッドの処理 (新規追加) ▼▼▼
+    if (bracketBbsResult && !bracketBbsResult.error) {
+        // 成功した場合、スレッドオブジェクト全体を bbsComments 配列に追加
+        tournamentState.bbsComments.push(bracketBbsResult);
+    } else if (bracketBbsResult && bracketBbsResult.error) {
+        // エラーの場合、エラー記事を news 配列に追加
+        tournamentState.news.push(bracketBbsResult); // エラーオブジェクトは記事と同じ形式のはず
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
-    if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     if (namcoNews) tournamentState.namcoNews = namcoNews;
 
-    renderNews(tournamentState.news); // 記事を表示
-    renderBbsComments(tournamentState.bbsComments);
+    renderNews(tournamentState.news);
+    renderBbsComments(tournamentState.bbsComments); // ★bbsCommentsの描画処理が必要★
     renderNamcoNews(tournamentState.namcoNews);
-    saveState(); // AI生成コンテンツを含めて最終保存
-    // ▲▲▲ 変更箇所ここまで ▲▲▲
+    saveState();
 }
 
 /**
@@ -4212,6 +4224,173 @@ ${analysisText}
         };
     }
 }   
+
+/**
+ * AIに組み合わせ抽選結果に基づいた、なんJ風の掲示板スレッド（タイトル＋コメント群）を生成させる
+ * (generateBracketAnalysisNewsArticleの分析ロジックを流用)
+ */
+async function generateBracketBbsThread(state) {
+    const { teams, seeds } = state;
+    if (teams.length < 8) return null; // チーム数が少なすぎる場合は生成しない
+
+    // --- トーナメント表の詳細分析ロジック (generateBracketAnalysisNewsArticleから流用) ---
+    const numBlocks = Math.max(1, Math.ceil(teams.length / 16));
+    const blockSize = Math.floor(teams.length / numBlocks);
+    const blockData = [];
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    const getTeamRank = (teamName) => calculateRank(teamName, state);
+
+    for (let i = 0; i < numBlocks; i++) {
+        const blockName = String.fromCharCode(65 + i);
+        const startIdx = i * blockSize;
+        const endIdx = (i + 1) * blockSize;
+        const blockTeams = teams.slice(startIdx, endIdx);
+        if (blockTeams.length === 0) continue;
+
+        const strongTeamsInBlock = blockTeams.filter(team => {
+            const rank = getTeamRank(team);
+            return seeds.includes(team) || ['A', 'B'].includes(rank);
+        });
+
+        const matchupsR1 = [];
+        const potentialR2 = [];
+        const potentialR3 = [];
+
+        for (let j = 0; j < blockTeams.length; j += 2) {
+            const team1 = blockTeams[j];
+            const team2 = blockTeams[j + 1];
+            if (!team1 || !team2) continue;
+            const rank1 = getTeamRank(team1);
+            const rank2 = getTeamRank(team2);
+            const matchup = { team1, rank1, team2, rank2 };
+            matchupsR1.push(matchup);
+            if ((seeds.includes(team1) || ['A', 'B'].includes(rank1)) && (seeds.includes(team2) || ['A', 'B'].includes(rank2))) {
+                matchup.isCrush = true;
+            }
+        }
+
+        if (blockTeams.length >= 4) {
+            for (let j = 0; j < matchupsR1.length; j += 2) {
+                 const winner1Match = matchupsR1[j];
+                 const winner2Match = matchupsR1[j + 1];
+                 if (!winner1Match || !winner2Match) continue;
+                 const potentialWinner1 = rankValues[winner1Match.rank1] >= rankValues[winner1Match.rank2] ? winner1Match.team1 : winner1Match.team2;
+                 const potentialWinner2 = rankValues[winner2Match.rank1] >= rankValues[winner2Match.rank2] ? winner2Match.team1 : winner2Match.team2;
+                 if (strongTeamsInBlock.includes(potentialWinner1) && strongTeamsInBlock.includes(potentialWinner2)) {
+                     potentialR2.push(`${potentialWinner1} vs ${potentialWinner2}`);
+                 }
+            }
+        }
+        if (teams.length === 64 && blockTeams.length >= 8) {
+             const blockSeeds = strongTeamsInBlock.filter(t => seeds.includes(t));
+             if (blockSeeds.length >= 2) {
+                 potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
+             }
+        }
+
+        blockData.push({
+            name: blockName, teams: blockTeams, strongTeams: strongTeamsInBlock,
+            matchupsR1: matchupsR1, potentialR2: potentialR2, potentialR3: potentialR3
+        });
+    }
+
+    let blockSummary = '';
+    let crushR1 = [];
+    let goodCardsR2 = [];
+    let goodCardsR3 = [];
+    blockData.forEach(block => {
+        blockSummary += `- ${block.name}ブロック: 有力校 ${block.strongTeams.length} (${block.strongTeams.join(', ') || 'なし'})\n`;
+        block.matchupsR1.forEach(m => {
+            if (m.isCrush) crushR1.push(`${block.name}: ${m.team1}(${m.rank1}) vs ${m.team2}(${m.rank2})`);
+        });
+        goodCardsR2.push(...block.potentialR2.map(card => `${block.name}: ${card}`));
+        goodCardsR3.push(...block.potentialR3.map(card => `${block.name}: ${card}`));
+    });
+
+    blockData.sort((a, b) => b.strongTeams.length - a.strongTeams.length);
+    const deathBlock = blockData[0];
+    const blessedBlock = blockData[blockData.length - 1];
+
+    let analysisText = `各ブロックの有力校:\n${blockSummary}`;
+    analysisText += `死のブロック: ${deathBlock.name} (${deathBlock.strongTeams.length}校)\n`;
+    analysisText += `恵まれたブロック: ${blessedBlock.name} (${blessedBlock.strongTeams.length}校)\n`;
+    if (crushR1.length > 0) analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
+    if (goodCardsR2.length > 0) analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
+    if (goodCardsR3.length > 0) analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
+    // --- 分析ロジックここまで ---
+
+    // --- スレッド生成用プロンプト ---
+    const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
+夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを13〜20個**生成してください。
+
+### 組み合わせ分析結果サマリー
+${analysisText}
+
+### あなたが生成するコメントの方向性
+- **分析結果への反応:**
+    - 「死のブロック (${deathBlock.name})」に入ったチームへの同情や煽り。「〇〇終わったなw」「ここ勝ち上がるのマジでキツイやろ」
+    - 「恵まれたブロック (${blessedBlock.name})」への反応。「△△はクジ運良すぎ」「決勝まで余裕やん」
+    - 1回戦での有力校潰し合い (${crushR1.length}件) について。「初戦からこれとか勿体ねえ」「いきなり事実上の決勝かよ」
+    - 2, 3回戦で実現しそうな好カード予想について。「□□ vs ◇◇は絶対見たい」「もし実現したら熱いな」
+- **個人的な視点:**
+    - 自分の応援するチーム (架空で良い) の組み合わせに対する一喜一憂。「ワイの母校、初戦から強豪で草」「よっしゃ！いけるやん！」
+    - シード校や注目校に対するコメント。「王者〇〇のブロック楽すぎ」「△△はノーシードだけど怖いぞ」
+- **なんJらしさ:**
+    - 短い煽りレス。「は？」「雑魚w」「ファーwww」
+    - 他のコメントへの安価 (>>) 付きの返信やツッコミ。
+    - 全く関係ない野球ネタや時事ネタへの脱線 (少しだけ)。
+    - 草 (w) や顔文字 (^^;) などを適度に使う。
+- **スレッドの流れ:** 序盤は組み合わせへの驚き、中盤で各ブロックの分析や予想、終盤は少し脱線しつつ盛り上がる、という自然な流れを意識してください。
+
+### 出力形式
+【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
+{
+  "threadTitle": "（例：【速報】夏の高校野球組み合わせ決定www 死のブロックは〇〇か！？）",
+  "comments": [
+    {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
+    {"personality": "2: 風吹けば名無し", "comment": "（>>1 はえーよw）"},
+    {"personality": "3: 風吹けば名無し", "comment": "（〇〇ブロック地獄で草）"}
+    // ... (合計30〜40個のコメント) ...
+  ]
+}`;
+
+    // --- AIへのリクエストと結果の処理 ---
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const bbsJson = parseJsonFromText(rawText);
+            if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
+                // 成功：スレッドタイトルとコメント配列を含むオブジェクトを返す
+                return {
+                    id: `bracket-thread-${Date.now()}`, // スレッド固有ID
+                    title: bbsJson.threadTitle,
+                    matchId: 'bracket', // 試合IDの代わりに'bracket'などを設定
+                    comments: bbsJson.comments.map((c, index) => ({ // 個々のコメントにIDなどを付与
+                        id: crypto.randomUUID(),
+                        personality: c.personality || `${index + 1}: 風吹けば名無し`,
+                        text: c.comment,
+                        timestamp: Date.now() + index * 10, // タイムスタンプを少しずらす
+                        replies: []
+                    })),
+                    timestamp: Date.now()
+                };
+            }
+        }
+        throw new Error("AIからの応答が、正しいスレッド形式ではありません。");
+    } catch (error) {
+        console.error("AI組み合わせ反応スレッドの生成に失敗しました:", error);
+        // エラー：エラー情報を含むオブジェクトを返す
+        return {
+            error: true,
+            title: "組み合わせスレッド生成エラー",
+            body: "AIによるスレッド生成に失敗しました。",
+            timestamp: Date.now(),
+            errorId: `bracket-thread-error-${Date.now()}`
+        };
+    }
+}
 
 /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
@@ -4800,35 +4979,60 @@ function renderNews(news) {
 }
     
 
-function renderBbsComments(comments) {
-    if (!comments || comments.length === 0) {
+/**
+ * 掲示板のコメント（スレッド形式対応）を描画する
+ */
+function renderBbsComments(threads) { // 引数名を threads に変更
+    if (!threads || threads.length === 0) {
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
         return;
     }
-    bbsCommentsContainer.innerHTML = '';
-    
-    comments.slice().reverse().forEach((comment, index) => {
-        // ▼▼▼ THIS IS THE NEW LOGIC ▼▼▼
-        // Check if the comment object is an error message
-        if (comment.error) {
+    bbsCommentsContainer.innerHTML = ''; // コンテナをクリア
+
+    // 新しいスレッドが上に来るように逆順で処理
+    threads.slice().reverse().forEach((thread, reversedIndex) => {
+        // スレッドオブジェクトか、古い形式のエラーオブジェクトかを判定
+        if (thread.error && !thread.comments) { // 古いエラー形式の場合
+            const originalIndex = threads.length - 1 - reversedIndex;
             const errorEl = document.createElement('div');
-            errorEl.className = 'article-error'; // Reuse the article error style
-            // The original index is needed for the retry function
-            const originalIndex = comments.length - 1 - index;
+            errorEl.className = 'article-error'; // 記事のエラースタイルを流用
             errorEl.innerHTML = `
-                <span>${comment.title}</span>
-                <button class="retry-bbs-btn" data-index="${originalIndex}">再生成</button>
+                <span>${thread.title || '掲示板コメント生成エラー'}</span>
+                ${thread.context ? `<button class="retry-bbs-btn" data-index="${originalIndex}">再生成</button>` : ''}
             `;
             bbsCommentsContainer.appendChild(errorEl);
-        } 
-        // ▲▲▲ ▲▲▲
-        else {
-            // If it's a normal comment, render it as before
-            renderCommentThread(comment, bbsCommentsContainer, 'general');
+        } else if (thread.comments && Array.isArray(thread.comments)) { // スレッドオブジェクトの場合
+            const threadWrapper = document.createElement('div');
+            threadWrapper.className = 'mb-6 p-4 border rounded-lg bg-white shadow'; // スレッド全体を囲むスタイル
+
+            // スレッドタイトルを表示
+            const titleEl = document.createElement('h3');
+            titleEl.className = 'text-lg font-bold text-gray-800 mb-3 border-b pb-2';
+            titleEl.textContent = `【${thread.matchId === 'bracket' ? '組み合わせ決定' : '試合結果'}】${thread.title}`;
+            threadWrapper.appendChild(titleEl);
+
+            const commentsContainer = document.createElement('div');
+            commentsContainer.className = 'space-y-3'; // コメント間のスペース
+
+            // スレッド内のコメントを描画 (既存のrenderCommentThreadを流用)
+            thread.comments.forEach(comment => {
+                // 注意: renderCommentThread は replies を再帰的に描画するため、
+                // ここではトップレベルのコメントのみを渡す
+                renderCommentThread(comment, commentsContainer, 'general');
+            });
+
+            threadWrapper.appendChild(commentsContainer);
+            bbsCommentsContainer.appendChild(threadWrapper);
         }
+        // それ以外の予期せぬデータは無視
     });
 }
 
+// renderCommentThread 関数自体は、個々のコメントとその返信を描画するため、
+// 大きな変更は不要かもしれませんが、呼び出し元が変わったことによる
+// 微調整（例：トップレベルコメントのスタイル調整など）は必要になる可能性があります。
+// 特に、返信機能 (`.reply-btn` や `.reply-form`) がスレッド構造内で
+// 正しく動作するか（親コメントIDの特定など）の確認は重要です。
     function renderDaiyaBbsComments(comments) {
         if (!comments || comments.length === 0) {
             daiyaBbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
