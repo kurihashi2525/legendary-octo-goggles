@@ -6852,12 +6852,12 @@ function extractKeyPerformances(dbMatch) {
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
     // --- 1. contextから必要な情報を取り出す ---
-    const { 
+    const {
         winnerName, loserName, dbMatch, matchId,
-        winnerData, loserData, winnerDetailedData, loserDetailedData, 
-        winnerLineupChanges, loserLineupChanges, 
+        winnerData, loserData, winnerDetailedData, loserDetailedData,
+        winnerLineupChanges, loserLineupChanges,
         winnerJourney, loserJourney,
-        nextOpponent // ★★★ 次の対戦相手の情報をここで受け取ります ★★★
+        nextOpponent // 次の対戦相手の情報
     } = matchContext || {};
     
  let prompt = '';
@@ -7078,7 +7078,19 @@ ${notablePlayersText}
 
     // --- 詳細データがある場合 (Aルート) ---
     
-
+ let nextOpponentText = '次の対戦相手は未定。'; // デフォルト
+        if (nextOpponent) {
+            // パターン1: 対戦相手が決まっている場合
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(${nextOpponent.opponentRank}ランク)と対戦する。`;
+            } 
+            // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
+            else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者と対戦する。`;
+            }
+            // パターン3: それ以外の未定の場合 (この場合はデフォルトのまま)
+        }
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
         // --- 準備フェーズ ---
@@ -7112,19 +7124,7 @@ ${notablePlayersText}
         const loserCoach = loserData.coach;
 
         // 1. 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
-        let nextOpponentText = '次の対戦相手は未定。'; // デフォルト
-        if (nextOpponent) {
-            // パターン1: 対戦相手が決まっている場合
-            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-                nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(${nextOpponent.opponentRank}ランク)と対戦する。`;
-            } 
-            // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
-            else if (nextOpponent.decidingMatch) {
-                const dm = nextOpponent.decidingMatch;
-                nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者と対戦する。`;
-            }
-            // パターン3: それ以外の未定の場合 (この場合はデフォルトのまま)
-        }
+       
         // ★★★ 修正箇所はここまで ★★★
 
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
