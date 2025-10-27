@@ -2659,7 +2659,7 @@ async function generateGameMatchBbsComments(matchContext) {
 
     // ▼▼▼ プロンプトを修正 ▼▼▼
     const prompt = `あなたは、静岡県の高校野球を観戦している、なんJの野球ファンです。
-以下の試合データに基づき、ファンたちのリアルな会話コメントを**15〜20個**生成してください。
+以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜30個**生成してください。
 
 ### 現在の試合状況
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
@@ -2710,7 +2710,7 @@ ${highlightsText}
 [
   {"personality": "1: 風吹けば名無し", "comment": "（生成したコメント1）"},
   {"personality": "2: 風吹けば名無し", "comment": "（生成したコメント2）"},
-  // ... (合計15〜20個のコメント) ...
+  // ... (合計25〜30個のコメント) ...
 ]
 \`\`\`
 `; // ← ここでバッククォートを閉じる
