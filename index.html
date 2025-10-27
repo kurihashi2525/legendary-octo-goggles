@@ -9271,45 +9271,48 @@ async function processMatchWin(matchId, winnerName) {
 
 
     // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    // AI処理の完了を待つ
-    const [generatedArticle, generatedComments] = await Promise.all([articlePromise, commentsPromise]);
+    const [generatedArticle, generatedComments] // generatedComments は { title: "...", comments: [...] }
+        = await Promise.all([articlePromise, commentsPromise]);
 
-    // 生成された掲示板コメントを追加
     if (generatedComments) {
-        // エラーでないコメントのみ追加
+        // エラーでないコメントのみを取得
         const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
+
+        // ▼▼▼ ここを修正 ▼▼▼
         if (validComments.length > 0) {
-            // BBSコメントをスレッド形式で追加するために tournamentState.bbsComments を更新
-             tournamentState.bbsComments.push({
-                 id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
-                 title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
-                 matchId: matchId, //どの試合のスレかわかるように
-                 comments: validComments, //AIが生成したコメント配列
-                 timestamp: Date.now()
-             });
+            // スレッドオブジェクト全体ではなく、個々のコメントを展開して追加する
+            tournamentState.bbsComments.push(...validComments);
         }
-        // エラーがあった場合の処理 (エラー記事をニュースに追加)
-        const errorComment = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
-         if (errorComment) {
+        // ▲▲▲ 修正ここまで ▲▲▲
+
+        // エラーがあった場合の処理 (変更なし)
+        const errorCommentData = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
+         if (errorCommentData && errorCommentData.context) { // contextがあるエラーのみ処理
              tournamentState.news.push({
-                 title: errorComment.title || "掲示板コメント生成エラー",
+                 title: generatedComments.title || "掲示板コメント生成エラー", // エラータイトルにはスレッドタイトルを使う
+                 body: "AIによる掲示板コメントの生成に失敗しました。",
+                 timestamp: Date.now(),
+                 error: true,
+                 errorId: `error-${matchId}-bbs`, // エラーID
+                 context: errorCommentData.context // 再生成用コンテキスト
+             });
+         } else if (generatedComments.error) { // generatedComments自体がエラーオブジェクトの場合
+              tournamentState.news.push({
+                 title: "掲示板コメント生成エラー",
                  body: "AIによる掲示板コメントの生成に失敗しました。",
                  timestamp: Date.now(),
                  error: true,
                  errorId: `error-${matchId}-bbs`,
-                 context: errorComment.context
+                 context: generatedComments.context // 再生成用コンテキスト
              });
          }
     }
 
-    // 生成された記事を処理
+    // --- 記事の処理 (変更なし) ---
     if (generatedArticle) {
         if (!generatedArticle.error) {
-             generatedArticle.context = matchContext; // コンテキストを記事に紐付け
-             // 事実確認をせず、直接レビューモーダル表示
+             generatedArticle.context = matchContext;
              showArticleReviewModal(generatedArticle);
-             // 注意: showArticleReviewModal は記事を直接 news 配列に追加しません。
-             // ユーザーがモーダルで「確定」を押したときに news 配列に追加されます。
         } else {
             // エラー記事をニュースリストに追加
             const errorArticle = {
@@ -9324,16 +9327,15 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
 
-    // スキャンダルイベントのトリガー
+    // --- スキャンダル、画面更新、保存処理 (変更なし) ---
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
 
-    // 最終的な画面更新と状態保存
-    renderTournament(tournamentState);
+    renderTournament(tournamentState); // この中で renderBbsComments が呼ばれる
     saveState();
 
-    // 春季大会の場合、1回戦終了後に2回戦への進行を確認
+    // --- 春季大会の進行確認 (変更なし) ---
     if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
         const round1Matches = Object.values(tournamentState.matches).filter(m => m.id.includes('-R1-'));
         if (round1Matches.length === 8 && round1Matches.every(m => m.winner)) {
@@ -9344,7 +9346,6 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
 } // processMatchWin 関数の終了
-
 // processMatchWin 関数の終了
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
