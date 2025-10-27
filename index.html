@@ -4316,14 +4316,7 @@ async function generateBracketBbsThread(state) {
                     nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `実力伯仲の下位対決` });
                  }
             }
-            // 3. ユーザー指定の例 (熱海 vs 下田)
-            if ((team1 === '熱海' && team2 === '下田') || (team1 === '下田' && team2 === '熱海')) {
-                 // 重複チェック
-                 if (!nicheMatchups.some(nm => nm.match.includes('熱海'))) {
-                    nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `伊豆ダービー` });
-                 }
-            }
-        } // End of 1回戦カード分析ループ
+                    } // End of 1回戦カード分析ループ
 
         // 2回戦以降の有力カード予測 (簡易版)
         if (blockTeams.length >= 4) { // 2回戦が存在する場合
