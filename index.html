@@ -2701,8 +2701,11 @@ ${rawResultsDescription}
 3.  **【プレーへの言及】**
     **「データ4：生の打席結果データ」**から印象的なプレーを抜き出し、「〇回の△△のプレー（例：中安1点）は良かった/悪かった」といった、特定のプレーに言及するコメントを生成してください。
 
-4.  **【次戦の展望】**
-    「参考情報」を元に、次の対戦相手の強さや勝ち上がり方に触れ、「次は厳しい」「相手も苦戦しとるからワンチャンある」といった、次戦を予想する会話を生成してください。
+4.  **【次戦の確定情報への言及】** // ← ▼▼▼ この部分を確認 ▼▼▼
+    『参考情報：トーナメント全体の状況』の **\`次の試合:\`** に書かれている情報を**そのまま使って**コメントしてください。
+    - 例1 (相手確定時): 「次の相手は△△に決まったんか！」「次は△△(ランクB)か、厳しい戦いになりそうやな」
+    - 例2 (相手未定だが試合は確定時): 「次は□□と◇◇の勝者か。どっちが来てもキツイな」
+    - **提供された情報に『未定』と書かれていない限り、『未定』という言葉は絶対に使わないこと。** // ← ▲▲▲ ここまで ▲▲▲
 
 5.  その他、なんJらしい煽り、称賛、達観したコメントなどを自由に織り交ぜてください。安価（>>）を使った会話も必ず含めてください。
 
@@ -4227,101 +4230,180 @@ ${analysisText}
 
 /**
  * AIに組み合わせ抽選結果に基づいた、なんJ風の掲示板スレッド（タイトル＋コメント群）を生成させる
- * (generateBracketAnalysisNewsArticleの分析ロジックを流用)
+ * (★マニアックな分析とコメント指示を追加した最終版★)
  */
 async function generateBracketBbsThread(state) {
     const { teams, seeds } = state;
-    if (teams.length < 8) return null; // チーム数が少なすぎる場合は生成しない
+    // チーム数が少なすぎる場合 (例: 8未満) は掲示板コメントを生成しない
+    if (!teams || teams.length < 8) {
+        console.log("チーム数が少ないため、組み合わせBBSスレッドは生成しません。");
+        return null; // 何も生成しない場合は null を返す
+    }
 
-    // --- トーナメント表の詳細分析ロジック (generateBracketAnalysisNewsArticleから流用) ---
-    const numBlocks = Math.max(1, Math.ceil(teams.length / 16));
+    // --- トーナメント表の詳細分析ロジック ---
+    const numBlocks = Math.max(1, Math.ceil(teams.length / 16)); // 64チームなら4ブロック、16チームなら1ブロック
     const blockSize = Math.floor(teams.length / numBlocks);
-    const blockData = [];
-    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    const getTeamRank = (teamName) => calculateRank(teamName, state);
+    const blockData = []; // 各ブロックの情報を格納
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 }; // ランクの強さ
+    const getTeamRank = (teamName) => calculateRank(teamName, state); // チームランク取得関数
+    const getTeamRegion = (teamName) => TEAM_DATA[teamName]?.region || '不明'; // 地域取得ヘルパー
 
+    let nicheMatchups = []; // マニアックな注目カードを格納する配列
+
+    // 各ブロックを分析
     for (let i = 0; i < numBlocks; i++) {
         const blockName = String.fromCharCode(65 + i);
         const startIdx = i * blockSize;
         const endIdx = (i + 1) * blockSize;
         const blockTeams = teams.slice(startIdx, endIdx);
+        // ブロックにチームが存在しない場合はスキップ
         if (blockTeams.length === 0) continue;
 
+        // ブロック内の有力校 (シード or A/Bランク) を特定
         const strongTeamsInBlock = blockTeams.filter(team => {
             const rank = getTeamRank(team);
             return seeds.includes(team) || ['A', 'B'].includes(rank);
         });
 
-        const matchupsR1 = [];
-        const potentialR2 = [];
-        const potentialR3 = [];
+        const matchupsR1 = []; // 1回戦のカード情報
+        const potentialR2 = []; // 2回戦で当たりそうなカード
+        const potentialR3 = []; // 3回戦で当たりそうなカード (64チーム時)
 
+        // 1回戦の各カードを分析
         for (let j = 0; j < blockTeams.length; j += 2) {
             const team1 = blockTeams[j];
             const team2 = blockTeams[j + 1];
+            // 対戦相手がいない場合はスキップ (チーム数が奇数の場合など)
             if (!team1 || !team2) continue;
+
             const rank1 = getTeamRank(team1);
             const rank2 = getTeamRank(team2);
-            const matchup = { team1, rank1, team2, rank2 };
+            const region1 = getTeamRegion(team1);
+            const region2 = getTeamRegion(team2);
+            const matchup = { team1, rank1, region1, team2, rank2, region2 }; // カード情報に地域も追加
             matchupsR1.push(matchup);
-            if ((seeds.includes(team1) || ['A', 'B'].includes(rank1)) && (seeds.includes(team2) || ['A', 'B'].includes(rank2))) {
-                matchup.isCrush = true;
-            }
-        }
 
-        if (blockTeams.length >= 4) {
-            for (let j = 0; j < matchupsR1.length; j += 2) {
-                 const winner1Match = matchupsR1[j];
-                 const winner2Match = matchupsR1[j + 1];
-                 if (!winner1Match || !winner2Match) continue;
-                 const potentialWinner1 = rankValues[winner1Match.rank1] >= rankValues[winner1Match.rank2] ? winner1Match.team1 : winner1Match.team2;
-                 const potentialWinner2 = rankValues[winner2Match.rank1] >= rankValues[winner2Match.rank2] ? winner2Match.team1 : winner2Match.team2;
-                 if (strongTeamsInBlock.includes(potentialWinner1) && strongTeamsInBlock.includes(potentialWinner2)) {
-                     potentialR2.push(`${potentialWinner1} vs ${potentialWinner2}`);
+            // 1回戦での有力校潰し合いチェック
+            if ((seeds.includes(team1) || ['A', 'B'].includes(rank1)) && (seeds.includes(team2) || ['A', 'B'].includes(rank2))) {
+                matchup.isCrush = true; // 潰し合いフラグ
+            }
+
+            // マニアックな注目カードの抽出ロジック
+            const rankDiff = Math.abs(rankValues[rank1] - rankValues[rank2]);
+            // 1. 同地区の下位〜中堅対決 (C vs C, C vs D in same region)
+            if (region1 === region2 && !matchup.isCrush && rankValues[rank1] <= 3 && rankValues[rank2] <= 3) {
+                 if (nicheMatchups.length < 3) { // 3つまでピックアップ
+                    nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `${region1}地区対決` });
                  }
             }
+            // 2. ランクが近く、勝機がありそうな下位対決 (D vs D, D vs E, E vs E)
+            else if (rankDiff <= 1 && rankValues[rank1] <= 2 && rankValues[rank2] <= 2) {
+                 // 既にリストにあるチームとの重複を避ける
+                 if (nicheMatchups.length < 3 && !nicheMatchups.some(nm => nm.match.includes(team1) || nm.match.includes(team2))) {
+                    nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `実力伯仲の下位対決` });
+                 }
+            }
+            // 3. ユーザー指定の例 (熱海 vs 下田)
+            if ((team1 === '熱海' && team2 === '下田') || (team1 === '下田' && team2 === '熱海')) {
+                 // 重複チェック
+                 if (!nicheMatchups.some(nm => nm.match.includes('熱海'))) {
+                    nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `伊豆ダービー` });
+                 }
+            }
+        } // End of 1回戦カード分析ループ
+
+        // 2回戦以降の有力カード予測 (簡易版)
+        if (blockTeams.length >= 4) { // 2回戦が存在する場合
+            for (let j = 0; j < matchupsR1.length; j += 2) {
+                const winner1Match = matchupsR1[j];
+                const winner2Match = matchupsR1[j + 1];
+                if (!winner1Match || !winner2Match) continue; // ペアになる試合がない場合
+
+                // 各1回戦でランクが高い方が勝ち上がると仮定
+                const potentialWinner1 = rankValues[winner1Match.rank1] >= rankValues[winner1Match.rank2] ? winner1Match.team1 : winner1Match.team2;
+                const potentialWinner2 = rankValues[winner2Match.rank1] >= rankValues[winner2Match.rank2] ? winner2Match.team1 : winner2Match.team2;
+
+                // 両方とも有力校なら2回戦の注目カード候補
+                if (strongTeamsInBlock.includes(potentialWinner1) && strongTeamsInBlock.includes(potentialWinner2)) {
+                    potentialR2.push(`${potentialWinner1} vs ${potentialWinner2}`);
+                }
+            }
         }
-        if (teams.length === 64 && blockTeams.length >= 8) {
+        // 3回戦 (64チームトーナメントの場合のみ)
+        if (teams.length === 64 && blockTeams.length >= 8) { // 3回戦が存在する場合
+             // ブロック内のシード校同士が当たる可能性などをリストアップ
              const blockSeeds = strongTeamsInBlock.filter(t => seeds.includes(t));
              if (blockSeeds.length >= 2) {
+                 // 例: ブロック内のシード校 上位2校が当たると予想
                  potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
+             }
+             // 他にも有力校がいれば、シード vs 有力ノーシードなどの組み合わせも予測可能
+             if (blockSeeds.length >= 1 && strongTeamsInBlock.length > blockSeeds.length) {
+                 const topNonSeed = strongTeamsInBlock.find(t => !seeds.includes(t));
+                 if (topNonSeed) {
+                     potentialR3.push(`${blockSeeds[0]} vs ${topNonSeed} (予想)`);
+                 }
              }
         }
 
+        // ブロックの分析結果を格納
         blockData.push({
-            name: blockName, teams: blockTeams, strongTeams: strongTeamsInBlock,
-            matchupsR1: matchupsR1, potentialR2: potentialR2, potentialR3: potentialR3
+            name: blockName,
+            teams: blockTeams,
+            strongTeams: strongTeamsInBlock,
+            matchupsR1: matchupsR1,
+            potentialR2: potentialR2,
+            potentialR3: potentialR3
         });
-    }
+    } // End of ブロック分析ループ
 
+    // --- 分析結果をテキストにまとめる ---
     let blockSummary = '';
-    let crushR1 = [];
-    let goodCardsR2 = [];
-    let goodCardsR3 = [];
+    let crushR1 = []; // 1回戦潰し合いリスト
+    let goodCardsR2 = []; // 2回戦好カードリスト
+    let goodCardsR3 = []; // 3回戦好カードリスト
+
     blockData.forEach(block => {
         blockSummary += `- ${block.name}ブロック: 有力校 ${block.strongTeams.length} (${block.strongTeams.join(', ') || 'なし'})\n`;
         block.matchupsR1.forEach(m => {
-            if (m.isCrush) crushR1.push(`${block.name}: ${m.team1}(${m.rank1}) vs ${m.team2}(${m.rank2})`);
+            if (m.isCrush) { // 潰し合いフラグが立っているカードを追加
+                crushR1.push(`${block.name}: ${m.team1}(${m.rank1}) vs ${m.team2}(${m.rank2})`);
+            }
         });
+        // 2回戦、3回戦の注目カードをブロック名付きで追加
         goodCardsR2.push(...block.potentialR2.map(card => `${block.name}: ${card}`));
         goodCardsR3.push(...block.potentialR3.map(card => `${block.name}: ${card}`));
     });
 
+    // 死のブロックと恵まれたブロックを判定 (有力校数でソート)
     blockData.sort((a, b) => b.strongTeams.length - a.strongTeams.length);
-    const deathBlock = blockData[0];
-    const blessedBlock = blockData[blockData.length - 1];
+    const deathBlock = blockData[0]; // 最も有力校が多いブロック
+    const blessedBlock = blockData[blockData.length - 1]; // 最も有力校が少ないブロック
 
+    // AIに渡すための最終的な分析テキストを生成
     let analysisText = `各ブロックの有力校:\n${blockSummary}`;
     analysisText += `死のブロック: ${deathBlock.name} (${deathBlock.strongTeams.length}校)\n`;
     analysisText += `恵まれたブロック: ${blessedBlock.name} (${blessedBlock.strongTeams.length}校)\n`;
-    if (crushR1.length > 0) analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
-    if (goodCardsR2.length > 0) analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
-    if (goodCardsR3.length > 0) analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
+    if (crushR1.length > 0) {
+        analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
+    } else {
+        analysisText += `1回戦での有力校同士の直接対決はなし。\n`;
+    }
+    if (goodCardsR2.length > 0) {
+        analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
+    }
+     if (goodCardsR3.length > 0) {
+        analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
+    }
+    // マニアックな注目カードを分析結果に追加
+    if (nicheMatchups.length > 0) {
+        analysisText += `その他の注目1回戦カード:\n${nicheMatchups.map(nm => `  - ${nm.block}ブロック: ${nm.match} (${nm.reason})`).join('\n')}\n`;
+    }
     // --- 分析ロジックここまで ---
 
     // --- スレッド生成用プロンプト ---
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
-夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを13〜20個**生成してください。
+夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを35〜45個**生成してください。
 
 ### 組み合わせ分析結果サマリー
 ${analysisText}
@@ -4332,6 +4414,9 @@ ${analysisText}
     - 「恵まれたブロック (${blessedBlock.name})」への反応。「△△はクジ運良すぎ」「決勝まで余裕やん」
     - 1回戦での有力校潰し合い (${crushR1.length}件) について。「初戦からこれとか勿体ねえ」「いきなり事実上の決勝かよ」
     - 2, 3回戦で実現しそうな好カード予想について。「□□ vs ◇◇は絶対見たい」「もし実現したら熱いな」
+- **★マニアックな視点 (超重要)★:**
+    - **特定の無名校・中堅校のファンになりきること。** 例えば「熱海」高校のファンとして、初戦の相手「下田」を見て「これワンチャンあるやろ！」「伊豆ダービーきたか」「ここで負けたら目も当てられん」など、**具体的な学校名を挙げて**当事者目線のコメントを**必ず複数**生成してください。
+    - 分析結果にある「その他の注目1回戦カード」に挙げられているような、**下位・中堅校同士の対決**について、「〇〇と△△どっち勝つかな」「ここは潰し合いだな」「正直どうでもいいw」といったコメントも生成してください。
 - **個人的な視点:**
     - 自分の応援するチーム (架空で良い) の組み合わせに対する一喜一憂。「ワイの母校、初戦から強豪で草」「よっしゃ！いけるやん！」
     - シード校や注目校に対するコメント。「王者〇〇のブロック楽すぎ」「△△はノーシードだけど怖いぞ」
@@ -4340,17 +4425,17 @@ ${analysisText}
     - 他のコメントへの安価 (>>) 付きの返信やツッコミ。
     - 全く関係ない野球ネタや時事ネタへの脱線 (少しだけ)。
     - 草 (w) や顔文字 (^^;) などを適度に使う。
-- **スレッドの流れ:** 序盤は組み合わせへの驚き、中盤で各ブロックの分析や予想、終盤は少し脱線しつつ盛り上がる、という自然な流れを意識してください。
+- **スレッドの流れ:** 序盤は組み合わせへの驚き、中盤で各ブロック分析や有力校・マニアックなカードへの言及、終盤は少し脱線しつつ盛り上がる、という自然な流れを意識してください。
 
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {
-  "threadTitle": "（例：【速報】夏の高校野球組み合わせ決定www 死のブロックは〇〇か！？）",
+  "threadTitle": "（例：【速報】夏の高校野球組み合わせ決定www 死のブロックは〇〇！熱海は下田とｗｗｗ）",
   "comments": [
     {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
-    {"personality": "2: 風吹けば名無し", "comment": "（>>1 はえーよw）"},
-    {"personality": "3: 風吹けば名無し", "comment": "（〇〇ブロック地獄で草）"}
-    // ... (合計30〜40個のコメント) ...
+    {"personality": "2: 風吹けば名無し", "comment": "（>>1 うおおおお）"},
+    {"personality": "3: 熱海高校応援民", "comment": "（下田か…！勝てるやろ！）"}
+    // ... (合計35〜45個のコメント) ...
   ]
 }`;
 
@@ -4358,36 +4443,41 @@ ${analysisText}
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
+        // AIからの応答があるかチェック
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const rawText = result.candidates[0].content.parts[0].text;
+            // 応答テキストからJSONを抽出
             const bbsJson = parseJsonFromText(rawText);
+            // JSONが期待する形式 (タイトルとコメント配列を持つオブジェクト) かチェック
             if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
-                // 成功：スレッドタイトルとコメント配列を含むオブジェクトを返す
+                // 成功：スレッドオブジェクトを生成して返す
                 return {
                     id: `bracket-thread-${Date.now()}`, // スレッド固有ID
                     title: bbsJson.threadTitle,
                     matchId: 'bracket', // 試合IDの代わりに'bracket'などを設定
                     comments: bbsJson.comments.map((c, index) => ({ // 個々のコメントにIDなどを付与
                         id: crypto.randomUUID(),
-                        personality: c.personality || `${index + 1}: 風吹けば名無し`,
+                        personality: c.personality || `${index + 1}: 風吹けば名無し`, // personalityがなければデフォルト値
                         text: c.comment,
                         timestamp: Date.now() + index * 10, // タイムスタンプを少しずらす
-                        replies: []
+                        replies: [] // 返信用の空配列
                     })),
-                    timestamp: Date.now()
+                    timestamp: Date.now() // スレッド作成日時
                 };
             }
         }
+        // AIの応答が期待した形式でなかった場合、エラーを投げる
         throw new Error("AIからの応答が、正しいスレッド形式ではありません。");
     } catch (error) {
+        // エラーが発生した場合の処理
         console.error("AI組み合わせ反応スレッドの生成に失敗しました:", error);
-        // エラー：エラー情報を含むオブジェクトを返す
+        // エラー情報を含むオブジェクトを返す
         return {
             error: true,
             title: "組み合わせスレッド生成エラー",
-            body: "AIによるスレッド生成に失敗しました。",
+            body: "AIによるスレッド生成に失敗しました。", // エラーメッセージ
             timestamp: Date.now(),
-            errorId: `bracket-thread-error-${Date.now()}`
+            errorId: `bracket-thread-error-${Date.now()}` // エラー識別用ID
         };
     }
 }
@@ -9673,15 +9763,23 @@ async function processMatchWin(matchId, winnerName) {
         // エラーでないコメントのみを取得
         const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
 
+        
         // ▼▼▼ ここを修正 ▼▼▼
-        if (validComments.length > 0) {
-            // スレッドオブジェクト全体ではなく、個々のコメントを展開して追加する
-            tournamentState.bbsComments.push(...validComments);
+        // スレッドオブジェクトとして bbsComments に追加する
+        if (!generatedComments.error && validComments.length > 0) { // AI自体がエラーでなく、有効なコメントがあれば
+             tournamentState.bbsComments.push({
+                 id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
+                 title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
+                 matchId: matchId, //どの試合のスレかわかるように
+                 comments: validComments, //AIが生成したコメント配列
+                 timestamp: Date.now()
+             });
         }
         // ▲▲▲ 修正ここまで ▲▲▲
 
+
         // エラーがあった場合の処理 (変更なし)
-        const errorCommentData = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
+       
          if (errorCommentData && errorCommentData.context) { // contextがあるエラーのみ処理
              tournamentState.news.push({
                  title: generatedComments.title || "掲示板コメント生成エラー", // エラータイトルにはスレッドタイトルを使う
