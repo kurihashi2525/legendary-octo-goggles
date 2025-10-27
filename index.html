@@ -2623,19 +2623,21 @@ async function generateGameMatchBbsComments(matchContext) {
     const loserRank = calculateRank(loserName, tournamentState);
 
     // ★★★ ここからが修正箇所 ★★★
-    // 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
-    let nextOpponentText = '次の相手は未定やな。'; // デフォルト (なんJ風の語尾)
-    if (nextOpponent) {
-        // パターン1: 対戦相手が決まっている場合
-        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})か。`;
-        }
-        // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
-        else if (nextOpponent.decidingMatch) {
-            const dm = nextOpponent.decidingMatch;
-            nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者やな。`;
-        }
-    }
+ let nextOpponentText = '次の対戦相手は未定。'; // デフォルト
+        if (nextOpponent) {
+            // パターン1: 対戦相手が決まっている場合
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(${nextOpponent.opponentRank}ランク)と対戦する。`;
+            } 
+            // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
+            else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者と対戦する。`;
+            }
+            // パターン3: それ以外の未定の場合 (この場合はデフォルトのまま)
+        }
+
+ 
     const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney)
         ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。`
         : '';
