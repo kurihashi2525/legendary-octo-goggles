@@ -2606,15 +2606,14 @@ async function generateMatomeSiteHtml() {
 
 
 /**
- * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★善戦評価ロジック・最終版）
+ * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる（★ラウンド情報・軌跡を強く意識させる最終版）
  */
 async function generateGameMatchBbsComments(matchContext) {
     // contextから必要な基本情報を取り出す
-    const { winnerName, loserName, dbMatch, playerStatsText, playByPlayText, winnerJourney, loserJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext;
-    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    const { winnerName, loserName, dbMatch, matchId, /* ← matchId を使う */ playerStatsText, rawBattingResults, winnerJourney, /* ← winnerJourney を使う */ loserJourney, nextOpponent, nextOpponentJourney, winnerLineupChanges, loserLineupChanges } = matchContext; // matchId と winnerJourney を受け取る
 
-    // ★★★ ここからが修正箇所 ★★★
-    // この関数内で、プロンプトに必要な情報を改めて生成する
+    // スコア、チーム情報、ランクなどを準備
+    const score = `${dbMatch.score1}-${dbMatch.score2}`;
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
     const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
@@ -2622,28 +2621,19 @@ async function generateGameMatchBbsComments(matchContext) {
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
 
-    // ★★★ ここからが修正箇所 ★★★
- let nextOpponentText = '次の対戦相手は未定。'; // デフォルト
-        if (nextOpponent) {
-            // パターン1: 対戦相手が決まっている場合
-            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-                nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}(${nextOpponent.opponentRank}ランク)と対戦する。`;
-            } 
-            // パターン2: 対戦相手は未定だが、どの試合の勝者と当たるか分かっている場合
-            else if (nextOpponent.decidingMatch) {
-                const dm = nextOpponent.decidingMatch;
-                nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者と対戦する。`;
-            }
-            // パターン3: それ以外の未定の場合 (この場合はデフォルトのまま)
-        }
+    // 次戦相手情報を準備
+    let nextOpponentText = '次の相手は未定やな。'; // デフォルト (なんJ風の語尾)
+    if (nextOpponent) {
+        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})か。`;
+        } else if (nextOpponent.decidingMatch) {
+            const dm = nextOpponent.decidingMatch;
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者やな。`;
+        }
+    }
+    const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` : '';
 
- 
-    const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney)
-        ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。`
-        : '';
-    // ★★★ 修正箇所はここまで ★★★
-
-    // ★★★ 生データの説明を追加 ★★★
+    // 生の打席結果データを準備
     let rawResultsDescription = '詳細な打席ごとのデータはありません。';
     if (matchContext.rawBattingResults) { // matchContextからrawBattingResultsを参照
         rawResultsDescription = `
@@ -2655,17 +2645,47 @@ async function generateGameMatchBbsComments(matchContext) {
 - team1 (${dbMatch.team1}): ${JSON.stringify(matchContext.rawBattingResults.team1)}
 - team2 (${dbMatch.team2}): ${JSON.stringify(matchContext.rawBattingResults.team2)}`;
     }
-    // ★★★ ここまで追加 ★★★
 
+    // ▼▼▼ ラウンド情報を抽出 ▼▼▼
+    let roundName = "不明なラウンド";
+    let currentRoundNumber = 0; // ラウンド番号も保持
+    if (matchId && matchId.includes('-R')) {
+        const roundNum = parseInt(matchId.split('-')[1].slice(1));
+        currentRoundNumber = roundNum; // ラウンド番号を保存
+        const finalRound = tournamentState.is16team ? 4 : 6; // 大会規模で最終ラウンドを判定
+        const roundNameMap = {
+            [finalRound]: '決勝',
+            [finalRound-1]: '準決勝',
+            [finalRound-2]: '準々決勝',
+            // 他のラウンド名は数字で表示するため、マップからは削除
+        };
+         // 春季大会2回戦以降のラウンド名調整 (is16team で判定)
+         if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards') {
+             const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+             roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
+         }
+         // 秋季・春季の地区予選/県大会1回戦
+         else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
+         else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
+         // それ以外 (夏大会 or 秋/春の県大会本戦)
+         else roundName = roundNameMap[roundNum] || `${roundNum}回戦`; // マップにあればそれ、なければ数字
+    } else if (matchId === 'bracket') {
+        roundName = "組み合わせ決定時";
+    }
+    // ▲▲▲ ラウンド情報ここまで ▲▲▲
 
     const prompt = `あなたは、静岡県の高校野球を長年見続けている、なんJの玄人野球ファンです。あなたは特に「背番号」が持つ意味に詳しく、選手の背景を深く読み解きます。
-以下の試合データを多角的に分析し、玄人たちのリアルな会話を30個前後生成してください。
+以下の試合データを多角的に分析し、玄人たちのリアルな会話を35個前後生成してください。
+
+### 現在の試合状況
+- **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
+- **ラウンド:** ${roundName} (${matchId}) // ラウンド名と matchId を併記
 
 ### 参考情報：高校野球における背番号の意味
-- **[#1]**: チームの絶対的エース投手。
-- **[#2-9]**: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
-- **[#10], [#11]**: エースに次ぐ控え投手。
-- **[#12]以降**: 控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれる。
+- [#1]: チームの絶対的エース投手。
+- [#2-9]: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
+- [#10], [#11]: エースに次ぐ控え投手。
+- [#12]以降: 控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれる。
 
 ### データ1：前試合からのスタメン変更
 - **${winnerName}**: ${winnerLineupChanges || '情報なし'}
@@ -2687,33 +2707,32 @@ ${playerStatsText || '詳細な個人成績データはありません。'}
 ${rawResultsDescription}
 
 ### 参考情報：トーナメント全体の状況
-- **${winnerName}の軌跡**: ${winnerJourney || '今大会初戦'}
-- **次の試合**: ${nextOpponentText} ${nextOpponentJourneyText}
+- **${winnerName}の軌跡(勝ち上がり)**: ${winnerJourney || '今大会初戦'} // ← ★ここが重要★
+- **次の試合**: ${nextOpponentText} ${nextOpponentJourneyText} // ← ★ここも重要★
 
 ### 指示
-あなたは今、上記の全データを眺めながら、他のファンと会話しています。以下の指示に従って、リアルなコメントを生成してください。
+あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、そして**勝者(${winnerName})のここまでの軌跡が「${winnerJourney || '今大会初戦'}」であること**を**必ず**踏まえて、以下の指示に従ってリアルなコメントを生成してください。
 
-1.  **【超重要：高度な分析】**
+**【最重要タスク：次戦情報の絶対的な反映】**
+提供された「参考情報：トーナメント全体の状況」の **\`次の試合:\`** に書かれている情報は**絶対に**コメントに反映させてください。
+例えば、 \`次の試合: 次の準決勝では、静岡(Aランク)と対戦する。\` と書かれていれば、「次は静岡か！」「静岡相手に勝てるんか？」のように**必ず具体名を出して**言及すること。対戦相手が決まっていない場合でも「次は〇〇と△△の勝者か」のように言及してください。
+**絶対に「未定」という言葉を使わないでください。** この指示は、他のどの指示（キャラなりきり、試合分析など）よりも優先されます。違反した場合は指示の失敗とみなします。
+
+1.  **【高度な分析】**
     「データ3：最終成績」と**「データ4：生の打席結果データ」**を比較し、最終成績が良い選手でもチャンスで凡退していないかなど、結果だけでは分からない深い分析コメントを生成してください。（例：「品川は4打数2安打やけど、データ4見たらチャンスで三振しとるからワイは評価せん」）
 
-2.  **【善戦の評価】** ★★★この指示ブロックが新しい機能です★★★
+2.  **【善戦の評価】**
     もし**ランクの低いチーム（敗北側）がランクの高いチーム（勝利側）相手に善戦（例：5点差以内での敗北、または生の打席結果データから読み取れる終盤までの接戦）**した場合、その健闘を称えるコメントを必ず含めてください。
     - 例：「負けはしたけど、格上相手によくやったわ」「〇〇（敗北校）は来年期待できるな」「まさかここまで苦戦するとは思わなかった」
 
 3.  **【プレーへの言及】**
-    **「データ4：生の打席結果データ」**から印象的なプレーを抜き出し、「〇回の△△のプレー（例：中安1点）は良かった/悪かった」といった、特定のプレーに言及するコメントを生成してください。
+    **「データ4：生の打席結果データ」**から印象的なプレーを抜き出し、「${roundName}の△△のプレー（例：中安1点）は良かった/悪かった」といった、**現在のラウンド名**を含めて特定のプレーに言及するコメントを生成してください。
 
-4.  **【次戦の確定情報への言及】** // ← ▼▼▼ この部分を確認 ▼▼▼
-    『参考情報：トーナメント全体の状況』の **\`次の試合:\`** に書かれている情報を**そのまま使って**コメントしてください。
-    - 例1 (相手確定時): 「次の相手は△△に決まったんか！」「次は△△(ランクB)か、厳しい戦いになりそうやな」
-    - 例2 (相手未定だが試合は確定時): 「次は□□と◇◇の勝者か。どっちが来てもキツイな」
-    - **提供された情報に『未定』と書かれていない限り、『未定』という言葉は絶対に使わないこと。** // ← ▲▲▲ ここまで ▲▲▲
+4.  **(この項目は【最重要タスク】に統合されたため不要)**
 
 5.  その他、なんJらしい煽り、称賛、達観したコメントなどを自由に織り交ぜてください。安価（>>）を使った会話も必ず含めてください。
 
 6. ランク名をそのまま使うのではなく、eランクは無名校、dランクは挑戦校、cランクは中堅校、bランクは強豪校、Aランクは名門校と言い換えてください。
-
-7. #は背番号と言い換えてください。(#1→背番号1)
 
 ### 出力形式【最重要】
 解説や前置きは一切不要です。必ず以下のJSON形式"のみ"で出力してください。
@@ -2725,7 +2744,7 @@ ${rawResultsDescription}
   ]
 }`;
 
-    // AIへのリクエスト部分は変更なし
+    // --- AIへのリクエスト部分は変更なし ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -2733,24 +2752,38 @@ ${rawResultsDescription}
             const rawText = result.candidates[0].content.parts[0].text;
             const bbsJson = parseJsonFromText(rawText);
             if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
+                // 成功：スレッドオブジェクトを生成して返す
                 return {
+                    id: `thread-${matchId}-${Date.now()}`, // スレッド固有ID
                     title: bbsJson.threadTitle,
-                    comments: bbsJson.comments.map(c => ({
+                    matchId: matchId, //どの試合のスレかわかるように
+                    comments: bbsJson.comments.map((c, index) => ({ // 個々のコメントにIDなどを付与
                         id: crypto.randomUUID(),
-                        personality: c.personality,
+                        personality: c.personality || `${index + 1}: 風吹けば名無し`,
                         text: c.comment,
-                        timestamp: Date.now()
-                    }))
+                        timestamp: Date.now() + index * 10,
+                        replies: []
+                    })),
+                    timestamp: Date.now()
                 };
             }
         }
-        throw new Error("AI response format error.");
+        // AIの応答が期待した形式でなかった場合、エラーを投げる
+        throw new Error("AIからの応答が、正しいスレッド形式ではありません。");
     } catch (error) {
+        // エラーが発生した場合の処理
         console.error("AI game match BBS generation failed:", error);
-        return null;
+        // エラー情報を含むオブジェクトを返す
+        return {
+            error: true,
+            title: "掲示板コメント生成エラー",
+            body: "AIによるコメント生成に失敗しました。", // エラーメッセージ
+            timestamp: Date.now(),
+            errorId: `error-${matchId}-bbs`, // エラー識別用ID
+            context: matchContext // 再生成のために context を保存
+        };
     }
 }
-
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -5125,6 +5158,8 @@ function renderBbsComments(threads) { // 引数名を threads に変更
 // 微調整（例：トップレベルコメントのスタイル調整など）は必要になる可能性があります。
 // 特に、返信機能 (`.reply-btn` や `.reply-form`) がスレッド構造内で
 // 正しく動作するか（親コメントIDの特定など）の確認は重要です。
+
+
     function renderDaiyaBbsComments(comments) {
         if (!comments || comments.length === 0) {
             daiyaBbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
@@ -9762,23 +9797,24 @@ async function processMatchWin(matchId, winnerName) {
         = await Promise.all([articlePromise, commentsPromise]);
 
     if (generatedComments) {
-        // エラーでないコメントのみを取得
-        const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
+         // エラーでないコメントのみを取得
+         const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
+         const errorCommentData = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
 
-        
-        // ▼▼▼ ここを修正 ▼▼▼
-        // スレッドオブジェクトとして bbsComments に追加する
-        if (!generatedComments.error && validComments.length > 0) { // AI自体がエラーでなく、有効なコメントがあれば
-             tournamentState.bbsComments.push({
-                 id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
-                 title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
-                 matchId: matchId, //どの試合のスレかわかるように
-                 comments: validComments, //AIが生成したコメント配列
-                 timestamp: Date.now()
-             });
-        }
-        // ▲▲▲ 修正ここまで ▲▲▲
-
+         // ▼▼▼ ここを再確認・修正 ▼▼▼
+         // スレッドオブジェクトとして bbsComments に追加する
+         // AI自体がエラーオブジェクトを返しておらず、かつ有効なコメントが1つ以上ある場合
+         if (!generatedComments.error && validComments.length > 0) {
+              // この形式で push されているか確認
+              tournamentState.bbsComments.push({
+                  id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
+                  title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
+                  matchId: matchId, //どの試合のスレかわかるように
+                  comments: validComments, // AIが生成したコメント配列
+                  timestamp: Date.now()
+              });
+         }
+         // ▲▲▲ 修正ここまで ▲▲▲
 const errorCommentData = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null; // エラーコメントを探す
          // ★★★ 復活させる行ここまで ★★★
 
