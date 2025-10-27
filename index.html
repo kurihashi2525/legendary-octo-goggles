@@ -9330,7 +9330,9 @@ function createHighlightsText(dbMatch, winnerName) {
         }
     } // teamKey loop の終わり
     // ▲▲▲ 投手成績のハイライト生成ここまで ▲▲▲
-    // --- 3. 試合全体の物語性を分析し、総括ハイライトを生成 ---
+  
+
+  // --- 3. 試合全体の物語性を分析し、総括ハイライトを生成 ---
     let summaryHighlight = null; // 総括ハイライトを入れる変数
     // 勝者と敗者の最終スコアを取得 (parseIntで数値に変換、失敗時は0)
     const winnerScore = parseInt(dbMatch[winningTeamKey === 'team1' ? 'score1' : 'score2'] || 0);
@@ -9375,34 +9377,89 @@ function createHighlightsText(dbMatch, winnerName) {
         }
     }
 
-    // --- 試合内容に応じたサマリーハイライトを決定 ---
-    if (isSayonara) {
+// ▼▼▼ 新しい判定ロジック ▼▼▼
+    let mvpPlayer = null; // 活躍した選手名
+    let mvpPerformance = ''; // 活躍内容
+
+    // 1. 勝利チームの打者MVP判定
+    const winnerBattingStats = dbMatch.details.playerGameStats?.[winningTeamKey] || {};
+    for (const playerName in winnerBattingStats) {
+        const stats = winnerBattingStats[playerName];
+        if (!stats || !stats.played) continue; // 試合に出ていない選手は除く
+        if (stats.hr >= 2) { mvpPlayer = playerName; mvpPerformance = `${stats.hr}本塁打`; break; }
+        if (stats.rbi >= 4) { mvpPlayer = playerName; mvpPerformance = `${stats.rbi}打点`; break; }
+        if (stats.h >= 4) { mvpPlayer = playerName; mvpPerformance = `${stats.h}安打`; break; }
+        // 決勝打などの判定はより複雑になるため、ここでは安打数/本塁打/打点で判定
+    }
+
+    // 2. 勝利チームの投手MVP判定 (打者MVPがいなければ)
+    const winnerPitchingData = dbMatch.details.pitching?.[winningTeamKey] || [];
+    if (!mvpPlayer && winnerPitchingData.length > 0) {
+        winnerPitchingData.forEach(pitcher => {
+            if (!pitcher.name || !pitcher.innings) return;
+            const innings = parseFloat(pitcher.innings);
+            const earnedRuns = parseInt(pitcher.earnedRuns || 0);
+            const strikeouts = parseInt(pitcher.strikeouts || 0);
+            const runs = parseInt(pitcher.runs || 0); // 失点も考慮
+
+            if (pitcher.result === 'W') { // 勝利投手のみ
+                 if (runs === 0 && innings >= 7) { // 7回以上完封
+                     mvpPlayer = pitcher.name; mvpPerformance = `完封勝利`;
+                 } else if (strikeouts >= 10 && innings >= 6) { // 6回以上投げ10奪三振以上
+                     mvpPlayer = pitcher.name; mvpPerformance = `${strikeouts}奪三振の快投`;
+                 } else if (innings >= 6 && earnedRuns <= 1) { // 6回以上自責点1以下 (HQS相当)
+                      mvpPlayer = pitcher.name; mvpPerformance = `好投で試合を作る`;
+                 }
+            }
+             // リリーフ投手の好投も判定できる (例: 複数イニング無失点セーブなど)
+             else if (pitcher.result === 'S' && innings >= 2 && earnedRuns === 0) {
+                  mvpPlayer = pitcher.name; mvpPerformance = `好リリーフで試合を締める`;
+             }
+        });
+    }
+
+    // 3. 継投成功判定 (MVPがいなければ)
+    let isRelaySuccess = false;
+    if (!mvpPlayer && winnerPitchingData.length > 1) {
+        // 合計自責点が少ない (例: 9回投げて3点以下) かつ 勝利
+        const totalER = winnerPitchingData.reduce((sum, p) => sum + parseInt(p.earnedRuns || 0), 0);
+        const totalIP = winnerPitchingData.reduce((sum, p) => sum + parseFloat(p.innings || 0), 0);
+        // 9イニング換算の自責点が3.00未満くらいを目安にするか、単純に合計自責点が2点以下など
+        if (totalER <= 2 && totalIP >= (numInnings - 1)) { // ほぼ試合全体を投げて自責点2以下
+            isRelaySuccess = true;
+        }
+        // 他にも、リードを守り切った、ピンチを切り抜けたなどの判定を追加可能
+    }
+    // ▲▲▲ 新しい判定ロジックここまで ▲▲▲
+
+   // --- 試合内容に応じたサマリーハイライトを決定 (★優先順位変更★) ---
+    if (mvpPlayer) {
+        // 個人活躍を最優先
+        summaryHighlight = { type: 'summary', description: `${mvpPlayer}の${mvpPerformance}の活躍で、${winnerName}が勝利を掴んだ` };
+    } else if (isRelaySuccess) {
+        // 次に継投成功
+        summaryHighlight = { type: 'summary', description: `${winnerName}投手陣が${loserName}打線を${loserScore}失点に抑える見事な継投策で勝利` };
+    } else if (isSayonara) {
+        // 以下、既存の判定
         summaryHighlight = { type: 'summary', description: `劇的なサヨナラ勝ちで、${winnerName}が熱戦に終止符を打った` };
     } else if (winnerScoreAfter6th < loserScoreAfter6th && winnerScore > loserScore && numInnings >= 7) {
-        // 6回終了時点で負けていて、最終的に勝った場合 (7回以降の試合)
-        summaryHighlight = { type: 'summary', description: `${winnerName}が終盤に見事な逆転劇を演じ、勝利を掴んだ` }; // 表現変更
+        summaryHighlight = { type: 'summary', description: `${winnerName}が終盤に見事な逆転劇を演じ、勝利を掴んだ` };
     } else if (totalRuns <= 5 && totalHits <= 12) {
-        // 合計点が5点以下 かつ 合計ヒットが12本以下の場合 (ロースコア)
-        summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点に終わる、息詰まる投手戦となった` }; // 表現変更
+        summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点に終わる、息詰まる投手戦となった` };
     } else if (totalRuns >= 13 && totalHits >= 20) {
-        // 合計点が13点以上 かつ 合計ヒットが20本以上の場合 (ハイスコア)
-        summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点が乱れ飛ぶ、壮絶な打撃戦となった` }; // 表現変更
+        summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点が乱れ飛ぶ、壮絶な打撃戦となった` };
     } else if (winnerScore - loserScore >= 7) {
-        // 7点差以上ついた場合 (大差)
-        summaryHighlight = { type: 'summary', description: `${winnerName}が投打に相手を圧倒し、${winnerScore}-${loserScore}で快勝した` }; // 表現変更
+        summaryHighlight = { type: 'summary', description: `${winnerName}が投打に相手を圧倒し、${winnerScore}-${loserScore}で快勝した` };
     } else if (winnerScore - loserScore <= 2) {
-        // 2点差以内の場合 (接戦)
-        summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}の粘り強い追撃を振り切り、${winnerScore}-${loserScore}で接戦を制した` }; // 表現変更
+        summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}の粘り強い追撃を振り切り、${winnerScore}-${loserScore}で接戦を制した` };
     } else {
-        // 上記のいずれにも当てはまらない場合 (中差など)
-        summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}を下し、${winnerScore}-${loserScore}で勝利した` }; // シンプルな表現
+        summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}を下し、${winnerScore}-${loserScore}で勝利した` };
     }
 
     // 決定したサマリーハイライトがあれば、highlights配列の先頭に追加
     if (summaryHighlight) {
         highlights.unshift(summaryHighlight);
     }
-
     // --- 4. 結果を返す ---
     return { highlights: highlights, keyPlayerNames: Array.from(keyPlayerNames) };
 }
