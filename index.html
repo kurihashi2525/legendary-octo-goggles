@@ -5105,60 +5105,78 @@ function renderNews(news) {
     
 
 /**
- * 掲示板のコメント（スレッド形式対応）を描画する
+ * 掲示板のコメント（スレッド形式と個別コメント形式の両方に対応）を描画する
  */
-function renderBbsComments(threads) { // 引数名を threads に変更
-    if (!threads || threads.length === 0) {
+function renderBbsComments(items) { // 引数名を items に変更
+    if (!items || items.length === 0) {
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">まだ反応はありません。</p>`;
         return;
     }
     bbsCommentsContainer.innerHTML = ''; // コンテナをクリア
 
-    // 新しいスレッドが上に来るように逆順で処理
-    threads.slice().reverse().forEach((thread, reversedIndex) => {
-        // スレッドオブジェクトか、古い形式のエラーオブジェクトかを判定
-        if (thread.error && !thread.comments) { // 古いエラー形式の場合
-            const originalIndex = threads.length - 1 - reversedIndex;
+    // 新しいアイテムが上に来るように逆順で処理
+    items.slice().reverse().forEach((item, reversedIndex) => {
+        const originalIndex = items.length - 1 - reversedIndex;
+
+        // A. エラーオブジェクトの場合 (titleを持つ形式)
+        if (item.error && item.title) {
             const errorEl = document.createElement('div');
-            errorEl.className = 'article-error'; // 記事のエラースタイルを流用
+            errorEl.className = 'article-error mb-4'; // マージン追加
             errorEl.innerHTML = `
-                <span>${thread.title || '掲示板コメント生成エラー'}</span>
-                ${thread.context ? `<button class="retry-bbs-btn" data-index="${originalIndex}">再生成</button>` : ''}
+                <span>${item.title}</span>
+                ${item.context ? `<button class="retry-bbs-btn" data-index="${originalIndex}" data-type="error-object">再生成</button>` : ''}
             `;
             bbsCommentsContainer.appendChild(errorEl);
-        } else if (thread.comments && Array.isArray(thread.comments)) { // スレッドオブジェクトの場合
+        }
+        // B. スレッドオブジェクトの場合 (組み合わせ決定スレなど title と comments を持つ)
+        else if (item.comments && Array.isArray(item.comments) && item.title) {
             const threadWrapper = document.createElement('div');
-            threadWrapper.className = 'mb-6 p-4 border rounded-lg bg-white shadow'; // スレッド全体を囲むスタイル
+            threadWrapper.className = 'mb-6 p-4 border rounded-lg bg-white shadow';
 
-            // スレッドタイトルを表示
             const titleEl = document.createElement('h3');
             titleEl.className = 'text-lg font-bold text-gray-800 mb-3 border-b pb-2';
-            titleEl.textContent = `【${thread.matchId === 'bracket' ? '組み合わせ決定' : '試合結果'}】${thread.title}`;
+            titleEl.textContent = `【${item.matchId === 'bracket' ? '組み合わせ決定' : '試合結果'}】${item.title}`;
             threadWrapper.appendChild(titleEl);
 
             const commentsContainer = document.createElement('div');
-            commentsContainer.className = 'space-y-3'; // コメント間のスペース
+            commentsContainer.className = 'space-y-3';
 
-            // スレッド内のコメントを描画 (既存のrenderCommentThreadを流用)
-            thread.comments.forEach(comment => {
-                // 注意: renderCommentThread は replies を再帰的に描画するため、
-                // ここではトップレベルのコメントのみを渡す
+            // スレッド内のコメントを描画
+            item.comments.forEach(comment => {
                 renderCommentThread(comment, commentsContainer, 'general');
             });
 
             threadWrapper.appendChild(commentsContainer);
             bbsCommentsContainer.appendChild(threadWrapper);
         }
-        // それ以外の予期せぬデータは無視
+        // C. 個別のコメントオブジェクトの場合 (試合後の反応など personality と text を持つ)
+        else if (item.personality && item.text) {
+            // 個別コメントはスレッド枠なしで直接描画
+            renderCommentThread(item, bbsCommentsContainer, 'general');
+            // 個別コメント間に区切り線などを入れても良いかも
+            const hr = document.createElement('hr');
+            hr.className = 'my-3 border-gray-200';
+            bbsCommentsContainer.appendChild(hr);
+        }
+        // D. その他の予期せぬデータ
+        else {
+             console.warn("Unknown item type in bbsComments:", item);
+             const unknownEl = document.createElement('div');
+             unknownEl.className = 'text-red-500 text-sm my-2';
+             unknownEl.textContent = '[不明な掲示板データ]';
+             bbsCommentsContainer.appendChild(unknownEl);
+        }
     });
+
+     // 最後の区切り線を削除 (個別コメントが最後だった場合)
+     const lastElement = bbsCommentsContainer.lastElementChild;
+     if (lastElement && lastElement.tagName === 'HR') {
+         bbsCommentsContainer.removeChild(lastElement);
+     }
 }
 
-// renderCommentThread 関数自体は、個々のコメントとその返信を描画するため、
-// 大きな変更は不要かもしれませんが、呼び出し元が変わったことによる
-// 微調整（例：トップレベルコメントのスタイル調整など）は必要になる可能性があります。
-// 特に、返信機能 (`.reply-btn` や `.reply-form`) がスレッド構造内で
-// 正しく動作するか（親コメントIDの特定など）の確認は重要です。
-
+// renderCommentThread 関数は個別のコメントを描画するため、基本変更不要
+// function renderCommentThread(comment, container, bbsType) { ... }
 
     function renderDaiyaBbsComments(comments) {
         if (!comments || comments.length === 0) {
@@ -9791,55 +9809,49 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
 
-
-    // --- 5. AIコンテンツの処理と最終的な画面更新 ---
+// --- 5. AIコンテンツの処理と最終的な画面更新 ---
     const [generatedArticle, generatedComments] // generatedComments は { title: "...", comments: [...] }
         = await Promise.all([articlePromise, commentsPromise]);
 
     if (generatedComments) {
-         // エラーでないコメントのみを取得
-         const validComments = generatedComments.comments ? generatedComments.comments.filter(comment => !comment.error) : [];
-         const errorCommentData = generatedComments.comments ? generatedComments.comments.find(comment => comment.error) : null;
-
-         // ▼▼▼ ここを再確認・修正 ▼▼▼
-         // スレッドオブジェクトとして bbsComments に追加する
-         // AI自体がエラーオブジェクトを返しておらず、かつ有効なコメントが1つ以上ある場合
-         if (!generatedComments.error && validComments.length > 0) {
-              // この形式で push されているか確認
-              tournamentState.bbsComments.push({
-                  id: `thread-${matchId}-${Date.now()}`, // スレッド固有のID
-                  title: generatedComments.title || `【試合結果】${winnerName} vs ${loserName}`,
-                  matchId: matchId, //どの試合のスレかわかるように
-                  comments: validComments, // AIが生成したコメント配列
-                  timestamp: Date.now()
-              });
-         }
-         // ▲▲▲ 修正ここまで ▲▲▲
-
-         // ★★★ 復活させる行ここまで ★★★
-
-        // エラーがあった場合の処理 (変更なし)
-       
-         if (errorCommentData && errorCommentData.context) { // contextがあるエラーのみ処理
-             tournamentState.news.push({
-                 title: generatedComments.title || "掲示板コメント生成エラー", // エラータイトルにはスレッドタイトルを使う
-                 body: "AIによる掲示板コメントの生成に失敗しました。",
-                 timestamp: Date.now(),
-                 error: true,
-                 errorId: `error-${matchId}-bbs`, // エラーID
-                 context: errorCommentData.context // 再生成用コンテキスト
-             });
-         } else if (generatedComments.error) { // generatedComments自体がエラーオブジェクトの場合
-              tournamentState.news.push({
-                 title: "掲示板コメント生成エラー",
-                 body: "AIによる掲示板コメントの生成に失敗しました。",
-                 timestamp: Date.now(),
-                 error: true,
-                 errorId: `error-${matchId}-bbs`,
-                 context: generatedComments.context // 再生成用コンテキスト
-             });
-         }
-    }
+      // ▼▼▼ ここを修正 ▼▼▼
+      // AIが配列を返し、かつエラーオブジェクトを含まないかチェック
+      if (Array.isArray(generatedComments) && !generatedComments.some(c => c.error)) {
+          const validComments = generatedComments.filter(comment => !comment.error);
+          if (validComments.length > 0) {
+              // 配列の要素（個々のコメント）を展開して bbsComments に追加
+              tournamentState.bbsComments.push(...validComments);
+          }
+      // AIが配列を返したが、中にエラーオブジェクトが含まれる場合の処理
+      } else if (Array.isArray(generatedComments)) {
+           const errorCommentData = generatedComments.find(comment => comment.error);
+           if (errorCommentData && errorCommentData.context) {
+               tournamentState.news.push({
+                   title: "掲示板コメント生成エラー",
+                   body: "AIによるコメント生成に一部失敗しました。",
+                   timestamp: Date.now(),
+                   error: true,
+                   errorId: `error-${matchId}-bbs-partial`,
+                   context: errorCommentData.context
+               });
+           }
+      // AIがオブジェクト形式のエラーを返した場合 (例: { error: true, ... })
+      } else if (generatedComments.error) {
+           tournamentState.news.push({
+               title: generatedComments.title || "掲示板コメント生成エラー",
+               body: generatedComments.body || "AIによるコメント生成に失敗しました。",
+               timestamp: Date.now(),
+               error: true,
+               errorId: generatedComments.errorId || `error-${matchId}-bbs`,
+               context: generatedComments.context || matchContext // contextがあれば使う
+           });
+      // 予期しない形式の場合
+      } else {
+          console.error("Unexpected format from generateGameMatchBbsComments:", generatedComments);
+          tournamentState.news.push({ title: "掲示板コメント形式エラー", body:"予期しないデータ形式です。", timestamp: Date.now(), error: true });
+      }
+      // ▲▲▲ 修正ここまで ▲▲▲
+  }
 
     // --- 記事の処理 (変更なし) ---
     if (generatedArticle) {
