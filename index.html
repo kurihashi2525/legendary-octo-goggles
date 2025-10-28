@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【最終実装版】AI記者付きトーナメント表</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
  <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -669,6 +670,80 @@
     
 /* 詳細入力テーブル用のスタイル */
 /* 詳細入力テーブル用のスタイル（最終版） */
+
+/* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
+#animation-stage {
+    font-size: 0.75rem; /* 全体の文字サイズを小さめに */
+    transition: background-color 0.5s ease;
+}
+.anim-region, .anim-block, .anim-bracket {
+    border: 1px solid #ccc;
+    background-color: white;
+    padding: 8px;
+    margin: 5px;
+    border-radius: 4px;
+    text-align: center;
+    opacity: 0;
+    transition: all 0.5s ease-in-out;
+    position: relative; /* 子要素の絶対配置基準 */
+}
+.anim-team {
+    display: inline-block;
+    background-color: #e0f2fe; /* blue-100 */
+    border: 1px solid #7dd3fc; /* blue-300 */
+    color: #0c4a6e; /* blue-800 */
+    padding: 2px 5px;
+    margin: 1px;
+    border-radius: 3px;
+    font-weight: 500;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease-in-out;
+}
+.anim-team.seed {
+    background-color: #fef9c3; /* yellow-100 */
+    border-color: #facc15; /* yellow-400 */
+    color: #713f12; /* yellow-900 */
+    font-weight: bold;
+}
+.anim-team.winner {
+    background-color: #dcfce7; /* green-100 */
+    border-color: #4ade80; /* green-400 */
+    color: #14532d; /* green-900 */
+    font-weight: bold;
+}
+.anim-team.loser {
+    background-color: #f1f5f9; /* slate-100 */
+    border-color: #cbd5e1; /* slate-300 */
+    color: #64748b; /* slate-500 */
+    opacity: 0.6 !important;
+    text-decoration: line-through;
+}
+.anim-team.show, .anim-region.show, .anim-block.show, .anim-bracket.show {
+    opacity: 1;
+    transform: scale(1);
+}
+.anim-highlight {
+    box-shadow: 0 0 15px 5px rgba(251, 191, 36, 0.7); /* amber-400 */
+    transform: scale(1.1) !important;
+    z-index: 10;
+}
+.anim-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out 0.5s; /* 少し遅れて表示 */
+}
+.anim-arrow.right {
+    border-left: 8px solid #60a5fa; /* blue-400 */
+}
+.anim-arrow.show {
+    opacity: 1;
+}
+
 .details-table { 
     border-collapse: collapse; 
     font-size: 12px; 
@@ -1025,16 +1100,26 @@
     </div>
 
     <div id="details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="details-modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-            <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">試合詳細入力</h3>
-            <div id="details-modal-body" class="overflow-y-auto space-y-6 flex-grow">
-                </div>
-            <div class="mt-6 text-center border-t pt-4">
-                <button id="details-save" class="bg-blue-600 text-white px-6 py-2 rounded-lg mr-2">この内容で保存</button>
-                <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+    <div class="details-modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">試合詳細入力</h3>
+        <div id="details-modal-body" class="overflow-y-auto space-y-6 flex-grow pr-2"> {/* pr-2 を追加してスクロールバーとの隙間を作る */}
             </div>
+        
+                <div class="mt-6 text-center border-t pt-4">
+            <button id="details-save" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 mr-4">
+                この内容で保存
+            </button>
+            <button id="details-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">
+                キャンセル
+            </button>
         </div>
+               
     </div>
+</div>
+            
+
+
+
     
     <div id="save-load-modal" class="save-load-modal hidden">
         <div class="save-load-modal-content">
@@ -1180,107 +1265,215 @@
 
 <div id="help-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 取扱説明書</h3>
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">AI記者付きトーナメント表 取扱説明書 (Ver. 秋/春対応版)</h3>
         <div class="overflow-y-auto space-y-6 flex-grow pr-4 text-gray-700">
-            
+
             <div>
-                <h4 class="font-bold text-lg text-blue-700 mb-2">はじめに：このゲームの目的</h4>
+                <h4 class="font-bold text-lg text-blue-700 mb-2">はじめに：あなただけの高校野球史を創る</h4>
                 <p class="text-sm">
-                    このシミュレーターの目的は、単にトーナメントを勝ち進めることだけではありません。あなたの采配や入力した試合内容によって、AIが自動でリアルな「ニュース記事」や「掲示板の反応」を生成します。あなただけの、唯一無二の高校野球の物語を創り上げ、その歴史の目撃者となることが、このゲームの醍醐味です。
+                    このシミュレーターの目的は、単に試合の勝ち負けを決めることではありません。あなたの采配や入力した詳細な試合内容に基づき、AIがリアルタイムで「ニュース記事」「掲示板の反応」「まとめサイト風スレッド」、時には「密着ドキュメンタリー」を生成します。夏の甲子園、秋の新チーム、春の選抜へと続く一年間のドラマを通じて、あなただけの唯一無二の高校野球の歴史を創り上げ、その目撃者となることが、このゲームの最大の醍醐味です。
                 </p>
             </div>
 
             <div>
-                <h4 class="font-bold text-lg text-blue-700 mb-2">基本的な遊び方</h4>
+                <h4 class="font-bold text-lg text-blue-700 mb-2">基本的なゲームの流れ</h4>
                 <ol class="list-decimal list-inside space-y-2 text-sm">
-                    <li><strong>トーナメント開始:</strong> 「新しいトーナメントを開始」でゲームを始めます。最初の大会は夏の県大会です。</li>
-                    <li><strong>スコア入力:</strong> トーナメント表の試合カードに、半角数字で最終スコアを入力します。</li>
-                    <li><strong>勝者決定:</strong> スコアを入力したら、勝った方のチームの青い「▶」ボタンを押します。</li>
-                    <li><strong>AIコンテンツ生成:</strong> 勝者が決まると、AIが自動で「ニュース記事」と「掲示板の反応」を生成します。</li>
-                    <li><strong>繰り返し:</strong> 全ての試合でこれを繰り返し、優勝チームを決定してください。「セーブ」ボタンでいつでも進行状況を「合い言葉」として保存できます。</li>
+                    <li><strong>トーナメント開始:</strong> 「新しいトーナメントを開始」ボタンでゲームを始めます。初回は夏の静岡県大会からスタートします。抽選会イベントを経て、組み合わせが決定されます。</li>
+                    <li><strong>スコア入力:</strong> トーナメント表の各試合カードに、半角数字で最終スコアを入力します。</li>
+                    <li><strong>勝者決定:</strong> スコア入力後、勝った方のチームの青い「▶」ボタンを押します。</li>
+                    <li><strong>AIコンテンツ生成:</strong> 勝者が決まると、AIが自動で試合に関する「ニュース記事」や「掲示板の反応」を生成します。（設定でON/OFF可能）</li>
+                    <li><strong>詳細入力 (任意・推奨):</strong> 試合カードの「詳細入力」ボタンから、イニングスコアや個人成績を入力すると、AIが生成する物語のリアリティと深みが格段に向上します。</li>
+                    <li><strong>大会進行:</strong> 全ての試合が終了すると、優勝チームが決定します。夏の大会終了後は自動的に秋の大会へ、秋の後は春へ、春の後は次の年の夏へと進みます。</li>
+                    <li><strong>セーブ＆ロード:</strong> 「セーブ」ボタンでいつでも進行状況を「合い言葉」として保存できます。「再開」ボタンから「合い言葉」を入力すれば、中断したところから再開できます。</li>
                 </ol>
             </div>
-            
+
             <div>
-                <h4 class="font-bold text-lg text-orange-700 mb-2">一年間の流れと各大会のルール</h4>
+                <h4 class="font-bold text-lg text-orange-700 mb-2">【重要】一年間の大会サイクルとルール</h4>
                 <p class="text-sm mb-3">
-                    この世界では、夏の大会が終わると新チームによる秋季大会、そして春季大会へと時間が流れます。それぞれの大会には独自のルールと目的があります。
+                    この世界では、高校野球の一年間（夏→秋→春）が自動で進行します。各大会には異なる目的とルールがあり、それぞれが次の大会のシード権などに影響します。
                 </p>
                 <div class="space-y-4">
-                    <div class="p-4 border rounded-lg bg-gray-50">
-                        <h5 class="font-semibold text-gray-800">夏の大会 (メインイベント)</h5>
-                        <p class="text-sm text-gray-600">3年生にとって最後の大会。64校による一発勝負のトーナメントで、優勝校は夏の甲子園に出場したとみなされ、AIがその全国での戦績をシミュレートします。</p>
+                    <div class="p-4 border rounded-lg bg-yellow-50">
+                        <h5 class="font-semibold text-gray-800">夏の大会 (甲子園への道)</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>3年生にとって最後の大会。64校による一発勝負のトーナメント。</li>
+                            <li>春季大会のベスト8がシード校となります。</li>
+                            <li>優勝校は夏の甲子園に出場したとみなされ、AIがその全国での戦績（例: 全国ベスト8、甲子園初戦敗退など）を自動でシミュレートし、記録します。</li>
+                            <li>大会前には組み合わせ抽選会イベントが発生します。</li>
+                        </ul>
                     </div>
 
-                    <div class="p-4 border rounded-lg bg-gray-50">
-                        <h5 class="font-semibold text-gray-800">秋の大会 (新チームの始まりと、春への道)</h5>
-                        <p class="text-sm text-gray-600 mb-3">1,2年生の新チームで挑む最初の公式戦。この大会の最終成績が、次の春季大会のシード権を決定します。</p>
-                        <pre class="text-xs bg-white p-3 rounded-md border overflow-x-auto">
-秋季大会の流れ (東部・中部・西部地区)
-----------------------------------------------------------------
-[各地区20チーム] → [4ブロックに分割 (各5チーム)] → [ブロック予選]
-                                |
-                                |
-              +-----------------+-----------------+
-              | (各ブロック優勝4チーム)           | (各ブロック準優勝4チーム)
-              ↓                                 ↓
-[上位校トーナメント (1位-4位決定)]     [敗者復活トーナメント (5位決定)]
-              |                                 |
-              +-----------------+-----------------+
-                                |
-                                ↓
-                      [各地区代表5チームが県大会へ] → [計16チームによる県大会本戦]
-
-伊豆地区 (4チーム)
--------------------
-[予選なし] → [直接、県大会本戦へ (1チーム)]
-                        </pre>
+                    <div class="p-4 border rounded-lg bg-purple-50">
+                        <h5 class="font-semibold text-gray-800">秋の大会 (新チーム始動・センバツへの序章)</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>1,2年生の新チームで挑む最初の公式戦。</li>
+                            <li>まず、東部・中部・西部・伊豆の4地区に分かれて地区予選を行います。
+                                <div class="mt-2 mb-2 p-2 bg-purple-100 rounded text-xs border border-purple-300">
+                                    <p class="font-semibold mb-1">地区予選の仕組み:</p>
+                                    <p class="mb-1"><strong>東部・中部・西部地区 (各5枠):</strong></p>
+                                    <pre class="whitespace-pre-wrap leading-tight">
+[地区20チーム]
+    │
+    ├─▶ [ブロックA (5)] ─▶ 優勝 (県) / 準優勝 ┐
+    ├─▶ [ブロックB (5)] ─▶ 優勝 (県) / 準優勝 ┤
+    ├─▶ [ブロックC (5)] ─▶ 優勝 (県) / 準優勝 ┼─▶ [第5代表決定戦 (4)] ─▶ 優勝 (県)
+    └─▶ [ブロックD (5)] ─▶ 優勝 (県) / 準優勝 ┘   (敗者復活)</pre>
+                                    <p class="mt-1"><strong>伊豆地区 (1枠):</strong></p>
+                                    <pre class="whitespace-pre-wrap leading-tight">[伊豆4チーム] ─▶ [トーナメント] ─▶ 優勝 (県)</pre>
+                                </div>
+                            </li>
+                            <li>各地区予選を勝ち抜いた計16チームが県大会本戦 (トーナメント) に進出します。
+                                <div class="mt-2 mb-2 p-2 bg-purple-100 rounded text-xs border border-purple-300">
+                                    <p class="font-semibold mb-1">県大会本戦 (16チーム):</p>
+                                    <pre class="whitespace-pre-wrap leading-tight">
+    ┌─ 東部代表 (5) ┐
+    ├─ 中部代表 (5) ┤
+    ├─ 西部代表 (5) ┼─▶ [県大会 (16チームT)] ─▶ 優勝/準優勝 (センバツ有力)
+    └─ 伊豆代表 (1) ┘                       └─▶ ベスト8以上 (春季シード)</pre>
+                                </div>
+                            </li>
+                            <li>県大会の**優勝・準優勝校**は、春のセンバツ甲子園への出場権を得る可能性があります（AIが確率で判定）。</li>
+                            <li>県大会ベスト8以上の成績を収めると、次の**春季大会のシード権**を獲得できます。</li>
+                        </ul>
                     </div>
 
-                    <div class="p-4 border rounded-lg bg-gray-50">
-                        <h5 class="font-semibold text-gray-800">春の大会 (夏のシード権をかけた戦い)</h5>
-                        <p class="text-sm text-gray-600 mb-3">夏の大会の前哨戦。この大会の結果が、夏の大会のシード校を決定します。</p>
-                        <pre class="text-xs bg-white p-3 rounded-md border overflow-x-auto">
-春季大会の流れ
-----------------------------------------------------------------
-[秋季大会ベスト8 (シード校)] → [県大会2回戦から登場]
-                                               |
-                                               +--> [ベスト16による本戦]
-                                               |
-[それ以外の全チーム] → [地区予選] → [予選突破16チーム] → [県大会1回戦]
-                        </pre>
+                    <div class="p-4 border rounded-lg bg-green-50">
+                        <h5 class="font-semibold text-gray-800">春の大会 (夏のシード権獲得戦)</h5>
+                        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                            <li>夏の大会の前哨戦となる重要な大会。</li>
+                            <li>秋季大会ベスト8のチームはシード校となり、県大会2回戦から登場します。</li>
+                            <li>それ以外の全チームは、まず地区予選に参加し、各地区代表枠 (東5, 中5, 西5, 伊豆1) を争います。</li>
+                            <li>地区予選を突破した16チームが、県大会1回戦で対戦します。</li>
+                            <li>1回戦の勝者8チームが、2回戦で待つシード8チームと対戦します（計16チームによる本戦トーナメント）。</li>
+                            <li>この大会で**ベスト8**以上の成績を収めると、次の**夏の大会のシード権**を獲得できます。
+                                <div class="mt-2 mb-2 p-2 bg-green-100 rounded text-xs border border-green-300">
+                                    <p class="font-semibold mb-1">県大会の仕組み:</p>
+                                    {/* Mermaid Diagram Code Block - Requires Mermaid.js library */}
+                                    <pre><code class="language-mermaid">
+graph TD
+    subgraph 県大会
+        R1[1回戦 (予選突破16チーム)] --> |勝者8チーム| R2
+        subgraph 本戦トーナメント
+            S[シード8チーム (秋ベスト8)] --> R2{2回戦 (16チーム)}
+            R2 --> QF{準々決勝 (ベスト8)}
+            QF --> SF{準決勝 (ベスト4)}
+            SF --> F{決勝}
+        end
+        QF --▶ |夏のシード権獲得| SumSeed(夏の大会シード権)
+    end
+
+    subgraph 地区予選
+        O[シード以外のチーム] --> RegQ{地区予選}
+        RegQ --> |16チーム| R1
+    end
+
+    style S fill:#f9f,stroke:#333,stroke-width:2px
+    style SumSeed fill:#ccf,stroke:#333,stroke-width:2px
+                                    </code></pre>
+                                    <p class="mt-1 text-gray-500">(図の説明) シード校は2回戦から登場。地区予選突破組は1回戦から戦い、勝ち上がるとシード校と対戦。ベスト8以上で夏のシード権獲得。</p>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
 
             <div>
-                <h4 class="font-bold text-lg text-green-700 mb-2">【重要】詳細入力：あなただけの物語を創る</h4>
+                <h4 class="font-bold text-lg text-teal-700 mb-2">【最重要】詳細入力：物語を深化させる鍵</h4>
                 <p class="text-sm mb-3">
-                    このシミュレーターの真価は「詳細入力」にあります。スコアだけでなく、試合内容を細かく入力することで、AIが生成する物語の解像度が劇的に向上します。
+                    試合結果のスコアだけでなく、「詳細入力」を行うことで、AIが生成する記事やコメントの質が劇的に向上し、より深みのある物語が生まれます。面倒でも、ぜひ入力してみてください。
                 </p>
-                <ul class="list-disc list-inside space-y-2 text-sm bg-green-50 p-4 rounded-lg">
-                    <li><strong>イニングスコア:</strong> 試合展開をAIに教えます。「初回に大量得点した試合」と「9回に逆転した試合」では、生成される記事の物語が全く異なります。</li>
-                    <li><strong>個人成績:</strong> その試合の「ヒーロー」をAIに教えます。ここで入力された選手が、記事やハイライトの中心人物となります。</li>
-                    <li><strong>選手交代（出場）:</strong> ドロップダウンから「代打」「代走」「守備」を選ぶことで、監督の采配の意図をAIが理解します。</li>
-                    <li><strong>この回の主な出来事:</strong> 打席結果には現れないプレー（例：盗塁、盗塁死）を入力します。「鈴木 盗塁、佐藤 盗塁死」のように入力してください。</li>
-                    <li><strong>試合の決め手:</strong> トーナメント表のテキストエリアです。ここに「エース〇〇、気迫の150球完投勝利」のように入力すると、AIは他のどの情報よりもこれを**最優先**し、記事全体のテーマにします。</li>
+                <ul class="list-disc list-inside space-y-2 text-sm bg-teal-50 p-4 rounded-lg">
+                    <li><strong>イニングスコア:</strong> 試合展開をAIに伝えます。「初回に大量得点した試合」と「9回に逆転サヨナラした試合」では、生成される記事のドラマ性が全く異なります。延長戦は「+回」ボタンで追加できます。</li>
+                    <li><strong>打撃成績:</strong>
+                        <ul class="list-circle list-inside ml-4 text-xs">
+                            <li>**打席結果:** プルダウンから結果・方向・打点などを選択します。1イニングに複数打席あった場合は「+2打席目を追加」で入力できます。</li>
+                            <li>**走塁:** 「+走者プレーを追加」で盗塁、進塁、走塁死などを入力できます。</li>
+                            <li>**出場:** 代打・代走・守備交代などの情報は、交代選手の活躍を描写する上で重要です。</li>
+                            <li>AIはここでの入力に基づき、その試合のヒーローを特定し、記事の中心人物として描写します。</li>
+                        </ul>
+                    </li>
+                    <li><strong>投手成績:</strong> 投手名、投球回、失点、奪三振などを入力します。先発完投、リリーフ成功、炎上など、投手の活躍や苦闘が記事に反映されます。「+投手を追加」で継投も記録できます。</li>
+                    <li><strong>試合の決め手 (トーナメント表のテキストエリア):</strong> スコア入力欄の下にある小さなテキストエリアです。ここに**最も伝えたい試合のハイライト**（例：「エース〇〇、気迫の150球完投勝利」「伏兵△△のサヨナラ打」など）を簡潔に入力すると、AIは他のどの情報よりもこれを**最優先**し、記事全体のテーマとして扱います。</li>
                 </ul>
+                <p class="text-xs mt-2 text-gray-600">※詳細入力画面の「先攻・後攻を入れ替え」ボタンで、入力内容ごとチームを入れ替えられます。</p>
+                <p class="text-xs mt-1 text-gray-600">※スコア入力欄の横にある「🎲」ボタンで、現在のスコアに基づいてAIがおまかせで詳細内容を自動生成することも可能です。</p>
             </div>
-            
+
             <div>
-                <h4 class="font-bold text-lg text-red-700 mb-2">トラブルシューティング</h4>
+                <h4 class="font-bold text-lg text-indigo-700 mb-2">AIが生成するコンテンツ</h4>
                 <ul class="list-disc list-inside space-y-2 text-sm">
-                    <li><strong>エラーでクラッシュする場合:</strong> ほとんどの原因は、ブラウザに保存されている古いセーブデータと、最新のコードの間に矛盾が生じていることです。コード内の`TEAM_DATA`を編集した後は、**必ず「リセット」ボタンで古いセーブデータを完全に消去してから**「新しいトーナメントを開始」してください。</li>
-                    <li><strong>AIの記事がおかしい/事実と違う:</strong> AIに渡す情報が不足しているか、AIが稀に混乱している可能性があります。まずは「確認・編集」画面で手修正をお試しください。それでも改善しない場合は、詳細入力でより多くの情報（特に敗者チームの打撃成績など）を与えてみてください。</li>
+                    <li><strong>ニュース記事:</strong> 試合結果や大会の展望、時にはスキャンダル疑惑(!)など、様々な記事が自動生成されます。「本文」ボタンで内容を読めます。記事にカーソルを合わせると表示される「再生成」ボタンから、AIに追加指示を与えて記事を書き直させることも可能です（フィードバック機能）。</li>
+                    <li><strong>掲示板の反応:</strong> AIが匿名掲示板のファンになりきり、試合結果やニュースに対してリアルなコメントを生成します。あなたもコメントを投稿でき、AIファンがそれに返信してくれます。</li>
+                    <li><strong>まとめサイト風スレッド:</strong> 「📰 まとめ」ボタンからアクセスできるモーダル内で、現実のニュースとゲーム内の試合結果が混在した、なんJまとめサイト風の表示が楽しめます。各記事をクリックすると、その話題に関するAI生成の掲示板スレッドを読むことができます。</li>
+                    <li><strong>ナムコグループニュース:</strong> 系列校（765総合、283学園など）の試合結果や組み合わせに関する、企業公式発表風のお知らせが表示されることがあります。</li>
+                    <li><strong>スポーツ新聞:</strong> 大会が進むと（準々決勝以降）、AIがその日のハイライトを一面記事にしたスポーツ新聞風のコンテンツを生成することがあります。「新聞を読む」ボタンで表示できます。</li>
+                    <li><strong>密着ドキュメンタリー:</strong> 特定のチーム（強豪、古豪、逆境校など）に焦点を当てたドキュメンタリー記事が生成されることがあります。試合の勝敗に応じて連載形式で物語が進行します。</li>
                 </ul>
             </div>
 
-        </div>
-        <div class="mt-6 text-center border-t pt-4">
+             <div>
+                <h4 class="font-bold text-lg text-pink-700 mb-2">その他の機能</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm">
+                    <li><strong>チームステータス:</strong> トーナメント表のチーム名をクリックすると、そのチームの過去の最高成績や直近の成績、獲得した称号（例：ジャイアントキラー）などを確認できます。</li>
+                    <li><strong>スキップ機能:</strong> 各大会やラウンドごとに用意された「スキップ」ボタンを使うと、試合結果を自動で（ランク差などを考慮して）生成し、大会を高速で進行させることができます。</li>
+                    <li><strong>設定:</strong> 画面右上の「⚙️ 設定」ボタンから、ニュース記事や掲示板コメントの自動生成をON/OFFできます。</li>
+                    <li><strong>抽選会/勢力図分析:</strong> 夏の大会開始時には抽選会イベントが、抽選後には各ブロックの勢力図をAIが分析・解説するアニメーションが表示されます。</li>
+                 </ul>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-lg text-red-700 mb-2">トラブルシューティング</h4>
+                <ul class="list-disc list-inside space-y-2 text-sm">
+                    <li><strong>エラーで動作がおかしくなった / クラッシュする:</strong> 最も多い原因は、ブラウザに保存されている古いセーブデータと、最新版のゲームコードの間で矛盾が生じていることです。**「リセット」ボタンを押して一度完全にデータを消去してから**「新しいトーナメントを開始」すると解決することがほとんどです。開発中の仕様変更後は特にリセットをお試しください。</li>
+                    <li><strong>AIの記事やコメントがおかしい / 事実と違う:</strong> AIに与える情報が不足しているか、AIが稀に勘違いをしている可能性があります。
+                        <ul class="list-circle list-inside ml-4 text-xs">
+                            <li>記事の場合は、「再生成」ボタンからフィードバックを与えてみてください。</li>
+                            <li>思ったような記事にならない場合、詳細入力でより多くの情報（特に敗れたチームの成績や、活躍した選手名）を具体的に入力したり、「試合の決め手」欄を活用したりすると改善されることがあります。</li>
+                        </ul>
+                    </li>
+                     <li><strong>セーブデータ（合い言葉）が読み込めない:</strong> コードが更新されると、古いバージョンの合い言葉は読み込めなくなる場合があります。ご了承ください。</li>
+                </ul>
+            </div>
+
+       </div> <div id="tournament-animation-section" class="mt-6 border-t pt-4">
+
+                <h4 class="font-bold text-lg text-purple-700 mb-3 text-center">図解アニメーションで見る大会システム</h4>
+
+                <div class="flex justify-center space-x-4 mb-4">
+
+                    <button id="show-autumn-anim-btn" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">🍂 秋季大会を見る</button>
+
+                    <button id="show-spring-anim-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">🌸 春季大会を見る</button>
+
+                </div>
+
+                <div id="animation-stage" class="bg-gray-100 p-4 rounded min-h-[300px] border relative overflow-hidden flex flex-col justify-center items-center">
+
+                    <p id="anim-placeholder" class="text-gray-500">上のボタンを押してアニメーションを開始</p>
+
+                </div>
+
+                <p id="animation-narration" class="mt-3 text-center text-sm font-semibold h-10"></p>
+
+                <div class="flex justify-center space-x-4 mt-3">
+
+                    <button id="prev-step-btn" class="bg-gray-400 text-white px-4 py-1 rounded hover:bg-gray-500 disabled:opacity-50" disabled>＜ 前へ</button>
+
+                    <button id="next-step-btn" class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 disabled:opacity-50" disabled>次へ ＞</button>
+
+                </div>
+
+            </div>
+
+            </div> <div class="mt-6 text-center border-t pt-4">
+
             <button id="help-modal-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
+
         </div>
-    </div>
-</div>
+
+    </div> </div>
 
 <div id="team-status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
@@ -3690,6 +3883,9 @@ function simulateKoshien(teamRank) {
     }
 // --- Tournament Logic & Rendering ---
 
+
+
+
 // ▼▼▼ この関数をまるごと追加してください ▼▼▼
 /**
  * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
@@ -4240,6 +4436,317 @@ ${analysisText}
         };
     }
 }   
+
+
+// --- Tournament Animation Logic ---
+
+let currentAnimation = null; // 再生中のアニメーションの種類 (null, 'autumn', 'spring')
+let currentStep = -1;       // 現在のステップ番号
+let animationSteps = [];    // 現在のアニメーションの全ステップ関数
+
+const stage = document.getElementById('animation-stage');
+const narrationEl = document.getElementById('animation-narration');
+const prevBtn = document.getElementById('prev-step-btn');
+const nextBtn = document.getElementById('next-step-btn');
+const animPlaceholder = document.getElementById('anim-placeholder');
+const showAutumnBtn = document.getElementById('show-autumn-anim-btn');
+const showSpringBtn = document.getElementById('show-spring-anim-btn');
+
+/**
+ * アニメーション要素を作成するヘルパー
+ */
+function createAnimElement(type, text, options = {}) {
+    const el = document.createElement('div');
+    el.className = `anim-${type}`;
+    el.textContent = text;
+    if (options.id) el.id = options.id;
+    if (options.children) options.children.forEach(child => el.appendChild(child));
+    if (options.style) Object.assign(el.style, options.style);
+    return el;
+}
+
+/**
+ * 要素を表示（フェードイン）させるヘルパー
+ */
+async function showElement(element, delay = 50) {
+    if (!element) return;
+    await sleep(delay);
+    element.classList.add('show');
+}
+
+/**
+ * 要素を非表示（フェードアウト）させるヘルパー
+ */
+async function hideElement(element, delay = 0) {
+    if (!element) return;
+    await sleep(delay);
+    element.classList.remove('show', 'anim-highlight');
+    await sleep(500); // Wait for fade out
+}
+
+/**
+ * 要素をハイライトするヘルパー
+ */
+function highlightElement(element, clearOthers = true) {
+    if (clearOthers) {
+        stage.querySelectorAll('.anim-highlight').forEach(el => el.classList.remove('anim-highlight'));
+    }
+    if (element) {
+        element.classList.add('anim-highlight');
+    }
+}
+
+/**
+ * ナレーションを設定し、タイプライター風に表示するヘルパー
+ */
+async function setNarration(text) {
+    narrationEl.textContent = '';
+    for (const char of text) {
+        narrationEl.textContent += char;
+        await sleep(30); // 文字間のウェイト
+    }
+}
+
+/**
+ * ステップ実行とボタン制御
+ */
+async function runStep(stepIndex) {
+    if (stepIndex < 0 || stepIndex >= animationSteps.length) return;
+    currentStep = stepIndex;
+    stage.innerHTML = ''; // ステージをクリア
+    animPlaceholder.classList.add('hidden'); // プレースホルダー非表示
+    await animationSteps[currentStep](); // 現在のステップ関数を実行
+    updateButtons();
+}
+
+function updateButtons() {
+    prevBtn.disabled = currentStep <= 0;
+    nextBtn.disabled = currentStep >= animationSteps.length - 1;
+}
+
+// --- 秋季大会アニメーションステップ ---
+const autumnAnimation = [
+    // Step 0: Introduction
+    async () => {
+        await setNarration("🍂 秋季大会は新チーム最初の公式戦！センバツ甲子園出場に繋がります。");
+        const title = createAnimElement('bracket', '秋季大会システム', { style: { fontSize: '1.2rem', fontWeight: 'bold' } });
+        stage.appendChild(title);
+        await showElement(title);
+    },
+    // Step 1: Regional Qualifiers Overview
+    async () => {
+        await setNarration("まず、県内を4地区（東部・中部・西部・伊豆）に分けて地区予選を行います。");
+        const regions = ['東部(20)', '中部(20)', '西部(20)', '伊豆(4)'].map(r => createAnimElement('region', r));
+        const container = createAnimElement('bracket', '', { children: regions, style: { display: 'flex', justifyContent: 'center' } });
+        stage.appendChild(container);
+        for (const region of regions) await showElement(region);
+    },
+    // Step 2: Main 3 Regions - Blocks
+    async () => {
+        await setNarration("東・中・西地区では、20チームが4ブロックに分かれ、各ブロック優勝を目指します。");
+        const region = createAnimElement('region', '東部地区 (20チーム)', { id: 'main-region', style: { width: '80%' } });
+        const blocks = ['A (5)', 'B (5)', 'C (5)', 'D (5)'].map(b => createAnimElement('block', `ブロック ${b}`));
+        region.append(...blocks);
+        stage.appendChild(region);
+        await showElement(region);
+        for (const block of blocks) await showElement(block, 100);
+        highlightElement(region);
+    },
+    // Step 3: Block Winner
+    async () => {
+        await setNarration("各ブロックの優勝チーム (計4チーム) は県大会へ進出決定！🏆");
+        const region = document.getElementById('main-region');
+        if (!region) { // 要素がなければ再生成 (Prevボタン対策)
+            await autumnAnimation[2](); // 前のステップを再実行
+            await sleep(500);
+        }
+        const blockA = stage.querySelector('.anim-block'); // 例としてAブロック
+        const winner = createAnimElement('team', 'A優勝', { classList: ['winner'] });
+        blockA.appendChild(winner);
+        await showElement(winner, 200);
+        highlightElement(winner);
+        // TODO: 矢印で「県大会へ」を示す
+    },
+    // Step 4: Block Runner-up & Repechage
+    async () => {
+        await setNarration("各ブロックの準優勝チーム (計4チーム) は、最後の1枠を賭けた敗者復活戦へ。");
+        await autumnAnimation[3](); // 前のステップの表示をベースにする
+        const blocks = stage.querySelectorAll('.anim-block');
+        const runnersUp = [];
+        blocks.forEach((block, i) => {
+            const runnerUp = createAnimElement('team', `${String.fromCharCode(65 + i)}準優勝`, { classList: ['loser'] });
+            block.appendChild(runnerUp);
+            runnersUp.push(runnerUp);
+        });
+        for (const ru of runnersUp) await showElement(ru, 100);
+
+        const repechage = createAnimElement('bracket', '第5代表決定戦 (敗者復活)', { id: 'repechage', style: { marginTop: '15px' } });
+        stage.appendChild(repechage);
+        await showElement(repechage);
+        highlightElement(repechage);
+        // TODO: 準優勝チームから敗者復活戦への矢印
+    },
+    // Step 5: Repechage Winner
+    async () => {
+        await setNarration("敗者復活戦の勝者 (1チーム) も県大会へ進出！これで各地区5チーム。");
+        await autumnAnimation[4]();
+        const repechage = document.getElementById('repechage');
+        const repWinner = createAnimElement('team', '復活優勝', { classList: ['winner'] });
+        repechage.appendChild(repWinner);
+        await showElement(repWinner, 200);
+        highlightElement(repWinner);
+        // TODO: 矢印で「県大会へ」を示す
+    },
+    // Step 6: Izu Region
+    async () => {
+        await setNarration("伊豆地区は4チームのトーナメント。優勝した1チームのみ県大会へ。");
+        const region = createAnimElement('region', '伊豆地区 (4チーム)', { id: 'izu-region' });
+        const winner = createAnimElement('team', '伊豆優勝', { classList: ['winner'] });
+        region.appendChild(winner);
+        stage.appendChild(region);
+        await showElement(region);
+        await showElement(winner, 200);
+        highlightElement(region);
+    },
+    // Step 7: Prefectural Tournament
+    async () => {
+        await setNarration("全代表16チーム (東5+中5+西5+伊豆1) が集結し、県大会本戦 (トーナメント)！");
+        const bracket = createAnimElement('bracket', '県大会本戦 (16チーム)', { id: 'main-bracket' });
+        const teams = ['東1', '中1', '西1', '伊1', '東2', '中2', '...', '西5(敗復)'].map(t => createAnimElement('team', t));
+        bracket.append(...teams);
+        stage.appendChild(bracket);
+        await showElement(bracket);
+        for (const team of teams) await showElement(team, 30);
+        highlightElement(bracket);
+    },
+    // Step 8: Rewards
+    async () => {
+        await setNarration("県大会の優勝・準優勝はセンバツ有力！ベスト8以上で春季大会のシード権獲得！✨");
+        await autumnAnimation[7]();
+        const bracket = document.getElementById('main-bracket');
+        const rewards = createAnimElement('bracket', '🏆優勝/準優勝 → センバツへ<br>🏅ベスト8 → 春シード権', { style: { marginTop: '15px', borderColor: 'gold' } });
+        stage.appendChild(rewards);
+        await showElement(rewards, 200);
+        highlightElement(rewards);
+    }
+];
+
+// --- 春季大会アニメーションステップ ---
+const springAnimation = [
+    // Step 0: Introduction
+    async () => {
+        await setNarration("🌸 春季大会は夏の大会の前哨戦！夏のシード権獲得を目指します。");
+        const title = createAnimElement('bracket', '春季大会システム', { style: { fontSize: '1.2rem', fontWeight: 'bold' } });
+        stage.appendChild(title);
+        await showElement(title);
+    },
+    // Step 1: Seed Teams
+    async () => {
+        await setNarration("秋季大会ベスト8のチームはシード校となり、県大会2回戦から登場します。");
+        const seeds = Array.from({ length: 8 }).map((_, i) => createAnimElement('team', `秋Best8-${i+1}`, { classList: ['seed'] }));
+        const container = createAnimElement('bracket', 'シード校 (8チーム)', { children: seeds, id: 'seeds', style: { borderColor: 'orange' } });
+        stage.appendChild(container);
+        await showElement(container);
+        for (const seed of seeds) await showElement(seed, 50);
+        highlightElement(container);
+    },
+    // Step 2: Regional Qualifiers (Non-seeds)
+    async () => {
+        await setNarration("シード校以外のチームは、再び地区予選へ。秋と同様に代表枠を争います。");
+        const others = createAnimElement('region', 'シード以外の全チーム (56チーム)', { id: 'others' });
+        const qualifiers = createAnimElement('bracket', '地区予選 (秋と同じ形式)', { id: 'qualifiers' });
+        stage.appendChild(others);
+        stage.appendChild(qualifiers);
+        await showElement(others);
+        await showElement(qualifiers, 200);
+        highlightElement(qualifiers);
+        // TODO: othersからqualifiersへの矢印
+    },
+    // Step 3: Qualifier Winners
+    async () => {
+        await setNarration("地区予選を突破した16チームが県大会1回戦へ進出します。");
+        await springAnimation[2](); // 前のステップ表示
+        const qualifiers = document.getElementById('qualifiers');
+        const winners = Array.from({ length: 16 }).map((_, i) => createAnimElement('team', `予選突破-${i+1}`, { classList: ['winner'] }));
+        const winnerContainer = createAnimElement('bracket', '予選突破 (16チーム)', { children: winners, id: 'q-winners' });
+        qualifiers.appendChild(winnerContainer);
+        await showElement(winnerContainer, 200);
+        highlightElement(winnerContainer);
+    },
+    // Step 4: Prefectural Round 1
+    async () => {
+        await setNarration("県大会1回戦は、予選突破校同士の対決です。");
+        await springAnimation[3]();
+        const qWinners = document.getElementById('q-winners');
+        const r1Bracket = createAnimElement('bracket', '県大会1回戦 (8試合)', { id: 'r1-bracket', style: { marginTop: '15px' } });
+        // 代表として4チーム表示
+        const teamsR1 = ['予選A', '予選B', '予選C', '予選D'].map(t => createAnimElement('team', t));
+        r1Bracket.append(...teamsR1);
+        stage.appendChild(r1Bracket);
+        await showElement(r1Bracket, 200);
+        highlightElement(r1Bracket);
+        // TODO: q-winnersからr1-bracketへの矢印
+    },
+    // Step 5: Prefectural Round 2 (Seeds Join)
+    async () => {
+        await setNarration("1回戦の勝者8チームが、シード校8チームと2回戦で激突！ここから本戦！");
+        const seeds = Array.from({ length: 8 }).map((_, i) => createAnimElement('team', `秋Best8-${i+1}`, { classList: ['seed'] }));
+        const seedContainer = createAnimElement('bracket', 'シード校 (8チーム)', { children: seeds, id: 'seeds', style: { borderColor: 'orange' } });
+
+        const r1Winners = Array.from({ length: 8 }).map((_, i) => createAnimElement('team', `1回戦勝者-${i+1}`, { classList: ['winner'] }));
+        const r1WinnerContainer = createAnimElement('bracket', '1回戦勝者 (8チーム)', { children: r1Winners, id: 'r1-winners' });
+
+        const r2Bracket = createAnimElement('bracket', '県大会2回戦 (16チーム)', { id: 'r2-bracket', style: { borderColor: 'red' } });
+
+        stage.append(seedContainer, r1WinnerContainer, r2Bracket);
+        await showElement(seedContainer);
+        await showElement(r1WinnerContainer);
+        await showElement(r2Bracket, 200);
+        highlightElement(r2Bracket);
+        // TODO: seedContainerとr1WinnerContainerからr2Bracketへの矢印
+    },
+    // Step 6: Reward (Summer Seed)
+    async () => {
+        await setNarration("この大会でベスト8以上に入ると、夏の選手権大会のシード権獲得！🔥");
+        await springAnimation[5]();
+        const r2Bracket = document.getElementById('r2-bracket');
+        const reward = createAnimElement('bracket', '🏅ベスト8 → 夏のシード権', { style: { marginTop: '15px', borderColor: 'gold' } });
+        stage.appendChild(reward);
+        await showElement(reward, 200);
+        highlightElement(reward);
+    }
+];
+
+// --- Event Listeners for Animation Control ---
+
+showAutumnBtn.addEventListener('click', () => {
+    currentAnimation = 'autumn';
+    animationSteps = autumnAnimation;
+    runStep(0);
+});
+
+showSpringBtn.addEventListener('click', () => {
+    currentAnimation = 'spring';
+    animationSteps = springAnimation;
+    runStep(0);
+});
+
+prevBtn.addEventListener('click', () => {
+    if (currentStep > 0) {
+        runStep(currentStep - 1);
+    }
+});
+
+nextBtn.addEventListener('click', () => {
+    if (currentStep < animationSteps.length - 1) {
+        runStep(currentStep + 1);
+    }
+});
+
+// Helper for delays
+// function sleep(ms) { // 既存のsleep関数があれば不要
+//     return new Promise(resolve => setTimeout(resolve, ms));
+// }
 
 /**
  * AIに組み合わせ抽選結果に基づいた、なんJ風の掲示板スレッド（タイトル＋コメント群）を生成させる
@@ -5074,6 +5581,8 @@ function renderNews(news) {
     });
 }
     
+
+
 
 /**
  * 掲示板のコメント（スレッド形式と個別コメント形式の両方に対応）を描画する
@@ -11689,8 +12198,17 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
             showAlert('データの読み込みに失敗しました。');
         }
     });
+
+
+
+
     // アプリケーション起動
     initializeApp();
 </script>
+
+<script>
+    mermaid.initialize({ startOnLoad: true });
+</script>
+
     </body>
 </html>
