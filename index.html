@@ -11020,11 +11020,10 @@ document.body.addEventListener('click', async (e) => {
     }
     
     // --- まとめサイト内の記事リンククリック ---
-    // --- まとめサイト内の記事リンククリック ---
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
-        const headline = matomeLink.dataset.headline;
+        const headline = matomeLink.dataset.headline; // ★スレッドタイトルはここから取得
         const type = matomeLink.dataset.type;
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
@@ -11032,100 +11031,56 @@ document.body.addEventListener('click', async (e) => {
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
         const threadContentEl = document.getElementById('bbs-thread-content');
-        
+
         document.querySelectorAll('.matome-tab-content').forEach(content => content.classList.add('hidden'));
         threadDisplayArea.classList.remove('hidden');
 
         threadTitleEl.textContent = headline;
         threadContentEl.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
-        
+
         (async () => {
-            let result;
+            let commentsArray; // 変数名を配列と分かるように変更
+
             if (type === 'game' && matchId) {
                 const match = findMatchById(matchId);
-                // 詳細データがある場合のみ、高度な分析を行う
-                if (match && match.winner && match.details) { 
-    const playerStatsText = formatPlayerStatsForPrompt(match);
-    const playByPlayText = generatePlayByPlayText(match);
-    const winnerJourney = getCurrentTournamentPerformance(match.winner, matchId);
-    const nextOpponentInfo = findNextOpponent(match.winner, matchId);
-    
-    // ★ここからが変更点★
-    // 勝者と敗者、両チームのスタメン変更を分析
-    const loserName = match.team1 === match.winner ? match.team2 : match.team1;
-    const winnerLineupChanges = analyzeLineupChanges(match.winner, match);
-    const loserLineupChanges = analyzeLineupChanges(loserName, match);
-    // ★変更点はここまで★
-                    let nextOpponentJourney = null;
-                    if (nextOpponentInfo && nextOpponentInfo.opponentName && !['（未定）', '優勝'].includes(nextOpponentInfo.opponentName)) {
-                        nextOpponentJourney = getCurrentTournamentPerformance(nextOpponentInfo.opponentName, matchId);
-                    }
-                    const context = {
-                        winnerName: match.winner,
-                        loserName: match.team1 === match.winner ? match.team2 : match.team1,
-                        dbMatch: match,
-                        playerStatsText: playerStatsText,
-                        playByPlayText: playByPlayText, // ★試合経過をコンテキストに追加
-                        winnerJourney: winnerJourney,
-                        nextOpponent: nextOpponentInfo,
-                        nextOpponentJourney: nextOpponentJourney,
-        // ★分析結果をコンテキストに追加★
-        winnerLineupChanges: winnerLineupChanges,
-        loserLineupChanges: loserLineupChanges
-                    };
-                    result = await generateGameMatchBbsComments(context);
-                } else if (match && match.winner) {
-                    // 詳細データがない場合は、シンプルなコンテキストで呼び出す
-                    const context = { winnerName: match.winner, loserName: match.team1 === match.winner ? match.team2 : match.team1, dbMatch: match };
-                    result = await generateGameMatchBbsComments(context);
+                if (match && match.winner) {
+                    const matchContext = createMatchContext(matchId, match.winner);
+                    commentsArray = await generateGameMatchBbsComments(matchContext);
                 }
-    
-                   // ★変更点はここまで★
-                
             } else if (type === 'real') {
-                // 【現実のニュースの場合】
-                // index.html内に新設した generateRealNewsBbsComments 関数を直接呼び出す
-                const comments = await generateRealNewsBbsComments(headline, category);
-                if (comments) {
-                    result = { title: headline, comments: comments };
-                }
+                commentsArray = await generateRealNewsBbsComments(headline, category);
             }
-            // ▲▲▲ ここまで修正 ▲▲▲
 
-            // --- 結果の描画処理 (変更なし) ---
-            if (result && result.comments) {
-                threadTitleEl.textContent = `【スレ】${result.title}`;
+            // ▼▼▼ ここからが重要な修正点 ▼▼▼
+            // 「result.comments」ではなく、「commentsArray」が配列であるかを直接チェックする
+            if (commentsArray && Array.isArray(commentsArray)) {
+                threadTitleEl.textContent = `【スレ】${headline}`; // タイトルを設定
                 threadContentEl.innerHTML = ''; // ローダーを消す
 
-                                // --- ここからが「ライブ感」演出 ---
-                for (const comment of result.comments) {
+                // ライブ感のある描画処理
+                for (const comment of commentsArray) { // commentsArray を直接ループ
                     const commentEl = document.createElement('div');
-                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500'; // 最初は透明
+                    commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
                     commentEl.innerHTML = `
                         <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
                         <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
                     `;
                     threadContentEl.appendChild(commentEl);
-                    
-                    // 少し遅れてフワッと表示させる
+
                     setTimeout(() => {
                         commentEl.classList.remove('opacity-0');
                     }, 50);
 
-                    // 次のコメントが表示されるまで、ランダムな時間待つ
-                    const delay = Math.random() * 800 + 200; // 0.2秒から1.0秒
+                    const delay = Math.random() * 800 + 200;
                     await new Promise(resolve => setTimeout(resolve, delay));
-                    
-                    // 自動で一番下までスクロール
                     threadContentEl.scrollTop = threadContentEl.scrollHeight;
                 }
-                // --- 演出ここまで ---
 
             } else {
                 threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
             }
+            // ▲▲▲ 修正ここまで ▲▲▲
         })();
-        // ▲▲▲ ここまで書き換え ▲▲▲
     }
 
 
