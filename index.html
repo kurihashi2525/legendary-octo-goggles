@@ -2868,6 +2868,9 @@ async function generateGameMatchBbsComments(matchContext) {
 - **勝利:** ${winnerName} (ランク: ${winnerRank})
 - **敗北:** ${loserName} (ランク: ${loserRank})
 - **スコア:** ${score}
+// ▼▼▼ この行を追加 ▼▼▼
+${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+// ▲▲▲ 追加ここまで ▲▲▲
 - **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
 
 ### データ2：チームの背景
@@ -2896,6 +2899,9 @@ ${highlightsText}
     - なんJらしい短い煽りや草(w)を適度に含める。
     - 他のコメントへの安価 (>>) をいくつか含める。
     - ランク名を言い換える（A→名門、B→強豪、C→中堅、D→挑戦校、E→無名校）。
+// ▼▼▼ この指示を追加 ▼▼▼
+- **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+// ▲▲▲ 追加ここまで ▲▲▲
 
 ### 出力形式【最重要】
 解説や前置きは一切不要です。**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
@@ -5509,6 +5515,13 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
         </div>
     `;
 
+// ▼▼▼ ここからコールド表示を追加 ▼▼▼
+    let calledGameInfo = '';
+    if (dbMatch.calledGame) {
+        calledGameInfo = `<div class="text-center text-xs text-red-600 font-bold mt-1">(${dbMatch.calledInning}回コールド)</div>`;
+    }
+    // ▲▲▲ コールド表示ここまで ▲▲▲
+
     const footer = showDetailsButton ?
         `<div class="matchup-footer">
             <button class="details-btn" data-match-id="${matchId}">詳細入力</button>
@@ -5516,9 +5529,12 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
         </div>` :
         '';
 
-    return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">${content}${footer}</div>`;
-}
-
+return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">
+                ${content}
+                ${calledGameInfo} 
+                ${footer}
+            </div>`;
+}    
     
 /**
  * UIの各種コンテンツエリア（ニュース）を描画する（全機能対応・最終版）
@@ -7310,7 +7326,9 @@ function createMatchContext(matchId, winnerName) {
         nextOpponent: nextOpponentInfo,
         nextOpponentJourney: nextOpponentJourney,
         highlights: highlights,
-        keyPlayerNames: keyPlayerNames
+        keyPlayerNames: keyPlayerNames,
+        calledGame: dbMatch.calledGame,
+        calledInning: dbMatch.calledInning
     };
     return context;
 }
@@ -8099,6 +8117,12 @@ ${notablePlayersText}
         const winnerCoach = winnerData.coach;
         const loserCoach = loserData.coach;
 
+// ▼▼▼ ここから追加 ▼▼▼
+        const calledGameText = matchContext.calledGame
+            ? `\n- **【重要】** この試合は ${matchContext.calledInning}回コールド (${winnerScore}-${loserScore}) で ${winnerName} が勝利しました。`
+            : '';
+        // ▲▲▲ 追加ここまで ▲▲▲
+
         // 1. 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
        
         // ★★★ 修正箇所はここまで ★★★
@@ -8112,6 +8136,10 @@ ${notablePlayersText}
 - **[#10], [#11]**: エースに次ぐ控え投手。
 - **[#12]以降**: ベンチ入りした控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれるサプライズ枠。
 ---
+---
+// ▼▼▼ この行を追加 ▼▼▼
+${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+// ▲▲▲ 追加ここまで ▲▲▲
 ---
 ### **【最重要】この記事の唯一の事実情報源**
 ${factListText}
@@ -8138,6 +8166,7 @@ ${lineupChangesText}
 4.  試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
 5.  **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
 6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。
+7. **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -8155,14 +8184,29 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
         const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
         const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
         const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
+
+// ▼▼▼ ここから追加 ▼▼▼
+        const calledGameText = matchContext.calledGame
+            ? `\n- **【重要】** この試合は ${matchContext.calledInning}回コールド (${winnerScore}-${loserScore}) で ${winnerName} が勝利しました。`
+            : '';
+        // ▲▲▲ 追加ここまで ▲▲▲
+
+
+
         prompt = `あなたは、高校野球専門のAI記者です。
 以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
+---
+// ▼▼▼ この行を追加 ▼▼▼
+${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+// ▲▲▲ 追加ここまで ▲▲▲
+---
 ### 試合情報
 - **勝利チーム**: ${winnerName} (${winnerRankDesc})
 - **敗北チーム**: ${loserName} (${loserRankDesc})
 - **スコア**: ${winnerScore} - ${loserScore}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ### 執筆指示
+ **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
 - 試合結果を客観的に伝えてください。
 - **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。** // ← ★★★ この指示を追加 ★★★
@@ -8274,6 +8318,9 @@ async function generateBbsComments(matchContext) {
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+// ▼▼▼ この行を追加 ▼▼▼
+${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+// ▲▲▲ 追加ここまで ▲▲▲
 - ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
 ### 試合の主なハイライト
 ${highlightsText}
@@ -8287,6 +8334,9 @@ ${specialNarrativeContext}
 - **アンチ**: 「試合のハイライト」で活躍した相手選手を「まぐれだ」と貶してください。
 - **ライバル校のファン**: 「試合のハイライト」の選手を自チームの選手と比較してください。
 - **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
+// ▼▼▼ この指示を追加 ▼▼▼
+- **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+// ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
@@ -8298,6 +8348,9 @@ ${specialNarrativeContext}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+// ▼▼▼ この行を追加 ▼▼▼
+${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+// ▲▲▲ 追加ここまで ▲▲▲
 - ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
 ### チームの背景
 - **${winnerName}**: ${winnerDynamicInfo}
@@ -8309,6 +8362,9 @@ ${specialNarrativeContext}
 - **アンチ**: 負けたチームや、スコアが僅差だったチームを批判してください。
 - **ライバル校のファン**: 試合結果を見て、自チームとの力関係を測るようなコメントをしてください。
 - **単なる野球好き**: スコアを見て、接戦だったか、一方的だったかなどの感想を述べてください。
+// ▼▼▼ この指示を追加 ▼▼▼
+- **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+// ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
@@ -10417,6 +10473,65 @@ async function processMatchWin(matchId, winnerName) {
         dbMatch.score1 = '0';
         dbMatch.score2 = '0';
     }
+
+
+// ▼▼▼ ここからコールドゲーム判定（修正版） ▼▼▼
+    dbMatch.calledGame = false;
+    dbMatch.calledInning = null;
+
+    // 詳細入力があり、イニングスコアが存在する場合のみ判定
+    if (dbMatch.details && dbMatch.details.inningScore && dbMatch.details.inningScore.team1) {
+        const inningScores1 = dbMatch.details.inningScore.team1;
+        const inningScores2 = dbMatch.details.inningScore.team2;
+        const finalScore1 = parseInt(dbMatch.score1) || 0;
+        const finalScore2 = parseInt(dbMatch.score2) || 0;
+        const finalScoreDiff = Math.abs(finalScore1 - finalScore2);
+        const actualNumInnings = inningScores1.length; // 実際に記録されたイニング数
+
+        let earliestCalledInning = null; // コールドが成立した最初のイニングを記録する変数
+
+        // --- 10点差コールド (5回以降) のチェック ---
+        // 最終スコアで10点差以上ついている場合のみ、イニングを遡ってチェック
+        if (finalScoreDiff >= 10) {
+            let cumulativeScore1 = 0;
+            let cumulativeScore2 = 0;
+            // 1回から順に累計スコアを計算
+            for (let i = 0; i < actualNumInnings; i++) {
+                cumulativeScore1 += parseInt(inningScores1[i] || 0);
+                cumulativeScore2 += parseInt(inningScores2[i] || 0);
+                // 5回終了時点 (i=4) 以降で、初めて10点差以上ついたイニングを記録
+                if (i >= 4 && Math.abs(cumulativeScore1 - cumulativeScore2) >= 10) {
+                    earliestCalledInning = i + 1; // イニング番号は 1始まりなので +1
+                    break; // 最初に見つかった時点でループを抜ける
+                }
+            }
+        }
+
+        // --- 7点差コールド (7回以降) のチェック ---
+        // 10点差コールドが成立しておらず、かつ最終スコアで7点差以上ついている場合
+        if (earliestCalledInning === null && finalScoreDiff >= 7) {
+            let cumulativeScore1 = 0;
+            let cumulativeScore2 = 0;
+            // 1回から順に累計スコアを計算
+            for (let i = 0; i < actualNumInnings; i++) {
+                cumulativeScore1 += parseInt(inningScores1[i] || 0);
+                cumulativeScore2 += parseInt(inningScores2[i] || 0);
+                // 7回終了時点 (i=6) 以降で、初めて7点差以上ついたイニングを記録
+                if (i >= 6 && Math.abs(cumulativeScore1 - cumulativeScore2) >= 7) {
+                    earliestCalledInning = i + 1; // イニング番号は 1始まりなので +1
+                    break; // 最初に見つかった時点でループを抜ける
+                }
+            }
+        }
+
+        // earliestCalledInning が見つかっていれば、コールド成立と記録
+        if (earliestCalledInning !== null) {
+            dbMatch.calledGame = true;
+            dbMatch.calledInning = earliestCalledInning; // ★成立したイニングを記録
+        }
+    }
+    // ▲▲▲ コールドゲーム判定ここまで ▲▲▲
+
 
 
     // ▼▼▼ 修正箇所 ▼▼▼
