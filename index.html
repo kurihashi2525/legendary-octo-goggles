@@ -4266,12 +4266,11 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         // もし秋季・春季でも詳細なスレッドが欲しければ generateBracketBbsThread を呼んでも良い
     }
 
-    // ▼▼▼ Promise.all の中身を修正 ▼▼▼
+   // ▼▼▼ Promise.all の中身を修正 ▼▼▼
     const [namcoNews, analysisArticle, bracketBbsResult] = await Promise.all([
-        // generateBracketReactionComments の呼び出しを削除
         generateNamcoNews(tournamentState, 'bracket'),
         analysisArticlePromise,
-        bracketBbsPromise // ★新しいPromiseを追加★
+        bracketBbsPromise
     ]);
     // ▲▲▲ 修正ここまで ▲▲▲
 
@@ -4283,20 +4282,27 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         tournamentState.news.unshift(analysisArticle);
     }
 
-    // ▼▼▼ BBSスレッドの処理 (新規追加) ▼▼▼
+   // ▼▼▼ BBSスレッドのエラーハンドリングを修正 ▼▼▼
     if (bracketBbsResult && !bracketBbsResult.error) {
-        // 成功した場合、スレッドオブジェクト全体を bbsComments 配列に追加
-        tournamentState.bbsComments.push(bracketBbsResult);
+        tournamentState.bbsComments.push(bracketBbsResult); // 成功スレッドをBBSに追加
     } else if (bracketBbsResult && bracketBbsResult.error) {
-        // エラーの場合、エラー記事を news 配列に追加
-        tournamentState.news.push(bracketBbsResult); // エラーオブジェクトは記事と同じ形式のはず
+        // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
+        tournamentState.bbsComments.push({
+            title: bracketBbsResult.title || "組み合わせスレッド生成エラー",
+            body: bracketBbsResult.body || "AIによるスレッド生成に失敗しました。",
+            timestamp: Date.now(),
+            error: true,
+            errorId: bracketBbsResult.errorId || `bracket-thread-error-${Date.now()}`,
+            // ★★★ contextを追加して再生成可能にする ★★★
+            context: { isBracketThread: true } // 再生成時に使う目印
+        });
     }
     // ▲▲▲ 修正ここまで ▲▲▲
 
     if (namcoNews) tournamentState.namcoNews = namcoNews;
 
     renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments); // ★bbsCommentsの描画処理が必要★
+    renderBbsComments(tournamentState.bbsComments); // BBSを描画
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
 }
@@ -5614,14 +5620,13 @@ function renderBbsComments(items) { // 引数名を items に変更
     items.slice().reverse().forEach((item, reversedIndex) => {
         const originalIndex = items.length - 1 - reversedIndex;
 
-        // A. エラーオブジェクトの場合 (titleを持つ形式)
+        // A. エラーオブジェクトの場合
         if (item.error && item.title) {
             const errorEl = document.createElement('div');
-            errorEl.className = 'article-error mb-4'; // マージン追加
-            errorEl.innerHTML = `
-                <span>${item.title}</span>
-                ${item.context ? `<button class="retry-bbs-btn" data-index="${originalIndex}" data-type="error-object">再生成</button>` : ''}
-            `;
+            errorEl.className = 'article-error mb-4'; // マージン追加, ニュース記事のエラースタイルを流用
+            // ★★★ 再生成ボタンのdata属性を修正 ★★★
+            const regenerateButtonHTML = item.context ? `<button class="retry-bbs-btn bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700" data-index="${originalIndex}" data-type="${item.context.isBracketThread ? 'bracket-thread' : 'match-comments'}">再生成</button>` : '';
+            errorEl.innerHTML = `<span>${item.title}</span>${regenerateButtonHTML}`;
             bbsCommentsContainer.appendChild(errorEl);
         }
         // B. スレッドオブジェクトの場合 (組み合わせ決定スレなど title と comments を持つ)
@@ -10812,48 +10817,49 @@ async function processMatchWin(matchId, winnerName) {
     }
 
 // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    const [generatedArticle, generatedComments] // generatedComments は { title: "...", comments: [...] }
-        = await Promise.all([articlePromise, commentsPromise]);
+    const [generatedArticle, generatedComments] = await Promise.all([articlePromise, commentsPromise]);
 
+    // ▼▼▼ ここから BBSコメントのエラーハンドリングを修正 ▼▼▼
     if (generatedComments) {
-      // ▼▼▼ ここを修正 ▼▼▼
-      // AIが配列を返し、かつエラーオブジェクトを含まないかチェック
-      if (Array.isArray(generatedComments) && !generatedComments.some(c => c.error)) {
-          const validComments = generatedComments.filter(comment => !comment.error);
-          if (validComments.length > 0) {
-              // 配列の要素（個々のコメント）を展開して bbsComments に追加
-              tournamentState.bbsComments.push(...validComments);
-          }
-      // AIが配列を返したが、中にエラーオブジェクトが含まれる場合の処理
-      } else if (Array.isArray(generatedComments)) {
-           const errorCommentData = generatedComments.find(comment => comment.error);
-           if (errorCommentData && errorCommentData.context) {
-               tournamentState.news.push({
-                   title: "掲示板コメント生成エラー",
-                   body: "AIによるコメント生成に一部失敗しました。",
-                   timestamp: Date.now(),
-                   error: true,
-                   errorId: `error-${matchId}-bbs-partial`,
-                   context: errorCommentData.context
-               });
-           }
-      // AIがオブジェクト形式のエラーを返した場合 (例: { error: true, ... })
-      } else if (generatedComments.error) {
-           tournamentState.news.push({
-               title: generatedComments.title || "掲示板コメント生成エラー",
-               body: generatedComments.body || "AIによるコメント生成に失敗しました。",
-               timestamp: Date.now(),
-               error: true,
-               errorId: generatedComments.errorId || `error-${matchId}-bbs`,
-               context: generatedComments.context || matchContext // contextがあれば使う
-           });
-      // 予期しない形式の場合
-      } else {
-          console.error("Unexpected format from generateGameMatchBbsComments:", generatedComments);
-          tournamentState.news.push({ title: "掲示板コメント形式エラー", body:"予期しないデータ形式です。", timestamp: Date.now(), error: true });
-      }
-      // ▲▲▲ 修正ここまで ▲▲▲
-  }
+        // AIが配列を返し、かつエラーオブジェクトを含まないかチェック
+        if (Array.isArray(generatedComments) && !generatedComments.some(c => c.error)) {
+            const validComments = generatedComments.filter(comment => !comment.error);
+            if (validComments.length > 0) {
+                tournamentState.bbsComments.push(...validComments); // 成功コメントをBBSに追加
+            }
+        // AIが配列を返したが、中にエラーオブジェクトが含まれる場合の処理
+        } else if (Array.isArray(generatedComments)) {
+            const errorCommentData = generatedComments.find(comment => comment.error);
+            if (errorCommentData && errorCommentData.context) {
+                // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
+                tournamentState.bbsComments.push({
+                    title: "掲示板コメント生成エラー", // renderBbsCommentsで表示するためtitleを追加
+                    body: "AIによるコメント生成に一部失敗しました。", // bodyは使われないが一応保持
+                    timestamp: Date.now(),
+                    error: true,
+                    errorId: `error-${matchId}-bbs-partial`,
+                    context: errorCommentData.context
+                });
+            }
+        // AIがオブジェクト形式のエラーを返した場合 (例: { error: true, ... })
+        } else if (generatedComments.error) {
+            // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
+            tournamentState.bbsComments.push({
+                title: generatedComments.title || "掲示板コメント生成エラー",
+                body: generatedComments.body || "AIによるコメント生成に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: generatedComments.errorId || `error-${matchId}-bbs`,
+                context: generatedComments.context || matchContext
+            });
+        // 予期しない形式の場合
+        } else {
+            console.error("Unexpected format from generateBbsComments:", generatedComments);
+            // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
+            tournamentState.bbsComments.push({ title: "掲示板コメント形式エラー", body:"予期しないデータ形式です。", timestamp: Date.now(), error: true, context: matchContext });
+        }
+    }
+    // ▲▲▲ BBSコメントのエラーハンドリング修正ここまで ▲▲▲  
 
     // --- 記事の処理 (変更なし) ---
     if (generatedArticle) {
@@ -12066,34 +12072,69 @@ tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい�
     }
     // ▲▲▲ ここまで追加 ▲▲▲    // ▲▲▲ ここまで追加 ▲▲▲
 
-// ▼▼▼ ADD THE NEW BLOCK HERE ▼▼▼
-    // --- BBS Comment Retry Button ---
+// --- 掲示板コメントのエラー再生成ボタン ---
     else if (e.target.matches('.retry-bbs-btn')) {
         const btn = e.target;
         const index = parseInt(btn.dataset.index, 10);
-        const errorComment = tournamentState.bbsComments[index];
-        if (!errorComment || !errorComment.context) return;
+        const errorItem = tournamentState.bbsComments[index];
+        const regenType = btn.dataset.type; // 'bracket-thread' or 'match-comments'
+
+        if (!errorItem || !errorItem.context) {
+            alert("再生成に必要な情報が見つかりません。");
+            return;
+        }
 
         btn.textContent = '生成中...';
         btn.disabled = true;
+        // エラー表示を一時的にローダーに置き換えても良い
+        // btn.closest('.article-error').innerHTML = `<div class="loader text-sm">再生成中...</div>`;
 
-        const { winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText } = errorComment.context;
-        
-        const newComments = await generateBbsComments(winnerName, loserName, dbMatch, matchId, winnerData, loserData, winnerDetailedData, loserDetailedData, highlightsText);
+        let newBbsData = null; // 再生成結果を格納する変数
 
-        if (newComments && newComments.length > 0) {
-            tournamentState.bbsComments.splice(index, 1, ...newComments);
-        } else {
-            btn.textContent = '再生成';
-            btn.disabled = false;
-            alert('再生成に失敗しました。');
+        try {
+            if (regenType === 'bracket-thread') {
+                // 組み合わせスレッドの再生成
+                newBbsData = await generateBracketBbsThread(tournamentState); // state全体を渡す
+            } else if (regenType === 'match-comments' && errorItem.context.matchId) {
+                // 試合後コメントの再生成
+                // contextに必要な情報が揃っているか確認
+                if (errorItem.context.winnerName && errorItem.context.dbMatch) {
+                     newBbsData = await generateBbsComments(errorItem.context); // 保存されたcontextを渡す
+                } else {
+                    throw new Error("試合後コメント再生成のためのContext情報が不足しています。");
+                }
+            } else {
+                 throw new Error("不明な再生成タイプです: " + regenType);
+            }
+
+            // --- 再生成結果の処理 ---
+            if (newBbsData && !newBbsData.error) {
+                // 成功した場合：エラー項目を新しいデータで置き換える
+                if (Array.isArray(newBbsData)) { // generateBbsComments は配列を返す
+                    tournamentState.bbsComments.splice(index, 1, ...newBbsData);
+                } else { // generateBracketBbsThread はオブジェクトを返す
+                    tournamentState.bbsComments.splice(index, 1, newBbsData);
+                }
+            } else {
+                 // 再生成に失敗した場合：エラー表示はそのまま or 更新
+                 alert('再生成に失敗しました。');
+                 btn.textContent = '再生成'; // ボタンを元に戻す
+                 btn.disabled = false;
+                 // エラー表示を元に戻す処理が必要な場合
+                 // const errorEl = btn.closest('.article-error');
+                 // if(errorEl) errorEl.innerHTML = `<span>${errorItem.title}</span> ... 再生性ボタンHTML ...`;
+            }
+        } catch(err) {
+             console.error("BBS再生成中にエラー:", err);
+             alert('再生成処理中にエラーが発生しました。');
+             btn.textContent = '再生成'; // ボタンを元に戻す
+             btn.disabled = false;
         }
-        
-        renderBbsComments(tournamentState.bbsComments);
+
+        renderBbsComments(tournamentState.bbsComments); // 掲示板を再描画
         saveState();
     }
-    // ▲▲▲ ▲▲▲
-
+    // ▲▲▲ 追加ここまで ▲▲▲
 });
     
 
