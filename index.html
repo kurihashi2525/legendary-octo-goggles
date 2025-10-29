@@ -2899,6 +2899,7 @@ ${highlightsText}
     - なんJらしい短い煽りや草(w)を適度に含める。
     - 他のコメントへの安価 (>>) をいくつか含める。
     - ランク名を言い換える（A→名門、B→強豪、C→中堅、D→挑戦校、E→無名校）。
+** #は背番号と言い換えてください。(例　#1→背番号1)
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 // ▲▲▲ 追加ここまで ▲▲▲
@@ -8145,6 +8146,8 @@ ${notablePlayersText}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 // ▲▲▲ 追加ここまで ▲▲▲
+### **【最重要】この記事の唯一の事実情報源 (★背番号付きボックススコア)**
+${matchContext.playerStatsText} {/* ← ここで背番号情報が渡されている */}
 ---
 ### **【最重要】この記事の唯一の事実情報源**
 ${factListText}
@@ -8170,7 +8173,7 @@ ${lineupChangesText}
 3.  **【物語の連続性】**: 「今大会の軌跡」情報を参考に、これまでの戦いと繋がりのある物語を描写すること。
 4.  試合後の両チーム監督のコメントを、試合内容やチームの背景を反映させて生成すること。
 5.  **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
-6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。
+6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。#は背番号と言い換えてください。(例　#1→背番号1)
 7. **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 ---
 ### 編集長からの追加指示
@@ -10483,50 +10486,49 @@ async function processMatchWin(matchId, winnerName) {
 // ▼▼▼ ここからコールドゲーム判定（修正版） ▼▼▼
     dbMatch.calledGame = false;
     dbMatch.calledInning = null;
+    let earliestCalledInning = null; // コールドが成立した最初のイニングを記録する変数
 
-    // 詳細入力があり、イニングスコアが存在する場合のみ判定
-    if (dbMatch.details && dbMatch.details.inningScore && dbMatch.details.inningScore.team1) {
+    // 詳細入力があり、イニングスコアが存在し、最低5イニング以上のデータがある場合のみ判定
+    if (dbMatch.details && dbMatch.details.inningScore &&
+        dbMatch.details.inningScore.team1 && dbMatch.details.inningScore.team2 &&
+        dbMatch.details.inningScore.team1.length >= 5)
+    {
         const inningScores1 = dbMatch.details.inningScore.team1;
         const inningScores2 = dbMatch.details.inningScore.team2;
-        const finalScore1 = parseInt(dbMatch.score1) || 0;
-        const finalScore2 = parseInt(dbMatch.score2) || 0;
-        const finalScoreDiff = Math.abs(finalScore1 - finalScore2);
-        const actualNumInnings = inningScores1.length; // 実際に記録されたイニング数
+        const actualNumInningsRecorded = inningScores1.length; // 記録されているイニング数
 
-        let earliestCalledInning = null; // コールドが成立した最初のイニングを記録する変数
+        let cumulativeScore1 = 0;
+        let cumulativeScore2 = 0;
 
-        // --- 10点差コールド (5回以降) のチェック ---
-        // 最終スコアで10点差以上ついている場合のみ、イニングを遡ってチェック
-        if (finalScoreDiff >= 10) {
-            let cumulativeScore1 = 0;
-            let cumulativeScore2 = 0;
-            // 1回から順に累計スコアを計算
-            for (let i = 0; i < actualNumInnings; i++) {
-                cumulativeScore1 += parseInt(inningScores1[i] || 0);
-                cumulativeScore2 += parseInt(inningScores2[i] || 0);
-                // 5回終了時点 (i=4) 以降で、初めて10点差以上ついたイニングを記録
-                if (i >= 4 && Math.abs(cumulativeScore1 - cumulativeScore2) >= 10) {
-                    earliestCalledInning = i + 1; // イニング番号は 1始まりなので +1
-                    break; // 最初に見つかった時点でループを抜ける
-                }
+        // 1回から記録されている最終イニングまで、各イニング終了時点のスコア差をチェック
+        for (let i = 0; i < actualNumInningsRecorded; i++) {
+            cumulativeScore1 += parseInt(inningScores1[i] || 0);
+            cumulativeScore2 += parseInt(inningScores2[i] || 0);
+            const currentInning = i + 1; // 現在チェックしているイニング (1始まり)
+            const scoreDiff = Math.abs(cumulativeScore1 - cumulativeScore2);
+
+            // 【重要】チェックはイニング終了時点で行う
+            // 5回終了時点で10点差以上か？
+            if (currentInning === 5 && scoreDiff >= 10) {
+                earliestCalledInning = 5;
+                break; // 5回コールド成立なら以降のチェック不要
             }
-        }
-
-        // --- 7点差コールド (7回以降) のチェック ---
-        // 10点差コールドが成立しておらず、かつ最終スコアで7点差以上ついている場合
-        if (earliestCalledInning === null && finalScoreDiff >= 7) {
-            let cumulativeScore1 = 0;
-            let cumulativeScore2 = 0;
-            // 1回から順に累計スコアを計算
-            for (let i = 0; i < actualNumInnings; i++) {
-                cumulativeScore1 += parseInt(inningScores1[i] || 0);
-                cumulativeScore2 += parseInt(inningScores2[i] || 0);
-                // 7回終了時点 (i=6) 以降で、初めて7点差以上ついたイニングを記録
-                if (i >= 6 && Math.abs(cumulativeScore1 - cumulativeScore2) >= 7) {
-                    earliestCalledInning = i + 1; // イニング番号は 1始まりなので +1
-                    break; // 最初に見つかった時点でループを抜ける
-                }
+            // 6回終了時点で10点差以上か？
+            if (currentInning === 6 && scoreDiff >= 10) {
+                earliestCalledInning = 6;
+                break; // 6回コールド成立
             }
+            // 7回終了時点で7点差以上か？ (10点差も含む)
+            if (currentInning === 7 && scoreDiff >= 7) {
+                earliestCalledInning = 7;
+                break; // 7回コールド成立
+            }
+            // 8回終了時点で7点差以上か？ (10点差も含む)
+            if (currentInning === 8 && scoreDiff >= 7) {
+                earliestCalledInning = 8;
+                break; // 8回コールド成立
+            }
+            // ★★★ 9回以降のコールドはルール上ないので、ここでループは実質終了 ★★★
         }
 
         // earliestCalledInning が見つかっていれば、コールド成立と記録
@@ -10536,7 +10538,6 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
     // ▲▲▲ コールドゲーム判定ここまで ▲▲▲
-
 
 
     // ▼▼▼ 修正箇所 ▼▼▼
