@@ -9783,6 +9783,27 @@ function createHighlightsText(dbMatch, winnerName) {
         // --- エラーや野選での打点 ---
         else if (tempRes.includes('ゴロ') && rbiMatch) description = `${playerInfo}の${direction || '内野'}ゴロの間に${eventText}${rbiMatch[1]}点を挙げた`;
         else if ((tempRes.includes('エラー') || tempRes.includes('失')) && rbiMatch) description = `相手${direction ? direction + 'の' : ''}エラーの間に${eventText}${rbiMatch[1]}点を記録した`;
+
+// ▼▼▼ このブロックを置き換え ▼▼▼
+        else if (tempRes.includes('四球')) {
+            if (rbiMatch) {
+                // 押し出しの場合
+                description = `${playerInfo}が${eventText}押し出しの四球を選び、${rbiMatch[1]}点を挙げた`;
+            } else {
+                // 通常の四球
+                description = `${playerInfo}が四球を選んだ`;
+            }
+        }
+        else if (tempRes.includes('死球')) {
+            if (rbiMatch) {
+                // 押し出しの場合
+                description = `${playerInfo}が${eventText}押し出しの死球を受け、${rbiMatch[1]}点を挙げた`;
+            } else {
+                // 通常の死球
+                description = `${playerInfo}が死球で出塁した`;
+            }
+        }
+        // ▲▲▲ 置き換えここまで
         // --- アウト系 ---
         else if (tempRes.includes('三振')) description = `${playerInfo}が三振に倒れた`; // 方向なし
         else if (tempRes.includes('併殺')) description = `${playerInfo}が${direction || '内野'}ゴロで併殺打に倒れた`;
@@ -9790,8 +9811,7 @@ function createHighlightsText(dbMatch, winnerName) {
         else if (tempRes.includes('飛')) description = `${playerInfo}が${direction || '外野'}フライに倒れた`;
         else if (tempRes.includes('直')) description = `${playerInfo}が${direction || ''}ライナーに倒れた`;
         // --- 出塁系 (打点なし) ---
-        else if (tempRes.includes('四球')) description = `${playerInfo}が四球を選んだ`; // 方向なし
-        else if (tempRes.includes('死球')) description = `${playerInfo}が死球で出塁した`; // 方向なし
+        
         else if (tempRes.includes('エラー') || tempRes.includes('犠失')) description = `${playerInfo}が相手${direction ? direction + 'の' : ''}エラーで出塁した`; // 犠失もエラー扱い
         else if (tempRes.includes('野選')) description = `${playerInfo}が${direction ? direction + 'への' : ''}野選で出塁した`;
         else return null; // どれにも当てはまらない場合は null
