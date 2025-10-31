@@ -10932,17 +10932,7 @@ async function processMatchWin(matchId, winnerName) {
         updateTicker(); // ティッカー表示を更新
     }
 
-    // 勝者と敗者の前回のスタメン情報を記録 (詳細データがある場合)
-    if (dbMatch.details && dbMatch.details.batting) {
-        const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
-        if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
-            tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
-        }
-        const loserTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
-        if (tournamentState.teamRecords[loserName] && dbMatch.details.batting[loserTeamKey]) {
-            tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
-        }
-    }
+    
 
     // ジャイアントキリング称号の付与判定
     const winnerRank = calculateRank(winnerName, tournamentState);
@@ -11225,6 +11215,17 @@ async function processMatchWin(matchId, winnerName) {
     }
 
     renderTournament(tournamentState); // この中で renderBbsComments が呼ばれる
+// 勝者と敗者の前回のスタメン情報を記録 (詳細データがある場合)
+    if (dbMatch.details && dbMatch.details.batting) {
+        const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
+        if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
+            tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+        }
+        const loserTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
+        if (tournamentState.teamRecords[loserName] && dbMatch.details.batting[loserTeamKey]) {
+            tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+        }
+    }
     saveState();
 
     // --- 春季大会の進行確認 (変更なし) ---
