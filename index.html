@@ -8480,16 +8480,27 @@ ${rivalryText} {/* ← ここに追加 */}
     // --- AIへのリクエスト ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
-            if (article) {
-                const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
-                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
+        const result = await response.json(); // AI応答全体を取得
+
+        // ▼▼▼ ここで text 部分を抽出 ▼▼▼
+        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawTextFromAi = result.candidates[0].content.parts[0].text; // ★ text を取り出す
+            const article = parseJsonFromText(rawTextFromAi); // ★ 取り出した text をパースする
+        // ▲▲▲ 抽出ここまで ▲▲▲
+
+            if (article && article.title && article.body) { // パース結果をチェック
+                // ... (既存の処理: newspaperHtml 生成など) ...
                 return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
+            } else {
+                 // パースに失敗した場合のログを追加
+                 console.error("parseJsonFromText failed for raw text:", rawTextFromAi);
+                 throw new Error("AI response format error after parsing."); // エラーを投げる
             }
+        } else {
+             // 応答に必要な構造がなかった場合
+             console.error("Unexpected AI response structure:", result);
+             throw new Error("AI response structure is missing expected parts."); // エラーを投げる
         }
-        throw new Error("AIからの応答が予期した形式ではありません。");
     } catch (error) {
         console.error("AI記事の生成に失敗しました:", error);
         return { 
