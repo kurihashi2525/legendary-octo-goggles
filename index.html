@@ -4829,16 +4829,23 @@ async function generateBracketBbsThread(state) {
                 matchup.isCrush = true; // 潰し合いフラグ
             }
 
+            // ▼▼▼ このブロック全体を、既存のマニアックな注目カードのロジックと置き換えてください ▼▼▼
+
             // マニアックな注目カードの抽出ロジック
             const rankDiff = Math.abs(rankValues[rank1] - rankValues[rank2]);
+            
+            // ★★★ おそらく、以下の4行の定義が抜けているか、順番が間違っています ★★★
+            const isStrong1 = rankValues[rank1] >= 4; // A or B
+            const isStrong2 = rankValues[rank2] >= 4; // A or B
+            const isMid1 = rankValues[rank1] === 3; // C
+            const isMid2 = rankValues[rank2] === 3; // C
+
             // 1. 同地区の下位〜中堅対決 (C vs C, C vs D in same region)
             if (region1 === region2 && !matchup.isCrush && rankValues[rank1] <= 3 && rankValues[rank2] <= 3) {
-                 if (nicheMatchups.length < 3) { // 3つまでピックアップ
+                 if (nicheMatchups.length < 3) {
                     nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `${region1}地区対決` });
                  }
             }
-
-// ▼▼▼ この else if ブロックを追加 ▼▼▼
             // 2. Cランク vs 強豪 (A/B) の「波乱期待カード」
             else if (nicheMatchups.length < 3 && !matchup.isCrush && ((isStrong1 && isMid2) || (isMid1 && isStrong2))) {
                 nicheMatchups.push({ 
@@ -4847,9 +4854,7 @@ async function generateBracketBbsThread(state) {
                     reason: `Cランクが強豪に挑む注目カード` 
                 });
             }
-            // ▲▲▲ 追加ここまで ▲▲▲
-
-            // 2. ランクが近く、勝機がありそうな下位対決 (D vs D, D vs E, E vs E)
+            // 3. ランクが近く、勝機がありそうな下位対決 (D vs D, D vs E, E vs E)
             else if (rankDiff <= 1 && rankValues[rank1] <= 2 && rankValues[rank2] <= 2) {
                  // 既にリストにあるチームとの重複を避ける
                  if (nicheMatchups.length < 3 && !nicheMatchups.some(nm => nm.match.includes(team1) || nm.match.includes(team2))) {
