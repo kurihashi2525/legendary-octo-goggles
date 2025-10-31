@@ -2850,6 +2850,15 @@ async function generateGameMatchBbsComments(matchContext) {
         roundName = "組み合わせ決定時";
     }
 
+// ▼▼▼ この2ブロックを追加 ▼▼▼
+    const calledGameText = matchContext.calledGame
+        ? `\n- **特記事項:** ${matchContext.calledInning}回コールドゲーム`
+        : '';
+    const rivalryText = matchContext.rivalryType
+        ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。`
+        : '';
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     // ▼▼▼ プロンプトを修正 ▼▼▼
     const prompt = `あなたは、静岡県の高校野球を観戦している、なんJの野球ファンです。
 以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜30個**生成してください。
@@ -2870,6 +2879,8 @@ async function generateGameMatchBbsComments(matchContext) {
 - **スコア:** ${score}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+${calledGameText} 
+${rivalryText} 
 // ▲▲▲ 追加ここまで ▲▲▲
 - **ユーザーによる試合の決め手:** ${dbMatch.summary || '特になし'}
 
@@ -2902,7 +2913,9 @@ ${highlightsText}
 ** #は背番号と言い換えてください。(例　#1→背番号1)
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+- **【コールド/因縁】**: もし試合がコールドゲームや「${matchContext.rivalryType || '因縁の対決'}」であった場合、その点について必ず言及すること。
 // ▲▲▲ 追加ここまで ▲▲▲
+
 
 ### 出力形式【最重要】
 解説や前置きは一切不要です。**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
@@ -3845,7 +3858,46 @@ function simulateKoshien(teamRank) {
         return null; // どこにも見つからなかった場合
     }
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
-    /**
+    
+/**
+ * 2チーム間の因縁対決を判定し、フラグを返す（タグ機能不要版）
+ * @param {string} team1Name - チーム1の名前
+ * @param {string} team2Name - チーム2の名前
+ * @returns {string | null} - 因縁のタイプ（例: "283直接対決"）、なければ null
+ */
+function checkRivalry(team1Name, team2Name) {
+    if (!team1Name || !team2Name) return null;
+
+    const data1 = TEAM_DATA[team1Name];
+    const data2 = TEAM_DATA[team2Name];
+    if (!data1 || !data2) return null;
+
+    // 1. 283学園 vs 283学園B
+    if ((team1Name === "283学園" && team2Name === "283学園B") || (team1Name === "283学園B" && team2Name === "283学園")) {
+        return "283直接対決";
+    }
+
+    // ▼▼▼ 修正点 ▼▼▼
+    // 2. ナムコ系列ダービー (タグの代わりに、ここでリストを直接定義)
+    const namcoSchools = ["765総合高校", "283学園", "初星学園", "美城学園", "283学園B"];
+    if (namcoSchools.includes(team1Name) && namcoSchools.includes(team2Name)) {
+        return "ナムコダービー";
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
+
+    // 3. 同地区の強豪対決 (Aランク vs Aランク or Aランク vs Bランク)
+    if (data1.region === data2.region) {
+        const rank1 = calculateRank(team1Name, tournamentState);
+        const rank2 = calculateRank(team2Name, tournamentState);
+        if ((rank1 === 'A' && rank2 === 'A') || (rank1 === 'A' && rank2 === 'B') || (rank1 === 'B' && rank2 === 'A')) {
+            return `同地区強豪対決 (${data1.region})`;
+        }
+    }
+
+    return null; // その他の因縁はなし
+}
+
+/**
      * チームランクを計算する（現実の勢力図に合わせて調整版）
      */
     function calculateRank(teamName, state) {
@@ -4260,7 +4312,20 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         const side = index < 16 ? 'L' : 'R';
         const matchNum = index < 16 ? index + 1 : index - 15;
         const matchId = `${side}-R1-M${matchNum}`;
-        tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
+// ▼▼▼ この行を追加 ▼▼▼
+        const rivalryType = checkRivalry(match.team1, match.team2);
+        // ▲▲▲ 追加ここまで ▲▲▲
+        tournamentState.matches[matchId] = { 
+            id: matchId, 
+            team1: match.team1, 
+            team2: match.team2, 
+            winner: null, 
+            score1: '', 
+            score2: '', 
+            details: null, 
+            summary: '',
+            rivalryType: rivalryType // ← ★プロパティを追加
+        };
     });
 
     saveState(); // 組み合わせ決定時点の状態を保存
@@ -5515,19 +5580,25 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
     const t1Empty = !team1;
     const t2Empty = !team2;
 
+    // ▼▼▼ このブロックを修正 ▼▼▼
     let specialMatchClass = '';
-    if (!t1Empty && !t2Empty) {
+    // 1. 動的に判定された因縁 (283対決, ナムコダービーなど)
+    if (dbMatch.rivalryType) {
+        specialMatchClass = 'rivalry-match'; // 赤枠線
+    } 
+    // 2. 静的な因縁 (RIVALRIES, feuds)
+    else if (!t1Empty && !t2Empty) {
         const feud = tournamentState.feuds?.find(f => f.teams.includes(team1) && f.teams.includes(team2));
         if (feud) {
-            specialMatchClass = 'feud-match';
+            specialMatchClass = 'feud-match'; // 紫枠線
         } else {
             const rivalry = tournamentState.rivalries?.find(r => r.teams.includes(team1) && r.teams.includes(team2));
             if (rivalry) {
-                specialMatchClass = 'rivalry-match';
+                specialMatchClass = 'rivalry-match'; // 赤枠線
             }
         }
     }
-
+    // ▲▲▲ 修正ここまで ▲▲▲
     const rank1 = calculateRank(team1, tournamentState);
     const rank2 = calculateRank(team2, tournamentState);
     const rankColor = (rank) => {
@@ -7474,7 +7545,8 @@ function createMatchContext(matchId, winnerName) {
         highlights: highlights,
         keyPlayerNames: keyPlayerNames,
         calledGame: dbMatch.calledGame,
-        calledInning: dbMatch.calledInning
+        calledInning: dbMatch.calledInning,
+        rivalryType: dbMatch.rivalryType || null
     };
     return context;
 }
@@ -8263,12 +8335,15 @@ ${notablePlayersText}
         const winnerCoach = winnerData.coach;
         const loserCoach = loserData.coach;
 
-// ▼▼▼ ここから追加 ▼▼▼
+// ▼▼▼ この2ブロックを追加 ▼▼▼
         const calledGameText = matchContext.calledGame
             ? `\n- **【重要】** この試合は ${matchContext.calledInning}回コールド (${winnerScore}-${loserScore}) で ${winnerName} が勝利しました。`
             : '';
+        
+        const rivalryText = matchContext.rivalryType
+            ? `\n- **【最重要】** この試合は「${matchContext.rivalryType}」という特別な因縁の対決でした。`
+            : '';
         // ▲▲▲ 追加ここまで ▲▲▲
-
         // 1. 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
        
         // ★★★ 修正箇所はここまで ★★★
@@ -8285,7 +8360,11 @@ ${notablePlayersText}
 ---
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
+
 // ▲▲▲ 追加ここまで ▲▲▲
+### **試合結果サマリー**
+- ${winnerName} が ${loserName} に ${winnerScore} - ${loserScore} で勝利。${calledGameText}
+${rivalryText} 
 ### **【最重要】この記事の唯一の事実情報源 (★背番号付きボックススコア)**
 ${matchContext.playerStatsText} {/* ← ここで背番号情報が渡されている */}
 ---
@@ -8296,6 +8375,7 @@ ${factListText}
 - **前試合からのスタメン変更**:
 ${lineupChangesText}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
+
 ---
 ### **参考情報：チームと選手のプロフィール**
 - **${winnerName}**: ${winnerDynamicInfo}
@@ -8315,6 +8395,7 @@ ${lineupChangesText}
 5.  **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
 6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。#は背番号と言い換えてください。(例　#1→背番号1)
 7. **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
+8.  **【因縁の対決】**: もし試合が「因縁の対決」であった場合（${matchContext.rivalryType || '該当なし'}）、そのドラマ性（例：ダービーマッチの熱狂、兄弟校対決の複雑さ、同地区ライバルの意地）を記事の中心に据え、熱く描写してください。
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -8333,9 +8414,13 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
         const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
         const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
 
-// ▼▼▼ ここから追加 ▼▼▼
+// ▼▼▼ この2ブロックを追加 ▼▼▼
         const calledGameText = matchContext.calledGame
-            ? `\n- **【重要】** この試合は ${matchContext.calledInning}回コールド (${winnerScore}-${loserScore}) で ${winnerName} が勝利しました。`
+            ? `\n- **特記事項:** ${matchContext.calledInning}回コールドゲーム`
+            : '';
+        
+        const rivalryText = matchContext.rivalryType
+            ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。`
             : '';
         // ▲▲▲ 追加ここまで ▲▲▲
 
@@ -8353,10 +8438,13 @@ ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回
 - **敗北チーム**: ${loserName} (${loserRankDesc})
 - **スコア**: ${winnerScore} - ${loserScore}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
+${calledGameText} {/* ← ここに追加 */}
+${rivalryText} {/* ← ここに追加 */}
 ### 執筆指示
  **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
 - 試合結果を客観的に伝えてください。
+- **【因縁の対決】**: もし試合が「因縁の対決」であった場合、その事実を必ず記事に含めてください。
 - **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。** // ← ★★★ この指示を追加 ★★★
 - 記事のタイトルと本文をJSON形式で出力してください。`;
         }
@@ -8451,7 +8539,14 @@ async function generateBbsComments(matchContext) {
             specialNarrativeContext = `### 【掲示板の話題】\n衝撃！無名の公立「${winnerName}」が県大会初戦を勝ち、【来春のシード権獲得】だ！この快進撃に驚きと嫉妬のコメントを生成せよ。`;
         }
     }
-
+// ▼▼▼ このブロックを追加 ▼▼▼
+    const calledGameText = matchContext.calledGame
+        ? `\n- **特記事項:** ${matchContext.calledInning}回コールドゲーム`
+        : '';
+    const rivalryText = matchContext.rivalryType
+        ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。`
+        : '';
+    // ▲▲▲ 追加ここまで ▲▲▲
     let prompt = '';
 
     // --- 3. 記事の方向性を決定し、AIへの指示書(プロンプト)を作成する ---
@@ -8466,6 +8561,8 @@ async function generateBbsComments(matchContext) {
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+${calledGameText} 
+${rivalryText}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 // ▲▲▲ 追加ここまで ▲▲▲
@@ -8484,6 +8581,7 @@ ${specialNarrativeContext}
 - **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+- **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
 // ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
@@ -8496,6 +8594,8 @@ ${specialNarrativeContext}
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
 - スコア: ${winnerScore} - ${loserScore}
+${calledGameText}
+${rivalryText}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 // ▲▲▲ 追加ここまで ▲▲▲
@@ -8512,6 +8612,7 @@ ${specialNarrativeContext}
 - **単なる野球好き**: スコアを見て、接戦だったか、一方的だったかなどの感想を述べてください。
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
+- **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
 // ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
@@ -10758,7 +10859,16 @@ async function processMatchWin(matchId, winnerName) {
                     slot = (matchNum % 2 !== 0 ? 1 : 2); // 奇数試合ならteam1, 偶数試合ならteam2
                 }
                 tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
+
+// ▼▼▼ このブロックを追加 ▼▼▼
+                // 次の試合の両チームが揃ったかチェック
+                const nextMatch = tournamentState.matches[nextMatchId];
+                if (nextMatch.team1 && nextMatch.team2) {
+                    nextMatch.rivalryType = checkRivalry(nextMatch.team1, nextMatch.team2);
+                }
+                // ▲▲▲ 追加ここまで ▲▲▲
             }
+
         }
         // 決勝戦終了時の処理は後続 (手順4の最後) に移動
     }
