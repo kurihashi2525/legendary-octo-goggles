@@ -8488,8 +8488,9 @@ ${rivalryText} {/* ← ここに追加 */}
             const article = parseJsonFromText(rawTextFromAi); // ★ 取り出した text をパースする
         // ▲▲▲ 抽出ここまで ▲▲▲
 
-            if (article && article.title && article.body) { // パース結果をチェック
-                // ... (既存の処理: newspaperHtml 生成など) ...
+            if (article && article.title && article.body) { 
+ const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
+                const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
                 return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
             } else {
                  // パースに失敗した場合のログを追加
