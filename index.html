@@ -5533,18 +5533,33 @@ async function skipSpringMainTournament() {
         });
         // ▲▲▲ 置き換えここまで ▲▲▲
 
+        // ▼▼▼ この 2回戦以降のループ (for (let r = 2; ...)) を修正 ▼▼▼
         for (let r = 2; r <= numRounds; r++) {
             const numMatchesInRound = numMatchesInFirstRound / Math.pow(2, r - 1);
             for (let m = 1; m <= numMatchesInRound; m++) {
                 const matchId = `${side}-R${r}-M${m}`;
+                
+                // 1. まず、この試合のデータベースを取得する
+                const dbMatch = allMatches[matchId] || {};
+
+                // 2. この試合に進出してくるはずの、前のラウンドの試合IDを取得
                 const prevMatch1Id = `${side}-R${r - 1}-M${(m * 2) - 1}`;
                 const prevMatch2Id = `${side}-R${r - 1}-M${m * 2}`;
-                const team1 = allMatches[prevMatch1Id]?.winner || null;
-                const team2 = allMatches[prevMatch2Id]?.winner || null;
-                const dbMatch = allMatches[matchId] || {};
+
+                // 3. 前のラウンドの勝者 (デフォルトのチーム名) を取得
+                const prevWinner1 = allMatches[prevMatch1Id]?.winner || null;
+                const prevWinner2 = allMatches[prevMatch2Id]?.winner || null;
+
+                // 4. 【重要】表示するチーム名は、dbMatch (入れ替え情報) を優先し、
+                //    それが無ければデフォルト (前の勝者) を使う
+                const team1 = dbMatch.team1 || prevWinner1;
+                const team2 = dbMatch.team2 || prevWinner2;
+
+                // 5. 修正された team1, team2 を使ってHTMLを生成
                 roundElements[r - 1].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
             }
         }
+        // ▲▲▲ 修正ここまで ▲▲▲
     }
 
     /**
