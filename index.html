@@ -8429,9 +8429,12 @@ ${lineupChangesText}
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
 ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedback.exclude}\n` : '特になし'}
 ---
-### 出力形式
-【最重要】必ず以下のJSON形式"のみ"で出力すること。
-{"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
+### 出力形式【厳守】
+- **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
+- **絶対に**、JSONの前後に「はい、修正しました」や「\`\`\`json」などのテキストを付け加えてはいけません。
+- **必ず**、以下の形式に従ってください。
+{"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}
+`;
 
     } 
     // --- 詳細データがない場合 (Bルート) ---
