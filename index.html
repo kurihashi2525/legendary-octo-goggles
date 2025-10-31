@@ -2877,6 +2877,8 @@ async function generateGameMatchBbsComments(matchContext) {
 - **勝利:** ${winnerName} (ランク: ${winnerRank})
 - **敗北:** ${loserName} (ランク: ${loserRank})
 - **スコア:** ${score}
+スタメン変更
+${lineupChangesText}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 ${calledGameText} 
@@ -2914,6 +2916,7 @@ ${highlightsText}
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【コールド/因縁】**: もし試合がコールドゲームや「${matchContext.rivalryType || '因縁の対決'}」であった場合、その点について必ず言及すること。
+  **【スタメン変更】**:スタメン変更があった場合(${lineupChangesText}触れなさい。
 // ▲▲▲ 追加ここまで ▲▲▲
 
 
@@ -8415,6 +8418,7 @@ ${lineupChangesText}
 6.  **【背番号の意味を反映】**: 記事中で選手に言及する際、その選手の背番号が持つ意味を考慮し、物語に深みを与えてください。#は背番号と言い換えてください。(例　#1→背番号1)
 7. **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 8.  **【因縁の対決】**: もし試合が「因縁の対決」であった場合（${matchContext.rivalryType || '該当なし'}）、そのドラマ性（例：ダービーマッチの熱狂、兄弟校対決の複雑さ、同地区ライバルの意地）を記事の中心に据え、熱く描写してください。
+9.  **【スタメン変更】**:スタメン変更があった場合(${lineupChangesText})触れなさい。 
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
