@@ -4532,11 +4532,15 @@ ${analysisText}
             body: "AI記者との通信に失敗し、記事を生成できませんでした。",
             timestamp: Date.now(),
             error: true,
-            errorId: `bracket-analysis-${Date.now()}` // エラー識別用ID
+            errorId: `bracket-analysis-${Date.now()}`,
+            // ▼▼▼ この context を追加 ▼▼▼
+            context: {
+                isBracketAnalysis: true // ★これが「組み合わせ分析記事」であるというフラグ
+            }
+            // ▲▲▲ 追加ここまで ▲▲▲
         };
     }
-}   
-
+}
 
 // --- Tournament Animation Logic ---
 
@@ -12334,7 +12338,7 @@ document.body.addEventListener('click', async (e) => {
     if (feedbackSubmitBtn) {
         if (!articleForRegeneration) return;
         const { index, article } = articleForRegeneration;
-        const context = article.context;
+        const context = article.context; // エラー記事から context を取得
 
         // UIを準備
         feedbackSubmitBtn.textContent = '生成中...';
@@ -12353,38 +12357,48 @@ document.body.addEventListener('click', async (e) => {
         (async () => {
             let articlePromise;
 
-            // 再生成する記事がドキュメンタリーかどうかを context の中身で判断する
+            // ▼▼▼ この分岐を修正・追加 ▼▼▼
             if (context.isDocumentary) {
                 // 【ドキュメンタリー記事の場合】
                 const { type, teamName, matchData } = context;
                 articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
-
+            
+            } else if (context.isBracketAnalysis) {
+                // 【組み合わせ分析記事の場合】
+                // 分析には最新の tournamentState を使います
+                // (注: 組み合わせ記事はフィードバック入力を無視して再生成します)
+                articlePromise = generateBracketAnalysisNewsArticle(tournamentState); 
+            
             } else {
                 // 【通常の試合記事の場合】
+                // context には matchContext が入っているはず
                 articlePromise = generateNewsArticle(context, userFeedback);
             }
+            // ▲▲▲ 分岐修正ここまで ▲▲▲
 
             const newArticle = await articlePromise;
 
             const createErrorArticle = () => ({
                 title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true, errorId: context.matchId || 'error',
-                context: context
+                timestamp: Date.now(), error: true, errorId: context.matchId || context.errorId || 'error',
+                context: context // エラーが連鎖しても context を引き継ぐ
             });
 
             if (newArticle && !newArticle.error) {
                 newArticle.context = context; // 新しい記事にもコンテキストを付与
-
-tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
-                showArticleReviewModal(newArticle); // 事実確認なしでレビューモーダル表示
-                // ▲▲▲ 変更点ここまで ▲▲▲
-
+                tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
+                
+                // 組み合わせ分析記事はレビューモーダルを通さず、そのまま表示
+                if (!context.isBracketAnalysis) {
+                    showArticleReviewModal(newArticle);
+                }
             } else {
                 tournamentState.news.splice(index, 0, createErrorArticle()); // 元の位置にエラー記事を挿入
             }
+            // ▲▲▲ 結果処理の修正ここまで ▲▲▲
 
             saveState();
-            renderNews(tournamentState.news);
+            renderNews(tournamentState.news); // ニュース欄を再描画
             feedbackSubmitBtn.textContent = 'この指示で再生成';
             feedbackSubmitBtn.disabled = false;
         })();
