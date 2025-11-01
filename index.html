@@ -8368,7 +8368,22 @@ ${notablePlayersText}
         const rivalryText = matchContext.rivalryType
             ? `\n- **【最重要】** この試合は「${matchContext.rivalryType}」という特別な因縁の対決でした。`
             : '';
-
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let roundName = "不明なラウンド";
+        if (matchId && matchId.includes('-R')) {
+            const roundNum = parseInt(matchId.split('-')[1].slice(1));
+            const finalRound = tournamentState.is16team ? 4 : 6;
+            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+            
+            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
+            }
+            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
+            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
+            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加はここまで ▲▲▲
         // ▲▲▲ 追加ここまで ▲▲▲
         // 1. 次の対戦相手に関するテキストを、3つのパターンに応じて準備する
@@ -8385,6 +8400,9 @@ ${notablePlayersText}
 - **[#12]以降**: ベンチ入りした控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれるサプライズ枠。
 ---
 ---
+### **現在の試合状況**
+- **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
+- **ラウンド:** ${roundName} {/* ← この行を追加 */}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 
@@ -8455,7 +8473,22 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
             : '';
         // ▲▲▲ 追加ここまで ▲▲▲
 
-
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let roundName = "不明なラウンド";
+        if (matchId && matchId.includes('-R')) {
+            const roundNum = parseInt(matchId.split('-')[1].slice(1));
+            const finalRound = tournamentState.is16team ? 4 : 6;
+            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+            
+            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
+            }
+            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
+            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
+            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
 
         prompt = `あなたは、高校野球専門のAI記者です。
 以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
@@ -8471,6 +8504,9 @@ ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ${calledGameText} {/* ← ここに追加 */}
 ${rivalryText} {/* ← ここに追加 */}
+### **現在の試合状況**
+- **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
+- **ラウンド:** ${roundName} {/* ← この行を追加 */}
 ### 執筆指示
  **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
@@ -8598,6 +8634,34 @@ async function generateBbsComments(matchContext) {
         const { highlights } = createHighlightsText(dbMatch, winnerName);
         const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
         
+let roundName = "不明なラウンド";
+        if (matchId && matchId.includes('-R')) {
+            const roundNum = parseInt(matchId.split('-')[1].slice(1));
+            const finalRound = tournamentState.is16team ? 4 : 6;
+            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+            
+            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
+            }
+            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
+            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
+            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let nextOpponentText = '次の相手は未定。';
+        if (matchContext.nextOpponent) {
+            const nextOpponent = matchContext.nextOpponent;
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})。`;
+            } else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者。`;
+            }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
@@ -8606,6 +8670,11 @@ async function generateBbsComments(matchContext) {
 - スコア: ${winnerScore} - ${loserScore}
 ${calledGameText} 
 ${rivalryText}
+### 次の試合情報
+- **${winnerName}の次の試合**: ${nextOpponentText}
+### **現在の試合状況**
+- **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
+- **ラウンド:** ${roundName} {/* ← この行を追加 */}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 // ▲▲▲ 追加ここまで ▲▲▲
@@ -8625,12 +8694,42 @@ ${specialNarrativeContext}
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
+
+- **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。
 // ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
     } else {
         // 詳細データがない場合 (Bルート)
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let roundName = "不明なラウンド";
+        if (matchId && matchId.includes('-R')) {
+            const roundNum = parseInt(matchId.split('-')[1].slice(1));
+            const finalRound = tournamentState.is16team ? 4 : 6;
+            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+            
+            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
+            }
+            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
+            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
+            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let nextOpponentText = '次の相手は未定。';
+        if (matchContext.nextOpponent) {
+            const nextOpponent = matchContext.nextOpponent;
+            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}(ランク:${nextOpponent.opponentRank})。`;
+            } else if (nextOpponent.decidingMatch) {
+                const dm = nextOpponent.decidingMatch;
+                nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}(${dm.rank1}ランク)と${dm.team2}(${dm.rank2}ランク)の勝者。`;
+            }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
 ### 試合情報
@@ -8639,6 +8738,11 @@ ${specialNarrativeContext}
 - スコア: ${winnerScore} - ${loserScore}
 ${calledGameText}
 ${rivalryText}
+### 次の試合情報
+- **${winnerName}の次の試合**: ${nextOpponentText}
+### **現在の試合状況**
+- **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
+- **ラウンド:** ${roundName} {/* ← この行を追加 */}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 // ▲▲▲ 追加ここまで ▲▲▲
@@ -8647,6 +8751,11 @@ ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回
 - **${winnerName}**: ${winnerDynamicInfo}
 - **${loserName}**: ${loserDynamicInfo}
 ${specialNarrativeContext}
+### 次の試合情報
+- **${winnerName}の次の試合**: ${nextOpponentText}
+
+
+
 ### あなたがなりきるべきキャラクターと指示
 - **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
 - **上から目線の野球解説者**: 順当な結果か、意外な結果かを分析してください。
@@ -8656,6 +8765,7 @@ ${specialNarrativeContext}
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
+- **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。
 // ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
