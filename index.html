@@ -13520,9 +13520,13 @@ document.body.addEventListener('click', async (e) => {
             
             } else if (context.isBracketAnalysis) {
                 // 【組み合わせ分析記事の場合】
-                // 分析には最新の tournamentState を使います
                 // (注: 組み合わせ記事はフィードバック入力を無視して再生成します)
                 articlePromise = generateBracketAnalysisNewsArticle(tournamentState); 
+            
+            } else if (context.isHadaReport) { // ★★★ この分岐を追加 ★★★
+                // 【羽田レポートの場合】
+                // （注：羽田レポートはフィードバック入力を無視し、contextのみで再生成します）
+                articlePromise = generateHadaReport(context);
             
             } else {
                 // 【通常の試合記事の場合】
@@ -13544,20 +13548,20 @@ document.body.addEventListener('click', async (e) => {
                 tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
                 
                 // 組み合わせ分析記事はレビューモーダルを通さず、そのまま表示
-                if (!context.isBracketAnalysis) {
+                if (!context.isBracketAnalysis && !context.isHadaReport) { // ★羽田レポートもレビューを通さない
                     showArticleReviewModal(newArticle);
                 }
             } else {
                 tournamentState.news.splice(index, 0, createErrorArticle()); // 元の位置にエラー記事を挿入
             }
-            // ▲▲▲ 結果処理の修正ここまで ▲▲▲
-
+            
             saveState();
             renderNews(tournamentState.news); // ニュース欄を再描画
             feedbackSubmitBtn.textContent = 'この指示で再生成';
             feedbackSubmitBtn.disabled = false;
         })();
     }
+
 // ▲▲▲ ここまで置き換え ▲▲▲
 
 // ▼▼▼ この else if ブロックを (model_114 の提案と) 置き換え ▼▼▼
