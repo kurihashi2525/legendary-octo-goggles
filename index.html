@@ -672,6 +672,19 @@
 /* 詳細入力テーブル用のスタイル（最終版） */
 
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
+.match-schedule {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #4b5563; /* gray-600 */
+            text-align: center;
+            padding: 2px 0;
+            border-top: 1px dashed #cbd5e1; /* gray-300 */
+            border-bottom: 1px dashed #cbd5e1; /* gray-300 */
+            margin-top: 3px;
+            background-color: #f9fafb; /* gray-50 */
+        }
+/* ▲▲▲ 追加ここまで ▲▲▲ */
 #animation-stage {
     font-size: 0.75rem; /* 全体の文字サイズを小さめに */
     transition: background-color 0.5s ease;
@@ -2329,11 +2342,11 @@ const JAPANESE_SURNAMES = [
         info: "創立70年を迎える地域の伝統校だが、近年は過疎化の波に飲まれ、活気を失いつつある。野球部の活躍は、町に残された数少ない希望だ。『俺たちが勝てば、町が元気になる』。その想いを胸に、選手たちはグラウンドに立つ。選手は全員が地元出身。育成に定評のある根本監督の下、郷土愛を力に変えて戦う。そのひたむきなプレーには、多くの地元ファンがついている。地元出身の選手たちが、愛する故郷に勝利を届ける。",
         coach: { name: '根本 陸夫', style: '育成上手', experience: 'ベテラン' }
     },
-    "静岡東": {
-        name_yomi: "しずおかひがし",
+    "静岡市立": {
+        name_yomi: "しずおかいちりつ",
         region: "中部",
         type: "公立",
-        deviation: 53,
+        deviation: 83,
         best: "県大会ベスト16",
         last: "初戦敗退",
         info: "毎年投打にバランスの取れた好チームを編成するが、トーナメントの組み合わせに恵まれず、実力以上の結果を残せていない「悲運の公立校」。井上監督はどんな相手にも自分たちの野球を貫くことを選手に求める。今年こそ、厳しい組み合わせを乗り越えて上位進出を果たしたい。。",
@@ -2382,8 +2395,83 @@ const JAPANESE_SURNAMES = [
 };
 
 
+/**
+ * 試合会場の定義
+ * 1回戦～3回戦は全10球場、準々決勝以降は主要4球場に集約する想定
+ */
+// ▼▼▼ この STADIUM_DATA の定義をまるごと置き換えてください ▼▼▼
+const STADIUM_DATA = [
+    { name: "草薙総合運動場硬式野球場", abbr: "草", region: "中部" },
+    { name: "愛鷹広域公園野球場", abbr: "愛", region: "東部" },
+    { name: "富士総合運動公園野球場", abbr: "富", region: "東部" },
+    { name: "ちゅ～るスタジアム清水", abbr: "ち", region: "中部" },
+    { name: "焼津球場", abbr: "焼", region: "中部" },
+    { name: "島田球場", abbr: "島", region: "中部" },
+    { name: "掛川球場", abbr: "掛", region: "西部" },
+    { name: "浜岡球場", abbr: "岡", region: "西部" },
+    { name: "磐田球場", abbr: "磐", region: "西部" },
+    { name: "浜松球場", abbr: "浜", region: "西部" }
+];
+// ▲▲▲ 置き換えここまで ▲▲▲
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+// 3回戦用の主要4球場（草薙、愛鷹、清水、浜松）
+const ROUND_3_STADIUMS = [
+    STADIUM_DATA[0], // 草薙
+    STADIUM_DATA[1], // 愛鷹
+    STADIUM_DATA[3], // ちゅ～るスタジアム清水
+    STADIUM_DATA[9]  // 浜松
+];
 
+// 準々決勝以降用の球場（草薙のみ）
+const FINAL_STAGE_STADIUMS = [
+    STADIUM_DATA[0] // 草薙
+];
+// ▲▲▲ 追加ここまで ▲▲
+/**
+ * AIの解像度を上げるための「静岡県高校野球の常識・勢力図」（現実ベース＋架空・詳細版）
+ * 全てのAI関数がこの情報を参照し、文脈を理解する。
+ */
+const PREFECTURE_LORE = `
+静岡県の高校野球界は、長らく「公立の雄」である **静岡**（シズコウ）と**掛川西**（カケニシ）、そして甲子園優勝経験もある「古豪」**浜松商業**（ハマショウ）や**静岡商業**（静商） といった伝統校が上位を占める時代が長かった。
+
+その均衡を打ち破ったのが、2007年のセンバツ全国制覇 を果たした**常葉菊川**（常葉大菊川）である。彼らの「超攻撃型野球」は一世を風靡し、県の勢力図を「伝統校 vs 菊川」の構図に変えた。
+
+しかし、2010年代後半から現在（2025年）にかけて、勢力図はさらに複雑化する。「新・私立強豪」の時代である。
+**加藤学園**（2020年センバツ出場、2024年春季県大会優勝）、**日大三島**（2022年センバツ出場）、**浜松開誠館**（2023年夏の甲子園出場）、そして常に県大会上位に食い込む**聖隷クリストファー** が台頭。
+静岡県は「伝統校 vs 菊川 vs 新・私立強豪」が激突する、全国屈指の「戦国時代」に突入していた。
+
+この戦国時代に、さらに巨大な波乱要因として参入したのが、巨大資本「ナムコグループ」である。
+ナムコはまず「**765総合高校**」を設立し、2年前に甲子園ベスト16という鮮烈なデビューを飾った。
+さらに昨年、満を持して「**283学園**」を創部すると、姫川や白瀬といった全国レベルの選手を揃え、いきなり夏の県大会を制覇。昨年の王者として今大会の「倒すべき本命」となっている。
+
+その結果、現在の静岡県（2025年）の常識は、以下の4大勢力によって構成されている。
+
+1.  **【ナムコ資本】 (新・絶対王者)**
+    * **283学園**: 昨年の覇者。圧倒的な戦力を誇る本命。
+    * **765総合**: 2年前に甲子園を経験。王者283に次ぐ戦力。
+    * (その他、美城学園, 初星学園, 283学園B など)
+
+2.  **【現代・私立強豪】 (群雄割拠)**
+    * **加藤学園**: 2024年春の王者。今、最も勢いのあるチームの一つ。
+    * **日大三島**: 名将・永田監督の元、2022年に復活。
+    * **浜松開誠館**: 2023年の夏の代表校。
+    * **聖隷クリストファー**: 甲子園未出場ながら、常にベスト4を狙う「無冠の実力校」。
+    * **常葉菊川**: 2007年の全国制覇の衝撃は今も健在。超攻撃型野球は脅威。
+    * (その他、藤枝明誠, 磐田東、常葉橘、藤枝明誠、東海大翔洋など)
+
+3.  **【伝統・公立校】 (公立の砦)**
+    * **静岡**: 「公立最後の砦」として、新旧私立とナムコ資本に対抗する最大の希望。
+    * **掛川西**: 静岡と並ぶ公立の雄。2018年夏甲子園出場、2024年夏ベスト4 と実力は健在。
+    * **静岡商業**: 2006年夏甲子園出場。古豪としての意地がある。
+
+4.  **【復活を目指す古豪】 (Cランク・古豪)**
+    * **浜松商業**: かつての全国優勝校。近年は低迷しているが、復活を願うファンは多い。
+    * **静清**: ハマショウ同様、近年は上位争いから遠ざかっている古豪。
+
+この「常識」は、AI記者やBBS住民の基本的な思考パターンとなります。
+`;
+// ▲▲▲ ここまでを貼り付け（または上書き） ▲▲▲
 
 
     const DETAILED_TEAM_DATA = {
@@ -2858,6 +2946,8 @@ async function generateGameMatchBbsComments(matchContext) {
         roundName = "組み合わせ決定時";
     }
 
+
+
 // ▼▼▼ この2ブロックを追加 ▼▼▼
 // ▼▼▼ このブロックを追加 ▼▼▼
     const hadaReportText = matchContext.hadaReportSummary
@@ -2886,14 +2976,36 @@ async function generateGameMatchBbsComments(matchContext) {
         }
     }
     // ▲▲▲ 追加ここまで ▲▲▲
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    let scheduleText = '';
+    if (matchContext.schedule) {
+        const sched = matchContext.schedule;
+        const team1Region = TEAM_DATA[dbMatch.team1]?.region || '不明';
+        const team2Region = TEAM_DATA[dbMatch.team2]?.region || '不明';
+        
+        let advantage = 'なし';
+        if (sched.region === team1Region && sched.region !== team2Region) {
+            advantage = `${dbMatch.team1}の地元`;
+        } else if (sched.region !== team1Region && sched.region === team2Region) {
+            advantage = `${dbMatch.team2}の地元`;
+        }
+        
+        scheduleText = `\n### データ7：球場情報\n- **球場:** ${sched.stadiumFull} (${sched.region}地区)\n- **地の利:** ${advantage}\n`;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▼▼▼ プロンプトを修正 ▼▼▼
     const prompt = `あなたは、静岡県の高校野球を観戦している、なんJの野球ファンです。
 以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜30個**生成してください。
 
+// ▼▼▼ このブロックを追加 ▼▼▼
+### 参考情報：静岡県高校野球の「常識」（勢力図）
+${PREFECTURE_LORE}
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ### 現在の試合状況
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
 - **ラウンド:** ${roundName}
-
+${scheduleText} {/* ← ここに追加 */}
 ### 参考情報：高校野球における背番号の意味
 - [#1]: チームの絶対的エース投手。
 - [#2-9]: 基本的にレギュラーの野手陣（正捕手、内野手、外野手）。
@@ -2935,6 +3047,7 @@ ${atmosphereText}
     - 試合結果（スコア、勝敗）に対する感想。
     - 「データ3（個人成績）」や「データ4（ハイライト）」で目立った選手やプレーへの言及。**特に「データ3」に記載されている選手の背番号にも触れ、その意味合い（エース、レギュラー、控えなど）を考慮したコメントをすること。**
     - もし敗北チームが善戦した場合 (スコア差が小さい、ランク差があるのに接戦など) は、その健闘を称えるコメント。
+- **【常識の反映】**: あなたが熟知している「常識」（例：ナムコ vs 公立の砦、古豪の復活、王者283学園の動向）を、試合結果やデータと関連付けてコメントすること。
 - **【その他】**:
     - なんJらしい短い煽りや草(w)を適度に含める。
     - 他のコメントへの安価 (>>) をいくつか含める。
@@ -2942,6 +3055,8 @@ ${atmosphereText}
 ** #は背番号と言い換えてください。(例　#1→背番号1)
 - **【羽田レポートへの言及】**: もし「データ6：記者の視点」に羽田記者の分析がある場合、**「羽田とかいう記者が～って言ってたけど…」** のように、その分析に同意したり、反論したりするコメントを**必ず**含めること。
 - **【試合前の雰囲気】**: もし「データ6：試合前の雰囲気・公約」が提供されていたら（例：「エース温存公言」「コンディション最悪」など）、**その伏線が試合結果でどうなったか**について（例：「なお姫」「温存（）」「やっぱ体調悪かったんか」）必ず言及すること。
+- **【球場への言及】**: もし「データ7：球場情報」があり、「地の利」がどちらかのチームにあった場合（例：静岡が草薙で試合）、**「謎の力キターw」「地元判定やめろ」「〇〇（球場名）まで遠征ご苦労さん」**など、球場に関するコメントを必ず含めること。
+    // ▲▲▲ 追加ここまで ▲▲▲
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【コールド/因縁】**: もし試合がコールドゲームや「${matchContext.rivalryType || '因縁の対決'}」であった場合、その点について必ず言及すること。
@@ -3892,6 +4007,54 @@ function simulateKoshien(teamRank) {
     // ▲▲▲ ここまで修正 ▲▲▲
         return null; // どこにも見つからなかった場合
     }
+
+/**
+ * チームの今大会の勝ち上がりを「〇〇回戦 vs △△」のように要約するヘルパー関数
+ */
+function getTournamentPathSummary(teamName, currentMatchId) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord) return "今大会初戦。";
+
+    const path = [];
+    const currentTournamentMatchIds = Object.keys(tournamentState.matches);
+
+    for (const matchId of currentTournamentMatchIds) {
+        if (matchId === currentMatchId) continue;
+        const match = tournamentState.matches[matchId];
+        
+        if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+            const opponent = match.team1 === teamName ? match.team2 : teamName;
+            const roundName = getRoundNameFromMatchId(matchId);
+            
+            if (match.winner === teamName) {
+                path.push(`${roundName} vs ${opponent}`);
+            }
+        }
+    }
+    
+    return path.length === 0 ? "今大会初戦。" : `ここまでの勝ち上がり: ${path.join(' → ')}。`;
+}
+
+/**
+ * 試合IDからラウンド名を取得するヘルパー関数
+ */
+function getRoundNameFromMatchId(matchId) {
+    if (!matchId || !matchId.includes('-R')) return "不明なラウンド";
+    
+    const roundNum = parseInt(matchId.split('-')[1].slice(1));
+    const finalRound = tournamentState.is16team ? 4 : 6;
+    const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+
+    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+         const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+         return springRoundMap[roundNum] || `${roundNum}回戦`;
+    }
+    else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') return "地区予選/順位決定戦";
+    else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') return "県大会1回戦";
+    else return roundNameMap[roundNum] || `${roundNum}回戦`;
+}
+
+
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
     
 /**
@@ -3930,6 +4093,50 @@ function checkRivalry(team1Name, team2Name) {
     }
 
     return null; // その他の因縁はなし
+}
+
+/**
+ * 指定されたラウンドの全試合に日付と球場を割り当てる
+ * @param {Array<string>} matchIds - スケジュールを割り当てる試合IDの配列
+ * @param {Array<string>} dates - 使用する日付の配列 (例: ["7/10", "7/11"])
+ * @param {Array<object>} stadiumList - 使用する球場のリスト (例: STADIUM_DATA)
+ * @param {number} gamesPerDayPerStadium - 1球場・1日あたりの最大試合数
+ */
+function scheduleRoundMatches(matchIds, dates, stadiumList, gamesPerDayPerStadium) {
+    if (!matchIds || matchIds.length === 0) return;
+
+    let scheduleQueue = []; // [ { stadium, date, gameNum: 1 }, { stadium, date, gameNum: 2 }, ... ]
+    
+    // 全ての日付と球場で、開催可能な全スロットを作成
+    for (const date of dates) {
+        for (const stadium of stadiumList) {
+            for (let i = 1; i <= gamesPerDayPerStadium; i++) {
+                scheduleQueue.push({
+                    date: date,
+                    stadium: stadium.abbr, // 略称を保存
+                    stadiumFull: stadium.name,
+                    gameNum: i // 試合順 (①, ②, ...)
+                });
+            }
+        }
+    }
+
+    // 試合IDにスケジュールを割り当て
+    matchIds.forEach((matchId, index) => {
+        const match = findMatchById(matchId);
+        if (match && scheduleQueue[index]) { // スロットが足りる限り割り当て
+            const schedule = scheduleQueue[index];
+            match.schedule = {
+                date: schedule.date,
+                stadium: schedule.stadium,
+                stadiumFull: schedule.stadiumFull,
+                game: schedule.gameNum
+            };
+        } else if (match) {
+            // スロットが足りなかった場合のフォールバック
+            match.schedule = { date: dates[0], stadium: stadiumList[0].abbr, game: 1 };
+        }
+    });
 }
 
 /**
@@ -4336,7 +4543,9 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.rivalries = RIVALRIES;
     tournamentState.feuds = tournamentState.feuds || [];
     tournamentState.namcoNews = null;
-
+// ▼▼▼ この1行をこのブロックの末尾に追加 ▼▼▼
+    tournamentState.preGameComments = {}; // 応援コメント用のキャッシュを初期化
+    // ▲▲▲ 追加はここまで ▲▲▲
     const round1Setup = teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
         else acc[acc.length - 1].team2 = team;
@@ -4363,7 +4572,180 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         };
     });
 
+// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+ // ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+    // --- 全ラウンドのスケジュールを割り当て (新ルール・R1カスタム・シード優遇版) ---
+    
+    // R1: 1回戦 (32試合) - カスタムロジックで割り当て
+    const datesR1 = ["7/10", "7/11", "7/12"];
+    const gamesPerDayPerStadiumR1 = 2;
+    const matchIdsR1 = Object.keys(tournamentState.matches).filter(id => id.includes('-R1-'));
+    
+    // 利用可能な全スロットを作成 (日付, 試合順, 球場)
+    // 10球場 * 3日 * 2試合 = 60スロット
+    let fullScheduleQueueR1 = [];
+    for (const date of datesR1) {
+        for (const stadium of STADIUM_DATA) { // 全10球場
+            for (let i = 1; i <= gamesPerDayPerStadiumR1; i++) {
+                fullScheduleQueueR1.push({
+                    date: date,
+                    stadium: stadium.abbr,
+                    stadiumFull: stadium.name,
+                    region: stadium.region, // 球場の地区
+                    gameNum: i
+                });
+            }
+        }
+    }
+    // スロットをシャッフルしてランダム性を確保
+    fullScheduleQueueR1 = shuffleArray(fullScheduleQueueR1);
+
+    // 1回戦の試合にスケジュールを割り当て
+    // ★★★ シード校優遇のため、試合IDを「シード校の試合」と「それ以外」に分類 ★★★
+    const seedMatchIds = [];
+    const normalMatchIds = [];
+    matchIdsR1.forEach(matchId => {
+        const match = findMatchById(matchId);
+        if (match && (tournamentState.seeds.includes(match.team1) || tournamentState.seeds.includes(match.team2))) {
+            seedMatchIds.push(matchId);
+        } else {
+            normalMatchIds.push(matchId);
+        }
+    });
+
+    // ★★★ 1. まずシード校の試合を優先的に割り当て ★★★
+    seedMatchIds.forEach(matchId => {
+        const match = findMatchById(matchId);
+        if (!match) return;
+
+        let targetRegion = null; // 狙う球場の地区
+        let preferredStadiumAbbr = null; // 狙う球場（謎の力用）
+
+        // 1-A. 「謎の力」チェック (静岡・掛川西)
+        if (match.team1 === "静岡" || match.team2 === "静岡") {
+            preferredStadiumAbbr = STADIUM_DATA[0].abbr; // 草薙
+            targetRegion = STADIUM_DATA[0].region; // 中部
+        } else if (match.team1 === "掛川西" || match.team2 === "掛川西") {
+            preferredStadiumAbbr = STADIUM_DATA[6].abbr; // 掛川
+            targetRegion = STADIUM_DATA[6].region; // 西部
+        } else {
+            // 1-B. その他のシード校の「地元地区」を特定
+            const seedTeamName = tournamentState.seeds.includes(match.team1) ? match.team1 : match.team2;
+            const seedTeamData = TEAM_DATA[seedTeamName];
+            if (seedTeamData) {
+                targetRegion = seedTeamData.region;
+                if (targetRegion === '伊豆') targetRegion = '東部'; // 伊豆は東部球場で
+            }
+        }
+
+        // 1-C. スロットを割り当て
+        let schedule;
+        let foundSlotIndex = -1;
+
+        // まず「謎の力」球場（草薙/掛川）を探す
+        if (preferredStadiumAbbr) {
+            foundSlotIndex = fullScheduleQueueR1.findIndex(s => s.stadium === preferredStadiumAbbr);
+        }
+
+        // 「謎の力」が発動しない、またはスロットが埋まっていた場合
+        if (foundSlotIndex === -1 && targetRegion) {
+            // 地元地区（東部/中部/西部）の球場スロットを探す
+            foundSlotIndex = fullScheduleQueueR1.findIndex(s => s.region === targetRegion);
+        }
+        
+        // ▼▼▼ model_100 のフォールバックロジックを流用 ▼▼▼
+        // それでも見つからない場合（地元地区が満席）
+        if (foundSlotIndex === -1 && (preferredStadiumAbbr === STADIUM_DATA[0].abbr || preferredStadiumAbbr === STADIUM_DATA[6].abbr)) {
+             // 謎の力が不発の場合、東部球場を探す (ユーザー要望)
+             let fallbackSlotIndex = fullScheduleQueueR1.findIndex(s => s.region === '東部');
+             if (fallbackSlotIndex !== -1) {
+                 schedule = fullScheduleQueueR1.splice(fallbackSlotIndex, 1)[0];
+             } else {
+                 schedule = fullScheduleQueueR1.shift(); // 東部もなければ残りの先頭
+             }
+        } else if (foundSlotIndex !== -1) {
+             // 優先スロット（地元地区 or 謎の力）が見つかった場合
+             schedule = fullScheduleQueueR1.splice(foundSlotIndex, 1)[0];
+        } else {
+             // フォールバック（残りのスロットの先頭）
+             schedule = fullScheduleQueueR1.shift();
+        }
+        // ▲▲▲ フォールバックここまで ▲▲▲
+
+        if (schedule) {
+             match.schedule = {
+                date: schedule.date,
+                stadium: schedule.stadium,
+                stadiumFull: schedule.stadiumFull,
+                game: schedule.gameNum
+            };
+        }
+    });
+
+    // ★★★ 2. 次にノーシード校同士の試合を割り当て ★★★
+    normalMatchIds.forEach(matchId => {
+        const match = findMatchById(matchId);
+        if (!match) return;
+
+        // 3. 通常ルール適用: 中間地点の球場を探す
+        const data1 = TEAM_DATA[match.team1];
+        const data2 = TEAM_DATA[match.team2];
+        let targetRegion = '中部'; // デフォルト
+        if (data1 && data2) {
+            const region1 = data1.region;
+            const region2 = data2.region;
+            if (region1 === region2) targetRegion = region1;
+            else if ((region1 === '東部' && region2 === '西部') || (region1 === '西部' && region2 === '東部')) targetRegion = '中部'; // 東西対決は中部
+            else if ((region1 === '東部' && region2 === '中部') || (region1 === '中部' && region2 === '東部')) targetRegion = '中部'; // 東中 -> 中部
+            else if ((region1 === '西部' && region2 === '中部') || (region1 === '中部' && region2 === '西部')) targetRegion = '西部'; // 西中 -> 西部
+            else if (region1 === '伊豆' || region2 === '伊豆') targetRegion = '東部';
+            if (targetRegion === '伊豆') targetRegion = '東部';
+        }
+
+        // キューから、該当地区の球場のスロットを探す
+        let foundSlotIndex = fullScheduleQueueR1.findIndex(s => s.region === targetRegion);
+        let schedule;
+        if (foundSlotIndex === -1) {
+            // 該当地区のスロットがもうない場合、残りのスロットから適当に選ぶ
+            schedule = fullScheduleQueueR1.shift();
+        } else {
+            schedule = fullScheduleQueueR1.splice(foundSlotIndex, 1)[0];
+        }
+
+        if (schedule) {
+             match.schedule = {
+                date: schedule.date,
+                stadium: schedule.stadium,
+                stadiumFull: schedule.stadiumFull,
+                game: schedule.gameNum
+            };
+        }
+    });
+
+    // R2以降 (model_97の「草薙集約ルール」を適用)
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
+        ["7/14", "7/15"], STADIUM_DATA, 2 // 2回戦 (全10球場)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
+        ["7/17", "7/18"], ROUND_3_STADIUMS, 2 // 3回戦 (主要4球場)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R4-')), 
+        ["7/20"], FINAL_STAGE_STADIUMS, 4 // 準々決勝 (草薙で4試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R5-')), 
+        ["7/23"], FINAL_STAGE_STADIUMS, 2 // 準決勝 (草薙で2試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
+        ["7/25"], FINAL_STAGE_STADIUMS, 1 // 決勝 (草薙で1試合)
+    );
+    // ▲▲▲ 置き換えここまで ▲▲▲
     saveState(); // 組み合わせ決定時点の状態を保存
+
     renderTournament(tournamentState); // 組み合わせを描画
 
     const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
@@ -4527,10 +4909,17 @@ async function generateBracketAnalysisNewsArticle(state) {
 ${state.tournamentYear}年度 夏季大会の組み合わせ抽選会が終了しました。
 以下の詳細な分析結果に基づき、読者の期待感を高めるような展望記事を作成してください。
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ### 組み合わせ分析結果 (チーム名(ランクS=シード), [タグ], [背景])
 ${analysisText}
 
 ### 執筆指示
+- **【常識の反映】**: 記事全体の分析の基盤として、「常識」（勢力図）を100%活用してください。例えば、「死のブロック」を分析する際も、「ナムコ系の〇〇と、現代私立強豪の△△が同居する最悪のブロックとなった」のように、なぜそこが激戦区なのかを「常識」と関連付けて記述してください。
 - **タイトル:** 「夏の組み合わせ決定！${deathBlock.name}ブロックは激戦区か？」のように、抽選結果のポイントと大会への期待が伝わるものにしてください。
 - **本文構成:**
     1. 組み合わせが決定したことを伝える導入。
@@ -5074,10 +5463,20 @@ async function generateBracketBbsThread(state) {
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
 夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを30〜40個**生成してください。
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ### 組み合わせ分析結果サマリー
 ${analysisText}
 
 ### あなたが生成するコメントの方向性
+- **【常識の反映（最重要）】**: あなたが熟知している「常識」（勢力図）に基づき、コメントしてください。
+    - （例：ナムコ系 vs 公立の砦・静岡）→「代理戦争キター」「シズコウ頑張れ！」
+    - （例：加藤学園 vs 日大三島）→「うわ、現代強豪同士で潰し合いかよ」
+    - （例：静清が強豪と対戦）→「古豪（笑）おつかれ」
 - **分析結果への反応:**
     - 「死のブロック (${deathBlock.name})」に入ったチームへの同情や煽り。「〇〇終わったなw」「ここ勝ち上がるのマジでキツイやろ」
     - 「恵まれたブロック (${blessedBlock.name})」への反応。「△△はクジ運良すぎ」「決勝まで余裕やん」
@@ -5685,6 +6084,19 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
     }
     // ▲▲▲ 追加ここまで ▲▲▲
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    let scheduleInfo = '';
+    // dbMatch.schedule が存在し、勝者がまだ決まっていない場合に表示
+    if (dbMatch.schedule && !dbMatch.winner) {
+        const gameNumIcon = ['①', '②', '③', '④'][dbMatch.schedule.game - 1] || `(${dbMatch.schedule.game})`;
+        scheduleInfo = `
+        <div class="match-schedule" title="${dbMatch.schedule.stadiumFull}球場 ${dbMatch.schedule.date} 第${dbMatch.schedule.game}試合">
+            ${dbMatch.schedule.date}・${dbMatch.schedule.stadium}${gameNumIcon}
+        </div>
+        `;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
   // HTMLテンプレート内の関数呼び出し名を修正
     const content = `
         <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
@@ -5705,6 +6117,7 @@ if (ONE_MAN_TEAMS.includes(teamName)) {
             <input type="text" class="score-input" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
             <button class="win-btn">▶</button>
         </div>
+${scheduleInfo}
 ${atmosphereInputs}
         <div class="match-summary-container ${!t1Empty && !t2Empty ? '' : 'hidden'}">
             <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
@@ -5724,9 +6137,10 @@ ${atmosphereInputs}
         `<div class="matchup-footer">
             <button class="details-btn" data-match-id="${matchId}">詳細入力</button>
             <button class="quick-sim-btn text-lg" data-match-id="${matchId}" title="このスコアでおまかせ入力">🎲</button>
-        </div>` :
+            
+            <button class="pre-game-cheer-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-match-id="${matchId}">応援</button>
+            </div>` :
         '';
-
 return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">
                 ${content}
                 ${calledGameInfo} 
@@ -7127,6 +7541,26 @@ async function setupAutumnMainTournament() {
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
 
+// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+    // --- 全ラウンドのスケジュールを割り当て (16チーム・新ルール版) ---
+    const finalRoundAutumn = 4;
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R1-')), 
+        ["9/15", "9/16"], ROUND_3_STADIUMS, 2 // 1回戦 (主要4球場) ※3回戦用球場を流用
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
+        ["9/18"], FINAL_STAGE_STADIUMS, 4 // 準々決勝 (草薙で4試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
+        ["9/21"], FINAL_STAGE_STADIUMS, 2 // 準決勝 (草薙で2試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
+        ["9/23"], FINAL_STAGE_STADIUMS, 1 // 決勝 (草薙で1試合)
+    );
+    // ▲▲▲ 置き換えここまで ▲▲▲
     renderTournament(tournamentState);
     saveState();
 
@@ -7470,6 +7904,14 @@ async function setupSpringMainTournament_Round1() {
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    // --- 1回戦のスケジュールを割り当て (16チーム) ---
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R1-')), 
+        ["4/10", "4/11"], MAJOR_STADIUMS, 2 // 1回戦 (8試合) -> 4球場*2日*2試合=16スロット
+    );
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     renderTournament(tournamentState);
     saveState();
     
@@ -7533,6 +7975,26 @@ async function setupSpringMainTournament_Round2() {
         if (record.lastFinish > 16 && record.lastFinish <=32) record.lastFinish = 32; // 1回戦敗退はベスト32扱い
     });
     
+// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+    // --- 2回戦以降のスケジュールを割り当て (16チーム・新ルール版) ---
+    const finalRoundSpring = 4;
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R1-')), // (R1 = 2回戦)
+        ["4/15", "4/16"], ROUND_3_STADIUMS, 2 // 2回戦 (主要4球場) ※3回戦用球場を流用
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
+        ["4/18"], FINAL_STAGE_STADIUMS, 4 // 準々決勝 (草薙で4試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
+        ["4/21"], FINAL_STAGE_STADIUMS, 2 // 準決勝 (草薙で2試合)
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
+        ["4/23"], FINAL_STAGE_STADIUMS, 1 // 決勝 (草薙で1試合)
+    );
+    // ▲▲▲ 置き換えここまで ▲▲▲
     renderTournament(tournamentState);
     saveState();
 
@@ -7611,7 +8073,11 @@ rivalryType: dbMatch.rivalryType || null,
         
         // ▼▼▼ この2行を追加 ▼▼▼
         atmosphere_team1: dbMatch.atmosphere_team1 || null,
-        atmosphere_team2: dbMatch.atmosphere_team2 || null
+        atmosphere_team2: dbMatch.atmosphere_team2 || null,
+        
+        // ▼▼▼ この1行を追加 ▼▼▼
+        schedule: dbMatch.schedule || null // 試合スケジュール情報 (日付、球場など)
+        // ▲▲▲ 追加ここまで ▲▲▲
         // ▲▲▲ 追加ここまで ▲▲▲
         
 
@@ -8187,15 +8653,42 @@ async function generateHadaReport(matchContext) {
     // --- 3. ハイライトをテキスト化 ---
     const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    let scheduleText = '';
+    let scheduleInstruction = '';
+    if (matchContext.schedule) {
+        const sched = matchContext.schedule;
+        const team1Region = TEAM_DATA[dbMatch.team1]?.region || '不明';
+        const team2Region = TEAM_DATA[dbMatch.team2]?.region || '不明';
+        
+        scheduleText = `\n- **試合会場:** ${sched.stadiumFull} (${sched.region}地区)\n`;
+        
+        // 地の利判定
+        if (sched.region === team1Region && sched.region !== team2Region) {
+            scheduleText += `- **地の利:** ${dbMatch.team1}にとって地元球場での試合。`;
+            scheduleInstruction = `**【地の利の分析】**: ${dbMatch.team1}にとって「地元球場」であったことが、試合にどう影響したか（例：大応援団の後押し、慣れたマウンドなど）を、あなたの視点で分析してください。`;
+        } else if (sched.region !== team1Region && sched.region === team2Region) {
+            scheduleText += `- **地の利:** ${dbMatch.team2}にとって地元球場での試合。`;
+            scheduleInstruction = `**【地の利の分析】**: ${dbMatch.team2}にとって「地元球場」であったことが、試合にどう影響したか（例：大応援団の後押し、慣れたマウンドなど）を、あなたの視点で分析してください。`;
+        }
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     // --- 4. AIへのプロンプト（指示書） ---
     const prompt = `あなたは「東海スポーツ」所属のスポーツライター「羽田 雄平」です。
 あなたは今、${roundName}「${winnerName} vs ${loserName}」の試合を取材し終え、興奮冷めやらぬまま署名入りのコラム記事を執筆しています。
 以下のデータに基づき、あなたの主観と分析を交えた「羽田 雄平スタイル」のナラティブな記事を生成してください。
 
+// ▼▼▼ このブロックを追加 ▼▼▼
+### 参考情報：静岡県高校野球の「常識」（勢力図）
+${PREFECTURE_LORE}
+// ▲▲▲ 追加ここまで ▲▲
+
 ### 羽田 雄平の取材メモ
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament]} ${roundName}
 - **対戦カード:** ${winnerName} (ランク: ${winnerRank}) vs ${loserName} (ランク: ${loserRank})
 - **結果:** ${winnerScore} - ${loserScore} で ${winnerName} が勝利。
+${scheduleText} {/* ← ここに追加 */}
 - **${winnerName}の背景:** ${winnerData.info}
 - **${loserName}の背景:** ${loserData.info}
 - **試合の決め手(ユーザー入力):** ${dbMatch.summary || '特になし'}
@@ -8210,6 +8703,9 @@ ${playerStatsText}
 ### 執筆指示
 1.  **一人称で書く:** 必ず「私」を主語にし、個人的な感想（～驚きました、～でしょうね）を交えてください。
 2.  **現場の空気感:** 試合当日の球場の雰囲気（観客の多さ、天候など）を描写してください。
+// ▼▼▼ この指示を追加 ▼▼▼
+    ${scheduleInstruction}
+    // ▲▲▲ 追加ここまで ▲▲▲
 3.  **両チームの紹介:** 両チームの背景（「王者」「進学校」など）を紹介し、試合の位置づけを明確にしてください。
 4.  **ターニングポイントの特定:** 試合が動いたイニング（例：3回）やプレーを特定し、そこを詳細に描写してください。「投手戦かと思いきや...」 のような流れの変化を重視してください。
 5.  **選手への言及:** **必ず「データ2」の背番号（[#X]）と選手名を引用**し、「〇〇くん」と呼称してください。
@@ -8217,6 +8713,7 @@ ${playerStatsText}
 7.  **試合後の情報:** 試合後の選手のコメント（例：「コントロールを重視した」）を（架空で）挿入してください。
 8.  **次戦への言及:** 記事の最後に、次の対戦相手（${nextOpponentText}）に触れて締めくくってください。
 9.  **【選手の背景創作】**: もし詳細な選手プロフィールがない無名の選手について書く場合、あなたが長年の取材でその選手を知っているという記者視点で、**それらしい架空の経歴や特徴を自由に付け加えてください。**（例：「2年生左腕の〇〇君、中学のボーイズ時代から見ていますが…」「彼の武器は高校に入って磨いた〇〇です」など）
+10.  **【常識の反映】**: あなたが熟知している「常識」（例：ナムコグループの台頭、公立の砦・静岡の苦戦、古豪の意地など）を、目の前の試合結果と関連付けて分析してください。
 
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
@@ -8556,6 +9053,26 @@ ${notablePlayersText}
             ? `\n- **【最重要】** この試合は「${matchContext.rivalryType}」という特別な因縁の対決でした。`
             : '';
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+        let scheduleText = '';
+        if (matchContext.schedule) {
+            const sched = matchContext.schedule;
+            // チームの地区情報を取得
+            const team1Region = TEAM_DATA[dbMatch.team1]?.region || '不明';
+            const team2Region = TEAM_DATA[dbMatch.team2]?.region || '不明';
+            
+            scheduleText = `\n- **試合会場:** ${sched.stadiumFull} (${sched.region}地区)\n`;
+            
+            // 地の利判定
+            if (sched.region === team1Region && sched.region !== team2Region) {
+                scheduleText += `- **地の利:** ${dbMatch.team1}にとって地元球場での試合となった。\n`;
+            } else if (sched.region !== team1Region && sched.region === team2Region) {
+                scheduleText += `- **地の利:** ${dbMatch.team2}にとって地元球場での試合となった。\n`;
+            }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
+
         let roundName = "不明なラウンド";
         if (matchId && matchId.includes('-R')) {
             const roundNum = parseInt(matchId.split('-')[1].slice(1));
@@ -8598,10 +9115,17 @@ ${notablePlayersText}
 - **[#10], [#11]**: エースに次ぐ控え投手。
 - **[#12]以降**: ベンチ入りした控え選手。時に監督の秘蔵っ子や、期待の1・2年生が含まれるサプライズ枠。
 ---
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+---
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
 ---
 ### **現在の試合状況**
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
 - **ラウンド:** ${roundName} {/* ← この行を追加 */}
+${scheduleText}
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 
@@ -8645,6 +9169,8 @@ ${lineupChangesText}
 // ▼▼▼ この指示を追加 ▼▼▼
     10.  **【選手の状態】**: ボックススコアに「(状態: 〇〇)」という記述がある選手に注目すること。その状態（例：「不振」「絶好調」）が**前回の試合から続いている**文脈を読み取り、「前回の試合で不振だった〇〇が、今日は復活の一打を放った」や「絶好調の〇〇が今日も止まらない」といった、**連続性のあるドラマ**を描写してください。
 11. **【試合前の雰囲気】**: もし「試合前の雰囲気・公約」が提供されている場合、その情報（例：「監督がエース温存を公言」「コンディション最悪で到着」など）を**試合結果と関連付け**、記事の重要なテーマとして扱ってください。（例：「公約通りエースを温存したが…」「悪天候の中、見事な勝利」など）
+12. **【常識の反映】**: あなたが熟知している「静岡県高校野球の常識」（例：ナムコ vs 伝統校、新私立強豪の台頭など）を、試合結果やチームの背景と関連付けて、記事の文脈に深みを与えてください。
+13. **【球場の地の利】**: もし「試合会場」情報があり、「地の利」がどちらかのチームにある場合（例：静岡高校が草薙球場で試合をする場合）、その**地元のアドバンテージ**が試合にどう影響したか（または、しなかったか）を記事に含めてください。
     // ▲▲▲ 追加ここまで ▲▲▲
 ---
 ### 編集長からの追加指示
@@ -8676,7 +9202,24 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
             ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。`
             : '';
         // ▲▲▲ 追加ここまで ▲▲▲
-
+// ▼▼▼ 上記(Aルート)と全く同じ「scheduleText」のロジックをここに追加 ▼▼▼
+        let scheduleText = '';
+        if (matchContext.schedule) {
+            const sched = matchContext.schedule;
+            // チームの地区情報を取得
+            const team1Region = TEAM_DATA[dbMatch.team1]?.region || '不明';
+            const team2Region = TEAM_DATA[dbMatch.team2]?.region || '不明';
+            
+            scheduleText = `\n- **試合会場:** ${sched.stadiumFull} (${sched.region}地区)\n`;
+            
+            // 地の利判定
+            if (sched.region === team1Region && sched.region !== team2Region) {
+                scheduleText += `- **地の利:** ${dbMatch.team1}にとって地元球場での試合となった。\n`;
+            } else if (sched.region !== team1Region && sched.region === team2Region) {
+                scheduleText += `- **地の利:** ${dbMatch.team2}にとって地元球場での試合となった。\n`;
+            }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
         let roundName = "不明なラウンド";
         if (matchId && matchId.includes('-R')) {
@@ -8696,6 +9239,14 @@ ${(userFeedback && userFeedback.exclude) ? `- **【厳禁事項】** ${userFeedb
 
         prompt = `あなたは、高校野球専門のAI記者です。
 以下の試合結果に基づき、簡潔で分かりやすいニュース記事を作成してください。
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+---
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ---
 // ▼▼▼ この行を追加 ▼▼▼
 ${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
@@ -8711,11 +9262,14 @@ ${rivalryText} {/* ← ここに追加 */}
 ### **現在の試合状況**
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
 - **ラウンド:** ${roundName} {/* ← この行を追加 */}
+${scheduleText} {/* ← ここに追加 */}
 ### 執筆指示
  **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その旨を記事の冒頭やタイトルで明確に記述し、大差がついた理由（一方的な攻撃、相手のミスなど）にも触れること。
 - もし「ユーザーによる試合の決め手」に記述があれば、それを中心に記事を構成してください。
 - 試合結果を客観的に伝えてください。
 - **【因縁の対決】**: もし試合が「因縁の対決」であった場合、その事実を必ず記事に含めてください。
+- **【常識の反映】**: あなたが熟知している「静岡県高校野球の常識」（例：ナムコ vs 伝統校、新私立強豪の台頭など）を、試合結果やチームの背景と関連付けて、記事の文脈に深みを与えてください。
+- **【地の利】**: もし「地の利」情報がある場合、地元球場で戦えたことが勝敗にどう影響したかに触れてください。
 - **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。** // ← ★★★ この指示を追加 ★★★
 - 記事のタイトルと本文をJSON形式で出力してください。`;
         }
@@ -8795,6 +9349,70 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
         }
     }
 
+
+/**
+ * 試合直前の「応援コメント」をAIに生成させる
+ * (model_106 で提案した関数)
+ */
+async function generatePreGameCheerComments(teamName, teamRank, opponentName, opponentRank, roundName, tournamentPath, detailedData, numComments) {
+    
+    let personaInstructions = `
+あなたは「${teamName}」の熱狂的な応援団です。以下のペルソナ（役割）になりきって、試合直前の応援コメントを合計 ${numComments} 個生成してください。
+- **ペルソナ:** - OB (OB・OG。昔の思い出を語る)
+    - 在校生 (ブラスバンド部員や友人など)
+    - 地元ファン (その地域に住むファン)
+    - 選手の家族 (架空の親や兄弟)
+`;
+
+    if (teamName.includes("富士東") && roundName.includes("準々決勝")) {
+        personaInstructions += `
+- **思考の具体例（OBになりきる場合）:**
+「３期生です。（野球部ではないけど）今は他県に住んで今年定年退職、母校どうなってるのかネットで検索してたら野球部が大躍進中しててテンション上がってます。自分が在籍中の３年時に予選で高校創立来初勝利をあげたときスタンドで応援してました。そのときほぼ全校生徒が応援にいったことなど思い出した。あれから40年以上経つけど東高頑張ってるんだな。嬉しすぎる。」
+（↑このように、具体的でエモーショナルな架空の背景を創作してください）
+`;
+    }
+
+    const prompt = `
+${personaInstructions}
+
+### 試合情報
+- **応援するチーム:** ${teamName} (ランク: ${teamRank})
+- **対戦相手:** ${opponentName} (ランク: ${opponentRank})
+- **ラウンド:** ${roundName}
+- **ここまでの勝ち上がり:** ${tournamentPath || '今大会初戦'}
+- **注目選手 (一部):** ${detailedData ? detailedData.players.map(p => p.name).join(', ') : '情報なし'}
+
+### 指示
+1.  **ペルソナになりきる:** 上記のペルソナ（OB、在校生、地元ファン）に完全になりきり、その立場からの応援コメントを生成してください。
+2.  **文脈を反映:** 試合情報（相手が格上か、歴史的な快進撃か、注目選手は誰か）をコメントに反映させてください。
+3.  **創作を許可:** 選手や監督との（架空の）個人的な思い出や、過去の歴史（例：40年前の初勝利）を**自由に創作して**、コメントに深みを与えてください。
+
+### 出力形式【厳守】
+必ず以下のJSON配列形式"のみ"で出力してください。
+[
+    {"personality": "〇〇高校OB (3期生)", "comment": "（生成したコメント1）"},
+    {"personality": "在校生（ブラスバンド部）", "comment": "（生成したコメント2）"},
+    {"personality": "地元のファン", "comment": "（生成したコメント3）"}
+]
+`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson;
+            }
+        }
+        throw new Error("AI response format error (PreGameComments).");
+    } catch (error) {
+        console.error("AI応援コメントの生成に失敗しました:", error);
+        return [{ personality: "システムエラー", comment: "応援コメントの生成に失敗しました..." }];
+    }
+}
+// ▲▲▲ 貼り付けはここまで ▲▲
 /**
  * AIに掲示板のコメントを生成させるメイン関数（★context共有方式に統一した最終版）
  * @param {object} matchContext - 試合の全コンテキストデータ
@@ -8867,7 +9485,15 @@ let roundName = "不明なラウンド";
         // ▲▲▲ 追加ここまで ▲▲▲
 
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを10つ生成してください。
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+---
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
@@ -8890,11 +9516,13 @@ ${highlightsText}
 - **${loserName}**: ${loserDynamicInfo}
 ${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
+- **【常識の反映】**: あなたが熟知している「常識」（勢力図）を考慮し、この勝利/敗北がどのような意味を持つか（例：順当、波乱）を文脈に含めてください。
 - **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
 - **上から目線の野球解説者**: 「試合のハイライト」のプレーを玄人っぽく分析してください。
 - **アンチ**: 「試合のハイライト」で活躍した相手選手を「まぐれだ」と貶してください。
 - **ライバル校のファン**: 「試合のハイライト」の選手を自チームの選手と比較してください。
 - **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
+- **その他(自由に)**: リベラルなコメント
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
@@ -8935,7 +9563,15 @@ ${specialNarrativeContext}
         }
         // ▲▲▲ 追加ここまで ▲▲▲
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを5つ生成してください。
+以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを10つ生成してください。
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+---
+### **参考情報：静岡県高校野球の「常識」（勢力図）**
+${PREFECTURE_LORE}
+---
+// ▲▲▲ 追加ここまで ▲▲▲
+
 ### 試合情報
 - 勝利チーム: ${winnerName} (${winnerRankDesc})
 - 敗北チーム: ${loserName} (${loserRankDesc})
@@ -8961,11 +9597,13 @@ ${specialNarrativeContext}
 
 
 ### あなたがなりきるべきキャラクターと指示
+- **【常識の反映】**: あなたが熟知している「常識」（勢力図）を考慮し、この勝利/敗北がどのような意味を持つか（例：順当、波乱）を文脈に含めてください。
 - **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
 - **上から目線の野球解説者**: 順当な結果か、意外な結果かを分析してください。
 - **アンチ**: 負けたチームや、スコアが僅差だったチームを批判してください。
 - **ライバル校のファン**: 試合結果を見て、自チームとの力関係を測るようなコメントをしてください。
 - **単なる野球好き**: スコアを見て、接戦だったか、一方的だったかなどの感想を述べてください。
+- **その他(自由に)**: リベラルなコメント
 // ▼▼▼ この指示を追加 ▼▼▼
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
@@ -12757,8 +13395,10 @@ document.body.addEventListener('click', async (e) => {
         }
     }
     // --- 記事表示ボタン（通常記事の「本文」） ---
-    else if (e.target.matches('.news-article-btn')) {
-        const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
+    // --- 記事表示ボタン（通常記事の「本文」） ---
+    const newsArticleBtn = e.target.closest('.news-article-btn');
+    if (newsArticleBtn) {
+        const article = tournamentState.news[parseInt(newsArticleBtn.dataset.index, 10)];
         if (article && article.body) {
             document.getElementById('modal-title').textContent = article.title;
             document.getElementById('modal-body').textContent = article.body;
@@ -12771,14 +13411,14 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 記事表示ボタン（新聞の「新聞を読む」） ---
-    else if (e.target.matches('.newspaper-view-btn')) {
-        const article = tournamentState.news[parseInt(e.target.dataset.index, 10)];
+    const newspaperViewBtn = e.target.closest('.newspaper-view-btn');
+    if (newspaperViewBtn) {
+        const article = tournamentState.news[parseInt(newspaperViewBtn.dataset.index, 10)];
         if (article.isNewspaper && article.newspaperData) {
             renderNewspaperModal(article.newspaperData);
             newspaperModal.classList.remove('hidden');
         }
     }
-
  // ▼▼▼ 抜け落ちていたのは、このブロックです ▼▼▼
     // --- 掲示板の「返信する」ボタン ---
     const replyBtn = e.target.closest('.reply-btn');
@@ -12789,10 +13429,8 @@ document.body.addEventListener('click', async (e) => {
         if (formContainer) {
             formContainer.classList.toggle('hidden');
         }
-        return;
+        return; // 他のクリック処理と競合しないように return します
     }
-    // ▲▲▲ ▲▲▲
-
 // document.body.addEventListener('click', ...) の中
 
     
@@ -12890,12 +13528,122 @@ document.body.addEventListener('click', async (e) => {
         })();
     }
 // ▲▲▲ ここまで置き換え ▲▲▲
+
+// ▼▼▼ この else if ブロックを (model_114 の提案と) 置き換え ▼▼▼
+    // --- 試合前 応援コメントボタン（モーダルを開くだけ） ---
+    else if (e.target.matches('.pre-game-cheer-btn')) {
+        e.preventDefault();
+        const btn = e.target;
+        const matchId = btn.dataset.matchId;
+        const match = findMatchById(matchId);
+        if (!match || !match.team1 || !match.team2) {
+            alert("対戦カードが未定のため、コメントを読み込めません。");
+            return;
+        }
+
+        const modal = document.getElementById('pre-game-modal');
+        const titleEl = document.getElementById('pre-game-title');
+        const bodyEl = document.getElementById('pre-game-body');
+        const tab1 = document.getElementById('pre-game-tab-team1');
+        const tab2 = document.getElementById('pre-game-tab-team2');
+
+        // モーダルとタブのタイトルを設定
+        titleEl.textContent = `【${match.team1} vs ${match.team2}】試合前 応援コメント`;
+        tab1.textContent = `${match.team1} 応援席`;
+        tab2.textContent = `${match.team2} 応援席`;
+        
+        // タブに試合情報を仕込む
+        tab1.dataset.matchId = matchId;
+        tab1.dataset.teamName = match.team1;
+        tab1.dataset.opponentName = match.team2;
+        tab2.dataset.matchId = matchId;
+        tab2.dataset.teamName = match.team2;
+        tab2.dataset.opponentName = match.team1;
+        
+        // タブの状態をリセット
+        tab1.classList.remove('active', 'text-blue-600', 'border-blue-600');
+        tab2.classList.remove('active', 'text-blue-600', 'border-blue-600');
+        tab1.classList.add('text-gray-500', 'border-transparent');
+        tab2.classList.add('text-gray-500', 'border-transparent');
+
+        // 本文をリセット
+        bodyEl.innerHTML = `<p class="text-gray-500 text-center p-8">↑ 見たいチームの応援席タブをクリックしてください ↑</p>`;
+        
+        modal.classList.remove('hidden');
+    }
+    // ▲▲▲ 置き換えここまで ▲▲▲
+
+    // ▼▼▼ この else if ブロックを「新規追加」 ▼▼▼
+    // --- 応援モーダル内の「チームタブ」クリック ---
+    else if (e.target.matches('.pre-game-team-tab')) {
+        e.preventDefault();
+        const tabBtn = e.target;
+        if (tabBtn.classList.contains('active')) return; // 既にアクティブなら何もしない
+
+        const teamKey = tabBtn.dataset.teamKey; // 'team1' or 'team2' (これは現在使わないが念のため)
+        const matchId = tabBtn.dataset.matchId;
+        const teamName = tabBtn.dataset.teamName;
+        const opponentName = tabBtn.dataset.opponentName;
+        
+        const bodyEl = document.getElementById('pre-game-body');
+        const cacheKey = `${matchId}_${teamName}`; // キャッシュキーをチーム別に
+
+        // 他のタブを非アクティブ化
+        document.querySelectorAll('.pre-game-team-tab').forEach(btn => {
+            btn.classList.remove('active', 'text-blue-600', 'border-blue-600');
+            btn.classList.add('text-gray-500', 'border-transparent');
+        });
+        // クリックされたタブをアクティブ化
+        tabBtn.classList.add('active', 'text-blue-600', 'border-blue-600');
+        tabBtn.classList.remove('text-gray-500', 'border-transparent');
+
+        // 1. キャッシュを確認
+        if (tournamentState.preGameComments[cacheKey]) {
+            bodyEl.innerHTML = tournamentState.preGameComments[cacheKey];
+            return;
+        }
+
+        // 2. キャッシュがない場合、AIで生成
+        bodyEl.innerHTML = `<div class="loader text-center py-8">${teamName} 応援団（OB, 在校生, 地元ファン）のコメントを生成中...</div>`;
+
+        // ランクとコメント数を決定
+        const rankValues = { 'A': 10, 'B': 8, 'C': 5, 'D': 3, 'E': 2 };
+        const rank = calculateRank(teamName, tournamentState);
+        const opponentRank = calculateRank(opponentName, tournamentState);
+        const numComments = rankValues[rank] || 2;
+
+        // コンテキスト（文脈）を準備
+        const context = {
+            name: teamName, rank: rank,
+            opponent: opponentName, opponentRank: opponentRank,
+            round: getRoundNameFromMatchId(matchId),
+            path: getTournamentPathSummary(teamName, matchId),
+            detailed: DETAILED_TEAM_DATA[teamName] || null
+        };
+
+        // このチームの分だけAIに生成させる
+        const comments = await generatePreGameCheerComments(context.name, context.rank, context.opponent, context.opponentRank, context.round, context.path, context.detailed, numComments);
+
+        // 3. HTMLを生成して表示
+        let html = '';
+        comments.forEach(c => {
+            html += `<div class="bbs-comment"><p class="font-semibold text-gray-700 text-sm">${c.personality}</p><p class="text-gray-800 my-1 whitespace-pre-wrap">${c.comment}</p></div>`;
+        });
+
+        bodyEl.innerHTML = html;
+        tournamentState.preGameComments[cacheKey] = html; // HTMLをチーム別キャッシュとして保存
+        saveState();
+    }
+    // ▲▲▲ 新規追加ここまで ▲▲▲
+
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
         document.getElementById('feedback-modal').classList.add('hidden');
         articleForRegeneration = null;
     }
     // ▲▲▲ ここまで追加 ▲▲▲    // ▲▲▲ ここまで追加 ▲▲▲
+
+
 
 // --- 掲示板コメントのエラー再生成ボタン ---
     else if (e.target.matches('.retry-bbs-btn')) {
@@ -13150,6 +13898,10 @@ document.body.addEventListener('change', (e) => {
     document.getElementById('details-close').addEventListener('click', () => detailsModal.classList.add('hidden'));
     saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
     newspaperCloseBtn.addEventListener('click', () => newspaperModal.classList.add('hidden'));
+// ▼▼▼ この2行を 10953行目 の直後に追加 ▼▼▼
+    const preGameModalClose = document.getElementById('pre-game-modal-close');
+    if (preGameModalClose) preGameModalClose.addEventListener('click', () => document.getElementById('pre-game-modal').classList.add('hidden'));
+    // ▲▲▲ 追加ここまで ▲▲▲
 document.getElementById('status-modal-close').addEventListener('click', () => {
     document.getElementById('team-status-modal').classList.add('hidden');
 });
@@ -13203,6 +13955,25 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
 <script>
     mermaid.initialize({ startOnLoad: true });
 </script>
-
+<div id="pre-game-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[150]">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 id="pre-game-title" class="text-xl font-bold">試合前 応援コメント</h3>
+            <button id="pre-game-modal-close" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        
+        <div class="flex border-b mb-4">
+            <button id="pre-game-tab-team1" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team1">
+                （チーム1）
+            </button>
+            <button id="pre-game-tab-team2" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team2">
+                （チーム2）
+            </button>
+        </div>
+        <div id="pre-game-body" class="overflow-y-auto space-y-3 p-2 bg-gray-50 rounded min-h-[200px]">
+            <p class="text-gray-500 text-center p-8">↑ 見たいチームの応援席タブをクリックしてください ↑</p>
+        </div>
+    </div>
+</div>
     </body>
 </html>
