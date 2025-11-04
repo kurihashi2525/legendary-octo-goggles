@@ -9275,27 +9275,42 @@ ${scheduleText} {/* ← ここに追加 */}
         }
 
     // --- AIへのリクエスト ---
+   // --- AIへのリクエスト ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json(); // AI応答全体を取得
 
-        // ▼▼▼ ここで text 部分を抽出 ▼▼▼
+        // ▼▼▼ 堅牢な抽出ロジック（model_104）を適用 ▼▼▼
         if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
             const rawTextFromAi = result.candidates[0].content.parts[0].text; // ★ text を取り出す
             const article = parseJsonFromText(rawTextFromAi); // ★ 取り出した text をパースする
-        // ▲▲▲ 抽出ここまで ▲▲▲
+            
+            // ▼▼▼ ここからが今回のバグ修正 ▼▼▼
+            // AIが "body" ではなく "article" で返してきた場合に対応
+            if (article && !article.body && article.article) {
+                article.body = article.article; // "article" の中身を "body" にコピーする
+            }
+            // ▲▲▲ 修正ここまで ▲▲▲
 
+            // 修正後の article オブジェクトで、改めて title と body が存在するかチェック
             if (article && article.title && article.body) { 
- const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
+                const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn' || tournamentState.autumnPhase === 'main'));
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
-                return { ...article, isNewspaper: isNewspaperWorthy, timestamp: Date.now(), newspaperHtml };
+                
+                // 成功：isNewspaper と newspaperHtml を追加して返す
+                return { 
+                    ...article, 
+                    isNewspaper: isNewspaperWorthy, 
+                    timestamp: Date.now(), 
+                    newspaperHtml 
+                };
             } else {
-                 // パースに失敗した場合のログを追加
-                 console.error("parseJsonFromText failed for raw text:", rawTextFromAi);
+                 // パースに失敗した場合、または "body" も "article" も見つからなかった場合
+                 console.error("parseJsonFromText failed or keys (title/body/article) missing for raw text:", rawTextFromAi);
                  throw new Error("AI response format error after parsing."); // エラーを投げる
             }
         } else {
-             // 応答に必要な構造がなかった場合
+             // 応答に必要な構造(candidates...)がなかった場合
              console.error("Unexpected AI response structure:", result);
              throw new Error("AI response structure is missing expected parts."); // エラーを投げる
         }
@@ -9308,6 +9323,7 @@ ${scheduleText} {/* ← ここに追加 */}
         };
     }
 }
+
 /**
      * AIにスキップしたラウンドのダイジェスト記事を生成させる
      */
