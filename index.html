@@ -4541,10 +4541,10 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.daiyaBbsComments = [];
     tournamentState.tickerHeadlines = []; 
     tournamentState.rivalries = RIVALRIES;
-    tournamentState.feuds = tournamentState.feuds || [];
+    tournamentState.feuds = tournamentState.feuds || []; // 既存の因縁を初期化
     tournamentState.namcoNews = null;
-// ▼▼▼ この1行をこのブロックの末尾に追加 ▼▼▼
     tournamentState.preGameComments = {}; // 応援コメント用のキャッシュを初期化
+
     // ▲▲▲ 追加はここまで ▲▲▲
     const round1Setup = teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
@@ -4744,6 +4744,33 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         ["7/25"], FINAL_STAGE_STADIUMS, 1 // 決勝 (草薙で1試合)
     );
     // ▲▲▲ 置き換えここまで ▲▲▲
+// ▼▼▼ 【新機能】AIによる動的因縁の生成 ▼▼▼
+    // （注：この処理は時間がかかるため、先にUIを描画する）
+    renderTournament(tournamentState); // まず現在のトーナメントを描画
+
+    // AIが因縁を非同期で生成開始
+    (async () => {
+        const newFeuds = await generateDynamicFeuds(tournamentState);
+        if (newFeuds && newFeuds.length > 0) {
+            console.log("AIが新しい因縁を生成しました:", newFeuds);
+            // 既存のfeudsリストに新しい因縁を追加
+            tournamentState.feuds.push(...newFeuds);
+            saveState(); // 新しい因縁を保存
+            
+            // 因縁を反映させるため、トーナメント表を再描画
+            renderTournament(tournamentState); 
+            
+            // （オプション）因縁が決定したことをニュース記事として通知
+            const feudTitles = newFeuds.map(f => `「${f.teams[0]} vs ${f.teams[1]} (${f.type})」`).join('、');
+            tournamentState.news.push({
+                title: "【速報】今大会の「因縁の対決」が決定！",
+                body: `大会本部は、AI解説者の分析に基づき、今大会の注目すべき「因縁の対決」を発表した。\n${feudTitles}など、1回戦から目が離せない戦いが続く。`,
+                timestamp: Date.now()
+            });
+            renderNews(tournamentState.news);
+        }
+    })();
+    // ▲▲▲ 【新機能】ここまで ▲▲▲
     saveState(); // 組み合わせ決定時点の状態を保存
 
     renderTournament(tournamentState); // 組み合わせを描画
@@ -10796,6 +10823,71 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 }
 // --- Match Processing & Event Listeners ---
 
+
+/**
+ * AIにトーナメントの組み合わせから架空の因縁を動的に創作させる
+ * @param {object} state - 現在の tournamentState
+ * @returns {Promise<Array>} - AIが生成した因縁オブジェクトの配列
+ */
+async function generateDynamicFeuds(state) {
+    const { matches, teams } = state;
+    if (!matches || !teams) return [];
+
+    // 1回戦の組み合わせと、各チームの補足情報（監督・ランク・昨年の成績）をリストアップ
+    const round1Matchups = Object.values(matches).filter(m => m.id.includes('-R1-M'));
+    const matchupInfo = round1Matchups.map(match => {
+        const { team1, team2 } = match;
+        if (!team1 || !team2) return null; // チームが揃っていない試合は除外
+
+        const team1Data = TEAM_DATA[team1];
+        const team1Record = state.teamRecords[team1];
+        const team1Info = `"${team1}" (監督: ${team1Data?.coach?.name}, ランク: ${calculateRank(team1, state)}, 昨年: ${getRankString(team1Record?.lastFinish || 64)})`;
+
+        const team2Data = TEAM_DATA[team2];
+        const team2Record = state.teamRecords[team2];
+        const team2Info = `"${team2}" (監督: ${team2Data?.coach?.name}, ランク: ${calculateRank(team2, state)}, 昨年: ${getRankString(team2Record?.lastFinish || 64)})`;
+
+        return `${team1Info} vs ${team2Info}`;
+    }).filter(Boolean).join('\n'); // nullを除外し、改行で連結
+
+    const prompt = `あなたは、静岡県の高校野球の歴史をすべて知るベテランのスポーツライターです。
+夏の大会の1回戦の組み合わせが決定しました。以下の対戦カードリストと補足情報（監督、ランク、昨年の成績）を熟読してください。
+
+### 1回戦 組み合わせリスト
+${matchupInfo}
+
+### 指示
+上記のリストから、最もドラマチックな架空の因縁（フェイク・ストーリー）を持つ対決を**3つ**厳選し、その背景を創作してください。
+
+### 因縁の創作パターン例
+- **昨年のリベンジマッチ:** 昨年の大会で劇的な敗北を喫した相手との再戦。
+- **監督の師弟対決:** 両チームの監督が、実は大学時代の先輩と後輩だった。
+- **元チームメイト対決:** 両校のエースが、中学時代は同じチームのバッテリーだった。
+- **無名校の雪辱戦:** 過去に大差で敗れた相手に、成長して再び挑む。
+
+### 出力形式【厳守】
+以下のJSON配列形式"のみ"で出力してください。解説や「はい」などの返答は不要です。
+[
+  { "teams": ["チームA", "チームB"], "type": "因縁のタイプ（例：師弟対決）", "story": "AIが創作した短い背景ストーリー（例：〇〇監督は△△監督の大学時代の後輩にあたる）" },
+  { "teams": ["チームC", "チームD"], "type": "昨夏の雪辱戦", "story": "昨夏、C校はD校に9回裏サヨナラ負けを喫しており、選手たちは雪辱に燃えている" },
+  { "teams": ["チームE", "チームF"], "type": "元バッテリー対決", "story": "E校のエースとF校の4番打者は、中学時代にバッテリーを組んでいた親友同士だ" }
+]`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const feudsJson = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (Array.isArray(feudsJson)) {
+                return feudsJson; // 成功：因縁オブジェクトの配列を返す
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AIによる動的因縁の生成に失敗しました:", error);
+        return []; // エラー時は空配列を返す
+    }
+}
 /**
  * 延長イニングを全ての関連テーブルに追加する
  */
