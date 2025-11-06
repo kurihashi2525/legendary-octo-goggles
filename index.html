@@ -4769,7 +4769,20 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         // もし秋季・春季でも詳細なスレッドが欲しければ generateBracketBbsThread を呼んでも良い
     }
 
-   // ▼▼▼ Promise.all の中身を修正 ▼▼▼
+   // ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    // --- 【新機能】話題校紹介記事の生成 ---
+    // （AIの負荷を分散するため、Promise.all の外で await して先に生成する）
+    try {
+        const topicArticles = await generateTopicSchoolArticles(tournamentState, 3);
+        if (topicArticles && topicArticles.length > 0) {
+            tournamentState.news.push(...topicArticles); // 生成された記事をニュースに追加
+        }
+    } catch (e) {
+        console.error("話題校紹介記事の生成中にエラーが発生しました:", e);
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
+// ▼▼▼ Promise.all の中身を修正 ▼▼▼
     const [namcoNews, analysisArticle, bracketBbsResult] = await Promise.all([
         generateNamcoNews(tournamentState, 'bracket'),
         analysisArticlePromise,
@@ -4808,6 +4821,150 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     renderBbsComments(tournamentState.bbsComments); // BBSを描画
     renderNamcoNews(tournamentState.namcoNews);
     saveState();
+}
+
+/**
+ * 組み合わせ決定時に、AIに「話題校紹介」の記事を数本生成させる
+ * @param {object} state - tournamentState
+ * @param {number} count - 生成する記事の本数（例: 3本）
+ * @returns {Promise<Array<object>>} - 生成された記事オブジェクトの配列
+ */
+async function generateTopicSchoolArticles(state, count = 3) {
+    const { teams, seeds } = state;
+    if (!teams || teams.length === 0) return [];
+
+    const articles = [];
+    const getTeamRank = (teamName) => calculateRank(teamName, state);
+    const shuffledTeams = shuffleArray(teams); // チームをシャッフル
+
+    // ランク別にチームを分類
+    const teamsByRank = { 'A': [], 'B': [], 'C': [], 'D': [], 'E': [] };
+    shuffledTeams.forEach(team => {
+        const rank = getTeamRank(team);
+        teamsByRank[rank].push(team);
+    });
+
+    // 1. Eランク校の記事 (目標: 初戦突破)
+    const teamE = teamsByRank['E'][0];
+    if (teamE) {
+        articles.push(await createTopicArticle(teamE, getTeamRank(teamE), 'E'));
+    }
+
+    // 2. Dランク校の記事 (目標: ベスト8)
+    const teamD = teamsByRank['D'][0];
+    if (teamD) {
+        articles.push(await createTopicArticle(teamD, getTeamRank(teamD), 'D'));
+    }
+
+    // 3. Cランク以上の記事 (目標: 甲子園)
+    const teamCPlus = [...teamsByRank['C'], ...teamsByRank['B'], ...teamsByRank['A']][0];
+    if (teamCPlus) {
+        articles.push(await createTopicArticle(teamCPlus, getTeamRank(teamCPlus), 'C_PLUS'));
+    }
+
+    // 生成された記事（nullを含む）をフィルタリングして返す
+    return articles.filter(Boolean);
+}
+
+/**
+ * generateTopicSchoolArticles のヘルパー関数。
+ * 1校を選び、ランクに応じたテーマで記事を生成する。
+ * @param {string} teamName - 選ばれたチーム名
+ * @param {string} rank - チームランク
+ * @param {'E' | 'D' | 'C_PLUS'} theme - 記事のテーマ
+ * @returns {Promise<object|null>} - 生成された記事オブジェクト
+ */
+async function createTopicArticle(teamName, rank, theme) {
+    const teamData = TEAM_DATA[teamName];
+    const teamRecord = tournamentState.teamRecords[teamName];
+    const detailedData = DETAILED_TEAM_DATA[teamName];
+    const lore = PREFECTURE_LORE; // AIの常識
+
+    // AIに渡すための詳細情報を作成
+    let contextInfo = `
+- **チーム名:** ${teamName} (ランク: ${rank})
+- **チーム背景(info):** ${teamData.info || '情報なし'}
+- **監督:** ${teamData.coach.name} (${teamData.coach.style})
+- **昨年の成績:** ${getRankString(teamRecord.lastFinish)}
+`;
+    if (detailedData) {
+        contextInfo += `- **注目選手:** ${detailedData.players.map(p => `${p.name}(${p.year}年, ${p.pos}) - ${p.desc}`).join('、 ')}\n`;
+    }
+
+    // テーマに応じたプロンプトを作成
+    let prompt = `あなたは「スポーツ報知」の高校野球担当記者です。
+夏の静岡大会の組み合わせが決定しました。
+あなたは今、ピックアップした「話題校」の紹介記事を執筆しています。
+以下の【取材データ】と【執筆テーマ】に基づき、ご提示いただいた記事の例（焼津水産、御殿場西）のような、**情景や選手の背景（物語）が目に浮かぶようなリアルな紹介記事**を生成してください。
+
+### 取材データ
+${contextInfo}
+
+### 静岡県の常識（あなたの知識）
+${lore}
+
+`;
+
+    if (theme === 'E') {
+        prompt += `
+### 執筆テーマ：「悲願の初戦突破へ」
+- このチーム（Eランク）の目標は、まず「夏に1勝」することです。
+- （例：焼津水産の海洋実習のように）そのチームが抱える**特有の事情**（例：浜松特支の創部背景、新居の0勝32敗、川根の最後の夏、虎府島の離島ハンデなど）を**記事の中心**に据えてください。
+- 選手や監督の「まず1勝したい」という**切実な想い**や、チーム一丸となって困難に立ち向かう姿を描写してください。
+`;
+    } else if (theme === 'D') {
+        prompt += `
+### 執筆テーマ：「躍進のベスト8を目指して」
+- このチーム（Dランク）の目標は、強豪を倒して「ベスト8」に進出し、大会のダークホースになることです。
+- （例：富士東のOBの思い出のように）チームの**歴史**や、注目選手（いなければ架空の注目選手を創作）の**成長物語**に焦点を当ててください。
+- 監督や主将の「今年こそは」という、**下剋上（ジャイアントキリング）**にかける意気込みを描写してください。
+`;
+    } else { // C_PLUS (C, B, Aランク)
+        prompt += `
+### 執筆テーマ：「甲子園出場という悲願へ」
+- このチーム（Cランク以上）の目標は、静岡県の「戦国時代」を勝ち抜き、甲子園に出場することです。
+- （例：御殿場西の名古選手のように）チームの中心となる**エースや主軸選手**に焦点を当て、その選手の**苦悩、成長、そして決意**を深く掘り下げてください。
+- 監督との**師弟関係**や、チームメイトとの絆など、**人間ドラマ**を記事の中心に据えてください。
+- 「常識」（ナムコ、新私立強豪、伝統校）の中で、このチームがどのような立ち位置におり、何を背負っているのかを文脈に含めてください。
+`;
+    }
+
+    prompt += `
+### 出力形式【厳守】
+- **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
+- **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
+{"title": "（例：【高校野球】焼津水産が１勝を釣り上げる…全国高校野球選手権静岡県大会７月６日初戦～話題校紹介）", "body": "（ここにスポーツ報知風の記事本文）"}
+`;
+
+    // --- AIへのリクエスト ---
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+            const rawTextFromAi = result.candidates[0].content.parts[0].text;
+            const article = parseJsonFromText(rawTextFromAi);
+            
+            if (article && article.title && article.body) {
+                // 成功：記事に署名を追加して返す
+                article.body += "\n\n　（スポーツ報知 記者）"; // 署名
+                return { 
+                    ...article, 
+                    timestamp: Date.now(),
+                    isTopicArticle: true, // 話題校紹介フラグ
+                    context: { teamName: teamName, theme: theme } // 再生成用に情報を保持
+                };
+            } else {
+                 console.error("parseJsonFromText failed for TopicArticle:", rawTextFromAi);
+                 throw new Error("AI response format error after parsing (TopicArticle).");
+            }
+        } else {
+             console.error("Unexpected AI response structure (TopicArticle):", result);
+             throw new Error("AI response structure is missing expected parts (TopicArticle).");
+        }
+    } catch (error) {
+        console.error(`話題校紹介記事（${teamName}）の生成に失敗しました:`, error);
+        return null; // 失敗した場合は null を返す
+    }
 }
 
 /**
