@@ -2484,6 +2484,17 @@ AIは以下の「打順の役割」を理解し、分析やコメントに反映
 -   **8番 (守備要員):** 守備は上手いが打撃は期待されていないことが多い。
 -   **9番 (第2の1番):** 投手（打撃が苦手）の次であることが多く、打撃が良い選手が置かれると、1番打者に戻るまでの「第2のチャンスメーカー」として機能する。
 // ▲▲▲ 追記ここまで ▲▲▲
+// ▼▼▼ ここから「投打の相性」をまるごと追記 ▼▼▼
+---
+### 参考：高校野球における「投打の左右の常識」
+AIは以下の「相性」を理解し、分析やコメントに反映すること。
+
+-   **右投手 vs 右打者:** 一般的に投手が有利。外角に逃げるスライダーが有効。
+-   **右投手 vs 左打者:** 一般的に打者が有利。内角に食い込む球（クロスファイア）が鍵。
+-   **左投手 vs 左打者:** 一般的に投手が有利。「ワンポイントリリーフ」として起用されることも。
+-   **左投手 vs 右打者:** 一般的に打者が有利。
+-   **戦術:** 相手エースが「右腕」の場合、スタメンに「左打者」を並べる「ジグザグ打線」は有効な戦術である。逆に、相手が「左腕」なのに左打者を並べると「なぜだ？」と疑問視される。
+// ▲▲▲ 追記ここまで ▲▲▲
 `;
 // ▲▲▲ ここまでを貼り付け（または上書き） ▲▲▲
 
@@ -3099,6 +3110,11 @@ ${atmosphereText}
 // ▼▼▼ この指示を追加 ▼▼▼
     - **【打順の役割】**: 「常識」としてインプットされた**打順の役割**を意識してコメントすること。
         - （例：「さすが4番や！」「1番が出塁するとやっぱ違うわ」「9番に打たれるとか雑魚すぎw」）
+// ▼▼▼ この指示をまるごと追加 ▼▼▼
+    - **【投打の左右の相性】**:
+        - 「データ2（常識）」と「データ3（ボックススコア）」にある**投打の左右**にも注目すること。
+        - （例：「相手左腕やのに左打者並べるとかアホか」「〇〇、左キラーすぎw」「右腕から右打者が打つのむずいやろ」）
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
 
     // ▲▲▲ 追加ここまで ▲▲▲
@@ -7098,6 +7114,21 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     const numInnings = details.inningScore?.[teamKey]?.length || 9;
     const playersOnField = battingData.filter(p => p.name);
 
+// ▼▼▼ この2つのブロックを追加 ▼▼▼
+    const throwBatOptionsList = [
+        { val: "R/R", label: "右/右" },
+        { val: "R/L", label: "右/左" },
+        { val: "L/L", label: "左/左" },
+        { val: "L/R", label: "左/右" }
+    ];
+
+    const createThrowBatOptions = (selectedVal) => {
+        return throwBatOptionsList.map(opt => 
+            `<option value="${opt.val}" ${selectedVal === opt.val ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+    };
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     let numberOptions = '<option value=""></option>';
     for (let i = 1; i <= 20; i++) { numberOptions += `<option value="${i}">${i}</option>`; }
     const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右'].map(p => `<option value="${p}">${p}</option>`).join('');
@@ -7114,6 +7145,9 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         if (!starterData.results) starterData.results = Array(numInnings).fill('');
 
         const starterNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${starterData.number}"`, `value="${starterData.number}" selected`)}</select>`;
+// ▼▼▼ この2行を追加 ▼▼▼
+        const starterThrowBatSelect = `<select class="player-throw-bat w-full bg-transparent"><option value="">-投/打-</option>${createThrowBatOptions(starterData.throwBat)}</select>`;
+        // ▲▲▲ 追加ここまで ▲▲▲
         const starterPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${starterData.pos}"`, `value="${starterData.pos}" selected`)}</select>`;
         
         let resultInputs = '';
@@ -7134,17 +7168,23 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         }
         bodyRows += `
             <tr data-order="${starterData.order}">
-                <td class="col-order">${i}</td><td class="col-number">${starterNumberSelect}</td>
+                <td class="col-order">${i}</td>
+                <td class="col-number">${starterNumberSelect}</td>
+                
+                <td class="col-throw-bat">${starterThrowBatSelect}</td>
                 <td class="col-player"><input type="text" class="player-name" value="${starterData.name || ''}"></td>
                 <td class="col-pos flex items-center justify-between">${starterPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${starterData.name || ''}" data-team-key="${teamKey}">変更</button></td>
-                <td class="col-sub-type"></td>${resultInputs}
+                <td class="col-sub-type"></td>
+                ${resultInputs}
             </tr>
-        `;
-        
+        `;        
         const substitutes = battingData.filter(p => p.order && p.order.toString().startsWith(`${i}-sub`));
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
             const subNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${subData.number}"`, `value="${subData.number}" selected`)}</select>`;
+// ▼▼▼ この2行を追加 ▼▼▼
+            const subThrowBatSelect = `<select class="player-throw-bat w-full bg-transparent"><option value="">-投/打-</option>${createThrowBatOptions(subData.throwBat)}</select>`;
+            // ▲▲▲ 追加ここまで ▲▲▲
             const subPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${subData.pos}"`, `value="${subData.pos}" selected`)}</select>`;
             
             let subResultInputs = '';
@@ -7164,7 +7204,10 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             
             bodyRows += `
                 <tr data-order="${subData.order}">
-                    <td class="col-order"></td><td class="col-number">${subNumberSelect}</td>
+                    <td class="col-order"></td>
+                    <td class="col-number">${subNumberSelect}</td>
+
+                    <td class="col-throw-bat">${subThrowBatSelect}</td>
                     <td class="col-player pl-4"><input type="text" class="player-name" value="${subData.name || ''}"></td>
                     <td class="col-pos flex items-center justify-between">${subPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-player-name="${subData.name || ''}" data-team-key="${teamKey}">変更</button></td>
                     <td class="col-sub-type">
@@ -7187,7 +7230,11 @@ function createPlayerBattingTable(teamName, teamKey, details) {
             <table class="details-table batting-table" id="batting-table-${teamKey}">
                 <thead>
                     <tr>
-                        <th class="col-order">打順</th><th class="col-number">#</th><th class="col-player">選手名</th>
+                        <th class="col-order">打順</th>
+                        <th class="col-number">#</th>
+                        
+                        <th class="col-throw-bat">投/打</th>
+                        <th class="col-player">選手名</th>
                         <th class="col-pos">守備</th><th class="col-sub-type">出場</th>${inningsHeader}
                         <th class="w-10"><button class="add-inning-btn text-xs" data-team-key="${teamKey}">+ 回</button></th>
                     </tr>
@@ -7332,6 +7379,7 @@ function saveDetailedStats() {
                     const playerData = {
                         order: row.dataset.order, name: nameInput.value.trim(),
                         number: row.querySelector('.player-number').value,
+throwBat: row.querySelector('.player-throw-bat')?.value,
                         pos: row.querySelector('.player-pos').value,
                         sub_type: row.querySelector('.sub-type-select') ? row.querySelector('.sub-type-select').value : null,
                         results: results
@@ -8794,11 +8842,21 @@ const teamRecord = tournamentState.teamRecords[teamName]; // ★チームレコ�
                 statusText = ` (状態: ${flagMap[careerStats.narrative_flag] || careerStats.narrative_flag})`;
             }
 
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+            // ★ 「投/打」情報を解析して「（右打）」などを追加
+            let batHandText = "";
+            if (player.throwBat) {
+                if (player.throwBat.endsWith('/R')) batHandText = "（右打）";
+                else if (player.throwBat.endsWith('/L')) batHandText = "（左打）";
+            }
+            // ▲▲▲ 追加ここまで ▲▲▲
+
             const orderDisplay = player.order.includes('sub') ? `  - ${player.sub_type || '代'}` : `${player.order}.`;
             const playerIdentifier = `[#${player.number}] ${player.name}`; 
             const statsLine = `${stats.ab}打数${stats.h}安打 ${stats.rbi}打点` + (stats.hr > 0 ? ` ${stats.hr}本塁打` : '');
             
-            output += `${orderDisplay} ${playerIdentifier} (${player.pos})${statusText}: ${statsLine}\n`; // ★ statusText を追加
+            // ▼▼▼ この行を修正 ▼▼▼
+            output += `${orderDisplay} ${playerIdentifier}${batHandText}${statusText}: ${statsLine}\n`; // ★ batHandText を追加
             // ▲▲▲ 修正ここまで ▲▲▲
         });
         
@@ -9065,6 +9123,11 @@ ${feedbackPrompt}
 // ▼▼▼ この指示を追加 ▼▼▼
     14. **【打順の役割】**: あなたはプロの記者として、**打順の役割**も重視してください。4番が4番の仕事をしたのか、あるいは9番が意外な活躍でラッキーボーイとなったのか、といった戦術的な分析をコラムに含めてください。
     15. **【投手の左右】**: ボックススコアに「（右腕）」「（左腕）」の表記がある場合、それを記事に反映させること。特に、**左腕投手**（サウスポー）が相手打線（特に右打者）をどう抑えたか、あるいはリリーフで「ワンポイント」として機能したか、などに言及すると記事の質が上がる。
+// ▼▼▼ この指示をまるごと追加 ▼▼▼
+    16. **【投打の左右の相性】**:
+        - あなたはプロの記者として、「データ2（ボックススコア）」に記載されている**投打の左右（例：右腕 vs 左打）**にも注目してください。
+        - 「常識」でインプットされた**相性**（例：左腕は左打者に強い）を考慮し、監督の采配（例：左腕対策で右打者を並べた、など）や、その相性を覆した選手の活躍について、戦術的な分析をコラムに含めてください。
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
@@ -9556,6 +9619,11 @@ ${lineupChangesText}
     19. **【打順の役割】**: 「常識」としてインプットされた**打順の役割**（例：1番のチャンスメイク、4番の決定力）を考慮すること。「4番の〇〇が期待に応え、先制打を放った」「1番の△△が足でかき回し…」など、その打順らしい活躍かどうかを記事に反映させること。
 // ▼▼▼ この指示を「11.5」(12の前)として追加 ▼▼▼
     20. **【投手の左右】**: ボックススコアに「（右腕）」「（左腕）」の表記がある場合、それを記事に反映させること。特に、**左腕投手**（サウスポー）が相手打線（特に右打者）をどう抑えたか、あるいはリリーフで「ワンポイント」として機能したか、などに言及すると記事の質が上がる。
+// ▼▼▼ この指示を「11.6」として追加 ▼▼▼
+    21. **【打者の左右】**: ボックススコアの「（右打）」「（左打）」にも注目し、「常識」でインプットされた**投打の左右の相性**について分析してください。
+        - （例：相手が左腕投手だったにも関わらず、〇〇高校は左打者を並べる強気の采配を見せた）
+        - （例：右打者が並ぶ〇〇打線に対し、相手監督はワンポイントで左腕を投入したが…）
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
@@ -9971,6 +10039,11 @@ ${specialNarrativeContext}
 - **【打球の質（チーム・個人）】**:
     - 「試合のハイライト」や「チーム別 打球品質」にある**打球の質**（「鋭い当たり」「詰まった当たり」）にも言及すること。
     - （例：「〇〇、4タコだけど全部当たりは良かったな」「△△（チーム）、勝ったけど詰まった当たり多くて次が不安だわ」）
+// ▼▼▼ この指示をまるごと追加 ▼▼▼
+    - **【投打の左右の相性】**:
+        - 「常識」や「ハイライト」（ボックススコア）で読み取れる**投打の左右の相性**についてもコメントすること。
+        - （例：「左腕の〇〇出てきたら、右の代打出さないと」）
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▲▲▲ 追加ここまで ▲▲▲
 // ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式
