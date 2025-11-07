@@ -7160,7 +7160,7 @@ function openDetailsModal(matchId) {
 function createPitchingStatsTable(teamKey, details) {
     const pitchingData = details.pitching[teamKey] || [];
     
-// ▼▼▼ 3種類の新しいプルダウン選択肢を定義 ▼▼▼
+    // プルダウン選択肢の定義 (変更なし)
     const throwStyleOptions = [
         { val: "over", label: "オーバー" }, { val: "three_quarter", label: "スリークォーター" },
         { val: "side", label: "サイド" }, { val: "under", label: "アンダー" }
@@ -7170,59 +7170,57 @@ function createPitchingStatsTable(teamKey, details) {
         { val: "giko", label: "技巧派" }, { val: "nanto", label: "軟投派" }
     ];
     const velocityOptions = [];
-    for (let v = 100; v <= 165; v += 5) {
+    for (let v = 120; v <= 165; v += 5) {
         velocityOptions.push({ val: `${v}km`, label: `${v}km帯` });
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
-
     const throwBatOptions = [
-        { val: "R/R", label: "右/右" },
-        { val: "R/L", label: "右/左" },
-        { val: "R/S", label: "右/両" }, // ← ★追加
-        { val: "L/L", label: "左/左" },
-        { val: "L/R", label: "左/右" },
-        { val: "L/S", label: "左/両" }  // ← ★追加
+        { val: "R/R", label: "右/右" }, { val: "R/L", label: "右/左" }, { val: "R/S", label: "右/両" },
+        { val: "L/L", label: "左/左" }, { val: "L/R", label: "左/右" }, { val: "L/S", label: "左/両" }
     ];
-    
 
-let bodyRows = pitchingData.map((player, index) => {
-        // ▼▼▼ 各選択肢のHTMLを生成 ▼▼▼
+    let bodyRows = pitchingData.map((player, index) => {
         const tbOptionsHtml = throwBatOptions.map(opt => `<option value="${opt.val}" ${player.throwBat === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
         const styleOptionsHtml = throwStyleOptions.map(opt => `<option value="${opt.val}" ${player.throwStyle === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
         const typeOptionsHtml = pitcherTypeOptions.map(opt => `<option value="${opt.val}" ${player.pitcherType === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
         const velocityOptionsHtml = velocityOptions.map(opt => `<option value="${opt.val}" ${player.velocity === opt.val ? 'selected' : ''}>${opt.label}</option>`).join('');
-        // ▲▲▲ 追加ここまで ▲▲▲
 
-       // ▼▼▼ この行全体を修正（全要素にクラスを追加） ▼▼▼
+        // ▼▼▼ この行全体を修正（全要素にクラスを追加） ▼▼▼
         return `
         <tr data-pitcher-index="${index}">
-            <td class="col-pitcher-result"><select class="pitcher-result">...</select></td>
-            <td class="col-pitcher-name"><input type="text" class="pitcher-name" value="${player.name || ''}"></td>
+            <td class="col-pitcher-result">
+                <select class="pitcher-result"> 
+                    <option value="" ${!player.result ? 'selected' : ''}>-</option>
+                    <option value="W" ${player.result === 'W' ? 'selected' : ''}>○</option>
+                    <option value="L" ${player.result === 'L' ? 'selected' : ''}>●</option>
+                    <option value="S" ${player.result === 'S' ? 'selected' : ''}>S</option>
+                    <option value="H" ${player.result === 'H' ? 'selected' : ''}>H</option>
+                </select>
+            </td>
+            <td class="col-pitcher-name"><input type="text" class="pitcher-name" value="${player.name || ''}"></td> 
             <td class="col-pitcher-throw-bat"><select class="pitcher-throw-bat w-full bg-transparent"><option value="">-投/打-</option>${tbOptionsHtml}</select></td>
             <td class="col-pitcher-style"><select class="pitcher-throw-style w-full bg-transparent"><option value="">-投げ方-</option>${styleOptionsHtml}</select></td>
             <td class="col-pitcher-type"><select class="pitcher-type w-full bg-transparent"><option value="">-タイプ-</option>${typeOptionsHtml}</select></td>
             <td class="col-pitcher-velocity"><select class="pitcher-velocity w-full bg-transparent"><option value="">-球速帯-</option>${velocityOptionsHtml}</select></td>
-            <td class="col-stat"><input type="text" class="pitcher-innings" value="${player.innings || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-batters" value="${player.battersFaced || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-pitches" value="${player.pitches || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-hits" value="${player.hits || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-so" value="${player.strikeouts || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-walks" value="${player.walks || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-runs" value="${player.runs || ''}"></td>
-            <td class="col-stat"><input type="number" class="pitcher-er" value="${player.earnedRuns || ''}"></td>
+            <td class="col-stat"><input type="text" class="pitcher-innings" value="${player.innings || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-batters" value="${player.battersFaced || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-pitches" value="${player.pitches || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-hits" value="${player.hits || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-so" value="${player.strikeouts || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-walks" value="${player.walks || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-runs" value="${player.runs || ''}"></td> 
+            <td class="col-stat"><input type="number" class="pitcher-er" value="${player.earnedRuns || ''}"></td> 
         </tr>
-        `; // (※ <select class="pitcher-result">...</select> の中身は model_151 のコードで補完されます)
+        `;
         // ▲▲▲ 修正ここまで ▲▲▲
     }).join('');
 
-    // 空の行を1つ追加（変更なし）
+    // もし投手が一人もいなければ、空の行を1つ追加しておく
     if (pitchingData.length === 0) {
-        // (model_151 で修正済みの空行ロジック)
-        // ▼▼▼ 空行にも全クラスを追加 ▼▼▼
         const tbOptionsHtml = throwBatOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const styleOptionsHtml = throwStyleOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const typeOptionsHtml = pitcherTypeOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const velocityOptionsHtml = velocityOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
+        // ▼▼▼ 空行にも全クラスを追加 ▼▼▼
         bodyRows = `
             <tr data-pitcher-index="0">
                 <td class="col-pitcher-result"><select class="pitcher-result"><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
@@ -7249,11 +7247,12 @@ let bodyRows = pitchingData.map((player, index) => {
             <table class="details-table" id="pitching-table-${teamKey}">
                 <thead>
                     <tr>
-                        <th class="w-12">勝敗</th><th class="col-player">選手名</th>
-                        <th class="w-20">投/打</th>
-<th class="w-24">投げ方</th>
-                        <th class="w-20">タイプ</th>
-                        <th class="w-20">球速帯</th>
+                        <th class="col-pitcher-result">勝敗</th>
+                        <th class="col-pitcher-name">選手名</th>
+                        <th class="col-pitcher-throw-bat">投/打</th>
+                        <th class="col-pitcher-style">投げ方</th>
+                        <th class="col-pitcher-type">タイプ</th>
+                        <th class="col-pitcher-velocity">球速帯</th>
                         <th class="col-stat">回数</th>
                         <th class="col-stat">打者</th><th class="col-stat">球数</th><th class="col-stat">被安打</th>
                         <th class="col-stat">奪三振</th><th class="col-stat">与四球</th><th class="col-stat">失点</th>
@@ -7266,6 +7265,7 @@ let bodyRows = pitchingData.map((player, index) => {
         </div>
     `;
 }
+
 function createFieldingTable(teamKey, details, playersOnField) {
     const fieldingData = details.fielding?.[teamKey] || [];
     
