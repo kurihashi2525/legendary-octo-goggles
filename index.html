@@ -12714,29 +12714,86 @@ function updateInningState(teamKey, inningIndex) {
 }
 
 
+
+// ▼▼▼ この関数をまるごと追加 ▼▼▼
+/**
+ * 指定されたmatchIdに関連する、過去に生成されたAIコンテンツを全て削除する
+ * @param {string} matchId - 対象の試合ID
+ */
+function clearPreviousAiContent(matchId) {
+    if (!matchId) return;
+
+    // 1. ニュース記事 (通常記事、羽田レポート、エラー) を削除
+    // (context.matchId または errorId が matchId と一致するものを削除)
+    tournamentState.news = tournamentState.news.filter(article => {
+        if (article.context && article.context.matchId === matchId) return false;
+        if (article.errorId === matchId) return false;
+        return true;
+    });
+
+    // 2. 掲示板コメント (通常BBS) を削除
+    // (BBSはスレッドではなく個々のコメントなので、context.matchId で削除)
+    tournamentState.bbsComments = tournamentState.bbsComments.filter(comment => {
+        if (comment.context && comment.context.matchId === matchId) return false;
+        if (comment.errorId && comment.errorId.includes(matchId)) return false;
+        return true;
+    });
+
+    // 3. まとめスレッド (matomeThreads) を削除
+    if (tournamentState.matomeThreads && tournamentState.matomeThreads[matchId]) {
+        delete tournamentState.matomeThreads[matchId];
+    }
+}
+// ▲▲▲ 追加ここまで ▲▲▲
+
+
+
 /**
  * 試合の勝者を処理する中心的関数（全機能統合・実行順序修正・事実確認削除の最終版）
  */
 async function processMatchWin(matchId, winnerName) {
     // --- 1. 試合データの特定と基本情報の設定 ---
     let dbMatch = findMatchById(matchId);
-    if (!dbMatch || !dbMatch.team1 || !dbMatch.team2 || dbMatch.winner) return;
-
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- 1. 試合開始前に、両チームの古い「一時フラグ」をすべてリセット ---
-    for (const teamName of [dbMatch.team1, dbMatch.team2]) {
-        const teamRecord = tournamentState.teamRecords[teamName];
-        if (!teamRecord || !teamRecord.playerStats || !teamRecord.playerStats.batting) continue;
+    if (!dbMatch || !dbMatch.team1 || !dbMatch.team2) return;
+// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+    // --- 再処理（再生成）の確認 ---
+    if (dbMatch.winner) {
+        // 既に勝者が決まっている場合
+        const confirmed = await showConfirm(
+            `この試合（${dbMatch.team1} vs ${dbMatch.team2}）は既に「${dbMatch.winner}」の勝利で処理済みです。\n\n` +
+            "「詳細入力」でデータを修正しましたか？\n" +
+            "「はい」を押すと、現在の詳細入力データを基に、AI記事と掲示板をすべて再生成します。\n\n" +
+            "（注意：この操作は元に戻せません）"
+        );
         
-        // 全選手の batting と pitching のフラグをリセット
-        for (const playerName in teamRecord.playerStats.batting) {
-            teamRecord.playerStats.batting[playerName].narrative_flag = null;
+        if (!confirmed) {
+            return; // ユーザーが「いいえ」を押したら中断
         }
-        for (const playerName in teamRecord.playerStats.pitching) {
-            teamRecord.playerStats.pitching[playerName].narrative_flag = null;
+        
+        // ★ ユーザーが「はい」を押した場合、古いAIコンテンツを削除
+        clearPreviousAiContent(matchId);
+        
+        // ★ 勝者をリセットして、新しい勝者（winnerName）で上書きする
+        // （※通算成績は `saveDetailedStats` でリセット済みと仮定）
+        dbMatch.winner = null; 
+        
+    } else {
+        // （勝者がまだ決まっていない、通常の初回処理の場合）
+        // 試合開始前に、両チームの古い「一時フラグ」をすべてリセット
+        for (const teamName of [dbMatch.team1, dbMatch.team2]) {
+            const teamRecord = tournamentState.teamRecords[teamName];
+            if (!teamRecord || !teamRecord.playerStats || !teamRecord.playerStats.batting) continue;
+            
+            // 全選手の batting と pitching のフラグをリセット
+            for (const playerName in teamRecord.playerStats.batting) {
+                teamRecord.playerStats.batting[playerName].narrative_flag = null;
+            }
+            for (const playerName in teamRecord.playerStats.pitching) {
+                teamRecord.playerStats.pitching[playerName].narrative_flag = null;
+            }
         }
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
+    // ▲▲▲ 置き換えここまで ▲▲▲
 
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     dbMatch.winner = winnerName;
