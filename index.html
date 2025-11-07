@@ -6955,7 +6955,7 @@ function openDetailsModal(matchId) {
 
     let details = JSON.parse(JSON.stringify(match.details || {}));
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
     // --- 【新機能】前回のロスター情報を引き継ぐ ---
     // (まだこの試合の詳細入力(details.batting)が空の場合のみ実行)
     if ((!details.batting || !details.batting.team1 || details.batting.team1.length === 0)) {
@@ -6968,12 +6968,20 @@ function openDetailsModal(matchId) {
             if (teamRecord && teamRecord.roster && teamRecord.roster.length > 0) {
                 console.log(`[ロスター引継] ${teamName} の前回のロスター (${teamRecord.roster.length}人) を読み込みます。`);
                 
-                // (C) details.batting に、打席結果(results)を空にしてコピーする
+                // (B) details.batting に、打席結果(results)を空にしてコピーする
                 details.batting = details.batting || { team1: [], team2: [] };
-                details.batting[teamKey] = teamRecord.roster.map(playerData => ({
-                    ...playerData, // order, name, number, pos, throwBat, sub_type を引き継ぐ
-                    results: [] // 打席結果は空にする
-                }));
+                
+                // ★★★ ここが修正点 ★★★
+                // 交代選手(orderに'sub'が含まれる)を除外し、スタメン9名だけを抽出する
+                details.batting[teamKey] = teamRecord.roster
+                    .filter(playerData => playerData.order && !playerData.order.toString().includes('sub'))
+                    .map(playerData => ({
+                        ...playerData, // order, name, number, pos, throwBat を引き継ぐ
+                        sub_type: null, // 2回戦では「スタメン」なので sub_type はリセット
+                        results: []     // 打席結果は空にする
+                    }));
+                // ★★★ 修正ここまで ★★★
+
             }
             // (B) 念のため、古いスタメン情報(previousStarters)もチェック (古いセーブデータ用)
             else if (teamRecord && teamRecord.previousStarters && teamRecord.previousStarters.length > 0) {
@@ -6987,8 +6995,7 @@ function openDetailsModal(matchId) {
             }
         }
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    
+    // ▲▲▲ 置き換えここまで ▲▲▲    
     const numInnings = Math.max(9, ...Object.values(tournamentState.matches)
         .filter(m => m.details?.inningScore?.team1)
         .map(m => m.details.inningScore.team1.length));
