@@ -1100,10 +1100,17 @@
             <div id="bbs-thread-display-area" class="hidden p-4 bg-white rounded-lg shadow-md flex flex-col h-full">
                 <div class="flex justify-between items-center border-b pb-3 mb-4">
                     <h3 id="bbs-thread-title" class="text-xl md:text-2xl font-bold text-gray-800"></h3>
+
+<div>
+                        <button id="retry-matome-thread-btn" class="bg-red-600 text-white font-bold py-1 px-3 rounded hover:bg-red-700 text-sm hidden" data-match-id="">
+                            再生成
+                        </button>
+
                     <button id="bbs-thread-back-btn" class="bg-blue-500 text-white font-bold py-1 px-3 rounded hover:bg-blue-600 text-sm">
                         一覧に戻る
                     </button>
                 </div>
+</div>
                 <div id="bbs-thread-content" class="overflow-y-auto space-y-4 flex-grow">
                     <div class="loader text-center py-8">スレッドを読み込んでいます...</div>
                 </div>
@@ -4715,7 +4722,11 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.rivalries = RIVALRIES;
     tournamentState.feuds = tournamentState.feuds || []; // 既存の因縁を初期化
     tournamentState.namcoNews = null;
-    tournamentState.preGameComments = {}; // 応援コメント用のキャッシュを初期化
+    tournamentState.preGameComments = {};
+// ▼▼▼ この1行をまるごと追加 ▼▼▼
+    tournamentState.matomeThreads = {}; // まとめスレッド用のキャッシュを初期化
+    // ▲▲▲ 追加ここまで ▲▲▲ 
+// 応援コメント用のキャッシュを初期化
 
     // ▲▲▲ 追加はここまで ▲▲▲
     const round1Setup = teams.reduce((acc, team, i) => {
@@ -12968,6 +12979,9 @@ async function processMatchWin(matchId, winnerName) {
     let articlePromise = Promise.resolve(null);
     let commentsPromise = Promise.resolve(null);
 let hadaReportPromise = Promise.resolve(null);
+// ▼▼▼ この1行を追加 ▼▼▼
+    let matomeThreadPromise = Promise.resolve(null);
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     // 設定に応じてAI記事生成を開始
     if (tournamentState.settings.enableArticleGeneration) {
@@ -13012,6 +13026,9 @@ let hadaReportPromise = Promise.resolve(null);
     if (tournamentState.settings.enableBbsGeneration) {
         bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
         commentsPromise = generateBbsComments(matchContext); // 修正済み関数を呼び出し
+// ▼▼▼ この1行を追加 ▼▼▼
+        matomeThreadPromise = generateGameMatchBbsComments(matchContext); // ★まとめスレもここで生成
+        // ▲▲▲ 追加ここまで ▲▲▲
     }
 
     // --- 4. トーナメント進行ロジック (秋季・春季の特殊処理) ---
@@ -13167,11 +13184,14 @@ let hadaReportPromise = Promise.resolve(null);
     }
 
 // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    const [generatedArticle, generatedComments, generatedHadaReport] = await Promise.all([
+  // ▼▼▼ この Promise.all を修正 ▼▼▼
+    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread] = await Promise.all([
         articlePromise, 
         commentsPromise,
-        hadaReportPromise // ★追加
+        hadaReportPromise,
+        matomeThreadPromise // ★追加
     ]);
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     // ▼▼▼ ここから BBSコメントのエラーハンドリングを修正 ▼▼▼
     if (generatedComments) {
@@ -13239,6 +13259,16 @@ let hadaReportPromise = Promise.resolve(null);
     if (generatedHadaReport) {
         // 成功しても失敗しても、news配列に追加する
         tournamentState.news.push(generatedHadaReport);
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
+// --- まとめスレッドの処理 (新設) ---
+    if (generatedMatomeThread) {
+        // 成功（コメント配列）しても失敗（エラーオブジェクト）しても、matchIdをキーに保存する
+        tournamentState.matomeThreads[matchId] = {
+            thread: generatedMatomeThread, // スレッド本体（またはエラー）
+            context: matchContext         // ★再生成用の「試合終了時の情報」
+        };
     }
     // ▲▲▲ 追加ここまで ▲▲▲
 
@@ -13811,6 +13841,34 @@ ${promptDataText}
                 
                 if (confirmed) { // 「はい」が押された場合
                     tournamentState = lastState;
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+                    // --- 古いセーブデータへの「互換性パッチ」 ---
+                    if (tournamentState.teamRecords) {
+                        for (const teamName in tournamentState.teamRecords) {
+                            const record = tournamentState.teamRecords[teamName];
+                            
+                            // 1. (model_156) チーム打率(tournamentStats)がなければ初期化
+                            if (!record.tournamentStats) {
+                                record.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
+                            }
+                            
+                            // 2. (model_164) ロスター(roster)がなければ初期化
+                            if (!record.roster) {
+                                record.roster = null;
+                            }
+                        }
+                    }
+                    // 3. (model_106) 応援コメント(preGameComments)がなければ初期化
+                    if (!tournamentState.preGameComments) {
+                        tournamentState.preGameComments = {};
+                    }
+                    // ▲▲▲ 追加ここまで ▲▲▲
+
+// ▼▼▼ この1行をまるごと追加 ▼▼▼
+                    if (!tournamentState.matomeThreads) tournamentState.matomeThreads = {};
+                    // ▲▲▲ 追加ここまで ▲▲▲
+
                     setupEl.classList.add('hidden');
                     tournamentDisplayEl.classList.remove('hidden');
                     renderTournament(tournamentState);
@@ -14078,7 +14136,61 @@ document.body.addEventListener('click', async (e) => {
 
 
    // document.body.addEventListener('click', ...) 内の、まとめサイト関連の if ブロックを全てこれで置き換える
+// ▼▼▼ この else if ブロックをまるごと追加 ▼▼▼
+    // --- 【まとめサイト】スレッド再生成ボタン ---
+    else if (e.target.matches('#retry-matome-thread-btn')) {
+        e.preventDefault();
+        const btn = e.target;
+        const matchId = btn.dataset.matchId;
 
+        const originalData = tournamentState.matomeThreads[matchId];
+        if (!originalData || !originalData.context) {
+            alert("再生成に必要な「試合終了時の情報（コンテキスト）」が見つかりません。");
+            return;
+        }
+
+        // 試合終了時のコンテキスト（スタメン変更や調子フラグが正しい状態）を取得
+        const matchContext = originalData.context;
+        const threadContentEl = document.getElementById('bbs-thread-content');
+        
+        btn.disabled = true;
+        btn.textContent = '生成中...';
+        threadContentEl.innerHTML = `<div class="loader text-center py-8">AIがスレッドを再生成中です...（${matchContext.winnerLineupChanges || 'スタメン変更なし'}）</div>`;
+
+        // AIに再生成を依頼
+        const newCommentsArray = await generateGameMatchBbsComments(matchContext);
+
+        // 1. 成功した場合 (配列)
+        if (newCommentsArray && Array.isArray(newCommentsArray)) {
+            tournamentState.matomeThreads[matchId].thread = newCommentsArray; // キャッシュを上書き
+            saveState();
+            
+            // 再描画
+            threadContentEl.innerHTML = '';
+            for (const comment of newCommentsArray) {
+                const commentEl = document.createElement('div');
+                commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
+                commentEl.innerHTML = `
+                    <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
+                    <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
+                `;
+                threadContentEl.appendChild(commentEl);
+                setTimeout(() => { commentEl.classList.remove('opacity-0'); }, 50);
+                await new Promise(resolve => setTimeout(resolve, 50)); // 再描画は高速で
+                threadContentEl.scrollTop = threadContentEl.scrollHeight;
+            }
+        } 
+        // 2. 失敗した場合 (エラーオブジェクト)
+        else {
+            tournamentState.matomeThreads[matchId].thread = newCommentsArray; // エラーオブジェクトで上書き
+            saveState();
+            threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの再生成に失敗しました。(エラー: ${newCommentsArray.body || '不明'})</p>`;
+        }
+
+        btn.disabled = false;
+        btn.textContent = '再生成';
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
     // ▼▼▼ このブロックで、統合型まとめサイト関連の処理を全て書き換える ▼▼▼
 
     // --- 「まとめサイトを見る」ボタン ---
@@ -14172,44 +14284,52 @@ document.body.addEventListener('click', async (e) => {
         threadContentEl.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
 
         (async () => {
-            let commentsArray; // 変数名を配列と分かるように変更
+            let commentsArray; // 生成されたコメント配列（またはエラー）を格納する変数
 
+            // 「再生成」ボタンの要素を取得
+            const retryBtn = document.getElementById('retry-matome-thread-btn');
+            
+            // ゲーム内の記事（高校野球）がクリックされた場合
             if (type === 'game' && matchId) {
-                const match = findMatchById(matchId);
-                if (match && match.winner) {
-                    const matchContext = createMatchContext(matchId, match.winner);
+                
+                // 1. データベース(tournamentState)から「生成済み」のスレッドデータを取得
+                const preGeneratedData = tournamentState.matomeThreads[matchId];
+                const preGeneratedThread = preGeneratedData ? preGeneratedData.thread : null;
 
-// ▼▼▼ ここから羽田レポート検索ロジックを追加 ▼▼▼
-                    if (tournamentState.news && tournamentState.news.length > 0) {
-                        // この試合ID(matchId)に関連付けられた、最新の羽田レポートを探す
-                        const hadaReport = tournamentState.news.slice().reverse().find(article => 
-                            !article.error && 
-                            article.isHadaReport && // 羽田レポートのフラグ
-                            article.context && 
-                            article.context.matchId === matchId // 試合IDが一致
-                        );
-                        
-                        if (hadaReport) {
-                            // matchContext に羽田レポートの情報を要約して追加
-                            matchContext.hadaReportSummary = `なお、東海スポーツの羽田記者はこの記事（『${hadaReport.title}』）で「${hadaReport.body.substring(0, 50)}...」などと分析している。`;
-                        }
-                    }
-                    // ▲▲▲ 羽田レポート検索ロジックここまで ▲▲▲
-
-                    commentsArray = await generateGameMatchBbsComments(matchContext);
+                // 2. 「再生成」ボタンに matchId をセットして表示する
+                if (preGeneratedData && preGeneratedData.context) {
+                    retryBtn.dataset.matchId = matchId;
+                    retryBtn.classList.remove('hidden');
+                } else {
+                    retryBtn.classList.add('hidden'); // コンテキストが無い場合は隠す
                 }
-            } else if (type === 'real') {
+
+                // 3. スレッドの表示処理
+                if (preGeneratedThread) {
+                    if (Array.isArray(preGeneratedThread)) { // 3A. 成功
+                        commentsArray = preGeneratedThread;
+                    } else if (preGeneratedThread.error) { // 3B. 失敗
+                        threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。(エラー: ${preGeneratedThread.body || '不明'})</p>`;
+                        return; // 処理中断
+                    }
+                } else { // 3C. スレッド無し
+                    threadContentEl.innerHTML = `<p class="text-center text-gray-500">この試合のまとめスレッドはまだありません。</p>`;
+                    retryBtn.classList.add('hidden'); // スレッドが無いなら再生成も隠す
+                    return; // 処理中断
+                }
+
+            } 
+            // 現実のニュースがクリックされた場合
+            else if (type === 'real') {
+                retryBtn.classList.add('hidden'); // 現実ニュースは再生成不可
                 commentsArray = await generateRealNewsBbsComments(headline, category);
             }
 
-            // ▼▼▼ ここからが重要な修正点 ▼▼▼
-            // 「result.comments」ではなく、「commentsArray」が配列であるかを直接チェックする
+            // --- 4. 取得したコメント配列を描画する ---
             if (commentsArray && Array.isArray(commentsArray)) {
-                threadTitleEl.textContent = `【スレ】${headline}`; // タイトルを設定
                 threadContentEl.innerHTML = ''; // ローダーを消す
-
-                // ライブ感のある描画処理
-                for (const comment of commentsArray) { // commentsArray を直接ループ
+                // ... (既存の「ライブ感のある描画処理」forループ) ...
+                for (const comment of commentsArray) {
                     const commentEl = document.createElement('div');
                     commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
                     commentEl.innerHTML = `
@@ -14217,23 +14337,16 @@ document.body.addEventListener('click', async (e) => {
                         <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
                     `;
                     threadContentEl.appendChild(commentEl);
-
-                    setTimeout(() => {
-                        commentEl.classList.remove('opacity-0');
-                    }, 50);
-
+                    setTimeout(() => { commentEl.classList.remove('opacity-0'); }, 50);
                     const delay = Math.random() * 800 + 200;
                     await new Promise(resolve => setTimeout(resolve, delay));
                     threadContentEl.scrollTop = threadContentEl.scrollHeight;
                 }
-
-            } else {
-                threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。</p>`;
+            } else if (!commentsArray) { // real news 失敗など
+                threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの読み込みに失敗しました。</p>`;
             }
-            // ▲▲▲ 修正ここまで ▲▲▲
         })();
     }
-
 
     // --- BBSスレッドから一覧に戻るボタン ---
     if (e.target.closest('#bbs-thread-back-btn')) {
