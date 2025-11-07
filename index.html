@@ -6954,6 +6954,40 @@ function openDetailsModal(matchId) {
     console.log("--- [モーダル表示 開始] ---", { matchId: matchId, 既存データ: match.details });
 
     let details = JSON.parse(JSON.stringify(match.details || {}));
+
+// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    // --- 【新機能】前回のロスター情報を引き継ぐ ---
+    // (まだこの試合の詳細入力(details.batting)が空の場合のみ実行)
+    if ((!details.batting || !details.batting.team1 || details.batting.team1.length === 0)) {
+        console.log("[ロスター引継] この試合の詳細は空です。前回のロスターを探します...");
+        for (const teamKey of ['team1', 'team2']) {
+            const teamName = match[teamKey];
+            const teamRecord = tournamentState.teamRecords[teamName];
+            
+            // (A) 前回のロスター情報(roster)があるか？
+            if (teamRecord && teamRecord.roster && teamRecord.roster.length > 0) {
+                console.log(`[ロスター引継] ${teamName} の前回のロスター (${teamRecord.roster.length}人) を読み込みます。`);
+                
+                // (C) details.batting に、打席結果(results)を空にしてコピーする
+                details.batting = details.batting || { team1: [], team2: [] };
+                details.batting[teamKey] = teamRecord.roster.map(playerData => ({
+                    ...playerData, // order, name, number, pos, throwBat, sub_type を引き継ぐ
+                    results: [] // 打席結果は空にする
+                }));
+            }
+            // (B) 念のため、古いスタメン情報(previousStarters)もチェック (古いセーブデータ用)
+            else if (teamRecord && teamRecord.previousStarters && teamRecord.previousStarters.length > 0) {
+                 console.log(`[ロスター引継] ${teamName} の前回のスタメン (${teamRecord.previousStarters.length}人) を読み込みます。`);
+                 
+                 details.batting = details.batting || { team1: [], team2: [] };
+                 details.batting[teamKey] = teamRecord.previousStarters.map(playerData => ({
+                    ...playerData, // order, name, pos を引き継ぐ
+                    results: [] // 打席結果は空にする
+                }));
+            }
+        }
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
     
     const numInnings = Math.max(9, ...Object.values(tournamentState.matches)
         .filter(m => m.details?.inningScore?.team1)
@@ -7764,18 +7798,7 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
     // ▲▲▲ 追加はここまで ▲▲
 
     match.details = details;
-    for (const teamKey of ['team1', 'team2']) {
-        const teamName = match[teamKey];
-        const teamRecord = tournamentState.teamRecords[teamName];
-        if (!teamRecord) continue;
-        const battingData = details.batting[teamKey];
-        if (battingData && battingData.length > 0) {
-            teamRecord.roster = battingData
-                .filter(p => p.order && !p.order.toString().includes('sub'))
-                .map(p => ({ order: p.order, number: p.number, name: p.name, pos: p.pos }));
-        }
-    }
-
+    
     saveState();
     detailsModal.classList.add('hidden');
     renderTournament(tournamentState);
@@ -13207,16 +13230,34 @@ let hadaReportPromise = Promise.resolve(null);
 
     renderTournament(tournamentState); // この中で renderBbsComments が呼ばれる
 // 勝者と敗者の前回のスタメン情報を記録 (詳細データがある場合)
+    // ▼▼▼ このブロックをまるごと置き換え ▼▼▼
+    // --- 試合後のロスター情報（背番号、ポジション、投打）を記録 ---
     if (dbMatch.details && dbMatch.details.batting) {
-        const winnerTeamKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
-        if (tournamentState.teamRecords[winnerName] && dbMatch.details.batting[winnerTeamKey]) {
-            tournamentState.teamRecords[winnerName].previousStarters = dbMatch.details.batting[winnerTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
-        }
-        const loserTeamKey = dbMatch.team1 === loserName ? 'team1' : 'team2';
-        if (tournamentState.teamRecords[loserName] && dbMatch.details.batting[loserTeamKey]) {
-            tournamentState.teamRecords[loserName].previousStarters = dbMatch.details.batting[loserTeamKey].filter(p => p.order && !p.order.toString().includes('sub')).map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+        for (const teamKey of ['team1', 'team2']) {
+            const teamName = dbMatch[teamKey];
+            const teamRecord = tournamentState.teamRecords[teamName];
+            const battingData = dbMatch.details.batting[teamKey];
+            
+            if (teamRecord && battingData && battingData.length > 0) {
+                // 1. スタメン変更検知用に「スタメン」だけを previousStarters に保存 (既存のロジック)
+                teamRecord.previousStarters = battingData
+                    .filter(p => p.order && !p.order.toString().includes('sub'))
+                    .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
+                
+                // 2. 「全選手」の情報を teamRoster に保存 (★新機能★)
+                // (打席結果(results)や変遷(posHistoryDisplay)を除外し、基本情報のみを保存)
+                teamRecord.roster = battingData.map(p => ({
+                    order: p.order,
+                    name: p.name,
+                    number: p.number,
+                    pos: p.currentPos || p.pos, // ★変遷後の最新ポジションを保存
+                    throwBat: p.throwBat,
+                    sub_type: p.sub_type
+                }));
+            }
         }
     }
+    // ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
     // --- 6. 試合結果に基づき、選手の「一時的な状態異常」フラグを付与 ---
