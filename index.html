@@ -1542,7 +1542,7 @@ graph TD
 const BATTING_RESULTS = {
     hits: ['安', '二塁打', '三塁打', '本塁打'],
     outs: ['三振', 'ゴロ', '飛', '邪', '直', '併殺'],
-    walks: ['四球', '死球'],
+    walks: ['四球', '死球', '敬遠'],
     sacrifices: ['犠打', '犠飛', '犠失'], // ← ここに追加
     other: ['野選', 'エラー']
 };
@@ -7698,8 +7698,7 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
 
                             gameStats.played = true;
                             gameStats.pa++;
-                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanBatterPlay.includes('犠')) gameStats.ab++; // cleanBatterPlay を参照
-                            
+                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanBatterPlay.includes('敬遠') && !cleanBatterPlay.includes('犠')) gameStats.ab++; // cleanBatterPlay を参照
                             if (isHit) gameStats.h++; // isHit を参照
                             if (cleanBatterPlay.includes('本')) gameStats.hr++;
                             if (cleanBatterPlay.includes('点')) {
@@ -8793,7 +8792,7 @@ function translatePlay(atBatString) {
     if (s.includes('二塁打')) return { description: `二塁打`, type: "double", out: false, base: 2 };
     if (s.includes('安')) return { description: `ヒット`, type: "single", out: false, base: 1 };
     
-    if (s.includes('四球') || s.includes('死球')) return { description: `四死球`, type: "walk", out: false, base: 1 };
+    if (s.includes('四球') || s.includes('死球') || s.includes('敬遠')) return { description: `四死球`, type: "walk", out: false, base: 1 };
     if (s.includes('エラー') || s.includes('野選') || s.includes('犠失')) return { description: `エラー/野選`, type: "error", out: false, base: 1 };
 
     if (s.includes('犠飛')) return { description: `犠牲フライ`, type: "sac_fly", out: true, base: 0 };
@@ -11714,6 +11713,19 @@ function createHighlightsText(dbMatch, winnerName) {
                 if (rbiMatch) description = `${playerInfo}が${markPrefix}${eventText}押し出しの死球を受け、${rbiMatch[1]}点を挙げた`;
                 else description = `${playerInfo}が${markPrefix}死球で出塁した`;
             }
+
+
+// ▼▼▼ この else if ブロックをまるごと追加 ▼▼▼
+        else if (tempRes.includes('敬遠')) {
+            if (rbiMatch) {
+                // 満塁での敬遠（押し出し）
+                description = `${playerInfo}が${markPrefix}${eventText}押し出しの敬遠四球を選び、${rbiMatch[1]}点を挙げた`;
+            } else {
+                // 通常の敬遠
+                description = `${playerInfo}が${markPrefix}${eventText}敬遠四球で出塁した`;
+            }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
             
             else if (tempRes.includes('三振')) description = `${playerInfo}が${markPrefix}三振に倒れた`;
             else if (tempRes.includes('併殺')) description = `${playerInfo}が${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '内野'}ゴロで併殺打に倒れた`;
