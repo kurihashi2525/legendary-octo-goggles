@@ -15064,6 +15064,11 @@ document.body.addEventListener('click', async (e) => {
             let articlePromise;
 
             // ▼▼▼ この分岐ロジック全体を置き換えてください ▼▼▼
+            
+            // ★★★ ここが最重要修正点 ★★★
+            // context.theme が存在する場合、それは「話題校記事」であると判断します。
+            // (古いセーブデータは isTopicArticle フラグを持っていないため)
+            
             if (context.isDocumentary) {
                 // 【ドキュメンタリー記事の場合】
                 const { type, teamName, matchData } = context;
@@ -15077,8 +15082,8 @@ document.body.addEventListener('click', async (e) => {
                 // 【羽田レポートの場合】
                 articlePromise = generateHadaReport(context);
             
-            } else if (context.isTopicArticle) {
-                // 【★バグ修正★ 話題校紹介記事の場合】
+            } else if (context.isTopicArticle || context.theme) { // ★★★ (|| context.theme) を追加 ★★★
+                // 【話題校紹介記事の場合】
                 // ランクを再計算してから関数を呼ぶ
                 const rank = calculateRank(context.teamName, tournamentState); 
                 articlePromise = createTopicArticle(context.teamName, rank, context.theme); 
@@ -15090,9 +15095,6 @@ document.body.addEventListener('click', async (e) => {
             }
             // ▲▲▲ 分岐修正ここまで ▲▲▲
 
-            const newArticle = await articlePromise;
-
-            // ▼▼▼ エラー記事作成ロジックも修正 ▼▼▼
             const createErrorArticle = () => ({
                 title: "記事生成エラー", body: "記事の再生成に失敗しました。",
                 timestamp: Date.now(), error: true,
@@ -15101,17 +15103,18 @@ document.body.addEventListener('click', async (e) => {
                 isDocumentary: context.isDocumentary,
                 isBracketAnalysis: context.isBracketAnalysis,
                 isHadaReport: context.isHadaReport,
-                isTopicArticle: context.isTopicArticle, 
+                isTopicArticle: (context.isTopicArticle || context.theme), // ★修正
                 context: context // エラーが連鎖しても context を引き継ぐ
             });
-            // ▲▲▲ 修正ここまで ▲▲▲
+
+            const newArticle = await articlePromise;
 
             if (newArticle && !newArticle.error) {
                 newArticle.context = context; // 新しい記事にもコンテキストを付与
                 tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
                 
                 // レビューモーダルを通さず、そのまま表示する記事
-                if (!context.isBracketAnalysis && !context.isHadaReport && !context.isTopicArticle) {
+                if (!context.isBracketAnalysis && !context.isHadaReport && ( !context.isTopicArticle && !context.theme )) { // ★修正
                     showArticleReviewModal(newArticle);
                 }
             } else {
@@ -15124,6 +15127,7 @@ document.body.addEventListener('click', async (e) => {
             feedbackSubmitBtn.disabled = false;
         })();
     }
+
 // ▲▲▲ ここまで置き換え ▲▲▲
 
 // ▼▼▼ この else if ブロックを (model_114 の提案と) 置き換え ▼▼▼
