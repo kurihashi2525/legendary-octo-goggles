@@ -2810,81 +2810,172 @@ function formatRecordToString(record) {
 
 /**
  * チームの今大会の軌跡を要約する
- * (★試合ごとの記録を参照して、正確に猛打賞を判断する最終版)
+ * (★試合内容の要約(narrativeSummary)を反映する最終版)
+ *
+ * @param {string} teamName - チーム名
+ * @param {string} currentMatchId - 現在処理中の試合ID (集計から除外するため)
+ * @returns {string} - AIプロンプト用のチーム状況要約文
  */
 function getCurrentTournamentPerformance(teamName, currentMatchId) {
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return "今大会初戦。";
 
-    const path = [];
-    const keyPerformances = new Set();
-    const currentTournamentMatchIds = Object.keys(tournamentState.matches);
+    const path = []; // 勝ち上がり履歴 (例: "1回戦で〇〇に 8-1 で勝利")
+    const keyPerformances = new Set(); // 活躍ハイライト (例: "鈴木が1回戦で猛打賞")
+    const playerAggStats = {}; // 今大会の個人成績集計用 (例: { "鈴木": { ab: 8, h: 3, ... } })
 
-    for (const matchId of currentTournamentMatchIds) {
-        if (matchId === currentMatchId) continue;
-        const match = tournamentState.matches[matchId];
+    // --- 1. 全大会の試合データを統合 ---
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+    
+    // --- 2. 現在の大会に絞り込み ---
+    const currentTournamentKey = tournamentState.currentTournament;
+    
+    const currentTournamentMatchIds = Object.keys(allMatches).filter(matchId => {
+        let isCurrentTournamentMatch = false;
         
-        if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+        if (currentTournamentKey === 'summer') {
+            // 夏: 'L-', 'R-', 'F-' (県大会本戦ID)
+            isCurrentTournamentMatch = matchId.startsWith('L-') || matchId.startsWith('R-') || matchId.startsWith('F-');
+        } else if (currentTournamentKey === 'autumn') {
+            // 秋: 地区予選ID または (本戦フェーズなら) 県大会本戦ID
+            const isRegional = matchId.startsWith('東部-') || matchId.startsWith('中部-') || matchId.startsWith('西部-') || matchId.startsWith('伊豆-');
+            const isMain = matchId.startsWith('L-') || matchId.startsWith('R-') || matchId.startsWith('F-');
+            isCurrentTournamentMatch = isRegional || (tournamentState.autumnPhase === 'main' && isMain);
+        } else if (currentTournamentKey === 'spring') {
+            // 春: 地区予選ID または (本戦フェーズなら) 県大会本戦ID
+            const isRegional = matchId.includes('-SB') || matchId.includes('-SREP') || matchId.includes('-SIZU');
+            const isMain = matchId.startsWith('L-') || matchId.startsWith('R-') || matchId.startsWith('F-');
+            isCurrentTournamentMatch = isRegional || (tournamentState.springPhase !== 'regional_qualifiers' && isMain);
+        }
+        
+        return isCurrentTournamentMatch;
+    });
+
+    // --- 3. 今大会の全試合を分析 ---
+    for (const matchId of currentTournamentMatchIds) {
+        // 処理中の試合(currentMatchId)自体は集計から除外
+        if (matchId === currentMatchId) continue;
+        
+        const match = allMatches[matchId];
+        
+        // チームが関わった試合か、勝者が決まっているか
+        if (match && match.winner && (match.team1 === teamName || match.team2 === teamName)) {
             const opponent = match.team1 === teamName ? match.team2 : match.team1;
-            const roundNum = match.id.includes('-R') ? parseInt(match.id.split('-')[1].slice(1)) : 1;
+            if (!opponent) continue; // 不戦勝などは除外
             
+            const roundName = getRoundNameFromMatchId(matchId); // ラウンド名取得
+
+            // A. 勝ち試合の履歴を生成
             if (match.winner === teamName) {
-                path.push(`${roundNum}回戦 vs ${opponent}`);
+                
+                if (currentTournamentKey === 'summer') {
+                    // 【夏大会】スコアとランクを含む複雑な表現
+                    const winnerScore = (match.team1 === teamName ? match.score1 : match.score2) || 'W';
+                    const loserScore = (match.team1 === teamName ? match.score2 : match.score1) || 'L';
+                    const opponentRank = calculateRank(opponent, tournamentState);
+                    
+                    // ★★★ ここからが今回の修正箇所 ★★★
+                    let narrativeSummary = "";
+                    // 1. match.details に保存された要約文を取得
+                    if (match.details && match.details.narrativeSummary) {
+                        // "〇〇が勝利を掴んだ" や "投手戦となった" などの重複表現を削除
+                        narrativeSummary = match.details.narrativeSummary
+                            .replace(/で、?.*が勝利を掴んだ/, '')
+                            .replace(/で、?.*が勝利した/, '')
+                            .replace(/、?息詰まる投手戦となった/, 'の投手戦')
+                            .replace(/、?壮絶な打撃戦となった/, 'の打撃戦');
+                    }
+                    
+                    let pathText;
+                    if (narrativeSummary) {
+                        // 要約がある場合 (例: 9回サヨナラ勝ち)
+                        pathText = `${roundName}で${opponent}(${opponentRank})に ${winnerScore}-${loserScore} で勝利 (${narrativeSummary})`;
+                    } else {
+                        // 要約がない場合 (詳細入力なし)
+                        pathText = `${roundName}で${opponent}(${opponentRank})に ${winnerScore}-${loserScore} で勝利`;
+                    }
+                    path.push(pathText);
+                    // ★★★ 修正ここまで ★★★
+
+                } else {
+                    // 【秋・春大会】シンプルな表現
+                    path.push(`${roundName} vs ${opponent}`);
+                }
             }
 
+            // B. 個人成績（キーパフォーマンス）の収集 (変更なし)
             if (match.details) {
                 const teamKey = match.team1 === teamName ? 'team1' : 'team2';
                 
-                // 投手の好投
                 const pitchers = match.details.pitching?.[teamKey] || [];
                 pitchers.forEach(p => {
                     if (p.name && p.result === 'W' && parseFloat(p.innings) >= 6) {
-                        keyPerformances.add(`${p.name}が${roundNum}回戦で好投`);
+                        keyPerformances.add(`${p.name}が${roundName}で好投`);
                     }
                 });
 
-                // 保存された「試合ごとの成績」を参照して猛打賞を判断
                 if (match.details.playerGameStats) {
                     const gameStats = match.details.playerGameStats[teamKey];
                     for (const playerName in gameStats) {
-                        // この試合で3安打以上打っていたかをチェック
+                        // 今大会の集計用オブジェクトを初期化
+                        if (!playerAggStats[playerName]) {
+                            playerAggStats[playerName] = { ab: 0, h: 0, hr: 0, rbi: 0 };
+                        }
+                        const agg = playerAggStats[playerName];
+                        const game = gameStats[playerName];
+                        
+                        // この試合の成績を加算
+                        agg.ab += game.ab || 0;
+                        agg.h += game.h || 0;
+                        agg.hr += game.hr || 0;
+                        agg.rbi += game.rbi || 0;
+                        
+                        // 猛打賞
                         if (gameStats[playerName].h >= 3) {
-                            keyPerformances.add(`${playerName}が${roundNum}回戦で猛打賞を記録`);
+                            keyPerformances.add(`${playerName}が${roundName}で猛打賞`);
                         }
                     }
                 }
             }
         }
-    }
+    } // (試合ループ終了)
     
+    // --- 4. 最終的な文章の組み立て ---
     let summary = "";
     if (path.length === 0) {
-        return "今大会初戦。";
+        summary = "今大会初戦。";
     } else {
-        summary += `ここまでの勝ち上がり: ${path.join(' → ')}。`;
+        if (currentTournamentKey === 'summer') {
+            summary = `ここまでの勝ち上がり: ${path.join('、')}。`;
+        } else {
+            // 秋・春は「→」でつなぐ
+            summary = `ここまでの勝ち上がり: ${path.join(' → ')}。`;
+        }
     }
     
-    // 大会通算打率の分析
-    const playerBattingStats = teamRecord.playerStats?.batting || {};
-    for (const playerName in playerBattingStats) {
-        const stats = playerBattingStats[playerName];
+    // 5. 今大会の通算成績の分析 (変更なし)
+    for (const playerName in playerAggStats) {
+        const stats = playerAggStats[playerName];
         if (stats.ab >= 5) { // 5打数以上の選手を対象
-            const battingAverage = stats.h / stats.ab;
+            const battingAverage = (stats.ab > 0) ? (stats.h / stats.ab) : 0;
             if (battingAverage >= 0.4) {
-                keyPerformances.add(`${playerName}が打率4割超えと絶好調`);
-            } else if (battingAverage <= 0.2) {
-                keyPerformances.add(`${playerName}が打率2割以下と不振`);
+                keyPerformances.add(`${playerName}が打率${battingAverage.toFixed(3)}と絶好調`);
+            } else if (battingAverage <= 0.2 && battingAverage > 0) { // 0割は不振と言わない
+                keyPerformances.add(`${playerName}が打率${battingAverage.toFixed(3)}と不振`);
             }
         }
     }
     
     if (keyPerformances.size > 0) {
-        summary += `今大会の主な活躍: ${Array.from(keyPerformances).join('、')}。`;
+        summary += ` 今大会の主な活躍: ${Array.from(keyPerformances).join('、')}。`;
     }
 
     return summary;
 }
-
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
@@ -5034,18 +5125,20 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
 }
 
 /**
- * 組み合わせ決定時に、AIに「話題校紹介」の記事を数本生成させる
+ * AIに組み合わせ抽選時に「話題校紹介」の記事を数本生成させる
+ * (★E, D, C, B, Aランクから各1校ずつ、計5校ピックアップする最終版)
  * @param {object} state - tournamentState
- * @param {number} count - 生成する記事の本数（例: 3本）
  * @returns {Promise<Array<object>>} - 生成された記事オブジェクトの配列
  */
-async function generateTopicSchoolArticles(state, count = 3) {
+async function generateTopicSchoolArticles(state) {
     const { teams, seeds } = state;
     if (!teams || teams.length === 0) return [];
 
     const articles = [];
     const getTeamRank = (teamName) => calculateRank(teamName, state);
-    const shuffledTeams = shuffleArray(teams); // チームをシャッフル
+    
+    // チームをシャッフル (同じランクからランダムに選ぶため)
+    const shuffledTeams = shuffleArray(teams); 
 
     // ランク別にチームを分類
     const teamsByRank = { 'A': [], 'B': [], 'C': [], 'D': [], 'E': [] };
@@ -5054,22 +5147,36 @@ async function generateTopicSchoolArticles(state, count = 3) {
         teamsByRank[rank].push(team);
     });
 
-    // 1. Eランク校の記事 (目標: 初戦突破)
+    // --- 各ランクから1校ずつ選んで記事を生成 ---
+
+    // 1. Eランク校の記事 (テーマ: 悲願の初戦突破へ)
     const teamE = teamsByRank['E'][0];
     if (teamE) {
         articles.push(await createTopicArticle(teamE, getTeamRank(teamE), 'E'));
     }
 
-    // 2. Dランク校の記事 (目標: ベスト8)
+    // 2. Dランク校の記事 (テーマ: 躍進のベスト8へ)
     const teamD = teamsByRank['D'][0];
     if (teamD) {
         articles.push(await createTopicArticle(teamD, getTeamRank(teamD), 'D'));
     }
 
-    // 3. Cランク以上の記事 (目標: 甲子園)
-    const teamCPlus = [...teamsByRank['C'], ...teamsByRank['B'], ...teamsByRank['A']][0];
-    if (teamCPlus) {
-        articles.push(await createTopicArticle(teamCPlus, getTeamRank(teamCPlus), 'C_PLUS'));
+    // 3. Cランク校の記事 (テーマ: 甲子園という悲願へ)
+    const teamC = teamsByRank['C'][0];
+    if (teamC) {
+        articles.push(await createTopicArticle(teamC, getTeamRank(teamC), 'C'));
+    }
+
+    // 4. Bランク校の記事 (テーマ: 打倒Aランクへ)
+    const teamB = teamsByRank['B'][0];
+    if (teamB) {
+        articles.push(await createTopicArticle(teamB, getTeamRank(teamB), 'B'));
+    }
+
+    // 5. Aランク校の記事 (テーマ: 王者の道)
+    const teamA = teamsByRank['A'][0];
+    if (teamA) {
+        articles.push(await createTopicArticle(teamA, getTeamRank(teamA), 'A'));
     }
 
     // 生成された記事（nullを含む）をフィルタリングして返す
@@ -5079,9 +5186,10 @@ async function generateTopicSchoolArticles(state, count = 3) {
 /**
  * generateTopicSchoolArticles のヘルパー関数。
  * 1校を選び、ランクに応じたテーマで記事を生成する。
+ * (★ランク記号を「名門校」などの日本語説明に置き換えてAIに渡す最終版)
  * @param {string} teamName - 選ばれたチーム名
- * @param {string} rank - チームランク
- * @param {'E' | 'D' | 'C_PLUS'} theme - 記事のテーマ
+ * @param {string} rank - チームランク (A, B, C, D, E)
+ * @param {'E' | 'D' | 'C' | 'B' | 'A'} theme - 記事のテーマ
  * @returns {Promise<object|null>} - 生成された記事オブジェクト
  */
 async function createTopicArticle(teamName, rank, theme) {
@@ -5090,9 +5198,14 @@ async function createTopicArticle(teamName, rank, theme) {
     const detailedData = DETAILED_TEAM_DATA[teamName];
     const lore = PREFECTURE_LORE; // AIの常識
 
-    // AIに渡すための詳細情報を作成
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+
+    // 1. ランク記号を日本語の説明に変換 (例: 'A' -> '名門校')
+    const rankDescription = getRankDescription(rank); 
+
+    // 2. AIに渡すための詳細情報を作成 (ランク記号の代わりに説明文を使用)
     let contextInfo = `
-- **チーム名:** ${teamName} (ランク: ${rank})
+- **チーム名:** ${teamName} (${rankDescription})
 - **チーム背景(info):** ${teamData.info || '情報なし'}
 - **監督:** ${teamData.coach.name} (${teamData.coach.style})
 - **昨年の成績:** ${getRankString(teamRecord.lastFinish)}
@@ -5101,11 +5214,38 @@ async function createTopicArticle(teamName, rank, theme) {
         contextInfo += `- **注目選手:** ${detailedData.players.map(p => `${p.name}(${p.year}年, ${p.pos}) - ${p.desc}`).join('、 ')}\n`;
     }
 
+    // チームの初戦情報を検索
+    const firstMatch = Object.values(tournamentState.matches).find(m => 
+        m.id.includes('-R1-') && (m.team1 === teamName || m.team2 === teamName)
+    );
+    
+    let firstMatchInfo = '';
+    if (firstMatch) {
+        const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
+        // 相手のランクも日本語の説明に変換
+        const opponentRankDesc = getRankDescription(calculateRank(opponentName, tournamentState)); 
+        
+        let scheduleInfo = '日程・球場未定';
+        if (firstMatch.schedule) {
+            const gameNumIcon = ['①', '②', '③', '④'][firstMatch.schedule.game - 1] || `(第${firstMatch.schedule.game}試合)`;
+            scheduleInfo = `${firstMatch.schedule.date} ${firstMatch.schedule.stadiumFull} ${gameNumIcon}`;
+        }
+        
+        // AIに渡すコンテキストに「初戦情報」セクションを追加
+        firstMatchInfo = `
+- **初戦情報:**
+  - **対戦相手:** ${opponentName} (${opponentRankDesc})
+  - **日程:** ${scheduleInfo}
+`;
+    }
+    contextInfo += firstMatchInfo; // チーム情報に初戦情報を連結
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     // テーマに応じたプロンプトを作成
     let prompt = `あなたは「スポーツ報知」の高校野球担当記者です。
 夏の静岡大会の組み合わせが決定しました。
 あなたは今、ピックアップした「話題校」の紹介記事を執筆しています。
-以下の【取材データ】と【執筆テーマ】に基づき、ご提示いただいた記事の例（焼津水産、御殿場西）のような、**情景や選手の背景（物語）が目に浮かぶようなリアルな紹介記事**を生成してください。
+以下の【取材データ】と【執筆テーマ】に基づき、情景や選手の背景（物語）が目に浮かぶようなリアルな紹介記事を生成してください。
 
 ### 取材データ
 ${contextInfo}
@@ -5115,31 +5255,52 @@ ${lore}
 
 `;
 
+    // ▼▼▼ 各テーマの指示文も (ランク記号) -> (ランク説明) に修正 ▼▼▼
     if (theme === 'E') {
         prompt += `
 ### 執筆テーマ：「悲願の初戦突破へ」
-- このチーム（Eランク）の目標は、まず「夏に1勝」することです。
-- （例：焼津水産の海洋実習のように）そのチームが抱える**特有の事情**（例：浜松特支の創部背景、新居の0勝32敗、川根の最後の夏、虎府島の離島ハンデなど）を**記事の中心**に据えてください。
+- このチーム（${rankDescription}）の目標は、まず「夏に1勝」することです。
+- そのチームが抱える**特有の事情**（例：浜松特支の創部背景、新居の0勝32敗、川根の最後の夏、虎府島の離島ハンデなど）を**記事の中心**に据えてください。
 - 選手や監督の「まず1勝したい」という**切実な想い**や、チーム一丸となって困難に立ち向かう姿を描写してください。
 `;
     } else if (theme === 'D') {
         prompt += `
 ### 執筆テーマ：「躍進のベスト8を目指して」
-- このチーム（Dランク）の目標は、強豪を倒して「ベスト8」に進出し、大会のダークホースになることです。
-- （例：富士東のOBの思い出のように）チームの**歴史**や、注目選手（いなければ架空の注目選手を創作）の**成長物語**に焦点を当ててください。
+- このチーム（${rankDescription}）の目標は、強豪を倒して「ベスト8」に進出し、大会のダークホースになることです。
+- チームの**歴史**や、注目選手（いなければ架空の注目選手を創作）の**成長物語**に焦点を当ててください。
 - 監督や主将の「今年こそは」という、**下剋上（ジャイアントキリング）**にかける意気込みを描写してください。
 `;
-    } else { // C_PLUS (C, B, Aランク)
+    } else if (theme === 'C') {
         prompt += `
 ### 執筆テーマ：「甲子園出場という悲願へ」
-- このチーム（Cランク以上）の目標は、静岡県の「戦国時代」を勝ち抜き、甲子園に出場することです。
-- （例：御殿場西の名古選手のように）チームの中心となる**エースや主軸選手**に焦点を当て、その選手の**苦悩、成長、そして決意**を深く掘り下げてください。
+- このチーム（${rankDescription}）の目標は、静岡県の「戦国時代」を勝ち抜き、甲子園に出場することです。
+- チームの中心となる**エースや主軸選手**に焦点を当て、その選手の**苦悩、成長、そして決意**を深く掘り下げてください。
 - 監督との**師弟関係**や、チームメイトとの絆など、**人間ドラマ**を記事の中心に据えてください。
 - 「常識」（ナムコ、新私立強豪、伝統校）の中で、このチームがどのような立ち位置におり、何を背負っているのかを文脈に含めてください。
+`;
+    } else if (theme === 'B') {
+        prompt += `
+### 執筆テーマ：「悲願の甲子園出場へ！そして聖地１勝を」
+- このチーム（${rankDescription}）は、優勝候補に次ぐ「強豪」です。最大の目標は、名門校を倒し、まずは「甲子園出場」の切符を掴むことです。
+- チームの強み（例：強力打線）に焦点を当て、それが甲子園出場、さらにその先の「甲子園での勝利」にどう繋がるかを分析してください。
+- チームのキーマン（例：4番、エース）を取り上げ、彼/彼女の「まずは甲子園に連れて行く」という強い決意を語らせてください。
+- 「常識」の中で、このチームが「新私立強豪」なのか「伝統校」なのかを意識し、その立場からの挑戦を描写してください。
+`;
+    } else if (theme === 'A') {
+        prompt += `
+### 執筆テーマ：「全国制覇へ、王者のプレッシャー」
+- このチーム（${rankDescription}）は、今大会の「優勝候補筆頭」です。最終目標は「全国制覇」ですが、そのためにはまず「甲子園出場」という最大の関門を突破しなければなりません。
+- **「勝って当然」というプレッシャー**の中で、まずは県大会を勝ち抜くことの難しさを、主将や監督のコメントを通じて描写してください。
+- チームの圧倒的な戦力（例：プロ注目選手）を紹介しつつ、その選手たちが「全国制覇」という目標と「県大会敗退は許されない」という現実の間でどう戦っているかを描写してください。
+- 「常識」の中で、このチームが「ナムコ資本」なのか「伝統校」なのかを明確にし、その立場からの王者の戦いを描写してください。
 `;
     }
 
     prompt += `
+### 追加指示：初戦の情報【最重要】
+- 記事の最後（締めくくり）に、**【取材データ】にある「初戦情報」**（対戦相手、日程、球場）に必ず言及し、大会への期待感を高めてください。
+- （例：「初戦は〇〇日、△△球場での□□高校戦。彼らの夏が、いよいよ幕を開ける。」）
+
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
 - **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
@@ -5151,7 +5312,7 @@ ${lore}
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const rawTextFromAi = result.candidates[0].content.parts[0].text;
+            const rawTextFromAi = result.candidates[0].content?.parts[0]?.text;
             const article = parseJsonFromText(rawTextFromAi);
             
             if (article && article.title && article.body) {
@@ -9723,7 +9884,11 @@ ${notablePlayersText}
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
         // --- 準備フェーズ ---
-        const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+        // ▼▼▼ この呼び出し部分を修正 ▼▼▼
+        const { highlights, keyPlayerNames, summaryHighlight } = createHighlightsText(dbMatch, winnerName);
+        
+        // ▼▼▼ この1行を「追加」 ▼▼▼
+        dbMatch.details.narrativeSummary = summaryHighlight; // ★detailsに要約文を保存
         const factListText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
         
         const winnerKey = dbMatch.team1 === winnerName ? 'team1' : 'team2';
@@ -12274,8 +12439,14 @@ function createHighlightsText(dbMatch, winnerName) {
     if (summaryHighlight) {
         highlights.unshift(summaryHighlight);
     }
-    // --- 5. 結果を返す ---
-    return { highlights: highlights, keyPlayerNames: Array.from(keyPlayerNames) };
+    
+// --- 5. 結果を返す ---
+    // ▼▼▼ この return 文をまるごと置き換えてください ▼▼▼
+    return { 
+        highlights: highlights, 
+        keyPlayerNames: Array.from(keyPlayerNames),
+        summaryHighlight: summaryHighlight ? summaryHighlight.description : null // ★要約文を追加
+    };
 }
 
 // ▼▼▼ ヘルパー関数：交代状況シミュレーション用 (★複数打席対応・先頭打者指定版★) ▼▼▼
