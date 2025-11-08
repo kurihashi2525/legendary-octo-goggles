@@ -15063,7 +15063,7 @@ document.body.addEventListener('click', async (e) => {
         (async () => {
             let articlePromise;
 
-            // ▼▼▼ この分岐を修正・追加 ▼▼▼
+            // ▼▼▼ この分岐ロジック全体を置き換えてください ▼▼▼
             if (context.isDocumentary) {
                 // 【ドキュメンタリー記事の場合】
                 const { type, teamName, matchData } = context;
@@ -15071,35 +15071,47 @@ document.body.addEventListener('click', async (e) => {
             
             } else if (context.isBracketAnalysis) {
                 // 【組み合わせ分析記事の場合】
-                // (注: 組み合わせ記事はフィードバック入力を無視して再生成します)
                 articlePromise = generateBracketAnalysisNewsArticle(tournamentState); 
             
-            } else if (context.isHadaReport) { // ★★★ この分岐を追加 ★★★
+            } else if (context.isHadaReport) {
                 // 【羽田レポートの場合】
-                // （注：羽田レポートはフィードバック入力を無視し、contextのみで再生成します）
                 articlePromise = generateHadaReport(context);
+            
+            } else if (context.isTopicArticle) {
+                // 【★バグ修正★ 話題校紹介記事の場合】
+                // ランクを再計算してから関数を呼ぶ
+                const rank = calculateRank(context.teamName, tournamentState); 
+                articlePromise = createTopicArticle(context.teamName, rank, context.theme); 
+                // (注: 話題校記事はユーザーフィードバックを無視し、コンテキストのみで再生成します)
             
             } else {
                 // 【通常の試合記事の場合】
-                // context には matchContext が入っているはず
                 articlePromise = generateNewsArticle(context, userFeedback);
             }
             // ▲▲▲ 分岐修正ここまで ▲▲▲
 
             const newArticle = await articlePromise;
 
+            // ▼▼▼ エラー記事作成ロジックも修正 ▼▼▼
             const createErrorArticle = () => ({
                 title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true, errorId: context.matchId || context.errorId || 'error',
+                timestamp: Date.now(), error: true,
+                errorId: context.matchId || context.errorId || `regen-error-${Date.now()}`,
+                // ★各種フラグを正しく引き継ぐ
+                isDocumentary: context.isDocumentary,
+                isBracketAnalysis: context.isBracketAnalysis,
+                isHadaReport: context.isHadaReport,
+                isTopicArticle: context.isTopicArticle, 
                 context: context // エラーが連鎖しても context を引き継ぐ
             });
+            // ▲▲▲ 修正ここまで ▲▲▲
 
             if (newArticle && !newArticle.error) {
                 newArticle.context = context; // 新しい記事にもコンテキストを付与
                 tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
                 
-                // 組み合わせ分析記事はレビューモーダルを通さず、そのまま表示
-                if (!context.isBracketAnalysis && !context.isHadaReport) { // ★羽田レポートもレビューを通さない
+                // レビューモーダルを通さず、そのまま表示する記事
+                if (!context.isBracketAnalysis && !context.isHadaReport && !context.isTopicArticle) {
                     showArticleReviewModal(newArticle);
                 }
             } else {
@@ -15112,7 +15124,6 @@ document.body.addEventListener('click', async (e) => {
             feedbackSubmitBtn.disabled = false;
         })();
     }
-
 // ▲▲▲ ここまで置き換え ▲▲▲
 
 // ▼▼▼ この else if ブロックを (model_114 の提案と) 置き換え ▼▼▼
