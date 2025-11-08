@@ -5126,9 +5126,10 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
 
 /**
  * AIに組み合わせ抽選時に「話題校紹介」の記事を数本生成させる
- * (★E, D, C, B, Aランクから各1校ずつ、計5校ピックアップする最終版)
+ * (★E, D, C, B, Aランクから各1校ずつ、計5校ピックアップ)
+ * (★★AI生成失敗時に「エラー記事」として描画し、再生成を可能にする最終版★★)
  * @param {object} state - tournamentState
- * @returns {Promise<Array<object>>} - 生成された記事オブジェクトの配列
+ * @returns {Promise<Array<object>>} - 生成された記事オブジェクト（またはエラー記事オブジェクト）の配列
  */
 async function generateTopicSchoolArticles(state) {
     const { teams, seeds } = state;
@@ -5152,35 +5153,97 @@ async function generateTopicSchoolArticles(state) {
     // 1. Eランク校の記事 (テーマ: 悲願の初戦突破へ)
     const teamE = teamsByRank['E'][0];
     if (teamE) {
-        articles.push(await createTopicArticle(teamE, getTeamRank(teamE), 'E'));
+        const article = await createTopicArticle(teamE, getTeamRank(teamE), 'E');
+        if (article) {
+            articles.push(article);
+        } else {
+            // ▼▼▼ ユーザーの要望: 失敗した場合、エラー記事オブジェクトを作成 ▼▼▼
+            articles.push({
+                title: `記事生成エラー (${teamE})`,
+                body: "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                isTopicArticle: true, // これも話題校記事であることを示す
+                context: { teamName: teamE, theme: 'E' } // ★再生成用のコンテキスト
+            });
+            // ▲▲▲
+        }
     }
 
     // 2. Dランク校の記事 (テーマ: 躍進のベスト8へ)
     const teamD = teamsByRank['D'][0];
     if (teamD) {
-        articles.push(await createTopicArticle(teamD, getTeamRank(teamD), 'D'));
+        const article = await createTopicArticle(teamD, getTeamRank(teamD), 'D');
+        if (article) {
+            articles.push(article);
+        } else {
+            articles.push({
+                title: `記事生成エラー (${teamD})`,
+                body: "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                isTopicArticle: true, 
+                context: { teamName: teamD, theme: 'D' } 
+            });
+        }
     }
 
-    // 3. Cランク校の記事 (テーマ: 甲子園という悲願へ)
+    // 3. Cランク校の記事 (テーマ: 甲子園出場という悲願へ)
     const teamC = teamsByRank['C'][0];
     if (teamC) {
-        articles.push(await createTopicArticle(teamC, getTeamRank(teamC), 'C'));
+        const article = await createTopicArticle(teamC, getTeamRank(teamC), 'C');
+        if (article) {
+            articles.push(article);
+        } else {
+            articles.push({
+                title: `記事生成エラー (${teamC})`,
+                body: "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                isTopicArticle: true, 
+                context: { teamName: teamC, theme: 'C' } 
+            });
+        }
     }
 
     // 4. Bランク校の記事 (テーマ: 打倒Aランクへ)
     const teamB = teamsByRank['B'][0];
     if (teamB) {
-        articles.push(await createTopicArticle(teamB, getTeamRank(teamB), 'B'));
+        const article = await createTopicArticle(teamB, getTeamRank(teamB), 'B');
+        if (article) {
+            articles.push(article);
+        } else {
+            articles.push({
+                title: `記事生成エラー (${teamB})`,
+                body: "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                isTopicArticle: true, 
+                context: { teamName: teamB, theme: 'B' } 
+            });
+        }
     }
 
     // 5. Aランク校の記事 (テーマ: 王者の道)
     const teamA = teamsByRank['A'][0];
     if (teamA) {
-        articles.push(await createTopicArticle(teamA, getTeamRank(teamA), 'A'));
+        const article = await createTopicArticle(teamA, getTeamRank(teamA), 'A');
+        if (article) {
+            articles.push(article);
+        } else {
+            articles.push({
+                title: `記事生成エラー (${teamA})`,
+                body: "AI記者との通信に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                isTopicArticle: true, 
+                context: { teamName: teamA, theme: 'A' } 
+            });
+        }
     }
 
-    // 生成された記事（nullを含む）をフィルタリングして返す
-    return articles.filter(Boolean);
+    // 失敗した記事(エラーオブジェクト)もそのまま返すため、.filter(Boolean) は削除
+    return articles;
 }
 
 /**
