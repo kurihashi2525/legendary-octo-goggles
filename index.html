@@ -7606,21 +7606,9 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     `;
 }
 
-    /**
+/**
  * 詳細データを保存し、通算成績を更新する
- * (★先攻後攻を入れ替えた場合にも対応した最終版)
- */
-/**
- * 詳細データを保存し、通算成績を更新する（全ての機能を網羅した最終完成版）
- */
-/**
- * 詳細データを保存し、通算成績を更新する（省略箇所を全て復元した最終完成版）
- */
-/**
- * 詳細データを保存し、通算成績を更新する（データ構造の矛盾を解消した最終完成版）
- */
-/**
- * 詳細データを保存し、通算成績を更新する（データ構造の矛盾を解消した最終完成版）
+ * (★prevGameStatsのスコープエラーを修正し、チーム成績のリセットロジックを修正した最終版)
  */
 function saveDetailedStats() {
     if (!currentMatchIdForDetails) return;
@@ -7636,9 +7624,11 @@ function saveDetailedStats() {
 
             const previousBattingStats = match.details.playerGameStats[teamKey];
             if (previousBattingStats) {
+                
+                // ★ (Step 1) 選手個人の「通算(career)」成績をリセット
                 for (const playerName in previousBattingStats) {
                     const careerStats = teamRecord.playerStats.batting[playerName];
-                    const prevGameStats = previousBattingStats[playerName];
+                    const prevGameStats = previousBattingStats[playerName]; // prevGameStatsは、このループ内でのみ有効
                     if (careerStats && prevGameStats) {
                         if(prevGameStats.played) careerStats.games = (careerStats.games || 1) - 1;
                         careerStats.pa -= prevGameStats.pa || 0;
@@ -7647,20 +7637,44 @@ function saveDetailedStats() {
                         careerStats.hr -= prevGameStats.hr || 0;
                         careerStats.rbi -= prevGameStats.rbi || 0;
                     }
-                }
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-                        if (teamRecord.tournamentStats) {
-                            teamRecord.tournamentStats.pa -= prevGameStats.pa || 0;
-                            teamRecord.tournamentStats.ab -= prevGameStats.ab || 0;
-                            teamRecord.tournamentStats.h -= prevGameStats.h || 0;
-                            teamRecord.tournamentStats.hr -= prevGameStats.hr || 0;
-                            teamRecord.tournamentStats.rbi -= prevGameStats.rbi || 0;
+                } // ★ (End of player loop)
+
+                // ▼▼▼ (Step 2) チーム全体の「今大会(tournamentStats)」の成績をリセット ▼▼▼
+                // (エラーの出ていたブロックを、この正しいロジックに置き換えます)
+                if (teamRecord.tournamentStats) {
+                    // この試合で加算されたチーム全体の成績を再計算する
+                    let totalPa = 0;
+                    let totalAb = 0;
+                    let totalH = 0;
+                    let totalHr = 0;
+                    let totalRbi = 0;
+
+                    // previousBattingStats (== match.details.playerGameStats[teamKey]) をループ
+                    for (const playerName in previousBattingStats) {
+                        const prevGameStats = previousBattingStats[playerName]; // prevGameStats はこのスコープで有効
+                        if (prevGameStats) {
+                            totalPa += prevGameStats.pa || 0;
+                            totalAb += prevGameStats.ab || 0;
+                            totalH += prevGameStats.h || 0;
+                            totalHr += prevGameStats.hr || 0;
+                            totalRbi += prevGameStats.rbi || 0;
                         }
-                        // ▲▲▲ 追加ここまで ▲▲▲
-            }
+                    }
+
+                    // 再計算した合計値を、今大会の成績から減算する
+                    teamRecord.tournamentStats.pa -= totalPa;
+                    teamRecord.tournamentStats.ab -= totalAb;
+                    teamRecord.tournamentStats.h -= totalH;
+                    teamRecord.tournamentStats.hr -= totalHr;
+                    teamRecord.tournamentStats.rbi -= totalRbi;
+                }
+                // ▲▲▲ (Step 2) 修正ここまで ▲▲▲
+            } // ★ (End of if (previousBattingStats))
+
+            // (投手成績のリセットロジック - 変更なし)
             const previousPitchingStats = match.details.pitching?.[teamKey];
             if (previousPitchingStats) {
-                previousPitchingStats.forEach(prevGameStats => {
+                previousPitchingStats.forEach(prevGameStats => { 
                     const playerName = prevGameStats.name;
                     const careerStats = teamRecord.playerStats.pitching[playerName];
                     if (careerStats && prevGameStats && parseFloat(prevGameStats.innings) > 0) {
@@ -7673,15 +7687,16 @@ function saveDetailedStats() {
                     }
                 });
             }
-        }
+        } // ★ (End of teamKey loop)
     }
+    // --- (リセット処理 ここまで) ---
 
     // --- 2. 新しい詳細データオブジェクトを作成 ---
     const details = { 
         inningScore: { team1: [], team2: [] }, 
         batting: { team1: [], team2: [] }, 
         pitching: { team1: [], team2: [] }, 
-        fielding: { team1: [], team2: [] }, // ★ fielding を初期化
+        fielding: { team1: [], team2: [] },
         playerGameStats: { team1: {}, team2: {} },
         positionChanges: match.details?.positionChanges || []
     };
@@ -7704,6 +7719,9 @@ function saveDetailedStats() {
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
         if (!teamRecord.playerStats) teamRecord.playerStats = { batting: {}, pitching: {} };
+        // ★今大会の成績オブジェクトがなければ初期化
+        if (!teamRecord.tournamentStats) teamRecord.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
+
 
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         if (battingTable) {
@@ -7723,27 +7741,20 @@ function saveDetailedStats() {
                             const direction = container.querySelector('.result-direction').value;
                             const rbi = container.querySelector('.result-rbi').value;
                             const runnerPlay = container.querySelector('.result-runner-play').value;
-                            // ▼▼▼ この1行を追加 ▼▼▼
-                            const strength = container.querySelector('.result-strength').value; // 例: "S:" or "W:"
-                            // ▲▲▲ 追加ここまで ▲▲▲
+                            const strength = container.querySelector('.result-strength').value; 
                             
-                            // ▼▼▼ この1ブロックを追加 ▼▼▼
                             const markBtn = block.querySelector('.mark-at-bat-btn');
-                            const mark = (markBtn && markBtn.dataset.marked === 'true') ? '★:' : ''; // ★フラグ
-                            // ▲▲▲ 追加ここまで ▲▲▲
+                            const mark = (markBtn && markBtn.dataset.marked === 'true') ? '★:' : ''; 
                             
-                            // ▼▼▼ この行を修正 ▼▼▼
                             const batterPlay = [mark, strength, direction, resultType, rbi, runnerPlay].filter(Boolean).join('');
-                            // ▲▲▲ 修正ここまで ▲▲▲                           
-                            // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
+                           
                             const runnerPlays = Array.from(block.querySelectorAll('.runner-play-input')).map(rpContainer => {
                                 const name = rpContainer.querySelector('.runner-name').value;
                                 const play = rpContainer.querySelector('.runner-play').value;
                                 const base = rpContainer.querySelector('.runner-base').value;
                                 if (!name || !play) return '';
                                 return [name, play, base].filter(Boolean).join(' ');
-                            }).filter(Boolean).join(',');
-                            // ▲▲▲
+                            }).filter(Boolean).join(','); 
                             
                             return [batterPlay, runnerPlays].filter(Boolean).join(';');
                         }).join('、');
@@ -7754,7 +7765,7 @@ function saveDetailedStats() {
                     const playerData = {
                         order: row.dataset.order, name: nameInput.value.trim(),
                         number: row.querySelector('.player-number').value,
-throwBat: row.querySelector('.player-throw-bat')?.value,
+                        throwBat: row.querySelector('.player-throw-bat')?.value,
                         pos: row.querySelector('.player-pos').value,
                         sub_type: row.querySelector('.sub-type-select') ? row.querySelector('.sub-type-select').value : null,
                         results: results
@@ -7766,11 +7777,13 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                         teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
                     }
                     const careerStats = teamRecord.playerStats.batting[playerName];
-                    // ▼▼▼ gameStats の定義を修正 ▼▼▼
-                    const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
-                    // ▲▲▲ 修正ここまで ▲▲▲
+                    
+                    // ★ 交代選手かどうかを判定
+                    const isNonBattingSub = playerData.sub_type === 'DEF' || playerData.sub_type === 'PR';
 
-                  playerData.results.forEach(inningResultString => {
+                    const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
+
+                    playerData.results.forEach(inningResultString => {
                         if (!inningResultString) return;
                         inningResultString.split('、').forEach(atBatString => {
                             if (!atBatString) return;
@@ -7778,21 +7791,17 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                             const [batterPlay] = atBatString.split(';');
                             if (!batterPlay) return;
                             
-                            // ▼▼▼ このブロックをまるごと置き換え ▼▼▼
-                            let strength = 'N'; // N: Normal (Default)
+                            let strength = 'N'; 
                             let cleanBatterPlay = batterPlay;
 
-                            // 1. 「★注目」フラグを削除
                             if (cleanBatterPlay.startsWith('★:')) {
-                                cleanBatterPlay = cleanBatterPlay.substring(3); // "★:" の3文字を削除
+                                cleanBatterPlay = cleanBatterPlay.substring(3); 
                             }
-                            
-                            // 2. 「勢い」フラグを削除
                             if (cleanBatterPlay.startsWith('S:')) {
-                                strength = 'S'; // S: Strong
+                                strength = 'S'; 
                                 cleanBatterPlay = cleanBatterPlay.substring(2);
                             } else if (cleanBatterPlay.startsWith('W:')) {
-                                strength = 'W'; // W: Weak
+                                strength = 'W'; 
                                 cleanBatterPlay = cleanBatterPlay.substring(2);
                             }
                             
@@ -7803,56 +7812,46 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                             if (isHit && strength === 'W') gameStats.weakHits++;
                             if (isOut && strength === 'S') gameStats.strongOuts++;
                             if (isOut && strength === 'W') gameStats.weakOuts++;
-                            // ▲▲▲ 置き換えここまで ▲▲▲
 
                             gameStats.played = true;
                             gameStats.pa++;
-                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanBatterPlay.includes('敬遠') && !cleanBatterPlay.includes('犠')) gameStats.ab++; // cleanBatterPlay を参照
-                            if (isHit) gameStats.h++; // isHit を参照
-                            if (cleanBatterPlay.includes('本')) gameStats.hr++;
-                            if (cleanBatterPlay.includes('点')) {
-                                const rbiMatch = cleanBatterPlay.match(/(\d+)点/);
-                                gameStats.rbi += rbiMatch ? parseInt(rbiMatch[1]) : 1;
-                            }
-                        });
-                    });
-                    if(gameStats.played) careerStats.games++;
+                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanLBattingSub) { 
+                        careerStats.games++;
+                    }
                     careerStats.pa += gameStats.pa;
                     careerStats.ab += gameStats.ab;
                     careerStats.h += gameStats.h;
                     careerStats.hr += gameStats.hr;
                     careerStats.rbi += gameStats.rbi;
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+                    // ★ 今大会の成績にも加算
                     if (teamRecord.tournamentStats) {
-                        if(gameStats.played) teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
+                        if(gameStats.played || isNonBattingSub) teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
                         teamRecord.tournamentStats.pa += gameStats.pa;
                         teamRecord.tournamentStats.ab += gameStats.ab;
                         teamRecord.tournamentStats.h += gameStats.h;
                         teamRecord.tournamentStats.hr += gameStats.hr;
                         teamRecord.tournamentStats.rbi += gameStats.rbi;
                     }
-                    // ▲▲▲ 追加ここまで ▲▲▲
                     
                     details.playerGameStats[teamKey][playerName] = gameStats;
                 }
             });
         }
+        
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
             pitchingTable.querySelectorAll('tbody tr').forEach(row => {
-                const pitcherName = row.querySelector('.pitcher-name')?.value.trim(); // ← 1回目の宣言
+                const pitcherName = row.querySelector('.pitcher-name')?.value.trim(); 
                 
                 if (pitcherName && pitcherName !== '') {
                     const pitcherData = {
                         result: row.querySelector('.pitcher-result').value,
-                        name: pitcherName, // ← 1回目の pitcherName をここで使用
+                        name: pitcherName, 
                         throwBat: row.querySelector('.pitcher-throw-bat').value,
-
                         throwStyle: row.querySelector('.pitcher-throw-style').value,
                         pitcherType: row.querySelector('.pitcher-type').value,
                         velocity: row.querySelector('.pitcher-velocity').value,
-                        
                         innings: row.querySelector('.pitcher-innings').value,
                         battersFaced: row.querySelector('.pitcher-batters').value,
                         pitches: row.querySelector('.pitcher-pitches').value,
@@ -7864,14 +7863,13 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                     };
                     details.pitching[teamKey].push(pitcherData);
 
-                    // const pitcherName = pitcherData.name; // ← ★★★ この行を削除します ★★★
-
-                    // ↓ この pitcherName は、1回目で宣言されたものを正しく参照します
                     if (!teamRecord.playerStats.pitching[pitcherName]) {
                         teamRecord.playerStats.pitching[pitcherName] = { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0 };
                     }
                     const careerStats = teamRecord.playerStats.pitching[pitcherName];
-                    if (parseFloat(pitcherData.innings) > 0) {
+                    
+                    // ★ イニング数(0.0)ではなく、対戦打者数(battersFaced)で出場をカウント
+                    if (pitcherData.battersFaced && parseInt(pitcherData.battersFaced) > 0) {
                         careerStats.games = (careerStats.games || 0) + 1;
                         if (pitcherData.result === 'W') careerStats.w++;
                         if (pitcherData.result === 'L') careerStats.l--;
@@ -7882,9 +7880,8 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                 }
             });
         }
-}
+    }
 
-// ▼▼▼ この for ループをここに追加 ▼▼▼
     for (const teamKey of ['team1', 'team2']) {
         const fieldingTable = document.getElementById(`fielding-table-${teamKey}`);
         if (fieldingTable) {
@@ -7893,7 +7890,7 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
                 const player = row.querySelector('.player-name')?.value;
                 const play = row.querySelector('.fielding-play')?.value;
                 
-                if (player && play) { // 選手名とプレー内容が入力されている場合のみ保存
+                if (player && play) { 
                     details.fielding[teamKey].push({
                         inning: inning ? parseInt(inning) : null,
                         player: player,
@@ -7903,7 +7900,6 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
             });
         }
     }
-    // ▲▲▲ 追加はここまで ▲▲
 
     match.details = details;
     
@@ -7912,6 +7908,7 @@ throwBat: row.querySelector('.player-throw-bat')?.value,
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
+
 /**
      * 【修正版】スキップ機能関連
      */
