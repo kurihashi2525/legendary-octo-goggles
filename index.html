@@ -7608,7 +7608,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 
 /**
  * 詳細データを保存し、通算成績を更新する
- * (★prevGameStatsのスコープエラーを修正し、チーム成績のリセットロジックを修正した最終版)
+ * (★全構文エラー(SyntaxError)と参照エラー(ReferenceError)を修正した最終版)
  */
 function saveDetailedStats() {
     if (!currentMatchIdForDetails) return;
@@ -7625,10 +7625,10 @@ function saveDetailedStats() {
             const previousBattingStats = match.details.playerGameStats[teamKey];
             if (previousBattingStats) {
                 
-                // ★ (Step 1) 選手個人の「通算(career)」成績をリセット
+                // (Step 1) 選手個人の「通算(career)」成績をリセット
                 for (const playerName in previousBattingStats) {
                     const careerStats = teamRecord.playerStats.batting[playerName];
-                    const prevGameStats = previousBattingStats[playerName]; // prevGameStatsは、このループ内でのみ有効
+                    const prevGameStats = previousBattingStats[playerName]; 
                     if (careerStats && prevGameStats) {
                         if(prevGameStats.played) careerStats.games = (careerStats.games || 1) - 1;
                         careerStats.pa -= prevGameStats.pa || 0;
@@ -7637,21 +7637,14 @@ function saveDetailedStats() {
                         careerStats.hr -= prevGameStats.hr || 0;
                         careerStats.rbi -= prevGameStats.rbi || 0;
                     }
-                } // ★ (End of player loop)
+                } // (End of player loop)
 
-                // ▼▼▼ (Step 2) チーム全体の「今大会(tournamentStats)」の成績をリセット ▼▼▼
-                // (エラーの出ていたブロックを、この正しいロジックに置き換えます)
+                // (Step 2) チーム全体の「今大会(tournamentStats)」の成績をリセット
                 if (teamRecord.tournamentStats) {
-                    // この試合で加算されたチーム全体の成績を再計算する
-                    let totalPa = 0;
-                    let totalAb = 0;
-                    let totalH = 0;
-                    let totalHr = 0;
-                    let totalRbi = 0;
-
-                    // previousBattingStats (== match.details.playerGameStats[teamKey]) をループ
+                    let totalPa = 0, totalAb = 0, totalH = 0, totalHr = 0, totalRbi = 0;
+                    
                     for (const playerName in previousBattingStats) {
-                        const prevGameStats = previousBattingStats[playerName]; // prevGameStats はこのスコープで有効
+                        const prevGameStats = previousBattingStats[playerName]; 
                         if (prevGameStats) {
                             totalPa += prevGameStats.pa || 0;
                             totalAb += prevGameStats.ab || 0;
@@ -7660,18 +7653,16 @@ function saveDetailedStats() {
                             totalRbi += prevGameStats.rbi || 0;
                         }
                     }
-
-                    // 再計算した合計値を、今大会の成績から減算する
+                    
                     teamRecord.tournamentStats.pa -= totalPa;
                     teamRecord.tournamentStats.ab -= totalAb;
                     teamRecord.tournamentStats.h -= totalH;
                     teamRecord.tournamentStats.hr -= totalHr;
                     teamRecord.tournamentStats.rbi -= totalRbi;
                 }
-                // ▲▲▲ (Step 2) 修正ここまで ▲▲▲
-            } // ★ (End of if (previousBattingStats))
+            } // (End of if (previousBattingStats))
 
-            // (投手成績のリセットロジック - 変更なし)
+            // (投手成績のリセットロジック)
             const previousPitchingStats = match.details.pitching?.[teamKey];
             if (previousPitchingStats) {
                 previousPitchingStats.forEach(prevGameStats => { 
@@ -7687,7 +7678,8 @@ function saveDetailedStats() {
                     }
                 });
             }
-        } // ★ (End of teamKey loop)
+        } // ★★★ (End of teamKey loop) ★★★
+          // (↑↑↑ 前回この } が欠落していました)
     }
     // --- (リセット処理 ここまで) ---
 
@@ -7719,7 +7711,6 @@ function saveDetailedStats() {
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
         if (!teamRecord.playerStats) teamRecord.playerStats = { batting: {}, pitching: {} };
-        // ★今大会の成績オブジェクトがなければ初期化
         if (!teamRecord.tournamentStats) teamRecord.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0 };
 
 
@@ -7778,7 +7769,6 @@ function saveDetailedStats() {
                     }
                     const careerStats = teamRecord.playerStats.batting[playerName];
                     
-                    // ★ 交代選手かどうかを判定
                     const isNonBattingSub = playerData.sub_type === 'DEF' || playerData.sub_type === 'PR';
 
                     const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
@@ -7813,9 +7803,25 @@ function saveDetailedStats() {
                             if (isOut && strength === 'S') gameStats.strongOuts++;
                             if (isOut && strength === 'W') gameStats.weakOuts++;
 
-                            gameStats.played = true;
+                            gameStats.played = true; 
                             gameStats.pa++;
-                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanLBattingSub) { 
+                            
+                            // ★★★ ここが構文エラーのあった行です ★★★
+                            if (!cleanBatterPlay.includes('四球') && !cleanBatterPlay.includes('死球') && !cleanBatterPlay.includes('敬遠') && !cleanBatterPlay.includes('犠')) {
+                            // ★★★
+                                gameStats.ab++; 
+                            }
+                            
+                            if (isHit) gameStats.h++; 
+                            if (cleanBatterPlay.includes('本')) gameStats.hr++;
+                            if (cleanBatterPlay.includes('点')) {
+                                const rbiMatch = cleanBatterPlay.match(/(\d+)点/);
+                                gameStats.rbi += rbiMatch ? parseInt(rbiMatch[1]) : 1;
+                            }
+                        });
+                    });
+                    
+                    if(gameStats.played || isNonBattingSub) { 
                         careerStats.games++;
                     }
                     careerStats.pa += gameStats.pa;
@@ -7824,7 +7830,6 @@ function saveDetailedStats() {
                     careerStats.hr += gameStats.hr;
                     careerStats.rbi += gameStats.rbi;
 
-                    // ★ 今大会の成績にも加算
                     if (teamRecord.tournamentStats) {
                         if(gameStats.played || isNonBattingSub) teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
                         teamRecord.tournamentStats.pa += gameStats.pa;
@@ -7838,6 +7843,7 @@ function saveDetailedStats() {
                 }
             });
         }
+
         
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
@@ -7868,7 +7874,6 @@ function saveDetailedStats() {
                     }
                     const careerStats = teamRecord.playerStats.pitching[pitcherName];
                     
-                    // ★ イニング数(0.0)ではなく、対戦打者数(battersFaced)で出場をカウント
                     if (pitcherData.battersFaced && parseInt(pitcherData.battersFaced) > 0) {
                         careerStats.games = (careerStats.games || 0) + 1;
                         if (pitcherData.result === 'W') careerStats.w++;
@@ -7908,6 +7913,7 @@ function saveDetailedStats() {
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
+
 
 /**
      * 【修正版】スキップ機能関連
