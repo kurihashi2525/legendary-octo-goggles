@@ -10141,18 +10141,34 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 
 /**
  * 試合直前の「応援コメント」をAIに生成させる
- * (model_106 で提案した関数)
+ * (★A/Bランク校には「無関係のファン」ペルソナを追加する最終版)
+ * @param {object} context - 試合とチームの全コンテキスト
+ * @param {number} numComments - 生成するコメント数
+ * @returns {Promise<Array<object>>} - 生成されたコメントオブジェクトの配列
  */
-async function generatePreGameCheerComments(teamName, teamRank, opponentName, opponentRank, roundName, tournamentPath, detailedData, numComments) {
+async function generatePreGameCheerComments(context, numComments) {
     
-    // AIに渡すペルソナ（応援団）の指示を作成
+    // --- 1. コンテキストを分解 ---
+    const {
+        name: teamName,
+        rank: teamRank, // ★ランクを取得
+        opponent: opponentName,
+        opponentRank: opponentRank,
+        round: roundName,
+        path: tournamentPath,
+        detailed: detailedData,
+        info: teamInfo 
+    } = context;
+
+    // --- 2. AIへのペルソナ指示 (★修正箇所) ---
+    // ★ デフォルトのペルソナ
     let personaInstructions = `
-あなたは「${teamName}」の熱狂的な応援団です。以下のペルソナ（役割）になりきって、試合直前の応援コメントを合計 ${numComments} 個生成してください。
+あなたは「${teamName}」の熱狂的な応援団、または試合に期待するファンです。以下のペルソナ（役割）になりきって、試合直前の応援コメントを合計 ${numComments} 個生成してください。
 
 ### ペルソナ（役割）と、あなたが語るべき視点
 - **OB (OB・OG):**
     - **視点:** あなたの在籍時代（例：5年前、20年前）の思い出と、現在のチームを比較してください。
-    - **（重要）:** もし応援するチームが「283学園」や「765総合」のような**創部数年の新しい学校**の場合、「40年前」といった矛盾した発言は**絶対にせず**、「創部まもないのに、ここまで来るとは…」「俺が1期生だった頃は…」といった、**新しい学校のOBらしい**コメントを生成してください。
+    - **（重要）:** もし応援するチームが「283学園」や「765総合」のような**創部数年の新しい学校**の場合、「40年前」といった矛盾した発言は**絶対にせず**、「創部まもないのに, ここまで来るとは…」「俺が1期生だった頃は…」といった、**新しい学校のOBらしい**コメントを生成してください。
 
 - **在校生 (ブラスバンド部員や友人など):**
     - **視点:** 今の学校の雰囲気や、応援練習の様子、クラスメイトとしての選手の素顔（架空でOK）を語ってください。
@@ -10164,15 +10180,20 @@ async function generatePreGameCheerComments(teamName, teamRank, opponentName, op
 - **選手の家族 (架空の親や兄弟):**
     - **視点:** 選手の個人的な努力（架空でOK）や、家庭での様子を語ってください。
     - **（例）:** 「息子がベンチ入りできただけで奇跡です」「あの子、毎朝5時に起きて素振りしてましたから…」
-
-### 参考：思考の具体例（※あくまで一例です）
-- **（伝統校・富士東の場合）:**
-「３期生です。（野球部ではないけど）今は他県に住んで今年定年退職、母校どうなってるのかネットで検索してたら野球部が大躍進中しててテンション上がってます。自分が在籍中の３年時に予選で高校創立来初勝利をあげたときスタンドで応援してました。そのときほぼ全校生徒が応援にいったことなど思い出した。あれから40年以上経つけど東高頑張ってるんだな。嬉しすぎる。」
-（↑このように、具体的でエモーショナルな架空の背景を創作してください）
 `;
-    // ▲▲▲ 置き換えここまで ▲▲▲
+
+    // ★ AランクまたはBランクの場合、「無関係のファン」ペルソナを追加
+    if (teamRank === 'A' || teamRank === 'B') {
+        personaInstructions += `
+- **（無関係の）高校野球ファン:**
+    - **視点:** あなたは、この試合が ${teamName}（${getRankDescription(teamRank)}）の試合だから観に来た「無関係の野球好き」です。学校関係者ではありません。
+    - **（例）:** 「今日の目当てはこのカード。ハイレベルな試合を期待してる」「〇〇（注目選手）のピッチング/バッティングが見たくて有休とったわ」「どっちが勝ってもいいから熱い試合を見せてくれ」
+`;
+    }
+    // ★ 修正ここまで
 
     
+    // --- 3. AIへのプロンプト (変更なし) ---
     const prompt = `
 ${personaInstructions}
 
@@ -10182,11 +10203,18 @@ ${personaInstructions}
 - **ラウンド:** ${roundName}
 - **ここまでの勝ち上がり:** ${tournamentPath || '今大会初戦'}
 - **注目選手 (一部):** ${detailedData ? detailedData.players.map(p => p.name).join(', ') : '情報なし'}
+- **★チームの背景(info):** ${teamInfo || '特になし'}
 
 ### 指示
-1.  **ペルソナになりきる:** 上記のペルソナ（OB、在校生、地元ファン）に完全になりきり、その立場からの応援コメントを生成してください。
+1.  **ペルソナになりきる:** 上記のペルソナ（OB、在校生、地元ファン、家族、無関係のファン等）に完全になりきり、その立場からの応援コメントを生成してください。
 2.  **文脈を反映:** 試合情報（相手が格上か、歴史的な快進撃か、注目選手は誰か）をコメントに反映させてください。
-3.  **創作を許可:** 選手や監督との（架空の）個人的な思い出や、過去の歴史（例：40年前の初勝利）を**自由に創作して**、コメントに深みを与えてください。
+3.  **★【最重要】背景(info)の活用:** AIに渡された「★チームの背景(info)」を熟読してください。
+    - （例：もし「川根」なら「最後の夏」や「閉校」に触れる）
+    - （例：もし「浜松特支」なら「創部一年目」「52-0の大敗」の記憶に触れる）
+    - （例：もし「虎府島」なら「離島のハンデ」に触れる）
+    - （例：もし「283学園」なら「王者としてのプレッシャー」に触れる）
+    - この背景情報に基づいた、**具体的で解像度の高い**コメントを必ず生成してください。
+4.  **創作を許可:** 選手や監督との（架空の）個人的な思い出や、過去の歴史（例：40年前の初勝利）を**自由に創作して**、コメントに深みを与えてください。
 
 ### 出力形式【厳守】
 必ず以下のJSON配列形式"のみ"で出力してください。
@@ -10198,6 +10226,7 @@ ${personaInstructions}
 ]
 `;
 
+    // --- 4. AIへのリクエスト (変更なし) ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -10214,6 +10243,7 @@ ${personaInstructions}
         return [{ personality: "システムエラー", comment: "応援コメントの生成に失敗しました..." }];
     }
 }
+
 // ▲▲▲ 貼り付けはここまで ▲▲
 // ▲▲▲ 貼り付けはここまで ▲▲
 
@@ -15098,12 +15128,13 @@ document.body.addEventListener('click', async (e) => {
 
     // ▼▼▼ この else if ブロックを「新規追加」 ▼▼▼
     // --- 応援モーダル内の「チームタブ」クリック ---
+   // --- 応援モーダル内の「チームタブ」クリック ---
     else if (e.target.matches('.pre-game-team-tab')) {
         e.preventDefault();
         const tabBtn = e.target;
         if (tabBtn.classList.contains('active')) return; // 既にアクティブなら何もしない
 
-        const teamKey = tabBtn.dataset.teamKey; // 'team1' or 'team2' (これは現在使わないが念のため)
+        const teamKey = tabBtn.dataset.teamKey; // 'team1' or 'team2'
         const matchId = tabBtn.dataset.matchId;
         const teamName = tabBtn.dataset.teamName;
         const opponentName = tabBtn.dataset.opponentName;
@@ -15135,17 +15166,23 @@ document.body.addEventListener('click', async (e) => {
         const opponentRank = calculateRank(opponentName, tournamentState);
         const numComments = rankValues[rank] || 2;
 
+        // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
         // コンテキスト（文脈）を準備
+        const teamData = TEAM_DATA[teamName] || {}; // ★チームデータを取得
         const context = {
-            name: teamName, rank: rank,
-            opponent: opponentName, opponentRank: opponentRank,
+            name: teamName, 
+            rank: rank,
+            opponent: opponentName, 
+            opponentRank: opponentRank,
             round: getRoundNameFromMatchId(matchId),
             path: getTournamentPathSummary(teamName, matchId),
-            detailed: DETAILED_TEAM_DATA[teamName] || null
+            detailed: DETAILED_TEAM_DATA[teamName] || null,
+            info: teamData.info || '' // ★チームの背景(info)を追加
         };
+        // ▲▲▲ 修正ここまで ▲▲▲
 
         // このチームの分だけAIに生成させる
-        const comments = await generatePreGameCheerComments(context.name, context.rank, context.opponent, context.opponentRank, context.round, context.path, context.detailed, numComments);
+        const comments = await generatePreGameCheerComments(context, numComments); // ★contextオブジェクトを渡す
 
         // 3. HTMLを生成して表示
         let html = '';
@@ -15157,6 +15194,7 @@ document.body.addEventListener('click', async (e) => {
         tournamentState.preGameComments[cacheKey] = html; // HTMLをチーム別キャッシュとして保存
         saveState();
     }
+
     // ▲▲▲ 新規追加ここまで ▲▲▲
 
     // --- フィードバックモーダルの「キャンセル」ボタン ---
