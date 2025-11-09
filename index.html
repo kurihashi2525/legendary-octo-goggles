@@ -5343,13 +5343,13 @@ ${lore}
 
 /**
  * AIに組み合わせ抽選結果の詳細分析に基づいた展望ニュース記事を生成させる
- * (★シードランク認識 最終版)
+ * (★勢力図アニメーションのフラグを削除し、通常記事として扱う最終版)
  */
 async function generateBracketAnalysisNewsArticle(state) {
     const { teams, seeds } = state;
     if (teams.length < 8) return null; 
 
-    // --- トーナメント表の詳細分析ロジック (変更なし) ---
+    // --- トーナメント表の詳細分析ロジック ---
     const numBlocks = Math.max(1, Math.ceil(teams.length / 16));
     const blockSize = Math.floor(teams.length / numBlocks);
     const blockData = [];
@@ -5365,7 +5365,7 @@ async function generateBracketAnalysisNewsArticle(state) {
 
         const strongTeamsInBlock = blockTeams.filter(team => {
             const rank = getTeamRank(team);
-            return seeds.some(s => s.team === team) || ['A', 'B'].includes(rank); // ★シード判定を修正
+            return seeds.some(s => s.team === team) || ['A', 'B'].includes(rank); 
         });
 
         const matchupsR1 = [];
@@ -5398,7 +5398,7 @@ async function generateBracketAnalysisNewsArticle(state) {
             }
         }
         if (teams.length === 64 && blockTeams.length >= 8) {
-             const blockSeeds = strongTeamsInBlock.filter(t => seeds.some(s => s.team === t)); // ★シード判定を修正
+             const blockSeeds = strongTeamsInBlock.filter(t => seeds.some(s => s.team === t)); 
              if (blockSeeds.length >= 2) {
                  potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
              }
@@ -5411,13 +5411,12 @@ async function generateBracketAnalysisNewsArticle(state) {
     }
     // --- (分析ロジックここまで) ---
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+    // --- 分析結果をテキストにまとめる ---
     let blockSummary = '';
     let crushR1 = [];
     let goodCardsR2 = [];
     let goodCardsR3 = [];
     blockData.forEach(block => {
-        // ★有力校リストにシードランクを追加
         const strongTeamNames = block.strongTeams.map(team => 
             `${team} ${getSeedRankString(team, state.seeds)}`
         ).join(', ');
@@ -5426,7 +5425,6 @@ async function generateBracketAnalysisNewsArticle(state) {
         
         block.matchupsR1.forEach(m => {
             if (m.isCrush) {
-                // ★1回戦の潰し合いにもシードランクを追加
                 const team1Info = `${m.team1}${getSeedRankString(m.team1, state.seeds)}(${m.rank1})`;
                 const team2Info = `${m.team2}${getSeedRankString(m.team2, state.seeds)}(${m.rank2})`;
                 crushR1.push(`${block.name}: ${team1Info} vs ${team2Info}`);
@@ -5446,9 +5444,9 @@ async function generateBracketAnalysisNewsArticle(state) {
     if (crushR1.length > 0) analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
     if (goodCardsR2.length > 0) analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
     if (goodCardsR3.length > 0) analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
-    // ▲▲▲ 修正ここまで ▲▲▲
+    // --- (分析テキストまとめここまで) ---
 
-    // --- 記事生成用プロンプト ---
+    // --- 記事生成用プロンプト (変更なし) ---
     const prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 ${state.tournamentYear}年度 夏季大会の組み合わせ抽選会が終了しました。
 以下の詳細な分析結果に基づき、読者の期待感を高めるような展望記事を作成してください。
@@ -5460,17 +5458,17 @@ ${PREFECTURE_LORE}
 ${analysisText}
 
 ### 執筆指示
-- **【常識の反映】**: 記事全体の分析の基盤として、「常識」（勢力図）を100%活用してください。
-- **【★シードランク言及】**: 分析結果に「(第1シード)」などの情報が含まれています。**「第1シードの283学園は〜」**や**「第3シードの静岡が入ったCブロックは〜」**のように、シードランクにも具体的に言及し、記事に深みを与えてください。
-- **タイトル:** 「夏の組み合わせ決定！${deathBlock.name}ブロックは激戦区か？」のように、抽選結果のポイントと大会への期待が伝わるものにしてください。
-- **本文構成:**
+- 【常識の反映】: 記事全体の分析の基盤として、「常識」（勢力図）を100%活用してください。
+- 【★シードランク言及】: 分析結果に「(第1シード)」などの情報が含まれています。「第1シードの283学園は〜」や「第3シードの静岡が入ったCブロックは〜」のように、シードランクにも具体的に言及し、記事に深みを与えてください。
+- タイトル: 「夏の組み合わせ決定！${deathBlock.name}ブロックは激戦区か？」のように、抽選結果のポイントと大会への期待が伝わるものにしてください。
+- 本文構成:
     1. 組み合わせが決定したことを伝える導入。
-    2. 各ブロックの有力校に触れつつ、特に「死のブロック (${deathBlock.name})」と「恵まれたブロック (${blessedBlock.name})」について、**シードランク**も交えて詳しく解説してください。
+    2. 各ブロックの有力校に触れつつ、特に「死のブロック (${deathBlock.name})」と「恵まれたブロック (${blessedBlock.name})」について、シードランクも交えて詳しく解説してください。
     3. Cランクの実力校がどのブロックでシード校を脅かす存在（ダークホース）になりそうか、具体的な校名を挙げて分析してください。
     4. 勝ち上がりを予想し、2回戦や3回戦で実現しそうな好カードについても触れてください。
-    5. **【AI記者の注目株】**: あなたが「今大会の一押しチーム（推し）」を1校選び、そのチームが持つドラマ性（例：「逆境」「最後の夏」「古豪復活」など）を熱く語るコラム欄を設けてください。
+    5. 【AI記者の注目株】: あなたが「今大会の一押しチーム（推し）」を1校選び、そのチームが持つドラマ性（例：「逆境」「最後の夏」「古豪復活」など）を熱く語るコラム欄を設けてください。
     6. 最後に、3年生最後の夏としてのドラマ性や、甲子園への切符をかけた熱い戦いへの期待を述べて締めくくってください。
-- **文体:** 熱意が伝わる、ややドラマチックなスポーツ記事の文体で記述してください。
+- 文体: 熱意が伝わる、ややドラマチックなスポーツ記事の文体で記述してください。
 
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
@@ -5482,9 +5480,18 @@ ${analysisText}
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            
+            // ▼▼▼ ここが今回の修正箇所 ▼▼▼
             if (article && article.title && article.body) {
-                return { ...article, timestamp: Date.now(), isAnalysisArticle: true, context: { isBracketAnalysis: true } }; // ★isAnalysisArticleフラグを追加
+                return { 
+                    ...article, 
+                    timestamp: Date.now(), 
+                    // isAnalysisArticle: true, // ★このフラグを削除 (またはコメントアウト)
+                    context: { isBracketAnalysis: true } 
+                }; 
             }
+            // ▲▲▲ 修正ここまで ▲▲▲
+
         }
         throw new Error("AIからの応答が、正しい記事形式ではありません。");
     } catch (error) {
