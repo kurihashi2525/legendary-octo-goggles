@@ -9830,19 +9830,29 @@ ${notablePlayersText}
         else if (roundNum === 1) roundAchievement = '初戦突破';
     }
     
+   // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     let nextOpponentText = '次の対戦相手は未定。'; 
     if (nextOpponent) {
-        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); // ★次戦相手のシードも取得
-            nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}${nextOpponentSeed}(${nextOpponent.opponentRank}ランク)と対戦する。`;
+        if (nextOpponent.opponentName === '優勝') {
+            // 決勝戦勝利時の専用テキスト
+            nextOpponentText = (tournamentState.currentTournament === 'summer')
+                ? '夏の甲子園出場が決定した。'
+                : '見事、今大会の頂点に立った。';
+        }
+        else if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds);
+            // opponentRankが空文字('')でないこと（＝決勝以外）を確認
+            const rankText = nextOpponent.opponentRank ? `(${nextOpponent.opponentRank}ランク)` : '';
+            nextOpponentText = `次の${nextOpponent.roundName}では、${nextOpponent.opponentName}${nextOpponentSeed}${rankText}と対戦する。`;
         } 
         else if (nextOpponent.decidingMatch) {
             const dm = nextOpponent.decidingMatch;
-            const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds); // ★
-            const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds); // ★
+            const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds);
+            const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds);
             nextOpponentText = `次の${nextOpponent.roundName}では、${dm.team1}${team1Seed}(${dm.rank1}ランク)と${dm.team2}${team2Seed}(${dm.rank2}ランク)の勝者と対戦する。`;
         }
     }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     // --- 詳細データがある場合 (Aルート) ---
     if (dbMatch.details) {
@@ -12572,23 +12582,32 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
         </div>
     `;
 }
+
+
 /**
- * トーナメント表をたどり、次の対戦相手の情報を特定する（★タイプミスを修正した最終版）
+ * トーナメント表をたどり、次の対戦相手の情報を特定する
+ * (★決勝戦勝利時のバグを修正した最終版)
  * @param {string} teamName - チーム名
  * @param {string} currentMatchId - そのチームが勝利した現在の試合ID
  * @returns {object|null} - 次の対戦相手に関する詳細情報
  */
 function findNextOpponent(teamName, currentMatchId) {
     const allMatches = tournamentState.matches;
-    // ★★★ ここが修正箇所： allMessages -> allMatches に修正 ★★★
     if (!allMatches || !allMatches[currentMatchId]) return null;
 
     const idParts = currentMatchId.split('-');
     const side = idParts[0];
 
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     if (side === 'F') {
-        return { opponentName: '優勝', roundName: '大会終了' };
+        // 決勝戦に勝利した場合
+        return { 
+            opponentName: '優勝', 
+            roundName: '大会終了',
+            opponentRank: '' // ★「undefined」バグを防ぐため、空文字を追加
+        };
     }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     const roundNum = parseInt(idParts[1].slice(1));
     const matchNum = parseInt(idParts[2].slice(1));
