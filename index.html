@@ -3106,19 +3106,27 @@ async function generateGameMatchBbsComments(matchContext) {
     const loserSeedRank = getSeedRankString(loserName, tournamentState.seeds);
     // ▲▲▲ 修正ここまで ▲▲▲
 
-    // 次戦相手情報を準備 (変更なし)
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     let nextOpponentText = '次の相手は未定やな。';
     if (nextOpponent) {
-        if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); // ★次戦相手のシードも取得
-            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}${nextOpponentSeed}(ランク:${nextOpponent.opponentRank})か。`;
-        } else if (nextOpponent.decidingMatch) {
+        if (nextOpponent.opponentName === '優勝') {
+            nextOpponentText = (tournamentState.currentTournament === 'summer')
+                ? '夏の甲子園出場決定や！'
+                : '今大会、優勝おめでとう！';
+        }
+        else if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); 
+            const rankText = nextOpponent.opponentRank ? `(ランク:${nextOpponent.opponentRank})` : '';
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}${nextOpponentSeed}${rankText}か。`;
+        } 
+        else if (nextOpponent.decidingMatch) {
             const dm = nextOpponent.decidingMatch;
-            const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds); // ★
-            const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds); // ★
+            const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds); 
+            const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds); 
             nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}${team1Seed}(${dm.rank1}ランク)と${dm.team2}${team2Seed}(${dm.rank2}ランク)の勝者やな。`;
         }
     }
+    // ▲▲▲ 修正ここまで ▲▲▲
     const nextOpponentJourneyText = (nextOpponent && nextOpponentJourney) ? `ちなみに、その${nextOpponent.opponentName}のここまでの軌跡は「${nextOpponentJourney}」。` : '';
 
     // ハイライト情報をテキスト化 (変更なし)
@@ -9494,25 +9502,27 @@ async function generateHadaReport(matchContext) {
     // ▲▲▲
 
     // --- 2. ラウンド名と次の相手を特定 ---
-    let roundName = "不明なラウンド";
-    if (matchId && matchId.includes('-R')) {
-        // ... (ラウンド名判定ロジックは変更なし) ...
-        const roundNum = parseInt(matchId.split('-')[1].slice(1));
-        const finalRound = tournamentState.is16team ? 4 : 6;
-        const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
-        if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
-             const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
-             roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
-        }
-        else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
-    }
-    
-    let nextOpponentText = '次戦の相手はまだ決まっていません。';
-    if (nextOpponent && nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-        const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); // ★
-        nextOpponentText = `２回戦では${nextOpponent.opponentName}${nextOpponentSeed}と対戦します。`;
-    }
+    let roundName = getRoundNameFromMatchId(matchId);
 
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+    let nextOpponentText = '次戦の相手はまだ決まっていません。';
+    if (nextOpponent) {
+        if (nextOpponent.opponentName === '優勝') {
+            nextOpponentText = (tournamentState.currentTournament === 'summer')
+                ? '夏の甲子園出場が決定しました。'
+                : '今大会、見事優勝を果たしました。';
+        }
+        else if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds);
+            const rankText = nextOpponent.opponentRank ? `(${nextOpponent.opponentRank}ランク)` : '';
+            nextOpponentText = `次戦は${nextOpponent.roundName}、${nextOpponent.opponentName}${nextOpponentSeed}${rankText}と対戦します。`;
+        }
+        else if (nextOpponent.decidingMatch) {
+            const dm = nextOpponent.decidingMatch;
+            nextOpponentText = `次戦は${nextOpponent.roundName}、${dm.team1}と${dm.team2}の勝者と対戦します。`;
+        }
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
     // --- 3. ハイライトをテキスト化 ---
     const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
 
@@ -10199,7 +10209,7 @@ ${personaInstructions}
 
 /**
  * AIに掲示板のコメントを生成させるメイン関数
- * (★シードランク認識 最終版)
+ * (★決勝戦終了時の「次戦」の言及バグを修正)
  */
 async function generateBbsComments(matchContext) {
     // --- 1. contextから必要な情報を取り出す ---
@@ -10213,28 +10223,45 @@ async function generateBbsComments(matchContext) {
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
     const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
-    
-    // ▼▼▼ シードランク取得を追加 ▼▼▼
     const winnerSeedRank = getSeedRankString(winnerName, tournamentState.seeds);
     const loserSeedRank = getSeedRankString(loserName, tournamentState.seeds);
-    // ▲▲▲
-    
-    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]);
-    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
+    const winnerDynamicInfo = generateDynamicTeamInfo(winnerName, winnerData, tournamentState.teamRecords[winnerName]); // ★打率・通算盗塁入り
+    const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]); // ★打率・通算盗塁入り
     let specialNarrativeContext = '';
-    
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main' && matchId.includes('-R1-')) {
         const winnerRank = calculateRank(winnerName, tournamentState);
         if (winnerData.type === '公立' && (winnerRank === 'D' || winnerRank === 'E')) {
             specialNarrativeContext = `### 【掲示板の話題】\n衝撃！無名の公立「${winnerName}」が県大会初戦を勝ち、【来春のシード権獲得】だ！この快進撃に驚きと嫉妬のコメントを生成せよ。`;
         }
     }
-    const calledGameText = matchContext.calledGame
-        ? `\n- **特記事項:** ${matchContext.calledInning}回コールドゲーム`
-        : '';
-    const rivalryText = matchContext.rivalryType
-        ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。`
-        : '';
+    const calledGameText = matchContext.calledGame ? `\n- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : '';
+    const rivalryText = matchContext.rivalryType ? `\n- **特記事項:** この試合は「${matchContext.rivalryType}」という因縁の対決でした。` : '';
+    let roundName = getRoundNameFromMatchId(matchId);
+    
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+    let nextOpponentText = '次の相手は未定。';
+    if (matchContext.nextOpponent) {
+        const nextOpponent = matchContext.nextOpponent;
+        
+        if (nextOpponent.opponentName === '優勝') {
+            nextOpponentText = (tournamentState.currentTournament === 'summer')
+                ? '夏の甲子園出場決定！'
+                : '今大会、優勝！';
+        }
+        else if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
+            const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds);
+            const rankText = nextOpponent.opponentRank ? `(ランク:${nextOpponent.opponentRank})` : ''; // rankが空文字の場合を考慮
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}${nextOpponentSeed}${rankText}。`;
+        } 
+        else if (nextOpponent.decidingMatch) {
+            const dm = nextOpponent.decidingMatch;
+            const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds);
+            const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds);
+            nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}${team1Seed}(${dm.rank1}ランク)と${dm.team2}${team2Seed}(${dm.rank2}ランク)の勝者。`;
+        }
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     let prompt = '';
 
     // --- 3. 記事の方向性を決定し、AIへの指示書(プロンプト)を作成する ---
@@ -10242,49 +10269,13 @@ async function generateBbsComments(matchContext) {
         // 詳細データがある場合 (Aルート)
         const { highlights } = createHighlightsText(dbMatch, winnerName);
         const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
-        
-        let roundName = "不明なラウンド";
-        if (matchId && matchId.includes('-R')) {
-            // ... (ラウンド名判定ロジックは変更なし) ...
-            const roundNum = parseInt(matchId.split('-')[1].slice(1));
-            const finalRound = tournamentState.is16team ? 4 : 6;
-            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
-            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
-                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
-                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
-            }
-            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
-            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
-            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
-        }
-        
-        let nextOpponentText = '次の相手は未定。';
-        if (matchContext.nextOpponent) {
-            const nextOpponent = matchContext.nextOpponent;
-            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-                const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); // ★
-                nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}${nextOpponentSeed}(ランク:${nextOpponent.opponentRank})。`;
-            } else if (nextOpponent.decidingMatch) {
-                const dm = nextOpponent.decidingMatch;
-                const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds); // ★
-                const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds); // ★
-                nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}${team1Seed}(${dm.rank1}ランク)と${dm.team2}${team2Seed}(${dm.rank2}ランク)の勝者。`;
-            }
-        }
-        
         let ballQualityText = '';
         if (matchContext.team1BallQuality && matchContext.team2BallQuality) {
-            ballQualityText = `
-### チーム別 打球品質
-- ${matchContext.team1BallQuality}
-- ${matchContext.team2BallQuality}
-`;
+            ballQualityText = `\n### チーム別 打球品質\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
         }
         
-        // ▼▼▼ プロンプトを修正 ▼▼▼
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを10つ生成してください。
-
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
 ${PREFECTURE_LORE}
@@ -10300,27 +10291,17 @@ ${rivalryText}
 ### **現在の試合状況**
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
 - **ラウンド:** ${roundName} 
-${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 - ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
 ${ballQualityText} 
 ### 試合の主なハイライト
 ${highlightsText}
-### チームの背景
+### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
 ${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **【常識の反映】**: あなたが熟知している「常識」（勢力図）を考慮し、この勝利/敗北がどのような意味を持つか（例：順当、波乱）を文脈に含めてください。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
-- **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
-- **上から目線の野球解説者**: 「試合のハイライト」のプレーを玄人っぽく分析してください。
-- **アンチ**: 「試合のハイライト」で活躍した相手選手を「まぐれだ」と貶してください。
-- **ライバル校のファン**: 「試合のハイライト」の選手を自チームの選手と比較してください。
-- **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
-- **その他(自由に)**: リベラルなコメント
-- **【★注目の打席（最重要）】**:
-    - 「試合のハイライト」に「（★注目）」マークが付いている打席があります。これが**試合のターニングポイント**です。
-    - **「あの（★注目）の場面が勝負の分かれ目だった」「あそこで〇〇が打った（抑えた）のが全て」**のように、その打席が決定的な瞬間であったとコメントしてください。
 - **【★今大会の成績 (最重要)】**:
     - 「チームの背景」に**『今大会のチーム打率は.XXX』**という情報が含まれています。
     - この情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」「打率3割超えの打線相手によく抑えたわ」）にも言及してください。
@@ -10330,6 +10311,15 @@ ${specialNarrativeContext}
 - **【★盗塁への言及 (重要)】**:
     - 「ハイライト」や「ボックススコア」に**盗塁**が記録されていたら、その選手の足（機動力）を褒めること。（例：「〇〇の盗塁デカかったな」「足でかき回したな」）。
     - **盗塁が0でも批判は不要です。**
+- **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
+- **上から目線の野球解説者**: 「試合のハイライト」のプレーを玄人っぽく分析してください。
+- **アンチ**: 「試合のハイライト」で活躍した相手選手を「まぐれだ」と貶してください。
+- **ライバル校のファン**: 「試合のハイライト」の選手を自チームの選手と比較してください。
+- **単なる野球好き**: 「試合のハイライト」で最も印象的だったプレーの感想を述べてください。
+- **その他(自由に)**: リベラルなコメント
+- **【★注目の打席（最重要）】**:
+    - 「試合のハイライト」に「（★注目）」マークが付いている打席があります。これが**試合のターニングポイント**です。
+    - **「あの（★注目）の場面が勝負の分かれ目だった」「あそこで〇〇が打った（抑えた）のが全て」**のように、その打席が決定的な瞬間であったとコメントしてください。
 - **【コールドゲームの場合】**: もし試合がコールドで終了した場合、その圧勝ぶりや大差がついたことについて、キャラクターに応じた反応（称賛、煽り、驚きなど）をコメントに含めてください。
 - **【因縁の対決の場合】**: もし試合が「因縁の対決」であった場合、その特別な試合についての感想（例：「ダービー勝てて最高！」「やっぱり〇〇には勝てんか…」）をコメントに含めてください
 - **【投手の詳細属性】**: 「ハイライト」（ボックススコア）に記載されている**投手の詳細属性（例：右/サイド/技巧派）**にも注目し、コメントすること。
@@ -10343,43 +10333,11 @@ ${specialNarrativeContext}
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
-        // ▲▲▲ Aルートのプロンプト修正ここまで ▲▲▲
 
     } else {
         // 詳細データがない場合 (Bルート)
-        // ▼▼▼ Bルートのプロンプトも修正 ▼▼▼
-        let roundName = "不明なラウンド";
-        if (matchId && matchId.includes('-R')) {
-            // ... (ラウンド名判定ロジックは変更なし) ...
-            const roundNum = parseInt(matchId.split('-')[1].slice(1));
-            const finalRound = tournamentState.is16team ? 4 : 6;
-            const roundNameMap = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
-            if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
-                 const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
-                 roundName = springRoundMap[roundNum] || `${roundNum}回戦`;
-            }
-            else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') roundName = "地区予選/順位決定戦";
-            else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') roundName = "県大会1回戦";
-            else roundName = roundNameMap[roundNum] || `${roundNum}回戦`;
-        }
-        
-        let nextOpponentText = '次の相手は未定。';
-        if (matchContext.nextOpponent) {
-            const nextOpponent = matchContext.nextOpponent;
-            if (nextOpponent.opponentName && nextOpponent.opponentName !== '（未定）') {
-                const nextOpponentSeed = getSeedRankString(nextOpponent.opponentName, tournamentState.seeds); // ★
-                nextOpponentText = `次の${nextOpponent.roundName}の相手は${nextOpponent.opponentName}${nextOpponentSeed}(ランク:${nextOpponent.opponentRank})。`;
-            } else if (nextOpponent.decidingMatch) {
-                const dm = nextOpponent.decidingMatch;
-                const team1Seed = getSeedRankString(dm.team1, tournamentState.seeds); // ★
-                const team2Seed = getSeedRankString(dm.team2, tournamentState.seeds); // ★
-                nextOpponentText = `次の${nextOpponent.roundName}の相手は、${dm.team1}${team1Seed}(${dm.rank1}ランク)と${dm.team2}${team2Seed}(${dm.rank2}ランク)の勝者。`;
-            }
-        }
-        
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
 以下の試合結果について、それぞれのキャラクターになりきって、辛辣でリアルな短いコメントを10つ生成してください。
-
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
 ${PREFECTURE_LORE}
@@ -10395,9 +10353,8 @@ ${rivalryText}
 ### **現在の試合状況**
 - **大会:** ${tournamentState.tournamentYear}年度 ${tournamentNameMap[tournamentState.currentTournament] || '大会'}
 - **ラウンド:** ${roundName} 
-${matchContext.calledGame ? `- **特記事項:** ${matchContext.calledInning}回コールドゲーム` : ''}
 - ユーザーが語る試合の決め手: ${dbMatch.summary || '特になし'}
-### チームの背景
+### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
 ${specialNarrativeContext}
@@ -10405,6 +10362,12 @@ ${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **【常識の反映】**: あなたが熟知している「常識」（勢力図）を考慮し、この勝利/敗北がどのような意味を持つか（例：順当、波乱）を文脈に含めてください。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
+- **【★今大会の成績 (最重要)】**:
+    - 「チームの背景」に**『今大会のチーム打率は.XXX』**という情報が含まれています。
+    - この情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」「打率3割超えの打線相手によく抑えたわ」）にも言及してください。
+- **【★通算成績への言及 (裁量)】**:
+    - 「チームの背景」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
+    - **盗塁が0でも批判は不要です。**
 - **熱狂的な勝者チームのOB**: 勝利を喜び、チームの伝統や背景に触れてコメントしてください。
 - **上から目線の野球解説者**: 順当な結果か、意外な結果かを分析してください。
 - **アンチ**: 負けたチームや、スコアが僅差だったチームを批判してください。
@@ -10417,12 +10380,10 @@ ${specialNarrativeContext}
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
-        // ▲▲▲ Bルートのプロンプト修正ここまで ▲▲▲
     }
 
     // --- 4. AIへリクエストを送信し、結果を整形して返す ---
     try {
-        // ... (try-catchブロックは変更なし) ...
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
