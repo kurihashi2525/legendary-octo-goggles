@@ -4317,6 +4317,7 @@ function getRoundNameFromMatchId(matchId) {
         return roundNameMap_64[roundNum] || `${roundNum}回戦`;
     }
 }
+
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
     
 /**
@@ -9856,7 +9857,7 @@ ${notablePlayersText}
         else if (roundNum === 1) roundAchievement = '初戦突破';
     }
     
-   // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+  // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     let nextOpponentText = '次の対戦相手は未定。'; 
     if (nextOpponent) {
         if (nextOpponent.opponentName === '優勝') {
@@ -12925,28 +12926,38 @@ async function processMatchWin(matchId, winnerName) {
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     dbMatch.winner = winnerName;
 
-    // トーナメント表からスコアとsummaryを読み取る
-    const matchEl = document.querySelector(`.matchup[data-match-id="${matchId}"]`);
-    if (matchEl) {
-        const score1El = matchEl.querySelector('[data-team-pos="1"]');
-        const score2El = matchEl.querySelector('[data-team-pos="2"]');
-        // スコアが入力されている場合のみdbMatchを更新
-        if (score1El && score2El && score1El.value !== '' && score2El.value !== '') {
-            dbMatch.score1 = score1El.value;
-            dbMatch.score2 = score2El.value;
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
+
+    // --- スコアの読み取り（優先度変更） ---
+    // (A) スキップ機能によってスコアが既にdbMatchに設定されているか？
+    const scoresAlreadySetBySkip = (dbMatch.score1 !== '' && dbMatch.score2 !== '' && (dbMatch.score1 != null) && (dbMatch.score2 != null));
+
+    if (!scoresAlreadySetBySkip) {
+        // (B) スコアが設定されていない場合（＝手動クリック）、HTMLから読み取る
+        const matchEl = document.querySelector(`.matchup[data-match-id="${matchId}"]`);
+        if (matchEl) {
+            const score1El = matchEl.querySelector('[data-team-pos="1"]');
+            const score2El = matchEl.querySelector('[data-team-pos="2"]');
+            
+            if (score1El && score2El && score1El.value !== '' && score2El.value !== '') {
+                // HTML入力欄から取得
+                dbMatch.score1 = score1El.value;
+                dbMatch.score2 = score2El.value;
+            } else {
+                // 手動クリックだがHTML入力が空だった (0-0扱い)
+                dbMatch.score1 = '0';
+                dbMatch.score2 = '0';
+            }
+            dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
         } else {
-            // スコアが空の場合、0-0などを仮で設定するか、エラー処理が必要かもしれません
-            // ここでは仮に 0-0 としますが、適切なデフォルト値やバリデーションを検討してください
+            // (フォールバック) HTML要素が見つからなかった (0-0扱い)
             dbMatch.score1 = '0';
             dbMatch.score2 = '0';
         }
-        dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
-    } else {
-        // matchElが見つからない場合もスコアを仮設定 (エラーハンドリング)
-        dbMatch.score1 = '0';
-        dbMatch.score2 = '0';
     }
-
+    // (C) scoresAlreadySetBySkip が true の場合は、何もしない (dbMatchのスコア(5-2など)をそのまま使用)
+    
+    // ▲▲▲ 修正ここまで ▲▲▲
 
 // ▼▼▼ ここからコールドゲーム判定（修正版） ▼▼▼
     dbMatch.calledGame = false;
