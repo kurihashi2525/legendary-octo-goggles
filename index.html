@@ -6919,6 +6919,7 @@ function renderRegionMap(data) {
     
     /**
      * スキップボタンの表示・非表示を制御する
+     * (★ユーザーの要望に基づき、R1スキップボタンが途中で消えないよう修正した最終版)
      */
     function checkTournamentProgress() {
     // ボタン要素の取得
@@ -6938,17 +6939,11 @@ function renderRegionMap(data) {
 
     const matchIds = Object.keys(tournamentState.matches);
 
-    // ▼▼▼ ここが修正されたヘルパー関数 ▼▼▼
     const getRoundStatus = (roundNumber) => {
-        // 現在の試合データから、そのラウンドでプレイ済みの試合数を数える
         const played = matchIds.filter(id => id.includes(`-R${roundNumber}-M`) && tournamentState.matches[id]?.winner).length;
-        
-        // ★変更点：総試合数は、常に64チームトーナメントとして計算する
         const total = 64 / Math.pow(2, roundNumber);
-        
         return { total, played };
     };
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     const r1 = getRoundStatus(1);
     const r2 = getRoundStatus(2);
@@ -6957,8 +6952,12 @@ function renderRegionMap(data) {
     const r5 = getRoundStatus(5); // 準決勝
     const finalMatch = tournamentState.matches['F-R1-M1'];
 
-    // この表示/非表示の切り替えロジックは、getRoundStatusが修正されたことで正常に動作するようになります
-    skipR1Btn.classList.toggle('hidden', r1.played > 0);
+    // ▼▼▼ ここが今回の修正箇所です ▼▼▼
+    // 変更前: skipR1Btn.classList.toggle('hidden', r1.played > 0);
+    // 変更後: 1回戦が「すべて」終わったら隠す（r1.played === r1.total）
+    skipR1Btn.classList.toggle('hidden', r1.played === r1.total);
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
     skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
     skipR4Btn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0));
@@ -6968,6 +6967,7 @@ function renderRegionMap(data) {
     const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
     generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
 }
+
 /**
  * 決勝戦を自動でスキップする
  */
