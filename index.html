@@ -6915,54 +6915,66 @@ function renderRegionMap(data) {
     
     /**
      * スキップボタンの表示・非表示を制御する
-     * (★ユーザーの要望に基づき、R1スキップボタンが途中で消えないよう修正した最終版)
+     * (★ユーザーの要望に基づき、R2以降のスキップボタンがラウンド完了まで消えないよう修正した最終版)
      */
     function checkTournamentProgress() {
-    // ボタン要素の取得
-    const skipR1Btn = document.getElementById('skip-r1-btn');
-    const skipR2Btn = document.getElementById('skip-r2-btn');
-    const skipR3Btn = document.getElementById('skip-r3-btn');
-    const skipR4Btn = document.getElementById('skip-r4-btn');
-    const skipR5Btn = document.getElementById('skip-r5-btn');
-    const skipFinalBtn = document.getElementById('skip-final-btn');
-    const generateSummaryBtn = document.getElementById('generate-summary-btn');
+        // ボタン要素の取得
+        const skipR1Btn = document.getElementById('skip-r1-btn');
+        const skipR2Btn = document.getElementById('skip-r2-btn');
+        const skipR3Btn = document.getElementById('skip-r3-btn');
+        const skipR4Btn = document.getElementById('skip-r4-btn');
+        const skipR5Btn = document.getElementById('skip-r5-btn');
+        const skipFinalBtn = document.getElementById('skip-final-btn');
+        const generateSummaryBtn = document.getElementById('generate-summary-btn');
 
-    // 夏の大会以外では、全てのスキップボタンを非表示にする
-    if (tournamentState.is16team || !tournamentState.matches || Object.keys(tournamentState.matches).length === 0 || tournamentState.currentTournament !== 'summer') {
-        [skipR1Btn, skipR2Btn, skipR3Btn, skipR4Btn, skipR5Btn, skipFinalBtn, generateSummaryBtn].forEach(btn => btn?.classList.add('hidden'));
-        return;
+        // 夏の大会以外では、全てのスキップボタンを非表示にする
+        if (tournamentState.is16team || !tournamentState.matches || Object.keys(tournamentState.matches).length === 0 || tournamentState.currentTournament !== 'summer') {
+            [skipR1Btn, skipR2Btn, skipR3Btn, skipR4Btn, skipR5Btn, skipFinalBtn, generateSummaryBtn].forEach(btn => btn?.classList.add('hidden'));
+            return;
+        }
+
+        const matchIds = Object.keys(tournamentState.matches);
+
+        const getRoundStatus = (roundNumber) => {
+            const played = matchIds.filter(id => id.includes(`-R${roundNumber}-M`) && tournamentState.matches[id]?.winner).length;
+            const total = 64 / Math.pow(2, roundNumber);
+            return { total, played };
+        };
+
+        const r1 = getRoundStatus(1);
+        const r2 = getRoundStatus(2);
+        const r3 = getRoundStatus(3);
+        const r4 = getRoundStatus(4); // 準々決勝
+        const r5 = getRoundStatus(5); // 準決勝
+        const finalMatch = tournamentState.matches['F-R1-M1'];
+
+        // ▼▼▼ ここからが今回の修正箇所です ▼▼▼
+        
+        // R1: 1回戦が「すべて」終わったら隠す
+        skipR1Btn.classList.toggle('hidden', r1.played === r1.total);
+
+        // R2: (1回戦が完了) 且つ (2回戦が「まだ」完了していない) 場合に表示
+        // (修正前: r2.played === 0 だったので、1試合でもやると消えていた)
+        skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played !== r2.total));
+
+        // R3: (2回戦が完了) 且つ (3回戦が「まだ」完了していない) 場合に表示
+        skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played !== r3.total));
+
+        // R4: (3回戦が完了) 且つ (4回戦が「まだ」完了していない) 場合に表示
+        skipR4Btn.classList.toggle('hidden', !(r3.played === r3.total && r4.played !== r4.total));
+
+        // R5: (4回戦が完了) 且つ (5回戦が「まだ」完了していない) 場合に表示
+        skipR5Btn.classList.toggle('hidden', !(r4.played === r4.total && r5.played !== r5.total));
+
+        // Final: (5回戦が完了) 且つ (決勝が「まだ」完了していない) 場合に表示
+        skipFinalBtn.classList.toggle('hidden', !(r5.played === r5.total && (!finalMatch || !finalMatch.winner)));
+        
+        // ▲▲▲ 修正ここまで ▲▲▲
+
+        // ベスト8まとめ記事ボタンのロジック (変更なし)
+        const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
+        generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
     }
-
-    const matchIds = Object.keys(tournamentState.matches);
-
-    const getRoundStatus = (roundNumber) => {
-        const played = matchIds.filter(id => id.includes(`-R${roundNumber}-M`) && tournamentState.matches[id]?.winner).length;
-        const total = 64 / Math.pow(2, roundNumber);
-        return { total, played };
-    };
-
-    const r1 = getRoundStatus(1);
-    const r2 = getRoundStatus(2);
-    const r3 = getRoundStatus(3);
-    const r4 = getRoundStatus(4); // 準々決勝
-    const r5 = getRoundStatus(5); // 準決勝
-    const finalMatch = tournamentState.matches['F-R1-M1'];
-
-    // ▼▼▼ ここが今回の修正箇所です ▼▼▼
-    // 変更前: skipR1Btn.classList.toggle('hidden', r1.played > 0);
-    // 変更後: 1回戦が「すべて」終わったら隠す（r1.played === r1.total）
-    skipR1Btn.classList.toggle('hidden', r1.played === r1.total);
-    // ▲▲▲ 修正ここまで ▲▲▲
-
-    skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played === 0));
-    skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played === 0));
-    skipR4Btn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0));
-    skipR5Btn.classList.toggle('hidden', !(r4.played === r4.total && r5.played === 0));
-    skipFinalBtn.classList.toggle('hidden', !(r5.played === r5.total && (!finalMatch || !finalMatch.winner)));
-
-    const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
-    generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
-}
 
 /**
  * 決勝戦を自動でスキップする
