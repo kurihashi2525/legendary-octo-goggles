@@ -4272,52 +4272,60 @@ function getTournamentPathSummary(teamName, currentMatchId) {
 }
 
 /**
- * 試合IDからラウンド名を取得するヘルパー関数
- * (★決勝戦(F-R1-M1)の判定バグを修正した最終版)
- */
-function getRoundNameFromMatchId(matchId) {
-    if (!matchId) return "不明なラウンド";
+     * 試合IDからラウンド名を取得するヘルパー関数
+     * (★決勝戦(F-R1-M1)の判定ロジックを修正した最終版)
+     */
+    function getRoundNameFromMatchId(matchId) {
+        if (!matchId) return "不明なラウンド";
 
-    // ▼▼▼ このブロックを「最優先」で追加 ▼▼▼
-    // 決勝戦 (Final) の判定
-    if (matchId.startsWith('F-R1-')) {
-        return "決勝";
-    }
-    // ▲▲▲ 修正ここまで ▲▲▲
+        // ▼▼▼ ここが修正箇所です ▼▼▼
+        // 決勝戦 (Final) の判定を最優先し、ここで return させる
+        if (matchId.startsWith('F-R1-')) {
+            return "決勝";
+        }
+        
+        // --- 地区予選の判定 (秋季・春季) ---
+        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
+            return "地区予選/順位決定戦";
+        }
+        if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
+            return "地区予選";
+        }
 
-    // --- 既存のラウンド判定 ---
-    if (!matchId.includes('-R')) return "不明なラウンド";
-    
-    const roundNum = parseInt(matchId.split('-')[1].slice(1));
-    const finalRound = tournamentState.is16team ? 4 : 6;
-    
-    // (16チーム制の場合、64チーム制のラウンド名マップを使わないようにする)
-    const roundNameMap_64 = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
-    const roundNameMap_16 = { 4: '決勝', 3: '準決勝', 2: '準々決勝', 1: '1回戦' };
-
-    if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
-         // 春の2回戦以降 (16チームT)
-         const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
-         return springRoundMap[roundNum] || `${roundNum}回戦`;
-    }
-    else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
-        // 秋の県大会 (16チームT)
-         return roundNameMap_16[roundNum] || `${roundNum}回戦`;
-    }
-    else if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-        // 秋の地区予選
-        return "地区予選/順位決定戦";
-    }
-    else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
-        // 春の1回戦
-        return "県大会1回戦";
-    }
-    else {
+        // --- 本戦ラウンドの判定 ---
+        // (決勝 "F-" は既に上で処理済みなので、ここでは "L-" "R-" "S-" "A-" などだけが対象)
+        if (!matchId.includes('-R')) {
+             // 'L-' や 'R-' が含まないID（例: 東部-B1-R0-M1）もここで処理
+             if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
+                 return "県大会1回戦";
+             }
+             return "不明なラウンド"; // フォールバック
+        }
+        
+        const roundNum = parseInt(matchId.split('-')[1].slice(1));
+        
+        // 春の県大会本戦 (シード校登場以降)
+        if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round2_onwards'){
+             const springRoundMap = { 1: '2回戦', 2: '準々決勝', 3: '準決勝', 4: '決勝'};
+             return springRoundMap[roundNum] || `${roundNum}回戦`;
+        }
+        
+        // 秋の県大会本戦
+        if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
+             const roundNameMap_16 = { 4: '決勝', 3: '準決勝', 2: '準々決勝', 1: '1回戦' };
+             return roundNameMap_16[roundNum] || `${roundNum}回戦`;
+        }
+        
         // 夏の大会 (64チームT)
-        return roundNameMap_64[roundNum] || `${roundNum}回戦`;
+        if (tournamentState.currentTournament === 'summer') {
+            const finalRound = 6;
+            const roundNameMap_64 = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
+            return roundNameMap_64[roundNum] || `${roundNum}回戦`;
+        }
+        
+        // 上記以外 (例: 'L-R1-M1' だが大会が不明な場合)
+        return `${roundNum}回戦`;
     }
-}
-
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
     
 /**
