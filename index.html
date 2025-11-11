@@ -13333,6 +13333,32 @@ function createHighlightsText(dbMatch, winnerName) {
     }
     // ▲▲▲ 新しい判定ロジックここまで ▲▲▲
 
+    // ★★★ ここからが今回の修正箇所 ★★★
+    let lateGameColdSummary = null;
+    // 1. コールド勝ち、かつそれが「6回以降」の場合
+    if (dbMatch.calledGame && dbMatch.calledInning >= 6) {
+        // 2. コールドになったイニングの「直前」（例: 6回コールドなら5回終了時）のスコアを計算
+        const checkInningEnd = dbMatch.calledInning - 1; // 5, 6, 7...
+        let scoreBeforeBigInning = { team1: 0, team2: 0 };
+        if(inningScores?.team1 && inningScores?.team2){
+            for(let i = 0; i < Math.min(numInnings, checkInningEnd); i++) { // 5回まで, 6回まで...
+                 scoreBeforeBigInning.team1 += parseInt(inningScores.team1[i] || 0);
+                 scoreBeforeBigInning.team2 += parseInt(inningScores.team2[i] || 0);
+            }
+        }
+        const winnerScoreBefore = scoreBeforeBigInning[winningTeamKey];
+        const loserScoreBefore = scoreBeforeBigInning[losingTeamKey];
+        const scoreDiffBefore = Math.abs(winnerScoreBefore - loserScoreBefore);
+
+        // 3. もし直前まで3点差以内の「接戦」だったら、特別な要約文を使う
+        if (scoreDiffBefore <= 3) {
+            lateGameColdSummary = { type: 'summary', description: `${checkInningEnd}回まで${scoreDiffBefore}点差の接戦だったが、${dbMatch.calledInning}回に${winnerName}が一挙猛攻で試合を決め、コールド勝ちを収めた` };
+        }
+        // (もし4点差以上開いていたら、lateGameColdSummaryはnullのままになり、この後の「圧勝」ロジックが使われる)
+    }
+    // ★★★ 修正ここまで ★★★    // ★★★ 修正ここまで ★★★
+
+
    // --- 試合内容に応じたサマリーハイライトを決定 (★優先順位変更★) ---
     if (mvpPlayer) {
         // 個人活躍を最優先
@@ -13341,19 +13367,32 @@ function createHighlightsText(dbMatch, winnerName) {
         // 次に継投成功
         summaryHighlight = { type: 'summary', description: `${winnerName}投手陣が${loserName}打線を${loserScore}失点に抑える見事な継投策で勝利` };
     } else if (isSayonara) {
-        // 以下、既存の判定
+        // サヨナラ
         summaryHighlight = { type: 'summary', description: `劇的なサヨナラ勝ちで、${winnerName}が熱戦に終止符を打った` };
+    
+    // ★★★ この else if を追加 ★★★
+    } else if (lateGameColdSummary) {
+        // 終盤までの接戦コールド
+        summaryHighlight = lateGameColdSummary;
+    // ★★★ 追加ここまで ★★★
+
     } else if (winnerScoreAfter6th < loserScoreAfter6th && winnerScore > loserScore && numInnings >= 7) {
+        // 終盤逆転
         summaryHighlight = { type: 'summary', description: `${winnerName}が終盤に見事な逆転劇を演じ、勝利を掴んだ` };
     } else if (totalRuns <= 5 && totalHits <= 12) {
+        // 投手戦
         summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点に終わる、息詰まる投手戦となった` };
     } else if (totalRuns >= 13 && totalHits >= 20) {
+        // 打撃戦
         summaryHighlight = { type: 'summary', description: `両チーム合わせて${totalHits}安打${totalRuns}得点が乱れ飛ぶ、壮絶な打撃戦となった` };
     } else if (winnerScore - loserScore >= 7) {
+        // 圧勝 (★「接戦コールド」で拾われなかった場合、通常のコールドや大差の試合はここに来る)
         summaryHighlight = { type: 'summary', description: `${winnerName}が投打に相手を圧倒し、${winnerScore}-${loserScore}で快勝した` };
     } else if (winnerScore - loserScore <= 2) {
+        // 接戦
         summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}の粘り強い追撃を振り切り、${winnerScore}-${loserScore}で接戦を制した` };
     } else {
+        // デフォルト
         summaryHighlight = { type: 'summary', description: `${winnerName}が${loserName}を下し、${winnerScore}-${loserScore}で勝利した` };
     }
 
@@ -13363,7 +13402,7 @@ function createHighlightsText(dbMatch, winnerName) {
     }
     
 // --- 5. 結果を返す ---
-    // ▼▼▼ この return 文をまるごと置き換えてください ▼▼▼
+// ▼▼▼ この return 文をまるごと置き換えてください ▼▼▼
     return { 
         highlights: highlights, 
         keyPlayerNames: Array.from(keyPlayerNames),
