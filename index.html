@@ -11142,7 +11142,7 @@ JSON形式で出力してください: {"title": "記事のタイトル", "body"
 
 /**
  * 試合直前の「応援コメント」をAIに生成させる
- * (★A/Bランク校には「無関係のファン」ペルソナを追加する最終版)
+ * (★Gamelog, DynamicInfo, 会場, 因縁の情報を追加した最終版)
  * @param {object} context - 試合とチームの全コンテキスト
  * @param {number} numComments - 生成するコメント数
  * @returns {Promise<Array<object>>} - 生成されたコメントオブジェクトの配列
@@ -11152,17 +11152,19 @@ async function generatePreGameCheerComments(context, numComments) {
     // --- 1. コンテキストを分解 ---
     const {
         name: teamName,
-        rank: teamRank, // ★ランクを取得
+        rank: teamRank,
         opponent: opponentName,
         opponentRank: opponentRank,
         round: roundName,
-        path: tournamentPath,
-        detailed: detailedData,
-        info: teamInfo 
+        path: tournamentPath, // (getCurrentTournamentPerformance の結果)
+        detailed: detailedData, // (静的な注目選手情報)
+        info: teamInfo,         // (generateDynamicTeamInfo の結果)
+        playerGamelogs,       // (formatPlayerGamelogsForPrompt の結果)
+        schedule,             // (試合会場・日程)
+        rivalry               // (因縁情報)
     } = context;
 
-    // --- 2. AIへのペルソナ指示 (★修正箇所) ---
-    // ★ デフォルトのペルソナ
+    // --- 2. AIへのペルソナ指示 ---
     let personaInstructions = `
 あなたは「${teamName}」の熱狂的な応援団、または試合に期待するファンです。以下のペルソナ（役割）になりきって、試合直前の応援コメントを合計 ${numComments} 個生成してください。
 
@@ -11183,7 +11185,6 @@ async function generatePreGameCheerComments(context, numComments) {
     - **（例）:** 「息子がベンチ入りできただけで奇跡です」「あの子、毎朝5時に起きて素振りしてましたから…」
 `;
 
-    // ★ AランクまたはBランクの場合、「無関係のファン」ペルソナを追加
     if (teamRank === 'A' || teamRank === 'B') {
         personaInstructions += `
 - **（無関係の）高校野球ファン:**
@@ -11191,10 +11192,8 @@ async function generatePreGameCheerComments(context, numComments) {
     - **（例）:** 「今日の目当てはこのカード。ハイレベルな試合を期待してる」「〇〇（注目選手）のピッチング/バッティングが見たくて有休とったわ」「どっちが勝ってもいいから熱い試合を見せてくれ」
 `;
     }
-    // ★ 修正ここまで
-
     
-    // --- 3. AIへのプロンプト (変更なし) ---
+    // --- 3. AIへのプロンプト (★新情報追加版) ---
     const prompt = `
 ${personaInstructions}
 
@@ -11202,20 +11201,30 @@ ${personaInstructions}
 - **応援するチーム:** ${teamName} (ランク: ${teamRank})
 - **対戦相手:** ${opponentName} (ランク: ${opponentRank})
 - **ラウンド:** ${roundName}
-- **ここまでの勝ち上がり:** ${tournamentPath || '今大会初戦'}
-- **注目選手 (一部):** ${detailedData ? detailedData.players.map(p => p.name).join(', ') : '情報なし'}
-- **★チームの背景(info):** ${teamInfo || '特になし'}
+- **試合会場:** ${schedule || '未定'}
+${rivalry ? `- **${rivalry}**` : ''}
+
+### 参考情報：応援するチームの最新データ
+- **チームの背景(info):** ${teamInfo || '特になし'}
+- **今大会の軌跡:** ${tournamentPath || '今大会初戦'}
+- **注目選手 (静的):** ${detailedData ? detailedData.players.map(p => p.name).join(', ') : '情報なし'}
+- **今大会の選手成績履歴 (Gamelog):**
+${playerGamelogs || '今大会の試合履歴はありません。'}
 
 ### 指示
 1.  **ペルソナになりきる:** 上記のペルソナ（OB、在校生、地元ファン、家族、無関係のファン等）に完全になりきり、その立場からの応援コメントを生成してください。
 2.  **文脈を反映:** 試合情報（相手が格上か、歴史的な快進撃か、注目選手は誰か）をコメントに反映させてください。
-3.  **★【最重要】背景(info)の活用:** AIに渡された「★チームの背景(info)」を熟読してください。
+3.  **★【最重要】背景(info)の活用:** 「チームの背景(info)」を熟読してください。
     - （例：もし「川根」なら「最後の夏」や「閉校」に触れる）
     - （例：もし「浜松特支」なら「創部一年目」「52-0の大敗」の記憶に触れる）
-    - （例：もし「虎府島」なら「離島のハンデ」に触れる）
     - （例：もし「283学園」なら「王者としてのプレッシャー」に触れる）
+    - （例：もし「今大会のチーム打率は.350」とあれば、「打線好調！」に触れる）
     - この背景情報に基づいた、**具体的で解像度の高い**コメントを必ず生成してください。
-4.  **創作を許可:** 選手や監督との（架空の）個人的な思い出や、過去の歴史（例：40年前の初勝利）を**自由に創作して**、コメントに深みを与えてください。
+4.  **★【重要】Gamelogの活用:** 「選手成績履歴(Gamelog)」を読み、具体的な選手の**好不調の波**にも言及してください。
+    - （例：「〇〇くん、1回戦は3タコだったけど、2回戦はホームラン！今日が大事だぞ！」）
+    - （例：「エースの△△、前回登板は中1日だったから心配してたんだ…今日は頼む！」）
+5.  **★試合会場と因縁:** もし試合が「草薙球場」など**地元開催**であったり、「因縁の対決」であったりする場合、その点にも言及して期待感を高めてください。
+6.  **創作を許可:** 選手や監督との（架空の）個人的な思い出や、過去の歴史（例：40年前の初勝利）を**自由に創作して**、コメントに深みを与えてください。
 
 ### 出力形式【厳守】
 必ず以下のJSON配列形式"のみ"で出力してください。
@@ -11244,7 +11253,7 @@ ${personaInstructions}
         return [{ personality: "システムエラー", comment: "応援コメントの生成に失敗しました..." }];
     }
 }
-
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▲▲▲ 貼り付けはここまで ▲▲
 // ▲▲▲ 貼り付けはここまで ▲▲
 
@@ -16234,51 +16243,94 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 応援モーダル内の「チームタブ」クリック ---
+    // --- 応援モーダル内の「チームタブ」クリック ---
     if (e.target.matches('.pre-game-team-tab')) {
         e.preventDefault();
         const tabBtn = e.target;
         if (tabBtn.classList.contains('active')) return;
-        const teamKey = tabBtn.dataset.teamKey;
-        const matchId = tabBtn.dataset.matchId;
-        const teamName = tabBtn.dataset.teamName;
-        const opponentName = tabBtn.dataset.opponentName;
-        const bodyEl = document.getElementById('pre-game-body');
-        const cacheKey = `${matchId}_${teamName}`;
+        
+        // --- タブのUI切り替え ---
         document.querySelectorAll('.pre-game-team-tab').forEach(btn => {
             btn.classList.remove('active', 'text-blue-600', 'border-blue-600');
             btn.classList.add('text-gray-500', 'border-transparent');
         });
         tabBtn.classList.add('active', 'text-blue-600', 'border-blue-600');
         tabBtn.classList.remove('text-gray-500', 'border-transparent');
+        
+        // --- AIに渡すための情報収集 ---
+        const teamKey = tabBtn.dataset.teamKey;
+        const matchId = tabBtn.dataset.matchId;
+        const teamName = tabBtn.dataset.teamName;
+        const opponentName = tabBtn.dataset.opponentName;
+        const bodyEl = document.getElementById('pre-game-body');
+        const cacheKey = `${matchId}_${teamName}`;
+
+        // --- キャッシュチェック ---
         if (tournamentState.preGameComments[cacheKey]) {
             bodyEl.innerHTML = tournamentState.preGameComments[cacheKey];
             return;
         }
+
         bodyEl.innerHTML = `<div class="loader text-center py-8">${teamName} 応援団（OB, 在校生, 地元ファン）のコメントを生成中...</div>`;
+
+        // --- ★★★ ここからが新しいコンテキスト構築 ★★★ ---
+        
         const rankValues = { 'A': 10, 'B': 8, 'C': 5, 'D': 3, 'E': 2 };
         const rank = calculateRank(teamName, tournamentState);
         const opponentRank = calculateRank(opponentName, tournamentState);
         const numComments = rankValues[rank] || 2;
+        
         const teamData = TEAM_DATA[teamName] || {};
+        const teamRecord = tournamentState.teamRecords[teamName];
+        const match = findMatchById(matchId);
+
+        // 1. チームの動的情報 (打率、通算盗塁、過去成績など)
+        const dynamicInfo = generateDynamicTeamInfo(teamName, teamData, teamRecord);
+
+        // 2. 注目選手情報 (静的)
+        const detailedData = DETAILED_TEAM_DATA[teamName] || null;
+
+        // 3. 今大会の勝ち上がり (試合「前」の全軌跡)
+        const tournamentPath = getCurrentTournamentPerformance(teamName, matchId);
+
+        // 4. 選手個人のGamelog (今大会の成績履歴)
+        // (試合前なので、スキャン対象はチーム名だけ。AIが文中の選手名を読み取る)
+        const mentionedTeams = new Set([teamName]);
+        const playerGamelogs = formatPlayerGamelogsForPrompt(mentionedTeams, teamName);
+
+        // 5. 試合情報 (球場、因縁)
+        const scheduleInfo = match?.schedule 
+            ? `試合会場: ${match.schedule.stadiumFull} (${match.schedule.date} ${['①', '②', '③', '④'][match.schedule.game - 1]})`
+            : "試合会場: 未定";
+        const rivalryInfo = (match?.rivalryType || match?.feudType)
+            ? `特記事項: これは「${match.rivalryType || match.feudType}」という因縁の対決です。`
+            : null;
+
         const context = {
             name: teamName, 
             rank: rank,
             opponent: opponentName, 
             opponentRank: opponentRank,
             round: getRoundNameFromMatchId(matchId),
-            path: getTournamentPathSummary(teamName, matchId),
-            detailed: DETAILED_TEAM_DATA[teamName] || null,
-            info: teamData.info || ''
+            path: tournamentPath,      // ★強化 (getCurrentTournamentPerformance)
+            detailed: detailedData,
+            info: dynamicInfo,         // ★強化 (generateDynamicTeamInfo)
+            playerGamelogs: playerGamelogs, // ★新設 (Gamelog)
+            schedule: scheduleInfo,    // ★新設 (会場)
+            rivalry: rivalryInfo       // ★新設 (因縁)
         };
+        // --- ★★★ コンテキスト構築ここまで ★★★ ---
+
         const comments = await generatePreGameCheerComments(context, numComments);
         let html = '';
         comments.forEach(c => {
             html += `<div class="bbs-comment"><p class="font-semibold text-gray-700 text-sm">${c.personality}</p><p class="text-gray-800 my-1 whitespace-pre-wrap">${c.comment}</p></div>`;
         });
         bodyEl.innerHTML = html;
-        tournamentState.preGameComments[cacheKey] = html;
+        tournamentState.preGameComments[cacheKey] = html; // 生成結果をキャッシュ
         saveState();
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
