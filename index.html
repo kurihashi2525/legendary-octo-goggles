@@ -63,6 +63,16 @@
     box-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
 }
 
+.new-thread-modal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex; /* hidden/flexで表示切替 */
+    align-items: center;
+    justify-content: center;
+    z-index: 250; /* まとめサイトより手前 */
+}
+
 /* 勝ち上がり線のスタイル */
 .matchup-connector {
     position: absolute;
@@ -1238,7 +1248,11 @@
         <div id="matome-content-area" class="flex-grow overflow-y-auto bg-gray-50 p-2 md:p-4 rounded-b-lg scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200">
             
             <div id="matome-tab-top" class="matome-tab-content grid grid-cols-1 md:grid-cols-3 gap-4 active">
-                
+                <div class="md:col-span-2 mb-4">
+                    <button id="open-new-thread-modal-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 shadow-md transition-all duration-150">
+                        ＋ 新しいスレッドを立てる
+                    </button>
+                </div>
                 <div class="md:col-span-2 space-y-4">
                     <div class="bg-white p-4 rounded-lg shadow-md">
                         <h3 class="text-lg font-bold text-gray-800 border-b pb-2 mb-3">🔥 本日の注目記事</h3>
@@ -1492,6 +1506,30 @@
         <div id="interview-content" class="space-y-4 max-h-[60vh] overflow-y-auto"></div>
         <div class="text-center mt-6">
             <button id="close-interview-btn" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">大会を始める</button>
+        </div>
+    </div>
+</div>
+
+<div id="new-thread-modal" class="new-thread-modal hidden">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
+        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">新規スレッド作成</h3>
+        <div class="space-y-4">
+            <div>
+                <label for="new-thread-title" class="block text-sm font-medium text-gray-700">スレッドタイトル</label>
+                <input type="text" id="new-thread-title" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="例：〇〇高校の鈴木、ガチで天才すぎる">
+            </div>
+            <div>
+                <label for="new-thread-comment" class="block text-sm font-medium text-gray-700">本文 (>>1)</label>
+                <textarea id="new-thread-comment" rows="6" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="例：1回戦のピッチング見たか？あれは本物だわ..."></textarea>
+            </div>
+        </div>
+        <div class="mt-6 text-center border-t pt-4">
+            <button id="new-thread-submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 mr-4">
+                スレを立てる
+            </button>
+            <button id="new-thread-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">
+                キャンセル
+            </button>
         </div>
     </div>
 </div>
@@ -3276,7 +3314,16 @@ async function generateMatomeSiteHtml() {
         });
     });
 
-    // --- 3. 全記事をタイムスタンプでソートしてHTMLを生成 ---
+// ▼▼▼ このブロックをまるごと挿入 ▼▼▼
+    // --- 3. ユーザー作成スレッドを取得 ---
+    const userThreads = tournamentState.userThreads || [];
+    userThreads.forEach(userThread => {
+        // userThread オブジェクトは { id, headline, type, matchId, timestamp, category }
+        articles.push(userThread);
+    });
+    // ▲▲▲ 挿入ここまで ▲▲▲
+
+    // --- 4. 全記事をタイムスタンプでソートしてHTMLを生成 ---
     articles.sort((a, b) => b.timestamp - a.timestamp);
 
     if (articles.length === 0) {
@@ -3476,6 +3523,11 @@ ${hadaReportText}
 ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
 // ▲▲▲ 挿入ここまで ▲▲▲
 
+// ▼▼▼ 挿入 ▼▼▼
+### データ7：今大会の主な打者成績履歴 (この試合より前)
+${matchContext.batterGamelogInfo || '打者の試合履歴データはありません。'}
+// ▲▲▲
+
 ### 指示
 あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、**勝者の軌跡**、**次の試合情報**を踏まえつつ、以下の点をコメントに含めてください。
 
@@ -3526,6 +3578,12 @@ ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
     - **好不調の波**: 「前回炎上したのによう立ち直ったな」「こないだは良かったのに今日はアカンか」
     - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「強豪相手でも抑えるとか本物やん」
 // ▲▲▲ 置き換えここまで ▲▲▲
+// ▼▼▼ 挿入 ▼▼▼
+- **【★打者履歴への言及 (最重要)】**: 「データ6：打者成績履歴」も必ず確認し、以下の点をコメントに含めること。
+    - **好不調の波**: 「〇〇、今日で3試合連続ヒットやん！」「△△、10打数ノーヒットとかもう終わりだろ…」
+    - **役割**: 「こいつ代打成功率100%じゃね？」「1番に上げたら打ち出したな」
+    - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「Aランク投手から打つとか本物やん」
+// ▲▲▲
 ### 出力形式【最重要】
 解説や前置きは一切不要です。**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
 \`\`\`json
@@ -5399,6 +5457,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.namcoNews = null;
     tournamentState.preGameComments = {};
     tournamentState.matomeThreads = {}; 
+tournamentState.userThreads = [];
 
     // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     
@@ -8303,6 +8362,21 @@ function saveDetailedStats() {
                 } 
             } 
             
+const previousBattingData = match.details.batting?.[teamKey];
+            if (previousBattingData) {
+                previousBattingData.forEach(prevPlayerData => {
+                    const playerName = prevPlayerData.name;
+                    if (!playerName || !teamRecord.playerStats.batting[playerName]) return;
+                    
+                    const bStats = teamRecord.playerStats.batting[playerName];
+                    if (bStats.gamelogs) {
+                        // このmatchIdのログだけを削除
+                        bStats.gamelogs = bStats.gamelogs.filter(log => log.matchId !== currentMatchIdForDetails);
+                    }
+                });
+            }
+// ▲▲▲ 挿入ここまで ▲▲▲
+
             // (Step 2) チーム今大会成績のリセット (変更なし)
             if (teamRecord.tournamentStats && previousBattingStats) {
                 let totals = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 };
@@ -8466,9 +8540,31 @@ function saveDetailedStats() {
                         teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
                     }
                     details.playerGameStats[teamKey][playerName] = gameStats;
+
+// (Step 4b) ★★★ バッターのGamelogを保存 ★★★
+                    if (!careerStats.gamelogs) {
+                        careerStats.gamelogs = [];
+                    }
+                    
+                    const opponentName = teamKey === 'team1' ? match.team2 : match.team1;
+                    const opponentRank = opponentName ? calculateRank(opponentName, tournamentState) : 'E';
+
+                    careerStats.gamelogs.push({
+                        matchId: currentMatchIdForDetails,
+                        date: match.schedule?.date || '不明',
+                        round: getRoundNameFromMatchId(currentMatchIdForDetails),
+                        opponent: opponentName,
+                        opponentRank: opponentRank,
+                        order: playerData.order, // "1", "7-sub-1"
+                        sub_type: playerData.sub_type, // "PH", null
+                        stats: gameStats // { ab: 4, h: 1, ... }
+                    });
+                    // ★★★ Gamelog保存ここまで ★★★
                 }
             });
         }
+
+
         
         // (投手成績の集計 ... ★gamelogs対応)
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
@@ -9601,6 +9697,72 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
     if (!relevantLogsFound) {
         pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴\n- この試合に出場した投手は、全員今大会これが初登板です。\n";
     }
+
+// ▼▼▼ ★★★ NEW BATTER GAMELOG BLOCK ★★★ ▼▼▼
+    let batterGamelogInfo = "\n### 参考情報：今大会の主な打者成績履歴 (この試合より前)\n";
+    let relevantBatterLogsFound = false;
+
+    // (Helper function to parse dates - already defined above for pitchers)
+    // const parseDate = (dateStr) => { ... };
+    const today_batter = parseDate(dbMatch.schedule?.date);
+
+    if (dbMatch.details && dbMatch.details.batting) {
+        for (const teamKey of ['team1', 'team2']) {
+            const battingData = dbMatch.details.batting[teamKey] || [];
+            battingData.forEach(batter => {
+                const playerName = batter.name;
+                if (!playerName) return;
+                
+                const teamRecord = tournamentState.teamRecords[dbMatch[teamKey]];
+                const bStats = teamRecord?.playerStats?.batting[playerName];
+                
+                if (bStats && bStats.gamelogs && bStats.gamelogs.length > 0) {
+                    const currentTournamentKey = tournamentState.currentTournament;
+                    
+                    const previousLogs = bStats.gamelogs.filter(log => {
+                        if (log.matchId === matchId) return false;
+                        
+                        const logRound = log.round || '';
+                        if (currentTournamentKey === 'summer') return logRound.includes('回戦') || logRound.includes('決勝');
+                        if (currentTournamentKey === 'autumn') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                        if (currentTournamentKey === 'spring') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                        return false;
+                    });
+
+                    if (previousLogs.length > 0) {
+                        relevantBatterLogsFound = true;
+                        batterGamelogInfo += `- ${playerName} (${dbMatch[teamKey]}):\n`;
+                        
+                        previousLogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        
+                        previousLogs.forEach(log => {
+                            let dateInfo = log.date || '日付不明';
+                            
+                            const opponentRank = log.opponentRank || 'E';
+                            const stats = log.stats || { ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 };
+                            
+                            // Get Role
+                            let role = "";
+                            if (log.sub_type === 'PH') role = "代打出場";
+                            else if (log.sub_type === 'PR') role = "代走出場";
+                            else if (log.order && log.order.includes('sub')) role = "途中出場";
+                            else if (log.order) role = `${log.order}番スタメン`;
+                            else role = "出場";
+
+                            const statsLine = `${stats.ab}打数${stats.h}安打 ${stats.hr}HR ${stats.rbi}打点 ${stats.sb}盗塁`;
+                            
+                            batterGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]) (${role}): ${statsLine}\n`;
+                        });
+                    }
+                }
+            });
+        }
+    }
+    if (!relevantBatterLogsFound) {
+        batterGamelogInfo = "\n### 参考情報：今大会の主な打者成績履歴\n- この試合に出場した打者は、全員今大会これが初出場です。\n";
+    }
+    // ▲▲▲ ★★★ BATTER GAMELOG BLOCK END ★★★ ▲▲▲
+// ▲▲▲ 挿入ここまで ▲▲▲
     // ▲▲▲ 置き換えここまで ▲▲▲
 
     const context = {
@@ -9629,7 +9791,8 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         schedule: dbMatch.schedule || null,
         team1BallQuality: team1QualityText || "（打球品質データなし）",
         team2BallQuality: team2QualityText || "（打球品質データなし）",
-        pitcherGamelogInfo: pitcherGamelogInfo // ★登板履歴テキストを追加
+        pitcherGamelogInfo: pitcherGamelogInfo,
+        batterGamelogInfo: batterGamelogInfo  // ★登板履歴テキストを追加
     };
     return context;
 }
@@ -10316,12 +10479,18 @@ ${highlightsText}
 
 ### データ2：主な選手の個人成績 (ボックススコア)
 ${playerStatsText}
-${ballQualityText} 
+
 
 // ▼▼▼ このブロックを挿入 ▼▼▼
 ### データ3：今大会の主な投手登板履歴 (この試合より前)
 ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
 // ▲▲▲ 挿入ここまで ▲▲▲
+
+### データ4：今大会の主な打者成績履歴 (この試合より前)
+${matchContext.batterGamelogInfo || '打者の試合履歴データはありません。'}
+// ▲▲▲
+${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'データ5')}
+
 ### 執筆指示
 1.  **一人称で書く:** 必ず「私」を主語にし、個人的な感想（～驚きました、～でしょうね）を交えてください。
 2.  **現場の空気感:** 試合当日の球場の雰囲気（観客の多さ、天候など）を描写してください。
@@ -10351,6 +10520,10 @@ ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
 20. **【連投・酷使の分析】**: 「データ3：登板履歴」を見て、もし投手が「連投」や「中1日」であったり、今大会で「投げすぎ（酷使）」の状態であったりした場合、それが今日の投球にどう影響したか、あなたの鋭い視点で分析してください。（例：「昨日120球を投げた腕で、今日も140km/hを計測するとは…彼の肩は一体どうなっているんだ」）
 21. **【雪辱と真価】**: もし投手が「登板履歴」で「前回炎上」していた場合、今日の投球が「雪辱」のマウンドであったことに触れてください。逆に、これまで「格下相手」にしか投げていなかった場合、今日の試合が「真価を問うマウンド」であったと分析してください。
 // ▲▲▲ 追加ここまで ▲▲▲
+// ▼▼▼ 挿入 ▼▼▼
+22. **【★打者の好不調の波】**: 「データ4：打者成績履歴」を熟読し、選手の**連続ヒット**や**連続無安打**の「波」に言及してください。（例：「1回戦で4タコだった〇〇くんが、今日はまるで別人のようだった」「△△くんはこれで3試合連続ヒット。完全に掴んだようだね」）
+23. **【★打者の役割分析】**: もし選手が**「代打」**で結果を出し続けていたり、**「打順変更」**で調子を上げていたりする場合、その采配と選手の適応力をあなたの視点で分析してください。
+// ▲▲▲
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
 - **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
@@ -10666,6 +10839,13 @@ ${factListText}
 ### 今大会の主な投手登板履歴 (この試合より前)
 ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
 // ▲▲▲ 挿入ここまで ▲▲▲
+
+---
+### **【最重要】この記事の唯一の事実情報源 (打者別 試合履歴)**
+${matchContext.batterGamelogInfo || '打者の試合履歴データはありません。'}
+---
+// ▲▲▲
+
 ### **参考情報：補足**
 - **前試合からのスタメン変更**:
 ${lineupChangesText}
@@ -10732,6 +10912,16 @@ ${lineupChangesText}
 30. **【★対戦相手の質 (裁量)】**:
     - もし「登板履歴」で、過去の対戦相手が「格下」ばかりで、今回初めて「強豪」と対戦した場合、その「真価が問われるマウンド」であったことを描写してください。
 // ▲▲▲ 追加ここまで ▲▲▲
+// ▼▼▼ 挿入 ▼▼▼
+31. **【★打者の好不調の波 (最重要)】**:
+    - 「打者別 試合履歴」(${matchContext.batterGamelogInfo ? '情報あり' : '情報なし'}) を**必ず確認**してください。
+    - その選手が「X試合連続ヒット中」なのか、「X打数連続無安打」なのか、その**好不調の波**を記事の中心的なテーマにしてください。
+    - （例：「3試合連続無安打と不振だった鈴木が、ついに決勝打を放った」「佐藤はこれで3試合連続マルチヒットと手が付けられない」）
+32. **【★打者の役割分析 (重要)】**:
+    - 「試合履歴」を見て、その選手が「代打で結果を出し続けている」のか、「1番に抜擢されてから調子が良い」のか、その**役割（打順や出場タイプ）**と成績の関係性を分析してください。
+33. **【★打者の相手の質 (裁量)】**:
+    - もし「試合履歴」で、その打者が「格下相手」にしか打っておらず、今回初めて「強豪投手」に抑えられた場合、その「真価が問われた」と分析してください。
+// ▲▲▲
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -11071,6 +11261,12 @@ ${highlightsText}
 ### 今大会の主な投手登板履歴 (この試合より前)
 ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
 // ▲▲▲ 挿入ここまで ▲▲▲
+
+// ▼▼▼ 挿入 ▼▼▼
+### 今大会の主な打者成績履歴 (この試合より前)
+${matchContext.batterGamelogInfo || '打者の試合履歴データはありません。'}
+// ▲▲▲
+
 ### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
@@ -11112,7 +11308,13 @@ ${specialNarrativeContext}
     - **連投/登板間隔**: 「〇〇、連投じゃん」「中1日でこれはキツイ」
     - **酷使**: 「エース投げすぎだろ」「監督は鈴木を壊す気か」
     - **好不調の波**: 「前回炎上したのによう立ち直ったな」「こないだは良かったのに今日はアカンか」
-    - **相手の質**: 「今ま
+    - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「強豪相手でも抑えるとか本物やん」
+// ▼▼▼ 挿入 ▼▼▼
+- **【★打者履歴への言及 (最重要)】**: 「今大会の主な打者成績履歴」も必ず確認し、以下の点をコメントに含めること。
+    - **好不調の波**: 「〇〇、今日で3試合連続ヒットやん！」「△△、10打数ノーヒットとかもう終わりだろ…」
+    - **役割**: 「こいつ代打成功率100%じゃね？」「1番に上げたら打ち出したな」
+    - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「Aランク投手から打つとか本物やん」
+// ▲▲▲
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
@@ -11480,16 +11682,10 @@ async function generateMultipleReplies(userCommentText) {
         teamInfoPromptPart += `- **${teamName}**: ${dynamicInfo} (今大会の状況: ${fate})\n`;
     });
 
-    // 言及された全選手の個人成績
-    if (mentionedPlayers.size > 0) {
-        teamInfoPromptPart += `\n- **主な選手の今大会成績**:\n`;
-        mentionedPlayers.forEach(playerInfo => {
-            const statsSummary = getPlayerTournamentStatsSummary(playerInfo.name, playerInfo.team);
-            if (statsSummary) {
-                teamInfoPromptPart += `  - ${statsSummary}\n`;
-            }
-        });
-    }
+    // ▼▼▼ ★★★ Gamelog取得ロジックに置き換え ★★★ ▼▼▼
+    // 言及された全選手のGamelogを取得
+    teamInfoPromptPart += formatPlayerGamelogsForPrompt(mentionedTeams, userCommentText);
+    // ▲▲▲
 
     // --- プロンプト作成 ---
     const prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
@@ -11500,11 +11696,18 @@ ${teamInfoPromptPart}
 ### **指示**:
 - 各キャラクターの返信は、必ずユーザーのコメント内容に直接関連していること。
 - **【重要】**: あなたの知識である「参考情報」を最大限に活用し、具体的なチーム状況や**個人成績**に触れながら、的確な返信をすること。
-- **【★今大会の成績 (最重要)】**:
-    - 「参考情報」に**『今大会のチーム打率は.XXX』**という情報が含まれている場合、それにも触れ、チームの好調・不振（例：「〇〇、打率3割超えてるもんな」「△△は打線が冷えてるのが心配」）について言及すること。
-- **【★通算成績への言及 (裁量)】**:
-    - 「参考情報」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
-    - **盗塁が0でも批判は不要です。**
+- **【★Gamelogの活用 (最重要)】**:
+    - 「参考情報：今大会の主な選手成績履歴」に、言及された選手の**試合ごとの詳細な履歴 (Gamelog)** が含まれています。
+    - あなたの返信は、この**Gamelog**を基に、以下の点を分析してください。
+    - **好不調の波**: 「3試合連続ヒット中」「10打数ノーヒット」など、選手の**「調子の波」**を分析すること。
+    - **対戦相手の質**: 「格下[E]相手にしか打ってない」「Aランク[A]投手から打った」など、**「相手の質」**を分析すること。
+    - **役割**: 「代打で結果を出している」「1番に抜擢されてから好調」など、**「役割」**を分析すること。
+    - **登板間隔**: 「連投」「中1日」など、**「投手のコンディション」**を分析すること。
+- **【★今大会の成績 (重要)】**:
+    - 「参考情報」に**『今大会のチーム打率は.XXX』**という情報が含まれている場合、それにも触れ、チーム全体の好調・不振について言及すること。
+- **【★通算盗塁への言及 (裁量)】**:
+    - 「参考情報」に**『(参考: ... 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じてそのチームの機動力にも言及すること。
+// ▲▲▲ 置き換えここまで ▲▲▲
 - **【注意】**: まだ大会序盤である（例：2試合しか終わっていない）ことを考慮し、「本塁打が少ない」といった早計な批判は避けること。
 ---
 ---### **ステップ4：出力形式**
@@ -11823,7 +12026,13 @@ async function generateBbsReply(parentCommentId, userReplyText, bbsType, aiPerso
             teamInfoPromptPart += `- **${teamName}**: ${dynamicInfo}\n`;
         });
     }
-
+    
+    // ▼▼▼ ★★★ Gamelog取得ロジックを追加 ★★★ ▼▼▼
+    // 会話全体（親コメント＋あなたの返信）から選手名をスキャン
+    const fullConversationText = `${parentComment.text}\n${userReplyText}`;
+    teamInfoPromptPart += formatPlayerGamelogsForPrompt(mentionedTeams, fullConversationText);
+    // ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲
     // --- 3. 最終的なプロンプトを組み立てる（★脱線防止策を適用） ---
     const prompt = `あなたは、匿名掲示板のキャラクター「${aiPersona}」です。あなたは今、他のユーザーと日本の高校野球について会話しています。
 あなたの唯一の仕事は、会話の流れとあなたの知識に基づき、キャラクターになりきって自然な返信をすることです。野球以外の話題には絶対に触れないでください。
@@ -11842,11 +12051,17 @@ ${teamInfoPromptPart}
 - **指示**:
   - 必ず相手の発言に直接応答することから始めること。
   - 応答の根拠として、ステップ2の「関連情報」を自然な形で会話に含めること。
-  - **【★今大会の成績 (最重要)】**:
-      - あなたの知識である「参考情報」に**『今大会のチーム打率は.XXX』**という情報が含まれている場合、それにも触れ、チームの好調・不振（例：「〇〇、打率3割超えてるもんな」「△△は打線が冷えてるのが心配」）について言及すること。
-  - **【★通算成績への言及 (裁量)】**:
-      - あなたの知識である「参考情報」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
-      - **盗塁が0でも批判は不要です。**
+  - **【★Gamelogの活用 (最重要)】**:
+      - 「参考情報：今大会の主な選手成績履歴」に、言及された選手の**試合ごとの詳細な履歴 (Gamelog)** が含まれています。
+      - あなたの返信は、この**Gamelog**を基に、以下の点を分析してください。
+      - **好不調の波**: 「3試合連続ヒット中」「10打数ノーヒット」など、選手の**「調子の波」**を分析すること。
+      - **対戦相手の質**: 「格下[E]相手にしか打ってない」「Aランク[A]投手から打った」など、**「相手の質」**を分析すること。
+      - **登板間隔**: 「連投」「中1日」など、**「投手のコンディション」**を分析すること。
+  - **【★今大会の成績 (重要)】**:
+      - 「参考情報」に**『今大会のチーム打率は.XXX』**という情報が含まれている場合、それにも触れ、チーム全体の好調・不振について言及すること。
+  - **【★通算盗塁への言及 (裁量)】**:
+      - 「参考情報」に**『(参考: ... 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じてそのチームの機動力にも言及すること。
+// ▲▲▲ 置き換えここまで ▲▲▲
   - 相手が話していない無関係なチームや試合の情報を一方的に解説しないこと。
 ---
 ### **ステップ4：出力形式**
@@ -13477,7 +13692,101 @@ function updateInningState(teamKey, inningIndex) {
      }
 }
 
+// ▼▼▼ この関数をまるごと挿入 ▼▼▼
+/**
+ * [NEW HELPER] Finds all mentioned players and formats their full gamelogs for AI prompts.
+ * @param {Set<string>} mentionedTeams - A Set of team names mentioned.
+ * @param {string} conversationText - The text to scan for player names.
+ * @returns {string} - A formatted string block of all found gamelogs.
+ */
+function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
+    let logInfo = "";
+    let relevantLogsFound = false;
+    
+    // Helper to parse date (already exists, but let's re-define for safety/scoping if needed, or just ensure it's available)
+    const parseDate = (dateStr) => {
+        if (!dateStr || !dateStr.includes('/')) return null;
+        const [month, day] = dateStr.split('/').map(Number);
+        const year = tournamentState.tournamentYear + (month <= 3 ? 1 : 0);
+        return new Date(year, month - 1, day);
+    };
 
+    const today = parseDate(tournamentState.matches['F-R1-M1']?.schedule?.date || "7/25"); // Use a fallback "today"
+
+    mentionedTeams.forEach(teamName => {
+        const teamRecord = tournamentState.teamRecords[teamName];
+        if (!teamRecord || !teamRecord.playerStats) return;
+
+        // 1. Check Batting Gamelogs
+        const battingStats = teamRecord.playerStats.batting;
+        if (battingStats) {
+            for (const playerName in battingStats) {
+                if (conversationText.includes(playerName)) {
+                    const bStats = battingStats[playerName];
+                    if (bStats.gamelogs && bStats.gamelogs.length > 0) {
+                        if (!relevantLogsFound) logInfo += `\n### 参考情報：今大会の主な選手成績履歴\n`;
+                        relevantLogsFound = true;
+                        logInfo += `- ${playerName} (${teamName}, 打者):\n`;
+                        
+                        bStats.gamelogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        
+                        bStats.gamelogs.forEach(log => {
+                            const dateInfo = log.date || '日付不明';
+                            const opponentRank = log.opponentRank || 'E';
+                            const stats = log.stats || { ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 };
+                            let role = "";
+                            if (log.sub_type === 'PH') role = "代打";
+                            else if (log.order && log.order.includes('sub')) role = "途中出場";
+                            else if (log.order) role = `${log.order}番`;
+                            
+                            const statsLine = `${stats.ab}打数${stats.h}安打 ${stats.hr}HR ${stats.rbi}打点 ${stats.sb}盗塁`;
+                            logInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]) (${role}): ${statsLine}\n`;
+                        });
+                    }
+                }
+            }
+        }
+
+        // 2. Check Pitching Gamelogs
+        const pitchingStats = teamRecord.playerStats.pitching;
+        if (pitchingStats) {
+            for (const playerName in pitchingStats) {
+                if (conversationText.includes(playerName)) {
+                    const pStats = pitchingStats[playerName];
+                    if (pStats.gamelogs && pStats.gamelogs.length > 0) {
+                        if (!relevantLogsFound) logInfo += `\n### 参考情報：今大会の主な選手成績履歴\n`;
+                        relevantLogsFound = true;
+                        logInfo += `- ${playerName} (${teamName}, 投手):\n`;
+
+                        pStats.gamelogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+
+                        pStats.gamelogs.forEach(log => {
+                            let dateInfo = log.date || '日付不明';
+                            if (today) {
+                                const logDate = parseDate(log.date);
+                                if (logDate) {
+                                    const diffDays = Math.ceil(Math.abs(today - logDate) / (1000 * 60 * 60 * 24));
+                                    if (diffDays === 1) dateInfo = `${log.date} (連投)`;
+                                    else if (diffDays === 2) dateInfo = `${log.date} (中1日)`;
+                                    else if (diffDays > 0) dateInfo = `${log.date} (中${diffDays - 1}日)`;
+                                }
+                            }
+                            const opponentRank = log.opponentRank || 'E';
+                            const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
+                            pitcherGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
+                        });
+                    }
+                }
+            }
+        }
+    });
+
+    if (!relevantLogsFound) {
+        logInfo = "\n### 参考情報：今大会の主な選手成績履歴\n- 言及された選手の詳細な試合履歴は見つかりませんでした。\n";
+    }
+    return logInfo;
+}
+// ▲▲▲ 挿入ここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
@@ -15016,6 +15325,77 @@ document.body.addEventListener('click', async (e) => {
         }
     }
 
+// ▼▼▼ [NEW] スレ立てモーダルを開くボタン ▼▼▼
+    else if (e.target.closest('#open-new-thread-modal-btn')) {
+        e.preventDefault();
+        // フォームをリセット
+        document.getElementById('new-thread-title').value = '';
+        document.getElementById('new-thread-comment').value = '';
+        // モーダルを表示
+        document.getElementById('new-thread-modal').classList.remove('hidden');
+    }
+    // ▲▲▲ 挿入ここまで ▲▲▲
+// ▼▼▼ [NEW] スレ立てモーダルを閉じるボタン (キャンセル) ▼▼▼
+    else if (e.target.closest('#new-thread-cancel')) {
+        e.preventDefault();
+        document.getElementById('new-thread-modal').classList.add('hidden');
+    }
+
+    // ▼▼▼ [NEW] スレ立てモーダルを「実行」するボタン ▼▼▼
+    else if (e.target.closest('#new-thread-submit')) {
+        e.preventDefault();
+        const title = document.getElementById('new-thread-title').value.trim();
+        const comment = document.getElementById('new-thread-comment').value.trim();
+
+        if (!title || !comment) {
+            alert('タイトルと本文の両方を入力してください。');
+            return;
+        }
+
+        const threadId = 'user-' + Date.now();
+        const timestamp = Date.now();
+
+        // 1. 記事一覧に表示するための「記事オブジェクト」を作成
+        const threadArticle = {
+            id: threadId,
+            headline: title,
+            type: 'game', // AIスレと同じ 'game' タイプとして扱う
+            matchId: threadId, // matomeThreads との連携キー
+            timestamp: timestamp,
+            category: '自スレ' // 専用カテゴリ
+        };
+        
+        if (!tournamentState.userThreads) tournamentState.userThreads = [];
+        tournamentState.userThreads.push(threadArticle);
+
+        // 2. スレッド本文（コメント）を作成
+        const firstComment = {
+            id: crypto.randomUUID(),
+            personality: '1: 風吹けば名無し (スレ主)',
+            text: comment,
+            timestamp: timestamp,
+            replies: []
+        };
+        
+        if (!tournamentState.matomeThreads) tournamentState.matomeThreads = {};
+        tournamentState.matomeThreads[threadId] = {
+            thread: [firstComment],
+            context: { isUserThread: true, title: title } // 再生成はしないが、目印として
+        };
+
+        // 3. 保存してUIを更新
+        saveState();
+        document.getElementById('new-thread-modal').classList.add('hidden');
+        
+        // 4. まとめサイトの記事一覧をリフレッシュ
+        const articlesContainer = document.getElementById('matome-articles-container');
+        articlesContainer.innerHTML = `<div class="loader text-center py-8">スレッドを立てています...</div>`;
+        (async () => {
+            const matomeHtml = await generateMatomeSiteHtml();
+            articlesContainer.innerHTML = matomeHtml;
+        })();
+    }
+    // ▲▲▲ 挿入ここまで ▲▲▲
     // --- ★★★ ソート機能（ヘッダーTHクリック） ★★★ ---
     if (e.target.matches('.sortable-header')) {
         e.preventDefault();
