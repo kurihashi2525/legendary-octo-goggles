@@ -4195,111 +4195,8 @@ function swapTeamDetails(matchId) {
 
 // ▼▼▼ この関数を <script type="module"> 内に「新規追加」 ▼▼▼
 /**
- * 選手の通算成績モーダルの中身を生成・表示する
- * (★ OPS/WHIP計算機能付き 最終版)
- * @param {string} playerName - 選手名
- * @param {string} teamName - チーム名
- */
-function renderCareerStatsModal(playerName, teamName) {
-    const modalBody = document.getElementById('player-stats-modal-body');
-    const teamRecord = tournamentState.teamRecords[teamName];
-
-    if (!playerName || !teamRecord || !teamRecord.playerStats) {
-        modalBody.innerHTML = '<p class="text-center text-red-500">選手の成績データが見つかりません。</p>';
-        return;
-    }
-
-    const battingStats = teamRecord.playerStats.batting[playerName];
-    const pitchingStats = teamRecord.playerStats.pitching[playerName];
-    
-    let html = `
-        <div class="player-stats-header">
-            <h3 class="player-stats-name">${playerName}</h3>
-            <p class="player-stats-team">${teamName}</p>
-        </div>
-    `;
-
-    // --- 1. 打撃成績の計算と表示 ---
-    if (battingStats) {
-        const { games = 0, pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, sb = 0, bb = 0, hbp = 0, sf = 0, tb = 0 } = battingStats;
-
-        // 打率 (AVG)
-        const avg = (ab > 0) ? (h / ab) : 0;
-        // 出塁率 (OBP) = (安打 + 四球 + 死球) / (打数 + 四球 + 死球 + 犠飛)
-        const obp_numerator = h + bb + hbp;
-        const obp_denominator = ab + bb + hbp + sf;
-        const obp = (obp_denominator > 0) ? (obp_numerator / obp_denominator) : 0;
-        // 長打率 (SLG) = 塁打 / 打数
-        const slg = (ab > 0) ? (tb / ab) : 0;
-        // OPS = 出塁率 + 長打率
-        const ops = obp + slg;
-
-        html += `
-            <div>
-                <h4 class="stats-section-title">通算打撃成績</h4>
-                <div class="stats-grid">
-                    <div class="stats-grid-item highlight"><div class="stats-label">打率</div><div class="stats-value">${avg.toFixed(3)}</div></div>
-                    <div class="stats-grid-item highlight"><div class="stats-label">出塁率</div><div class="stats-value">${obp.toFixed(3)}</div></div>
-                    <div class="stats-grid-item highlight"><div class="stats-label">長打率</div><div class="stats-value">${slg.toFixed(3)}</div></div>
-                    <div class="stats-grid-item highlight"><div class="stats-label">OPS</div><div class="stats-value">${ops.toFixed(3)}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">試合</div><div class="stats-value">${games}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">打席</div><div class="stats-value">${pa}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">打数</div><div class="stats-value">${ab}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">安打</div><div class="stats-value">${h}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">本塁打</div><div class="stats-value">${hr}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">打点</div><div class="stats-value">${rbi}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">盗塁</div><div class="stats-value">${sb}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">塁打</div><div class="stats-value">${tb}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">四球</div><div class="stats-value">${bb}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">死球</div><div class="stats-value">${hbp}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">犠飛</div><div class="stats-value">${sf}</div></div>
-                </div>
-            </div>
-        `;
-    } else {
-        html += `<div><h4 class="stats-section-title">通算打撃成績</h4><p class="text-sm text-gray-500">（通算打撃成績なし）</p></div>`;
-    }
-
-    // --- 2. 投手成績の計算と表示 ---
-    if (pitchingStats && pitchingStats.ip > 0) {
-        const { games = 0, w = 0, l = 0, ip = 0, so = 0, er = 0, h = 0, bb = 0 } = pitchingStats;
-        
-        // 防御率 (ERA) = (自責点 * 9) / 投球回
-        const era = (ip > 0) ? ((er * 9) / ip) : 0;
-        // WHIP = (与四球 + 被安打) / 投球回
-        const whip = (ip > 0) ? ((bb + h) / ip) : 0;
-        // 奪三振率 (K/9) = (奪三振 * 9) / 投球回
-        const k9 = (ip > 0) ? ((so * 9) / ip) : 0;
-
-        html += `
-            <div class="mt-6">
-                <h4 class="stats-section-title">通算投手成績</h4>
-                <div class="stats-grid">
-                    <div class="stats-grid-item highlight"><div class="stats-label">防御率</div><div class="stats-value">${era.toFixed(2)}</div></div>
-                    <div class="stats-grid-item highlight"><div class="stats-label">WHIP</div><div class="stats-value">${whip.toFixed(2)}</div></div>
-                    <div class="stats-grid-item highlight"><div class="stats-label">奪三振率</div><div class="stats-value">${k9.toFixed(2)}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">勝利</div><div class="stats-value">${w}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">登板</div><div class="stats-value">${games}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">敗北</div><div class="stats-value">${l}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">投球回</div><div class="stats-value">${ip.toFixed(1)}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">奪三振</div><div class="stats-value">${so}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">被安打</div><div class="stats-value">${h}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">与四球</div><div class="stats-value">${bb}</div></div>
-                    <div class="stats-grid-item"><div class="stats-label">自責点</div><div class="stats-value">${er}</div></div>
-                </div>
-            </div>
-        `;
-    } else {
-         html += `<div class="mt-6"><h4 class="stats-section-title">通算投手成績</h4><p class="text-sm text-gray-500">（通算投手成績なし）</p></div>`;
-    }
-
-    modalBody.innerHTML = html;
-}
-// ▲▲▲ 新規追加ここまで ▲▲▲
-
-/**
  * チーム全員の通算成績モーダルの中身を生成・表示する
- * (★ クリックソート機能、OPS/WHIP計算機能付き 最終版)
+ * (★「登板履歴(Gamelogs)」タブを追加した最終版)
  * @param {string} teamName - チーム名
  */
 function renderTeamStatsModal(teamName) {
@@ -4338,39 +4235,28 @@ function renderTeamStatsModal(teamName) {
     let battingHtml = '';
     let pitchingHtml = '';
 
-    // --- 1. 打撃成績の計算と表示 ---
+    // --- 1. 打撃成績の計算と表示 (変更なし) ---
     if (batting && Object.keys(batting).length > 0) {
-        
-        // 1a. データを配列に変換し、計算値を付与
         const battingArray = Object.keys(batting).map(playerName => {
             const stats = batting[playerName];
             const { games = 0, pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, sb = 0, bb = 0, hbp = 0, sf = 0, tb = 0 } = stats;
-            
             const avg = (ab > 0) ? (h / ab) : 0;
             const obp_numerator = h + bb + hbp;
             const obp_denominator = ab + bb + hbp + sf;
             const obp = (obp_denominator > 0) ? (obp_numerator / obp_denominator) : 0;
             const slg = (ab > 0) ? (tb / ab) : 0;
             const ops = obp + slg;
-
             return { name: playerName, ...stats, avg, obp, slg, ops };
-        }).filter(p => p.pa > 0); // 1打席も立ってない選手は除外
-
-        // 1b. 配列をソート
+        }).filter(p => p.pa > 0); 
         const sortKey = sortState.batting.key;
         const sortDir = sortState.batting.dir === 'asc' ? 1 : -1;
         battingArray.sort((a, b) => {
-            let valA = a[sortKey];
-            let valB = b[sortKey];
-            if (sortKey === 'name') {
-                return valA.localeCompare(valB, 'ja') * sortDir;
-            }
+            let valA = a[sortKey], valB = b[sortKey];
+            if (sortKey === 'name') return valA.localeCompare(valB, 'ja') * sortDir;
             if (valA === undefined || valA === null) valA = 0;
             if (valB === undefined || valB === null) valB = 0;
             return (valA - valB) * sortDir;
         });
-
-        // 1c. HTMLを生成
         battingHtml = `
             <div>
                 <h4 class="stats-section-title">通算打撃成績</h4>
@@ -4378,20 +4264,20 @@ function renderTeamStatsModal(teamName) {
                     <table class="career-stats-table" id="batting-stats-table">
                         <thead>
                             <tr>
-                                <th class="player-name sortable-header ${getSortClass('batting', 'name')}" data-sort-key="name" data-sort-type="string" data-table-type="batting">選手名<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'games')}" data-sort-key="games" data-sort-type="numeric" data-table-type="batting">試<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'avg')}" data-sort-key="avg" data-sort-type="numeric" data-table-type="batting">打率<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'ops')}" data-sort-key="ops" data-sort-type="numeric" data-table-type="batting">OPS<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'pa')}" data-sort-key="pa" data-sort-type="numeric" data-table-type="batting">打席<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'ab')}" data-sort-key="ab" data-sort-type="numeric" data-table-type="batting">打数<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'h')}" data-sort-key="h" data-sort-type="numeric" data-table-type="batting">安打<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'hr')}" data-sort-key="hr" data-sort-type="numeric" data-table-type="batting">本<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'rbi')}" data-sort-key="rbi" data-sort-type="numeric" data-table-type="batting">点<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'sb')}" data-sort-key="sb" data-sort-type="numeric" data-table-type="batting">盗<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'bb')}" data-sort-key="bb" data-sort-type="numeric" data-table-type="batting">四<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('batting', 'hbp')}" data-sort-key="hbp" data-sort-type="numeric" data-table-type="batting">死<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'obp')}" data-sort-key="obp" data-sort-type="numeric" data-table-type="batting">出塁率<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'slg')}" data-sort-key="slg" data-sort-type="numeric" data-table-type="batting">長打率<span class="sort-arrow"></span></th>
+                                <th class="player-name sortable-header ${getSortClass('batting', 'name')}" data-sort-key="name" data-table-type="batting">選手名<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'games')}" data-sort-key="games" data-table-type="batting">試<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'avg')}" data-sort-key="avg" data-table-type="batting">打率<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'ops')}" data-sort-key="ops" data-table-type="batting">OPS<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'pa')}" data-sort-key="pa" data-table-type="batting">打席<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'ab')}" data-sort-key="ab" data-table-type="batting">打数<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'h')}" data-sort-key="h" data-table-type="batting">安打<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'hr')}" data-sort-key="hr" data-table-type="batting">本<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'rbi')}" data-sort-key="rbi" data-table-type="batting">点<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'sb')}" data-sort-key="sb" data-table-type="batting">盗<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'bb')}" data-sort-key="bb" data-table-type="batting">四<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('batting', 'hbp')}" data-sort-key="hbp" data-table-type="batting">死<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'obp')}" data-sort-key="obp" data-table-type="batting">出塁率<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('batting', 'slg')}" data-sort-key="slg" data-table-type="batting">長打率<span class="sort-arrow"></span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -4400,19 +4286,10 @@ function renderTeamStatsModal(teamName) {
             battingHtml += `
                 <tr>
                     <td class="player-name">${stats.name}</td>
-                    <td>${stats.games}</td>
-                    <td>${stats.avg.toFixed(3)}</td>
-                    <td class="stat-highlight">${stats.ops.toFixed(3)}</td>
-                    <td>${stats.pa}</td>
-                    <td>${stats.ab}</td>
-                    <td>${stats.h}</td>
-                    <td>${stats.hr}</td>
-                    <td>${stats.rbi}</td>
-                    <td>${stats.sb}</td>
-                    <td>${stats.bb}</td>
-                    <td>${stats.hbp}</td>
-                    <td class="stat-highlight">${stats.obp.toFixed(3)}</td>
-                    <td class="stat-highlight">${stats.slg.toFixed(3)}</td>
+                    <td>${stats.games}</td><td>${stats.avg.toFixed(3)}</td><td class="stat-highlight">${stats.ops.toFixed(3)}</td>
+                    <td>${stats.pa}</td><td>${stats.ab}</td><td>${stats.h}</td><td>${stats.hr}</td>
+                    <td>${stats.rbi}</td><td>${stats.sb}</td><td>${stats.bb}</td><td>${stats.hbp}</td>
+                    <td class="stat-highlight">${stats.obp.toFixed(3)}</td><td class="stat-highlight">${stats.slg.toFixed(3)}</td>
                 </tr>
             `;
         });
@@ -4426,33 +4303,32 @@ function renderTeamStatsModal(teamName) {
         
         // 2a. データを配列に変換し、計算値を付与
         const pitchingArray = Object.keys(pitching).map(playerName => {
-            const stats = pitching[playerName];
-            const { games = 0, w = 0, l = 0, ip = 0, so = 0, er = 0, h = 0, bb = 0 } = stats;
+            const pStats = pitching[playerName];
+            const stats = pStats.career; // 通算成績
+            if (!stats) return null;
             
-            const era = (ip > 0) ? ((er * 9) / ip) : Infinity; // 防御率
-            const whip = (ip > 0) ? ((bb + h) / ip) : Infinity; // WHIP
-            const k9 = (ip > 0) ? ((so * 9) / ip) : 0; // 奪三振率
+            const { games = 0, w = 0, l = 0, ip = 0, so = 0, er = 0, h = 0, bb = 0 } = stats;
+            const era = (ip > 0) ? ((er * 9) / ip) : Infinity; 
+            const whip = (ip > 0) ? ((bb + h) / ip) : Infinity; 
+            const k9 = (ip > 0) ? ((so * 9) / ip) : 0; 
 
-            return { name: playerName, ...stats, era, whip, k9 };
-        }).filter(p => p.ip > 0); // 投球回0の選手は除外
-
+            return { name: playerName, ...stats, era, whip, k9, gamelogs: pStats.gamelogs || [] }; // ★gamelogsも配列に含める
+        }).filter(p => p && p.ip > 0); 
+        
         // 2b. 配列をソート
         const sortKey = sortState.pitching.key;
         const sortDir = sortState.pitching.dir === 'asc' ? 1 : -1;
         pitchingArray.sort((a, b) => {
-            let valA = a[sortKey];
-            let valB = b[sortKey];
-            if (sortKey === 'name') {
-                return valA.localeCompare(valB, 'ja') * sortDir;
-            }
-            if (valA === Infinity) valA = 999.99; // 防御率・WHIPの無限大対策
+            let valA = a[sortKey], valB = b[sortKey];
+            if (sortKey === 'name') return valA.localeCompare(valB, 'ja') * sortDir;
+            if (valA === Infinity) valA = 999.99; 
             if (valB === Infinity) valB = 999.99;
             if (valA === undefined || valA === null) valA = 0;
             if (valB === undefined || valB === null) valB = 0;
             return (valA - valB) * sortDir;
         });
 
-        // 2c. HTMLを生成
+        // 2c. HTMLを生成 (★gamelogsの行を追加)
         pitchingHtml = `
             <div class="mt-6">
                 <h4 class="stats-section-title">通算投手成績</h4>
@@ -4460,37 +4336,41 @@ function renderTeamStatsModal(teamName) {
                     <table class="career-stats-table" id="pitching-stats-table">
                         <thead>
                             <tr>
-                                <th class="player-name sortable-header ${getSortClass('pitching', 'name')}" data-sort-key="name" data-sort-type="string" data-table-type="pitching">選手名<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'games')}" data-sort-key="games" data-sort-type="numeric" data-table-type="pitching">登<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'w')}" data-sort-key="w" data-sort-type="numeric" data-table-type="pitching">勝<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'l')}" data-sort-key="l" data-sort-type="numeric" data-table-type="pitching">敗<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'ip')}" data-sort-key="ip" data-sort-type="numeric" data-table-type="pitching">回<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'era')}" data-sort-key="era" data-sort-type="numeric" data-table-type="pitching">防御率<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'whip')}" data-sort-key="whip" data-sort-type="numeric" data-table-type="pitching">WHIP<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'so')}" data-sort-key="so" data-sort-type="numeric" data-table-type="pitching">振<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'h')}" data-sort-key="h" data-sort-type="numeric" data-table-type="pitching">被安<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'bb')}" data-sort-key="bb" data-sort-type="numeric" data-table-type="pitching">与四<span class="sort-arrow"></span></th>
-                                <th class="sortable-header ${getSortClass('pitching', 'er')}" data-sort-key="er" data-sort-type="numeric" data-table-type="pitching">自責<span class="sort-arrow"></span></th>
-                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'k9')}" data-sort-key="k9" data-sort-type="numeric" data-table-type="pitching">K/9<span class="sort-arrow"></span></th>
+                                <th class="player-name sortable-header ${getSortClass('pitching', 'name')}" data-sort-key="name" data-table-type="pitching">選手名<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'games')}" data-sort-key="games" data-table-type="pitching">登<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'w')}" data-sort-key="w" data-table-type="pitching">勝<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'l')}" data-sort-key="l" data-table-type="pitching">敗<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'ip')}" data-sort-key="ip" data-table-type="pitching">回<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'era')}" data-sort-key="era" data-table-type="pitching">防御率<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'whip')}" data-sort-key="whip" data-table-type="pitching">WHIP<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'so')}" data-sort-key="so" data-table-type="pitching">振<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'h')}" data-sort-key="h" data-table-type="pitching">被安<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'bb')}" data-sort-key="bb" data-table-type="pitching">与四<span class="sort-arrow"></span></th>
+                                <th class="sortable-header ${getSortClass('pitching', 'er')}" data-sort-key="er" data-table-type="pitching">自責<span class="sort-arrow"></span></th>
+                                <th class="stat-highlight sortable-header ${getSortClass('pitching', 'k9')}" data-sort-key="k9" data-table-type="pitching">K/9<span class="sort-arrow"></span></th>
                             </tr>
                         </thead>
                         <tbody>
         `;
         pitchingArray.forEach(stats => {
+            // ★ 登板履歴(gamelogs)を行に含める
+            const gamelogHtml = stats.gamelogs.length > 0 
+                ? stats.gamelogs.map(log => `(${log.round} vs ${log.opponent}: ${log.ip}回 ${log.r}失点)`).join(', ')
+                : '登板履歴なし';
+                
             pitchingHtml += `
                 <tr>
                     <td class="player-name">${stats.name}</td>
-                    <td>${stats.games}</td>
-                    <td>${stats.w}</td>
-                    <td>${stats.l}</td>
-                    <td>${stats.ip.toFixed(1)}</td>
-                    <td class="stat-highlight">${stats.era === 999.99 ? '----' : stats.era.toFixed(2)}</td>
+                    <td>${stats.games}</td><td>${stats.w}</td><td>${stats.l}</td>
+                    <td>${stats.ip.toFixed(1)}</td><td class="stat-highlight">${stats.era === 999.99 ? '----' : stats.era.toFixed(2)}</td>
                     <td class="stat-highlight">${stats.whip === 999.99 ? '----' : stats.whip.toFixed(2)}</td>
-                    <td>${stats.so}</td>
-                    <td>${stats.h}</td>
-                    <td>${stats.bb}</td>
-                    <td>${stats.er}</td>
+                    <td>${stats.so}</td><td>${stats.h}</td><td>${stats.bb}</td><td>${stats.er}</td>
                     <td class="stat-highlight">${stats.k9.toFixed(2)}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td colspan="12" class="text-left text-xs text-gray-600 p-2" style="white-space: normal;">
+                        <strong>登板履歴:</strong> ${gamelogHtml}
+                    </td>
                 </tr>
             `;
         });
@@ -4502,7 +4382,8 @@ function renderTeamStatsModal(teamName) {
     modalBody.innerHTML = battingHtml + pitchingHtml;
 }
 // ▲▲▲ 新規追加ここまで ▲▲▲
-// ▲▲▲ 新規追加ここまで ▲▲▲
+
+
 
 /**
  * チームステータスモーダルを表示する
@@ -8202,7 +8083,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 
 /**
  * 詳細データを保存し、通算成績を更新する
- * (★OPS/SBに加え、投手のWHIP計算用の被安打(h)・与四球(bb)の集計機能を追加した最終版)
+ * (★投手の「登板履歴(gamelogs)」の保存機能を追加した最終版)
  */
 function saveDetailedStats() {
     if (!currentMatchIdForDetails) return;
@@ -8216,7 +8097,7 @@ function saveDetailedStats() {
             const teamRecord = tournamentState.teamRecords[teamName];
             if (!teamRecord || !teamRecord.playerStats) continue;
 
-            // (Step 1) 打撃成績のリセット
+            // (Step 1) 打撃成績のリセット (変更なし)
             const previousBattingStats = match.details.playerGameStats[teamKey];
             if (previousBattingStats) {
                 for (const playerName in previousBattingStats) {
@@ -8224,21 +8105,14 @@ function saveDetailedStats() {
                     const prevGameStats = previousBattingStats[playerName]; 
                     if (careerStats && prevGameStats) {
                         if(prevGameStats.played) careerStats.games = (careerStats.games || 1) - 1;
-                        careerStats.pa -= prevGameStats.pa || 0;
-                        careerStats.ab -= prevGameStats.ab || 0;
-                        careerStats.h -= prevGameStats.h || 0;
-                        careerStats.hr -= prevGameStats.hr || 0;
-                        careerStats.rbi -= prevGameStats.rbi || 0;
-                        careerStats.sb = (careerStats.sb || 0) - (prevGameStats.sb || 0);
-                        careerStats.bb = (careerStats.bb || 0) - (prevGameStats.bb || 0);
-                        careerStats.hbp = (careerStats.hbp || 0) - (prevGameStats.hbp || 0);
-                        careerStats.sf = (careerStats.sf || 0) - (prevGameStats.sf || 0);
-                        careerStats.tb = (careerStats.tb || 0) - (prevGameStats.tb || 0);
+                        for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb']) {
+                            careerStats[key] = (careerStats[key] || 0) - (prevGameStats[key] || 0);
+                        }
                     }
                 } 
             } 
             
-            // (Step 2) チーム今大会成績のリセット
+            // (Step 2) チーム今大会成績のリセット (変更なし)
             if (teamRecord.tournamentStats && previousBattingStats) {
                 let totals = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 };
                 for (const playerName in previousBattingStats) {
@@ -8254,12 +8128,16 @@ function saveDetailedStats() {
                 }
             } 
 
-            // (Step 3) 投手成績のリセット (★被安打(h)・与四球(bb)リセット追加)
+            // (Step 3) 投手成績のリセット (★gamelogs対応)
             const previousPitchingStats = match.details.pitching?.[teamKey];
             if (previousPitchingStats) {
                 previousPitchingStats.forEach(prevGameStats => { 
                     const playerName = prevGameStats.name;
-                    const careerStats = teamRecord.playerStats.pitching[playerName];
+                    if (!playerName || !teamRecord.playerStats.pitching[playerName]) return;
+                    
+                    const pStats = teamRecord.playerStats.pitching[playerName];
+                    const careerStats = pStats.career; // 通算成績
+                    
                     if (careerStats && prevGameStats && parseInt(prevGameStats.battersFaced || 0) > 0) {
                         careerStats.games = (careerStats.games || 1) - 1;
                         if (prevGameStats.result === 'W') careerStats.w--;
@@ -8267,12 +8145,17 @@ function saveDetailedStats() {
                         careerStats.ip -= parseFloat(prevGameStats.innings || 0);
                         careerStats.so -= parseInt(prevGameStats.strikeouts || 0);
                         careerStats.er -= parseInt(prevGameStats.earnedRuns || 0);
-                        careerStats.h = (careerStats.h || 0) - parseInt(prevGameStats.hits || 0); // ★追加
-                        careerStats.bb = (careerStats.bb || 0) - parseInt(prevGameStats.walks || 0); // ★追加
+                        careerStats.h = (careerStats.h || 0) - parseInt(prevGameStats.hits || 0);
+                        careerStats.bb = (careerStats.bb || 0) - parseInt(prevGameStats.walks || 0);
+                    }
+                    
+                    // ★ 登板履歴(gamelogs)からも、このmatchIdのデータを削除
+                    if (pStats.gamelogs) {
+                        pStats.gamelogs = pStats.gamelogs.filter(log => log.matchId !== currentMatchIdForDetails);
                     }
                 });
             }
-        } // (End of teamKey loop)
+        }
     }
     // --- (リセット処理 ここまで) ---
 
@@ -8285,7 +8168,6 @@ function saveDetailedStats() {
         playerGameStats: { team1: {}, team2: {} },
         positionChanges: match.details?.positionChanges || []
     };
-
     
     // --- 3. 画面から入力された値を読み取り、成績を再計算・加算 ---
     const scoreTable = document.getElementById('inning-score-table');
@@ -8312,7 +8194,9 @@ function saveDetailedStats() {
             battingTable.querySelectorAll('tbody tr').forEach(row => {
                 const nameInput = row.querySelector('.player-name');
                 if (nameInput && nameInput.value.trim() !== '') {
-                    
+                    const playerName = nameInput.value.trim();
+                    // (打撃成績の集計ロジックは前回から変更なし)
+                    // ... (resultsの読み取り) ...
                     const resultCells = Array.from(row.querySelectorAll('td.col-inning'));
                     const results = resultCells.map(cell => {
                         const atBatBlocks = Array.from(cell.querySelectorAll('.at-bat-block'));
@@ -8338,9 +8222,8 @@ function saveDetailedStats() {
                         }).join('、');
                         return atBatsString;
                     });
-                    
                     const playerData = {
-                        order: row.dataset.order, name: nameInput.value.trim(),
+                        order: row.dataset.order, name: playerName,
                         number: row.querySelector('.player-number').value,
                         throwBat: row.querySelector('.player-throw-bat')?.value,
                         pos: row.querySelector('.player-pos').value,
@@ -8349,68 +8232,38 @@ function saveDetailedStats() {
                     };
                     details.batting[teamKey].push(playerData);
                     
-                    const playerName = playerData.name;
                     if (!teamRecord.playerStats.batting[playerName]) {
                         teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 };
                     }
                     const careerStats = teamRecord.playerStats.batting[playerName];
                     const isNonBattingSub = playerData.sub_type === 'DEF' || playerData.sub_type === 'PR';
                     const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
-
+                    
                     playerData.results.forEach(inningResultString => {
-                        if (!inningResultString) return;
-                        inningResultString.split('、').forEach(atBatString => {
+                        (inningResultString || '').split('、').forEach(atBatString => {
                             if (!atBatString) return;
-                            
                             const [batterPlay, runnerPlaysString] = atBatString.split(';');
-                            
                             if (batterPlay && batterPlay.trim() !== '') {
-                                let strength = 'N', cleanBatterPlay = batterPlay.trim();
-                                if (cleanBatterPlay.startsWith('★:')) cleanBatterPlay = cleanBatterPlay.substring(3);
-                                if (cleanBatterPlay.startsWith('S:')) { strength = 'S'; cleanBatterPlay = cleanBatterPlay.substring(2); }
-                                else if (cleanBatterPlay.startsWith('W:')) { strength = 'W'; cleanBatterPlay = cleanBatterPlay.substring(2); }
-                                
-                                const isHit = ['安', '二塁打', '三塁打', '本塁打'].some(w => cleanBatterPlay.includes(w));
-                                const isOut = ['三振', 'ゴロ', '飛', '邪', '直', '併殺', '犠'].some(w => cleanBatterPlay.includes(w));
-                                if (isHit && strength === 'S') gameStats.strongHits++;
-                                if (isHit && strength === 'W') gameStats.weakHits++;
-                                if (isOut && strength === 'S') gameStats.strongOuts++;
-                                if (isOut && strength === 'W') gameStats.weakOuts++;
-
-                                gameStats.played = true; 
-                                gameStats.pa++;
-                                
-                                const isWalk = cleanBatterPlay.includes('四球') || cleanBatterPlay.includes('死球') || cleanBatterPlay.includes('敬遠');
-                                const isSacFly = cleanBatterPlay.includes('犠飛');
-                                const isSacBunt = cleanBatterPlay.includes('犠打');
-                                
-                                if (!isWalk && !isSacBunt && !isSacFly && !cleanBatterPlay.includes('妨害') && !cleanBatterPlay.includes('犠失')) { gameStats.ab++; }
+                                let cleanBatterPlay = batterPlay.trim().replace(/^★:/, '').replace(/^[SW]:/, '');
+                                gameStats.played = true; gameStats.pa++;
+                                const isWalk = ['四球', '死球', '敬遠'].some(w => cleanBatterPlay.includes(w));
+                                const isSac = ['犠飛', '犠打', '犠失'].some(w => cleanBatterPlay.includes(w));
+                                if (!isWalk && !isSac && !cleanBatterPlay.includes('妨害')) { gameStats.ab++; }
                                 if (cleanBatterPlay.includes('四球') || cleanBatterPlay.includes('敬遠')) gameStats.bb++;
                                 if (cleanBatterPlay.includes('死球')) gameStats.hbp++;
-                                if (isSacFly) gameStats.sf++;
-
+                                if (cleanBatterPlay.includes('犠飛')) gameStats.sf++;
                                 if (cleanBatterPlay.includes('本塁打')) { gameStats.h++; gameStats.tb += 4; gameStats.hr++; }
                                 else if (cleanBatterPlay.includes('三塁打')) { gameStats.h++; gameStats.tb += 3; }
                                 else if (cleanBatterPlay.includes('二塁打')) { gameStats.h++; gameStats.tb += 2; }
                                 else if (cleanBatterPlay.includes('安')) { gameStats.h++; gameStats.tb += 1; }
-                                
-                                if (cleanBatterPlay.includes('点')) {
-                                    const rbiMatch = cleanBatterPlay.match(/(\d+)点/);
-                                    gameStats.rbi += rbiMatch ? parseInt(rbiMatch[1]) : 1;
-                                }
+                                if (cleanBatterPlay.includes('点')) { gameStats.rbi += (cleanBatterPlay.match(/(\d+)点/) || [0, 1])[1]; }
                             }
-
-                            if (runnerPlaysString) {
-                                runnerPlaysString.split(',').forEach(runnerPlay => {
-                                    const parts = runnerPlay.split(' ');
-                                    const runnerName = parts[0];
-                                    const play = parts[1];
-                                    if (runnerName === playerName && play === '盗塁') { gameStats.sb++; }
-                                });
-                            }
+                            (runnerPlaysString || '').split(',').forEach(runnerPlay => {
+                                const parts = runnerPlay.split(' ');
+                                if (parts[0] === playerName && parts[1] === '盗塁') { gameStats.sb++; }
+                            });
                         });
                     });
-                    
                     if(gameStats.played || isNonBattingSub) { careerStats.games++; }
                     for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb']) {
                         careerStats[key] = (careerStats[key] || 0) + gameStats[key];
@@ -8421,13 +8274,12 @@ function saveDetailedStats() {
                     if (teamRecord.tournamentStats && (gameStats.played || isNonBattingSub)) {
                         teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
                     }
-                    
                     details.playerGameStats[teamKey][playerName] = gameStats;
                 }
             });
         }
         
-        // (投手成績の集計 ... ★h, bbの集計を追加)
+        // (投手成績の集計 ... ★gamelogs対応)
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
             pitchingTable.querySelectorAll('tbody tr').forEach(row => {
@@ -8443,29 +8295,48 @@ function saveDetailedStats() {
                         innings: row.querySelector('.pitcher-innings').value,
                         battersFaced: row.querySelector('.pitcher-batters').value,
                         pitches: row.querySelector('.pitcher-pitches').value,
-                        hits: row.querySelector('.pitcher-hits').value, // ★
+                        hits: row.querySelector('.pitcher-hits').value, 
                         strikeouts: row.querySelector('.pitcher-so').value,
-                        walks: row.querySelector('.pitcher-walks').value, // ★
+                        walks: row.querySelector('.pitcher-walks').value, 
                         runs: row.querySelector('.pitcher-runs').value,
                         earnedRuns: row.querySelector('.pitcher-er').value,
                     };
                     details.pitching[teamKey].push(pitcherData);
 
+                    // ★ 投手成績の保存構造を変更
                     if (!teamRecord.playerStats.pitching[pitcherName]) {
-                        // ★ h, bb 初期化
-                        teamRecord.playerStats.pitching[pitcherName] = { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0, h: 0, bb: 0 };
+                        teamRecord.playerStats.pitching[pitcherName] = { 
+                            career: { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0, h: 0, bb: 0 },
+                            gamelogs: []
+                        };
                     }
-                    const careerStats = teamRecord.playerStats.pitching[pitcherName];
+                    const pStats = teamRecord.playerStats.pitching[pitcherName];
+                    const careerStats = pStats.career;
                     
                     if (pitcherData.battersFaced && parseInt(pitcherData.battersFaced) > 0) {
+                        // 通算成績(career)に加算
                         careerStats.games = (careerStats.games || 0) + 1;
                         if (pitcherData.result === 'W') careerStats.w++;
                         if (pitcherData.result === 'L') careerStats.l--;
                         careerStats.ip += parseFloat(pitcherData.innings) || 0;
                         careerStats.so += parseInt(pitcherData.strikeouts) || 0;
                         careerStats.er += parseInt(pitcherData.earnedRuns) || 0;
-                        careerStats.h = (careerStats.h || 0) + parseInt(pitcherData.hits || 0); // ★被安打 加算
-                        careerStats.bb = (careerStats.bb || 0) + parseInt(pitcherData.walks || 0); // ★与四球 加算
+                        careerStats.h = (careerStats.h || 0) + parseInt(pitcherData.hits || 0);
+                        careerStats.bb = (careerStats.bb || 0) + parseInt(pitcherData.walks || 0);
+
+                        // ★ 登板履歴(gamelogs)に「この試合のログ」を追加
+                        pStats.gamelogs.push({
+                            matchId: currentMatchIdForDetails,
+                            round: getRoundNameFromMatchId(currentMatchIdForDetails),
+                            opponent: teamKey === 'team1' ? match.team2 : match.team1,
+                            result: pitcherData.result,
+                            ip: pitcherData.innings,
+                            h: pitcherData.hits,
+                            bb: pitcherData.walks,
+                            so: pitcherData.strikeouts,
+                            r: pitcherData.runs,
+                            er: pitcherData.earnedRuns
+                        });
                     }
                 }
             });
@@ -8498,7 +8369,6 @@ function saveDetailedStats() {
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
-
 
 /**
      * 【修正版】スキップ機能関連
@@ -9341,12 +9211,15 @@ async function setupSpringMainTournament_Round2() {
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
 /**
- * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔（★生の打席結果を渡すように修正）
+ * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔
+ * (★投手の「今大会の全登板履歴(gamelogs)」をAIに渡すよう修正した最終版)
  * @param {string} matchId - 対象の試合ID
  * @param {string} winnerName - 勝者名
+ * @param {string} team1QualityText - 打球品質テキスト
+ * @param {string} team2QualityText - 打球品質テキスト
  * @returns {object} - AIに渡すための全ての情報が詰まったオブジェクト
  */
-function createMatchContext(matchId, winnerName, team1QualityText, team2QualityText) { // ← 引数を追加
+function createMatchContext(matchId, winnerName, team1QualityText, team2QualityText) {
     const dbMatch = findMatchById(matchId);
     if (!dbMatch) return null;
 
@@ -9358,20 +9231,63 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
     }
 
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
+    
+    // ▼▼▼ このブロックをまるごと修正 ▼▼▼
+    // --- 投手の登板履歴(gamelogs)を収集 ---
+    let pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴\n";
+    let relevantLogsFound = false;
+    if (dbMatch.details && dbMatch.details.pitching) {
+        for (const teamKey of ['team1', 'team2']) {
+            const pitchingData = dbMatch.details.pitching[teamKey] || [];
+            pitchingData.forEach(pitcher => {
+                const playerName = pitcher.name;
+                if (!playerName) return;
+                
+                const teamRecord = tournamentState.teamRecords[dbMatch[teamKey]];
+                const pStats = teamRecord?.playerStats?.pitching[playerName];
+                
+                // (gamelogsが存在し、今大会のログがある場合)
+                if (pStats && pStats.gamelogs && pStats.gamelogs.length > 0) {
+                    const currentTournamentKey = tournamentState.currentTournament;
+                    
+                    // 今大会(currentTournament)の、この試合(matchId)「より前」のログを抽出
+                    const previousLogs = pStats.gamelogs.filter(log => {
+                        if (log.matchId === matchId) return false; // この試合自体は除外
+                        
+                        // 大会キーで判定 (summer, autumn, spring)
+                        // （注：gamelogにtournamentKeyを保存するようsaveDetailedStatsを将来的に拡張する必要があるが、
+                        //   現状はラウンド名で簡易的に今大会かを判定する）
+                        const logRound = log.round || '';
+                        if (currentTournamentKey === 'summer') {
+                            return logRound.includes('回戦') || logRound.includes('決勝');
+                        }
+                        if (currentTournamentKey === 'autumn') {
+                            return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                        }
+                        if (currentTournamentKey === 'spring') {
+                            return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                        }
+                        return false;
+                    });
 
-    // ★★★ ここからが変更点 ★★★
-    // generatePlayByPlayTextの呼び出しを削除
-    // const playByPlayText = dbMatch.details ? generatePlayByPlayText(dbMatch) : null;
-
-    // 生の打席結果データを抽出
-    let rawBattingResults = null;
-    if (dbMatch.details && dbMatch.details.batting) {
-        rawBattingResults = {
-            team1: dbMatch.details.batting.team1?.map(p => ({ name: p.name, order: p.order, results: p.results })),
-            team2: dbMatch.details.batting.team2?.map(p => ({ name: p.name, order: p.order, results: p.results }))
-        };
+                    if (previousLogs.length > 0) {
+                        relevantLogsFound = true;
+                        pitcherGamelogInfo += `- ${playerName} (${dbMatch[teamKey]}):\n`;
+                        
+                        // ★★★ .slice(-2) を削除 ★★★
+                        // 直近2試合ではなく、今大会の「全試合」のログを渡す
+                        previousLogs.forEach(log => { 
+                            pitcherGamelogInfo += `  - ${log.round} (対 ${log.opponent}): ${log.ip}回 ${log.r}失点 ${log.so}奪三振\n`;
+                        });
+                    }
+                }
+            });
+        }
     }
-    // ★★★ 変更点はここまで ★★★
+    if (!relevantLogsFound) {
+        pitcherGamelogInfo = ""; // 関連ログがなければセクションごと削除
+    }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     const context = {
         winnerName,
@@ -9383,7 +9299,6 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         winnerDetailedData: DETAILED_TEAM_DATA[winnerName],
         loserDetailedData: DETAILED_TEAM_DATA[loserName],
         playerStatsText: dbMatch.details ? formatPlayerStatsForPrompt(dbMatch) : null,
-                rawBattingResults: rawBattingResults, // ← 新しく追加
         winnerJourney: getCurrentTournamentPerformance(winnerName, matchId),
         loserJourney: getCurrentTournamentPerformance(loserName, matchId),
         winnerLineupChanges: dbMatch.details ? analyzeLineupChanges(winnerName, dbMatch) : "比較データなし",
@@ -9394,22 +9309,13 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         keyPlayerNames: keyPlayerNames,
         calledGame: dbMatch.calledGame,
         calledInning: dbMatch.calledInning,
-rivalryType: dbMatch.rivalryType || null,
-        
-        // ▼▼▼ この2行を追加 ▼▼▼
+        rivalryType: dbMatch.rivalryType || null,
         atmosphere_team1: dbMatch.atmosphere_team1 || null,
         atmosphere_team2: dbMatch.atmosphere_team2 || null,
-        
         schedule: dbMatch.schedule || null,
-        
-        // ▼▼▼ この2行を追加 ▼▼▼
         team1BallQuality: team1QualityText || "（打球品質データなし）",
-        team2BallQuality: team2QualityText || "（打球品質データなし）"
-        // ▲▲▲ 追加ここまで ▲▲▲
-        // ▲▲▲ 追加ここまで ▲▲▲
-        // ▲▲▲ 追加ここまで ▲▲▲
-        
-
+        team2BallQuality: team2QualityText || "（打球品質データなし）",
+        pitcherGamelogInfo: pitcherGamelogInfo // ★登板履歴テキストを追加
     };
     return context;
 }
@@ -10155,7 +10061,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
         winnerData, loserData, winnerDetailedData, loserDetailedData,
         winnerLineupChanges, loserLineupChanges,
         winnerJourney, loserJourney,
-        nextOpponent 
+        nextOpponent, pitcherGamelogInfo // ★ pitcherGamelogInfo を取得
     } = matchContext || {};
     
     let prompt = '';
@@ -10413,6 +10319,7 @@ ${ballQualityText}
 ### **【最重要】この記事の唯一の事実情報源 (ハイライト)**
 ${factListText}
 ---
+${pitcherGamelogInfo}
 ### **参考情報：補足**
 - **前試合からのスタメン変更**:
 ${lineupChangesText}
@@ -10464,6 +10371,9 @@ ${lineupChangesText}
 25. **【★通算成績への言及 (裁量)】**:
         - 「参考情報」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
         - **盗塁が0でも批判は不要です。**
+26. **【★登板履歴への言及 (重要)】**:
+        - **「今大会の主な投手登板履歴」**が提供されている場合、それを参考に記事を執筆すること。
+        - （例：「1回戦で2回無失点と好投した〇〇が、今日も7回から登板し、流れを引き寄せた」）
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
