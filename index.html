@@ -1053,6 +1053,15 @@
         </div>
     </div>
         
+<div class="flex items-center justify-center space-x-4 p-4 mt-4 bg-slate-800/50 rounded-lg">
+            <span class="font-semibold text-white">大会開始時のAI自動生成</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="initial-ai-generation-toggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <span class="ml-3 text-sm font-medium text-gray-300 peer-checked:text-white">ON</span>
+            </label>
+        </div>
+
 <div id="settings-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
@@ -5365,7 +5374,14 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         tournamentState.autumnPhase = 'regional_blocks';
         if (!isNext) {
             tournamentState.tournamentYear = 2025;
-            tournamentState.settings = { enableArticleGeneration: true, enableBbsGeneration: true };
+            // ★★★ 修正箇所 ★★★
+            // スタート画面のトグルから設定を読み込む
+            const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
+            tournamentState.settings = { 
+                enableArticleGeneration: initialAiEnabled, 
+                enableBbsGeneration: initialAiEnabled 
+            };
+            // ★★★ 修正ここまで ★★★
         }
         tournamentState.autumnData = {
             regions: {
@@ -5453,10 +5469,14 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
         tournamentState.teamRecords = {};
         const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
         
-        tournamentState.settings = {
-            enableArticleGeneration: true,
-            enableBbsGeneration: true
+        // ★★★ 修正箇所 ★★★
+        // スタート画面のトグルから設定を読み込む
+        const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
+        tournamentState.settings = { 
+            enableArticleGeneration: initialAiEnabled, 
+            enableBbsGeneration: initialAiEnabled 
         };
+        // ★★★ 修正ここまで ★★★
 
         INITIAL_TEAM_POOL.forEach(t => {
             const historicalRank = historicalRanks.find(hr => hr.name === t);
@@ -5537,10 +5557,8 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     tournamentState.namcoNews = null;
     tournamentState.preGameComments = {};
     tournamentState.matomeThreads = {}; 
-tournamentState.userThreads = [];
+    tournamentState.userThreads = [];
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
-    
     // --- 1. R1 (1回戦) の試合オブジェクトを作成 ---
     const round1Setup = teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
@@ -5701,7 +5719,7 @@ tournamentState.userThreads = [];
     });
     // (R1の割り当てここまで)
 
-    // (R2以降の割り当て。試合オブジェクトが作成済みのため、正しく動作する)
+    // (R2以降の割り当て)
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
         ["7/14", "7/15"], STADIUM_DATA, 2 
@@ -5722,88 +5740,106 @@ tournamentState.userThreads = [];
         Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
         ["7/25"], FINAL_STAGE_STADIUMS, 1 
     );
-    // ▲▲▲ 修正ここまで ▲▲▲
+
+    // ★★★ ここからが修正箇所 ★★★
     
-    // (AI因縁生成 ... 変更なし)
+    // 4. 画面とAIの初期化
     renderTournament(tournamentState); 
-    (async () => {
-        const newFeuds = await generateDynamicFeuds(tournamentState);
-        if (newFeuds && newFeuds.length > 0) {
-            tournamentState.feuds.push(...newFeuds);
-            saveState(); 
-            renderTournament(tournamentState); 
-            const feudTitles = newFeuds.map(f => `「${f.teams[0]} vs ${f.teams[1]} (${f.type})」`).join('、');
-            tournamentState.news.push({
-                title: "【速報】今大会の「因縁の対決」が決定！",
-                body: `大会本部は、AI解説者の分析に基づき、今大会の注目すべき「因縁の対決」を発表した。\n${feudTitles}など、1回戦から目が離せない戦いが続く。`,
-                timestamp: Date.now()
+    
+    // 5. 設定をチェックし、AI生成を実行するか判断
+    if (tournamentState.settings.enableArticleGeneration) {
+        // AIがオンの場合：通常通りAI機能を実行
+        (async () => {
+            const newFeuds = await generateDynamicFeuds(tournamentState);
+            if (newFeuds && newFeuds.length > 0) {
+                tournamentState.feuds.push(...newFeuds);
+                saveState(); 
+                renderTournament(tournamentState); 
+                const feudTitles = newFeuds.map(f => `「${f.teams[0]} vs ${f.teams[1]} (${f.type})」`).join('、');
+                tournamentState.news.push({
+                    title: "【速報】今大会の「因縁の対決」が決定！",
+                    body: `大会本部は、AI解説者の分析に基づき、今大会の注目すべき「因縁の対決」を発表した。\n${feudTitles}など、1回戦から目が離せない戦いが続く。`,
+                    timestamp: Date.now()
+                });
+                renderNews(tournamentState.news);
+            }
+        })();
+
+        saveState(); 
+        renderTournament(tournamentState); 
+
+        const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
+        newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の組み合わせと展望を分析中...</div>`;
+        bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
+        namcoNewsSection.classList.remove('hidden');
+        namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
+
+        let analysisArticlePromise = Promise.resolve(null);
+        let bracketBbsPromise = Promise.resolve(null); 
+
+        if (tournamentState.currentTournament === 'summer') {
+            analysisArticlePromise = generateBracketAnalysisNewsArticle(tournamentState);
+            bracketBbsPromise = generateBracketBbsThread(tournamentState); 
+        } else { 
+            const previewContext = { matchId: 'preview' };
+            analysisArticlePromise = generateNewsArticle(previewContext);
+            bracketBbsPromise = generateBracketReactionComments(tournamentState);
+        }
+
+        try {
+            const topicArticles = await generateTopicSchoolArticles(tournamentState); 
+            if (topicArticles && topicArticles.length > 0) {
+                tournamentState.news.push(...topicArticles); 
+            }
+        } catch (e) {
+            console.error("話題校紹介記事の生成中にエラーが発生しました:", e);
+        }
+
+        const [namcoNews, analysisArticle, bracketBbsResult] = await Promise.all([
+            generateNamcoNews(tournamentState, 'bracket'),
+            analysisArticlePromise,
+            bracketBbsPromise
+        ]);
+
+        if (analysisArticle && !analysisArticle.error) {
+             tournamentState.news.unshift(analysisArticle);
+        } else if (analysisArticle && analysisArticle.error) {
+            tournamentState.news.unshift(analysisArticle);
+        }
+
+        if (bracketBbsResult && !bracketBbsResult.error) {
+            tournamentState.bbsComments.push(bracketBbsResult); 
+        } else if (bracketBbsResult && bracketBbsResult.error) {
+            tournamentState.bbsComments.push({
+                title: bracketBbsResult.title || "組み合わせスレッド生成エラー",
+                body: bracketBbsResult.body || "AIによるスレッド生成に失敗しました。",
+                timestamp: Date.now(),
+                error: true,
+                errorId: bracketBbsResult.errorId || `bracket-thread-error-${Date.now()}`,
+                context: { isBracketThread: true } 
             });
-            renderNews(tournamentState.news);
         }
-    })();
 
-    saveState(); 
-    renderTournament(tournamentState); 
+        if (namcoNews) tournamentState.namcoNews = namcoNews;
 
-    const currentTournamentName = tournamentNameMap[tournamentState.currentTournament];
-    newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の組み合わせと展望を分析中...</div>`;
-    bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
-    namcoNewsSection.classList.remove('hidden');
-    namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
-
-    let analysisArticlePromise = Promise.resolve(null);
-    let bracketBbsPromise = Promise.resolve(null); 
-
-    if (tournamentState.currentTournament === 'summer') {
-        analysisArticlePromise = generateBracketAnalysisNewsArticle(tournamentState);
-        bracketBbsPromise = generateBracketBbsThread(tournamentState); 
-    } else { 
-        const previewContext = { matchId: 'preview' };
-        analysisArticlePromise = generateNewsArticle(previewContext);
-        bracketBbsPromise = generateBracketReactionComments(tournamentState);
+        renderNews(tournamentState.news);
+        renderBbsComments(tournamentState.bbsComments); 
+        renderNamcoNews(tournamentState.namcoNews);
+        saveState();
+        
+    } else {
+        // AIがオフの場合：AI関連の処理をすべてスキップ
+        saveState(); 
+        renderTournament(tournamentState); 
+        
+        // ローダーの代わりにメッセージを表示
+        newsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる自動記事生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
+        bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる掲示板生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
+        namcoNewsSection.classList.add('hidden');
     }
-
-    try {
-        const topicArticles = await generateTopicSchoolArticles(tournamentState); 
-        if (topicArticles && topicArticles.length > 0) {
-            tournamentState.news.push(...topicArticles); 
-        }
-    } catch (e) {
-        console.error("話題校紹介記事の生成中にエラーが発生しました:", e);
-    }
-
-    const [namcoNews, analysisArticle, bracketBbsResult] = await Promise.all([
-        generateNamcoNews(tournamentState, 'bracket'),
-        analysisArticlePromise,
-        bracketBbsPromise
-    ]);
-
-    if (analysisArticle && !analysisArticle.error) {
-         tournamentState.news.unshift(analysisArticle);
-    } else if (analysisArticle && analysisArticle.error) {
-        tournamentState.news.unshift(analysisArticle);
-    }
-
-    if (bracketBbsResult && !bracketBbsResult.error) {
-        tournamentState.bbsComments.push(bracketBbsResult); 
-    } else if (bracketBbsResult && bracketBbsResult.error) {
-        tournamentState.bbsComments.push({
-            title: bracketBbsResult.title || "組み合わせスレッド生成エラー",
-            body: bracketBbsResult.body || "AIによるスレッド生成に失敗しました。",
-            timestamp: Date.now(),
-            error: true,
-            errorId: bracketBbsResult.errorId || `bracket-thread-error-${Date.now()}`,
-            context: { isBracketThread: true } 
-        });
-    }
-
-    if (namcoNews) tournamentState.namcoNews = namcoNews;
-
-    renderNews(tournamentState.news);
-    renderBbsComments(tournamentState.bbsComments); 
-    renderNamcoNews(tournamentState.namcoNews);
-    saveState();
+    // ★★★ 修正ここまで ★★★
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 /**
  * AIに組み合わせ抽選時に「話題校紹介」の記事を数本生成させる
  * (★E, D, C, B, Aランクから各1校ずつ、計5校ピックアップ)
@@ -14725,7 +14761,7 @@ async function startLotteryEvent() {
 
 /**
  * 抽選会のアニメーションを実行する
- * (★第1-4シードの山分け配置に対応した最終版)
+ * (★AIオフ設定に対応)
  * @param {Array<string>} lotteryOrder - 全チームの抽選順 (シード校が先)
  * @param {Array<object>} seeds - シード校8チームのランク付きオブジェクト配列
  */
@@ -14733,6 +14769,11 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     // --- 1. 初期設定 ---
     document.getElementById('lottery-pot').onclick = null;
     document.getElementById('skip-lottery-btn').style.display = 'none';
+    
+    // ★★★ 修正箇所 ★★★
+    // スタート画面のトグルの状態をここで読み込む
+    const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
+    // ★★★ 修正ここまで ★★★
 
     const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
     const drawnTeamContainer = document.getElementById('drawn-team-container');
@@ -14743,30 +14784,21 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const teamPositions = Array(64).fill(null);
     const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56]; // [A頭, B頭, C頭, D頭, ...]
     
-    // ▼▼▼ シード配置スロットの準備 (★山分けロジック適用) ▼▼▼
-    
-    // ランク順にソートされたトップ4シード
+    // ... (シード配置スロットの準備ロジック ... 変更なし) ...
     const rank1_4_teams_sorted = seeds.filter(s => s.rank <= 4).sort((a, b) => a.rank - b.rank);
-
-    // [第1シード, 第2シード, 第4シード, 第3シード] の順に並べ替える
     const rank1_4_teams = [
         rank1_4_teams_sorted[0], // 第1シード
         rank1_4_teams_sorted[1], // 第2シード
         rank1_4_teams_sorted[3], // 第4シード
         rank1_4_teams_sorted[2]  // 第3シード
     ].filter(Boolean);
-    
     const rank5_8_teams = shuffleArray(seeds.filter(s => s.rank > 4));
-    
     const rank1_4_positions = seedPositionsTemplate.slice(0, 4); // [0, 32, 16, 48]
     const rank5_8_positions = shuffleArray(seedPositionsTemplate.slice(4)); // [8, 40, 24, 56] をシャッフル
-    
     let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !seedPositionsTemplate.includes(p));
-    // ▲▲▲ 準備ここまで ▲▲▲
-    
     const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
-    // --- (内部ヘルパー関数: playSound, isStrongRank, checkDeathBlock は変更なし) ---
+    // ... (内部ヘルパー関数: playSound, isStrongRank, checkDeathBlock ... 変更なし) ...
     const playSound = (id) => {
         const soundElement = document.getElementById(id);
         if (soundElement) {
@@ -14789,20 +14821,19 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         }
         return false;
     };
-    // --- (内部ヘルパー関数ここまで) ---
 
 
     // --- 2. 抽選会フェーズ1：シード校の配置 ---
     potNameEl.textContent = "シード校";
     
-    // ▼▼▼ 第1〜第4シードの配置 (固定位置・山分け) ▼▼▼
+    // ... (第1〜第4シードの配置 (固定位置・山分け) ... 変更なし) ...
     for (let i = 0; i < rank1_4_teams.length; i++) {
         const teamName = rank1_4_teams[i].team;
         const teamRank = rank1_4_teams[i].rank;
-        const position = rank1_4_positions[i]; // 順番 [0, 32, 16, 48] に固定位置を取得
+        const position = rank1_4_positions[i]; 
 
         let dreadBg = null;
-        if (isStrongRank(teamName)) {
+        if (isStrongRank(teamName) && initialAiEnabled) { // ★AIがオンの場合のみ演出
             dreadBg = document.createElement('div');
             dreadBg.className = 'dread-mode-bg';
             document.body.appendChild(dreadBg);
@@ -14814,58 +14845,46 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         commentaryEl.textContent = `第${teamRank}シード、${teamName}がクジを引きます...`;
         playSound('sound-drumroll');
         await sleep(1500);
-
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
         teamPositions[position] = teamName;
-
         await sleep(1250);
-
         const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
         targetSlot.querySelector('.team-name-placeholder').textContent = `[${teamRank}] ${teamName}`;
         targetSlot.classList.add('filled', 'highlight'); 
         playSound('sound-cymbal');
-        
         if (dreadBg) {
             dreadBg.remove();
             potEl.classList.remove('dread');
             playSound('sound-gasp');
         }
-        
         commentaryEl.textContent = `第${teamRank}シード、${teamName}は ${position + 1}番に決定！`;
         await sleep(1500);
         drawnTeamContainer.classList.remove('fade-in-out');
         targetSlot.classList.remove('highlight');
     }
-    // ▲▲▲ 第1〜第4シードここまで ▲▲▲
 
-    // ▼▼▼ 第5〜第8シードの配置 (ランダム位置) ▼▼▼
+    // ... (第5〜第8シードの配置 (ランダム位置) ... 変更なし) ...
     for (let i = 0; i < rank5_8_teams.length; i++) {
         const teamName = rank5_8_teams[i].team;
         const teamRank = rank5_8_teams[i].rank;
-        const position = rank5_8_positions[i]; // シャッフル済みの残りのシード位置
-
+        const position = rank5_8_positions[i]; 
         commentaryEl.textContent = `第${teamRank}シード、${teamName}がクジを引きます...`;
         playSound('sound-drumroll');
         await sleep(1500);
-
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
         teamPositions[position] = teamName;
-
         await sleep(1250);
-
         const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
         targetSlot.querySelector('.team-name-placeholder').textContent = `[${teamRank}] ${teamName}`;
         targetSlot.classList.add('filled', 'highlight');
         playSound('sound-cymbal');
-        
         commentaryEl.textContent = `第${teamRank}シード、${teamName}は ${position + 1}番に決定！`;
         await sleep(1500);
         drawnTeamContainer.classList.remove('fade-in-out');
         targetSlot.classList.remove('highlight');
     }
-    // ▲▲▲ 第5〜第8シードここまで ▲▲▲
 
 
     // --- 3. 抽選会フェーズ2：ノーシード校の配置 (ロジック変更なし) ---
@@ -14873,7 +14892,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const nonSeeds = lotteryOrder.filter(t => !seeds.map(s => s.team).includes(t));
     for (const teamName of nonSeeds) {
         let dreadBg = null;
-        if (isStrongRank(teamName)) { // Aランクのノーシード
+        if (isStrongRank(teamName) && initialAiEnabled) { // ★AIがオンの場合のみ演出
             dreadBg = document.createElement('div');
             dreadBg.className = 'dread-mode-bg';
             document.body.appendChild(dreadBg);
@@ -14885,40 +14904,36 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         commentaryEl.textContent = `${teamName}がクジを引きます...`;
         playSound('sound-drumroll');
         await sleep(250);
-
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
-
         const slotIndex = Math.floor(Math.random() * availableNonSeedSlots.length);
         const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
         teamPositions[position] = teamName;
-        
         await sleep(200);
-
         const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
         targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
         targetSlot.classList.add('filled');
         playSound('sound-cymbal');
-        
         if (dreadBg) {
             dreadBg.remove();
             potEl.classList.remove('dread');
             playSound('sound-gasp');
         }
-        
         commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        let didComment = checkDeathBlock(position);
+        
+        let didComment = false;
+        if (initialAiEnabled) { // ★AIがオンの場合のみチェック
+             didComment = checkDeathBlock(position);
+        }
 
         if (!didComment) {
             const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
             if(teamPositions[opponentIndex]) {
                 const opponentName = teamPositions[opponentIndex];
                 const opponentIsSeed = seeds.some(s => s.team === opponentName);
-                
                 const isRival = (isStrongRank(teamName) && opponentIsSeed) || 
                               (['A','B'].includes(calculateRank(teamName, {})) && ['A','B'].includes(calculateRank(opponentName, {})));
-
-                if (isRival) {
+                if (isRival && initialAiEnabled) { // ★AIがオンの場合のみ演出
                     commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
                     playSound('sound-gasp');
                     document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
@@ -14937,14 +14952,20 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     commentaryEl.textContent = '全ての組み合わせが決定しました！';
     await sleep(2000);
     
-    await generateCaptainInterviews(teamPositions);
-    
-    // 最後に、決定した組み合わせ(teamPositions)を渡してトーナメントを生成
-    document.getElementById('lottery-modal').classList.add('hidden');
-    SoundManager.stopBgm();
-    createNewTournament(false, 'summer', teamPositions); 
+    // ★★★ 修正箇所 ★★★
+    // AIがオンの場合のみ、インタビューを生成する
+    if (initialAiEnabled) {
+        await generateCaptainInterviews(teamPositions);
+        // (インタビューモーダル内の「大会を始める」ボタンが createNewTournament を呼ぶ)
+    } else {
+        // AIがオフの場合、インタビューをスキップして即座に大会作成に進む
+        document.getElementById('lottery-modal').classList.add('hidden');
+        SoundManager.stopBgm();
+        createNewTournament(false, 'summer', teamPositions);
+    }
+    // ★★★ 修正ここまで ★★★
 }
-
+// ▲▲▲ 置き換えここまで ▲▲▲
 /**
  * 抽選会後の主将インタビューを生成・表示する（ランク差対応・最終版）
  * @param {Array<string>} teamPositions - 抽選会で決定した最終的なチームの組み合わせ
