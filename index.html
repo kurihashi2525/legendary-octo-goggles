@@ -5238,7 +5238,7 @@ async function generateTopicSchoolArticles(state) {
 /**
  * generateTopicSchoolArticles のヘルパー関数。
  * 1校を選び、ランクに応じたテーマで記事を生成する。
- * (★「第〇シード」表記に対応した最終版)
+ * (★ A/Bランクでも、ノーシード校の場合はAIの指示を変更する最終版 ★)
  * @param {string} teamName - 選ばれたチーム名
  * @param {string} rank - チームランク (A, B, C, D, E)
  * @param {'E' | 'D' | 'C' | 'B' | 'A'} theme - 記事のテーマ
@@ -5250,15 +5250,18 @@ async function createTopicArticle(teamName, rank, theme) {
     const detailedData = DETAILED_TEAM_DATA[teamName];
     const lore = PREFECTURE_LORE; 
 
-    // ▼▼▼ このブロックを修正 ▼▼▼
+    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     
     // 1. ランク記号を日本語の説明に変換 (例: 'A' -> '名門校')
     const rankDescription = getRankDescription(rank); 
     
-    // 2. ★シードランクの文字列を取得 (例: "(第1シード)")
-    const seedRankString = getSeedRankString(teamName, tournamentState.seeds);
+    // 2. ★このチームが「今大会の」シード校か判定★
+    const isSeed = tournamentState.seeds.some(s => s.team === teamName);
+    
+    // 3. ★シード校の場合のみ、シード情報を取得★
+    const seedRankString = isSeed ? getSeedRankString(teamName, tournamentState.seeds) : '';
 
-    // 3. AIに渡すための詳細情報を作成 (ランク説明とシードランクの両方を含める)
+    // 4. AIに渡すための詳細情報を作成 (シードランクは isSeed が true の場合のみ表示)
     let contextInfo = `
 - **チーム名:** ${teamName} ${seedRankString} (${rankDescription})
 - **チーム背景(info):** ${teamData.info || '情報なし'}
@@ -5269,7 +5272,7 @@ async function createTopicArticle(teamName, rank, theme) {
         contextInfo += `- **注目選手:** ${detailedData.players.map(p => `${p.name}(${p.year}年, ${p.pos}) - ${p.desc}`).join('、 ')}\n`;
     }
 
-    // チームの初戦情報を検索
+    // チームの初戦情報を検索 (変更なし)
     const firstMatch = Object.values(tournamentState.matches).find(m => 
         m.id.includes('-R1-') && (m.team1 === teamName || m.team2 === teamName)
     );
@@ -5277,7 +5280,6 @@ async function createTopicArticle(teamName, rank, theme) {
     let firstMatchInfo = '';
     if (firstMatch) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
-        // 相手のランクも日本語の説明 + シードランクに変換
         const opponentRankDesc = getRankDescription(calculateRank(opponentName, tournamentState)); 
         const opponentSeedRank = getSeedRankString(opponentName, tournamentState.seeds);
         
@@ -5293,7 +5295,8 @@ async function createTopicArticle(teamName, rank, theme) {
   - **日程:** ${scheduleInfo}
 `;
     }
-    contextInfo += firstMatchInfo; // チーム情報に初戦情報を連結
+    contextInfo += firstMatchInfo;
+    
     // ▲▲▲ 修正ここまで ▲▲▲
 
     // テーマに応じたプロンプトを作成
@@ -5310,13 +5313,12 @@ ${lore}
 
 `;
 
-    // ▼▼▼ 各テーマの指示文も (ランク説明) に修正 ▼▼▼
+    // ▼▼▼ 各テーマの指示文を (ランク説明) + (シード/ノーシード分岐) に修正 ▼▼▼
     if (theme === 'E') {
         prompt += `
 ### 執筆テーマ：「悲願の初戦突破へ」
 - このチーム（${rankDescription}）の目標は、まず「夏に1勝」することです。
 - そのチームが抱える**特有の事情**（例：浜松特支の創部背景、新居の0勝32敗、川根の最後の夏、虎府島の離島ハンデなど）を**記事の中心**に据えてください。
-- 選手や監督の「まず1勝したい」という**切実な想い**や、チーム一丸となって困難に立ち向かう姿を描写してください。
 `;
     } else if (theme === 'D') {
         prompt += `
@@ -5330,32 +5332,53 @@ ${lore}
 ### 執筆テーマ：「甲子園出場という悲願へ」
 - このチーム（${rankDescription}）の目標は、静岡県の「戦国時代」を勝ち抜き、甲子園に出場することです。
 - チームの中心となる**エースや主軸選手**に焦点を当て、その選手の**苦悩、成長、そして決意**を深く掘り下げてください。
-- 監督との**師弟関係**や、チームメイトとの絆など、**人間ドラマ**を記事の中心に据えてください。
-- 「常識」（ナムコ、新私立強豪、伝統校）の中で、このチームがどのような立ち位置におり、何を背負っているのかを文脈に含めてください。
 `;
-    } else if (theme === 'B') {
-        prompt += `
+    } 
+    
+    // ★★★ ここからが分岐の核心 ★★★
+    
+    else if (theme === 'B') {
+        // ★ Bランク用の指示を、シード校とノーシード校で分岐 ★
+        if (isSeed) {
+            prompt += `
 ### 執筆テーマ：「悲願の甲子園出場へ！そして聖地１勝を」
-- このチーム（${rankDescription}）は、優勝候補に次ぐ「強豪」です。最大の目標は、名門校を倒し、まずは「甲子園出場」の切符を掴むことです。
-- チームの強み（例：強力打線）に焦点を当て、それが甲子園出場、さらにその先の「甲子園での勝利」にどう繋がるかを分析してください。
-- チームのキーマン（例：4番、エース）を取り上げ、彼/彼女の「まずは甲子園に連れて行く」という強い決意を語らせてください。
-- 「常識」の中で、このチームが「新私立強豪」なのか「伝統校」なのかを意識し、その立場からの挑戦を描写してください。
-`;
-    } else if (theme === 'A') {
+- このチーム（${rankDescription}, ${seedRankString}）は、優勝候補に次ぐ「強豪シード校」です。最大の目標は、Aランク校を倒し、まずは「甲子園出場」の切符を掴むことです。`;
+        } else {
+            // ノーシードBランクの場合
+            prompt += `
+### 執筆テーマ：「ノーシードの強豪、下剋上なるか」
+- このチーム（${rankDescription}）は、Bランクの力を持つにも関わらず、「ノーシード」で今大会に臨みます。
+- 序盤からシード校と激突する可能性があり、大会の「ダークホース」または「波乱要因」として注目されています。`;
+        }
+        // (共通の指示)
         prompt += `
+- チームの強み（例：強力打線）に焦点を当て、それが甲子園出場にどう繋がるかを分析してください。
+- チームのキーマン（例：4番、エース）を取り上げ、彼/彼女の決意を語らせてください。`;
+    
+    } else if (theme === 'A') {
+        // ★ Aランク用の指示を、シード校とノーシード校で分岐 ★
+        if (isSeed) {
+            prompt += `
 ### 執筆テーマ：「全国制覇へ、王者のプレッシャー」
-- このチーム（${rankDescription}）は、今大会の「優勝候補筆頭」です。最終目標は「全国制覇」ですが、そのためにはまず「甲子園出場」という最大の関門を突破しなければなりません。
-- **「勝って当然」というプレッシャー**の中で、まずは県大会を勝ち抜くことの難しさを、主将や監督のコメントを通じて描写してください。
-- チームの圧倒的な戦力（例：プロ注目選手）を紹介しつつ、その選手たちが「全国制覇」という目標と「県大会敗退は許されない」という現実の間でどう戦っているかを描写してください。
-- 「常識」の中で、このチームが「ナムコ資本」なのか「伝統校」なのかを明確にし、その立場からの王者の戦いを描写してください。
-`;
+- このチーム（${rankDescription}, ${seedRankString}）は、今大会の「優勝候補筆頭」です。最終目標は「全国制覇」ですが、そのためにはまず「甲子園出場」という最大の関門を突破しなければなりません。`;
+        } else {
+            // ノーシードAランクの場合 (例: 765総合)
+            prompt += `
+### 執筆テーマ：「最強のノーシード、死のブロックの主役」
+- このチーム（${rankDescription}）は、Aランクの力を持つにも関わらず、「ノーシード」で今大会に臨みます。
+- 彼らが入ったブロックは、自動的に「死のブロック」となります。彼らがどのシード校を倒して勝ち上がってくるのか、その「下剋上」の軌跡に焦点を当ててください。`;
+        }
+        // (共通の指示)
+        prompt += `
+- **「勝って当然」というプレッシャー**（シード校の場合）または**「シード校を食う」という挑戦**（ノーシードの場合）とどう戦っているか、主将や監督のコメントを通じて描写してください。
+- チームの圧倒的な戦力（例：プロ注目選手）を紹介してください。`;
     }
+    // ★★★ 分岐ここまで ★★★
 
     prompt += `
 ### 追加指示：初戦の情報【最重要】
 - 記事の最後（締めくくり）に、**【取材データ】にある「初戦情報」**（対戦相手、日程、球場）に必ず言及し、大会への期待感を高めてください。
-- **【★シードランク言及】**: 取材データに「(第1シード)」などの情報が含まれています。記事の本文やタイトルで、**「第1シードの〇〇」**や**「初戦の相手は第8シードの△△」**のように、シードランクにも具体的に言及してください。
-- （例：「${seedRankString || ''}${teamName}の初戦は〇〇日、△△球場での${firstMatchInfo ? firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1 : '□□高校'}戦。彼らの夏が、いよいよ幕を開ける。」）
+- （例：「${seedRankString || ''}${teamName}の初戦は〇〇日、△△球場での${firstMatchInfo ? (firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1) : '□□高校'}戦。彼らの夏が、いよいよ幕を開ける。」）
 
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
@@ -5378,7 +5401,7 @@ ${lore}
                     ...article, 
                     timestamp: Date.now(),
                     isTopicArticle: true, // 話題校紹介フラグ
-                    context: { teamName: teamName, theme: theme, isTopicArticle: true } // ★isTopicArticleフラグをcontextにも追加
+                    context: { teamName: teamName, theme: theme, isTopicArticle: true } 
                 };
             } else {
                  console.error("parseJsonFromText failed for TopicArticle:", rawTextFromAi);
