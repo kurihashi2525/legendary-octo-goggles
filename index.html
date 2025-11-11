@@ -365,7 +365,64 @@
             border-bottom-color: rgba(255, 255, 255, 0.5) !important; /* 下線も白っぽくする */
         }
         /* ▲▲▲ ▲▲▲ */
-
+/* チーム通算成績モーダル（タブ切り替え）のスタイル */
+.team-stats-tab-btn {
+    border-color: transparent;
+    color: #6b7280; /* text-gray-500 */
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    border-bottom-width: 2px;
+}
+.team-stats-tab-btn:hover {
+    color: #1f2937; /* text-gray-800 */
+}
+.team-stats-tab-btn.active {
+    color: #2563eb; /* text-blue-600 */
+    border-color: #2563eb; /* border-blue-600 */
+}
+.team-stats-tab-content.hidden {
+    display: none;
+}
+/* スタメン履歴用のスタイル */
+.lineup-history-tournament {
+    margin-bottom: 1.5rem;
+}
+.lineup-history-title {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 700;
+    color: #1f2937; /* text-gray-800 */
+    border-bottom: 2px solid #e5e7eb; /* border-gray-200 */
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.lineup-history-match {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed #d1d5db; /* border-gray-300 */
+}
+.lineup-history-match:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.lineup-history-match-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e3a8a; /* text-blue-800 */
+    margin-bottom: 0.5rem;
+}
+/* スコアブック風フォントを適用 */
+.lineup-history-list {
+    display: grid;
+    /* 画面幅に応じて列数を自動調整 */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.5rem 1rem;
+    font-family: 'Yuji Syuku', serif; 
+    font-size: 1rem; /* 少しフォントを大きく */
+}
+.lineup-history-list li {
+    padding-left: 0.5rem;
+    white-space: nowrap;
+}
 /* ▼▼▼ このブロックを追加 ▼▼▼ */
      .main-title {
             font-family: 'Yuji Syuku', serif;
@@ -1671,9 +1728,25 @@ graph TD
             <button id="team-stats-modal-close" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
         </div>
         
-        <div id="team-stats-modal-body" class="overflow-y-auto flex-grow space-y-6 p-2">
-            <div class="loader text-center py-16">選手データを読み込み中...</div>
+        <div id="team-stats-modal-body" class="overflow-y-auto flex-grow p-2">
+            <div class="flex border-b mb-4 sticky top-0 bg-white z-10">
+                <button class="team-stats-tab-btn active" data-tab="stats">
+                    通算成績
+                </button>
+                <button class="team-stats-tab-btn" data-tab="lineups">
+                    試合別スタメン
+                </button>
+            </div>
+
+            <div id="team-stats-tab-content-stats" class="team-stats-tab-content space-y-6">
+                <div class="loader text-center py-16">選手データを読み込み中...</div>
+            </div>
+            
+            <div id="team-stats-tab-content-lineups" class="team-stats-tab-content hidden space-y-4">
+                <div class="loader text-center py-16">スタメン履歴を読み込み中...</div>
+            </div>
         </div>
+        
     </div>
 </div>
 
@@ -1685,6 +1758,7 @@ graph TD
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
+        
         <div class="space-y-4">
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">最高戦績</h4>
@@ -1699,19 +1773,17 @@ graph TD
                 <div id="status-modal-traits" class="flex flex-wrap gap-2"></div>
             </div>
             
-</div>
-
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">今大会 チーム成績</h4>
                 <p id="status-modal-team-stats" class="text-lg text-blue-700 font-bold"></p>
             </div>
             
-
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">監督</h4>
                 <div id="status-modal-coach" class="text-gray-700"></div>
             </div>
-            </div>
+        </div>
+        
     </div>
 </div>
 <script type="module">
@@ -3399,6 +3471,11 @@ ${ballQualityText}
 ${atmosphereText}
 ${hadaReportText}
 
+// ▼▼▼ このブロックを挿入 ▼▼▼
+### データ6：今大会の主な投手登板履歴 (この試合より前)
+${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
+// ▲▲▲ 挿入ここまで ▲▲▲
+
 ### 指示
 あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、**勝者の軌跡**、**次の試合情報**を踏まえつつ、以下の点をコメントに含めてください。
 
@@ -3440,7 +3517,15 @@ ${hadaReportText}
 - **【投打の左右の相性】**:
     - 「データ2（常識）」と「データ3（ボックススコア）」にある**投打の左右**にも注目すること。
     - **特に、相手が「左腕（サウスポー）」だった場合**や、監督が**「ワンポイントリリーフ」**を使った場合に、その相性について言及すること。
-
+- **【★スタメン復帰】**: 「データ1：スタメン変更」に「〇〇がスタメン復帰」とあった場合、**「おお、〇〇戻ってきたか！」「ここで使うのは博打だろw」**のように、その選手への期待や不安をコメントに含めること。
+- **【★登板履歴への言及】**: 「データ5：今大会の主な投手登板履歴」に情報がある場合、**「〇〇、1回戦でも投げてたよな」「連投大丈夫か？」**のように、その投手の登板間隔や過去の投球内容にも言及すること。
+// ▼▼▼ 既存の「登板履歴への言及」指示を、以下の詳細な指示ブロックに「置き換え」 ▼▼▼
+- **【★登板履歴への言及 (最重要)】**: 「データ5：今大会の主な投手登板履歴」の情報を必ず確認し、以下の点をコメントに含めること。
+    - **連投/登板間隔**: 「〇〇、昨日も投げてなかったか？」「連投お疲れ様」「中1日でこれはキツイわ」
+    - **酷使**: 「エース投げすぎだろ」「監督は鈴木を壊す気か」
+    - **好不調の波**: 「前回炎上したのによう立ち直ったな」「こないだは良かったのに今日はアカンか」
+    - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「強豪相手でも抑えるとか本物やん」
+// ▲▲▲ 置き換えここまで ▲▲▲
 ### 出力形式【最重要】
 解説や前置きは一切不要です。**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
 \`\`\`json
@@ -4193,6 +4278,105 @@ function swapTeamDetails(matchId) {
     openDetailsModal(matchId); // モーダルを再描画して変更を反映
 }
 
+/**
+ * [新機能] チームの全試合のスタメン履歴をHTMLで生成し、「試合別スタメン」タブに表示する
+ * @param {string} teamName - チーム名
+ */
+function renderStartingLineupHistory(teamName) {
+    const contentEl = document.getElementById('team-stats-tab-content-lineups');
+    if (!contentEl) return;
+    contentEl.innerHTML = '<div class="loader text-center py-16">スタメン履歴を読み込み中...</div>';
+
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord) {
+        contentEl.innerHTML = '<p class="text-center text-red-500">チーム記録が見つかりません。</p>';
+        return;
+    }
+
+    // 1. 全試合データをスキャン
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+
+    // 2. チームが関わり、かつ詳細入力(スタメン)が存在する試合を収集
+    const playedMatches = [];
+    for (const matchId in allMatches) {
+        const match = allMatches[matchId];
+        
+        const teamKey = match.team1 === teamName ? 'team1' : (match.team2 === teamName ? 'team2' : null);
+
+        // 条件：チームが関わっている AND 勝者が決まっている AND 詳細入力がある AND 打撃データがある
+        if (teamKey && 
+            match.winner && 
+            match.details && 
+            match.details.batting &&
+            match.details.batting[teamKey] &&
+            match.details.batting[teamKey].length > 0) 
+        {
+            // 試合IDからラウンド番号を簡易的に抽出
+            let roundSortKey = 0;
+            if (matchId.includes('-R')) {
+                // 'L-R1-M1' -> R1 -> 1
+                roundSortKey = parseInt(matchId.split('-R')[1].split('-')[0]);
+            }
+            if (matchId.startsWith('F-')) {
+                roundSortKey = 100; // 決勝は最後
+            }
+            
+            // TODO: 将来的に大会・年度別のソートキーを追加する
+            // 現状はラウンド順のみでソート
+            playedMatches.push({ ...match, roundSortKey, teamKey });
+        }
+    }
+    
+    // ラウンド順にソート (1回戦, 2回戦...)
+    playedMatches.sort((a, b) => a.roundSortKey - b.roundSortKey);
+
+    if (playedMatches.length === 0) {
+        contentEl.innerHTML = '<p class="text-center text-gray-500">詳細入力されたスタメンの履歴がまだありません。</p>';
+        return;
+    }
+
+    // 3. HTMLを生成 (現状は大会別ではなく、全履歴をラウンド順に表示)
+    // TODO: 将来的に tournamentState.history を参照して大会別にグループ化する
+    let html = `<div class="lineup-history-tournament">
+        <h3 class="lineup-history-title">試合別スタメン履歴</h3>`;
+
+    playedMatches.forEach(match => {
+        const { teamKey, roundSortKey } = match;
+        const opponentName = teamKey === 'team1' ? match.team2 : match.team1;
+        const result = match.winner === teamName ? '〇' : '●';
+        
+        // スコアを正しく取得
+        const scoreTeam = match[teamKey === 'team1' ? 'score1' : 'score2'];
+        const scoreOpp = match[teamKey === 'team1' ? 'score2' : 'score1'];
+        
+        const roundName = getRoundNameFromMatchId(match.id);
+        
+        // スタメンを抽出
+        const battingData = match.details.batting[teamKey] || [];
+        const starters = battingData
+            .filter(p => p.order && !p.order.toString().includes('sub') && parseInt(p.order) >= 1 && parseInt(p.order) <= 9)
+            .sort((a, b) => parseInt(a.order) - parseInt(b.order)); // 打順(1-9)でソート
+
+        if (starters.length > 0) {
+            html += `
+                <div class="lineup-history-match">
+                    <h4 class="lineup-history-match-header">${roundName} vs ${opponentName} (${result} ${scoreTeam}-${scoreOpp})</h4>
+                    <ul class="lineup-history-list">
+                        ${starters.map(p => `<li>${p.order}. [${p.currentPos || p.pos || '?'}] ${p.name}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+    });
+
+    html += `</div>`;
+    contentEl.innerHTML = html;
+}
+
 // ▼▼▼ この関数を <script type="module"> 内に「新規追加」 ▼▼▼
 /**
  * チーム全員の通算成績モーダルの中身を生成・表示する
@@ -4202,15 +4386,20 @@ function swapTeamDetails(matchId) {
 function renderTeamStatsModal(teamName) {
     const modal = document.getElementById('team-stats-modal');
     const modalTitle = document.getElementById('team-stats-modal-title');
-    const modalBody = document.getElementById('team-stats-modal-body');
+    
     const teamRecord = tournamentState.teamRecords[teamName];
 
     modalTitle.textContent = `${teamName} 通算成績`;
+    
+    // ▼▼▼ ここからが修正点 ▼▼▼
+    // 描画対象を、モーダル全体(modalBody)から「通算成績タブ」に変更
+    const statsContentEl = document.getElementById('team-stats-tab-content-stats');
 
     if (!teamRecord || !teamRecord.playerStats) {
-        modalBody.innerHTML = '<p class="text-center text-red-500">選手の成績データが見つかりません。</p>';
+        statsContentEl.innerHTML = '<p class="text-center text-red-500">選手の成績データが見つかりません。</p>';
         return;
     }
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     // --- 0. 現在のソート状態を取得（なければ選手名で昇順） ---
     const sortState = {
@@ -4379,7 +4568,7 @@ function renderTeamStatsModal(teamName) {
         pitchingHtml = `<div class="mt-6"><h4 class="stats-section-title">通算投手成績</h4><p class="text-sm text-gray-500">（通算投手成績なし）</p></div>`;
     }
 
-    modalBody.innerHTML = battingHtml + pitchingHtml;
+    statsContentEl.innerHTML = battingHtml + pitchingHtml;
 }
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
@@ -8081,6 +8270,8 @@ function createPlayerBattingTable(teamName, teamKey, details) {
     `;
 }
 
+
+
 /**
  * 詳細データを保存し、通算成績を更新する
  * (★投手の「登板履歴(gamelogs)」の保存機能を追加した最終版)
@@ -8324,11 +8515,21 @@ function saveDetailedStats() {
                         careerStats.h = (careerStats.h || 0) + parseInt(pitcherData.hits || 0);
                         careerStats.bb = (careerStats.bb || 0) + parseInt(pitcherData.walks || 0);
 
-                        // ★ 登板履歴(gamelogs)に「この試合のログ」を追加
+                       // ★ 登板履歴(gamelogs)に「この試合のログ」を追加 (日付・相手ランク対応)
+                        const opponentName = teamKey === 'team1' ? match.team2 : match.team1;
+                        const opponentRank = opponentName ? calculateRank(opponentName, tournamentState) : 'E';
+                        
                         pStats.gamelogs.push({
                             matchId: currentMatchIdForDetails,
+                            // (1) 試合日 (例: "7/10")
+                            date: match.schedule?.date || '不明', 
+                            // (2) ラウンド名
                             round: getRoundNameFromMatchId(currentMatchIdForDetails),
-                            opponent: teamKey === 'team1' ? match.team2 : match.team1,
+                            // (3) 対戦相手名
+                            opponent: opponentName,
+                            // (4) 対戦相手ランク
+                            opponentRank: opponentRank, 
+                            // (5) 投球内容
                             result: pitcherData.result,
                             ip: pitcherData.innings,
                             h: pitcherData.hits,
@@ -8342,7 +8543,7 @@ function saveDetailedStats() {
             });
         }
     }
-
+// ▲▲▲ 置き換えここまで ▲▲▲
     // (守備成績の集計 ... 変更なし)
     for (const teamKey of ['team1', 'team2']) {
         const fieldingTable = document.getElementById(`fielding-table-${teamKey}`);
@@ -8369,6 +8570,80 @@ function saveDetailedStats() {
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
+
+/**
+ * [新機能] あるチームの、指定された試合ID「以前」の
+ * 全試合のスタメン履歴を時系列で取得する
+ * @param {string} teamName - チーム名
+ * @param {string} currentMatchId - 現在の試合ID (これより前の履歴を取得する)
+ * @returns {Array<object>} - [{ matchId, roundName, starters: [...] }, ...]
+ */
+function getStarterHistory(teamName, currentMatchId) {
+    const history = [];
+    
+    // 1. 全試合データをスキャン
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+    
+    const targetMatch = allMatches[currentMatchId];
+    // 現在の試合のラウンドキーを取得 (例: 1, 2, 100)
+    const currentRoundSortKey = targetMatch?.roundSortKey || getRoundSortKey(currentMatchId);
+
+    // 2. チームが関わり、かつ「現在より前」の試合を収集
+    for (const matchId in allMatches) {
+        // 現在の試合自体は除外
+        if (matchId === currentMatchId) continue;
+        
+        const match = allMatches[matchId];
+        const teamKey = match.team1 === teamName ? 'team1' : (match.team2 === teamName ? 'team2' : null);
+        
+        // 条件：チームが関わっている AND 勝者が決まっている AND 詳細入力がある
+        if (teamKey && match.winner && match.details && match.details.batting && match.details.batting[teamKey]) {
+            
+            const matchRoundSortKey = getRoundSortKey(matchId);
+            
+            // ★現在の試合のラウンドキーより「小さい」試合のみを履歴に追加
+            if (matchRoundSortKey < currentRoundSortKey) {
+                const starters = match.details.batting[teamKey]
+                    .filter(p => p.order && !p.order.toString().includes('sub') && parseInt(p.order) >= 1 && parseInt(p.order) <= 9)
+                    .map(p => p.name); // 名前だけの配列にする
+                
+                history.push({
+                    matchId: matchId,
+                    roundSortKey: matchRoundSortKey,
+                    roundName: getRoundNameFromMatchId(matchId),
+                    starters: starters
+                });
+            }
+        }
+    }
+    
+    // 3. ラウンド順にソートして返す
+    history.sort((a, b) => a.roundSortKey - b.roundSortKey);
+    return history;
+}
+
+/**
+ * 試合IDからソート用の数値キーを取得する (getStarterHistoryのヘルパー)
+ */
+function getRoundSortKey(matchId) {
+    if (!matchId) return 999;
+    if (matchId.includes('-R')) {
+        // 'L-R1-M1' -> 1
+        return parseInt(matchId.split('-R')[1].split('-')[0]);
+    }
+    if (matchId.startsWith('F-')) {
+        return 100; // 決勝
+    }
+    if (matchId.includes('-SB') || matchId.includes('-SREP') || matchId.includes('-SIZU') || matchId.includes('AUTUMN')) {
+        return -1; // 地区予選は本戦より前
+    }
+    return 999;
+}
+// ▲▲▲ 貼り付けここまで ▲▲▲
 
 /**
      * 【修正版】スキップ機能関連
@@ -9232,10 +9507,23 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
 
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
     
-    // ▼▼▼ このブロックをまるごと修正 ▼▼▼
+   // ▼▼▼ このブロックをまるごと置き換える ▼▼▼
     // --- 投手の登板履歴(gamelogs)を収集 ---
-    let pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴\n";
+    let pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴 (この試合より前)\n";
     let relevantLogsFound = false;
+
+    // ヘルパー関数: 日付文字列 ("7/10") から日付オブジェクトを簡易生成
+    const parseDate = (dateStr) => {
+        if (!dateStr || !dateStr.includes('/')) return null;
+        const [month, day] = dateStr.split('/').map(Number);
+        // 年は現在の大会年度を仮定 (月が1-3月の場合は翌年扱い)
+        const year = tournamentState.tournamentYear + (month <= 3 ? 1 : 0);
+        return new Date(year, month - 1, day);
+    };
+
+    // この試合の「今日」の日付を取得
+    const today = parseDate(dbMatch.schedule?.date);
+
     if (dbMatch.details && dbMatch.details.pitching) {
         for (const teamKey of ['team1', 'team2']) {
             const pitchingData = dbMatch.details.pitching[teamKey] || [];
@@ -9246,17 +9534,14 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                 const teamRecord = tournamentState.teamRecords[dbMatch[teamKey]];
                 const pStats = teamRecord?.playerStats?.pitching[playerName];
                 
-                // (gamelogsが存在し、今大会のログがある場合)
                 if (pStats && pStats.gamelogs && pStats.gamelogs.length > 0) {
                     const currentTournamentKey = tournamentState.currentTournament;
                     
-                    // 今大会(currentTournament)の、この試合(matchId)「より前」のログを抽出
+                    // 今大会の、この試合「より前」のログを抽出
                     const previousLogs = pStats.gamelogs.filter(log => {
                         if (log.matchId === matchId) return false; // この試合自体は除外
                         
-                        // 大会キーで判定 (summer, autumn, spring)
-                        // （注：gamelogにtournamentKeyを保存するようsaveDetailedStatsを将来的に拡張する必要があるが、
-                        //   現状はラウンド名で簡易的に今大会かを判定する）
+                        // (簡易的な大会判定ロジック - 夏/秋/春をまたがない前提)
                         const logRound = log.round || '';
                         if (currentTournamentKey === 'summer') {
                             return logRound.includes('回戦') || logRound.includes('決勝');
@@ -9274,20 +9559,49 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                         relevantLogsFound = true;
                         pitcherGamelogInfo += `- ${playerName} (${dbMatch[teamKey]}):\n`;
                         
-                        // ★★★ .slice(-2) を削除 ★★★
-                        // 直近2試合ではなく、今大会の「全試合」のログを渡す
-                        previousLogs.forEach(log => { 
-                            pitcherGamelogInfo += `  - ${log.round} (対 ${log.opponent}): ${log.ip}回 ${log.r}失点 ${log.so}奪三振\n`;
+                        // 登板履歴を日付順にソート (万が一順不同でも大丈夫なように)
+                        previousLogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        
+                        previousLogs.forEach(log => {
+                            let dateInfo = log.date || '日付不明';
+                            
+                            // ★「中〇日」の計算★
+                            if (today) {
+                                const logDate = parseDate(log.date);
+                                if (logDate) {
+                                    // 日付の差分を計算 (ミリ秒 -> 日)
+                                    const diffTime = Math.abs(today - logDate);
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays === 1) {
+                                        dateInfo = `${log.date} (連投)`; // 翌日
+                                    } else if (diffDays === 2) {
+                                        dateInfo = `${log.date} (中1日)`;
+                                    } else if (diffDays > 0) {
+                                        dateInfo = `${log.date} (中${diffDays - 1}日)`;
+                                    }
+                                }
+                            }
+
+                            // ★相手ランクを追加★
+                            const opponentRank = log.opponentRank || 'E';
+                            
+                            // ★勝敗Sマークを追加★
+                            const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
+                            
+                            // (例: - 1回戦 (7/10, 中2日) (対 浜松特支 [E]): ○ 5回 3安打 1四球 10奪三振 0失点(自責0))
+                            pitcherGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
                         });
                     }
                 }
+// ▲▲▲ 置き換えここまで ▲▲▲
             });
         }
     }
     if (!relevantLogsFound) {
-        pitcherGamelogInfo = ""; // 関連ログがなければセクションごと削除
+        pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴\n- この試合に出場した投手は、全員今大会これが初登板です。\n";
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
+    // ▲▲▲ 置き換えここまで ▲▲▲
 
     const context = {
         winnerName,
@@ -9321,54 +9635,74 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
 }
 
 /**
- * 前試合と今試合のスタメンを比較し、変更点を要約する
+ * [新ロジック] 前試合とのスタメンを比較し、「復帰」「初スタメン」「スタメン落ち」を分析する
  * @param {string} teamName - 分析対象のチーム名
  * @param {object} dbMatch - 現在の試合オブジェクト
- * @returns {string} - 変更点をまとめた短いテキスト
+ * @returns {string} - 変更点をまとめた短いテキスト (例: "鈴木がスタメン復帰、田中が今大会初スタメン")
  */
 function analyzeLineupChanges(teamName, dbMatch) {
-    const teamRecord = tournamentState.teamRecords[teamName];
-    if (!teamRecord || !teamRecord.previousStarters) {
-        return "今大会初戦のため、比較なし。";
-    }
-
     const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
-    const previousStarters = teamRecord.previousStarters;
-    const currentStarters = dbMatch.details.batting[teamKey].filter(p => p.order && !p.order.toString().includes('sub'));
-
-    if (previousStarters.length === 0 || currentStarters.length === 0) return "比較データなし。";
-    
-    let changes = [];
-    const prevPlayerMap = new Map(previousStarters.map(p => [p.name, p]));
-    const currentPlayerMap = new Map(currentStarters.map(p => [p.name, p]));
-
-    // 1. スタメンから外れた選手を検出
-    for (const prevPlayer of previousStarters) {
-        if (!currentPlayerMap.has(prevPlayer.name)) {
-            changes.push(`${prevPlayer.order}番の${prevPlayer.name}がスタメン落ち`);
-        }
+    if (!dbMatch.details || !dbMatch.details.batting || !dbMatch.details.batting[teamKey]) {
+        return "比較データなし";
     }
 
-    // 2. 新しくスタメンに入った選手や、打順が変わった選手を検出
-    for (const currPlayer of currentStarters) {
-        const prevPlayer = prevPlayerMap.get(currPlayer.name);
-        if (!prevPlayer) {
-            changes.push(`${currPlayer.order}番に${currPlayer.name}が新しくスタメン入り`);
-        } else {
-            if (currPlayer.order !== prevPlayer.order) {
-                changes.push(`${currPlayer.name}が${prevPlayer.order}番から${currPlayer.order}番に打順変更`);
+    // 1. 現在のスタメンを取得
+    const currentStarters = dbMatch.details.batting[teamKey]
+        .filter(p => p.name && p.order && !p.order.toString().includes('sub'))
+        .map(p => p.name);
+    
+    // 2. 「これまでの全試合」のスタメン履歴を取得
+    const history = getStarterHistory(teamName, dbMatch.id);
+
+    // 3. 履歴がない場合 (今大会初戦)
+    if (history.length === 0) {
+        return "今大会初スタメン。";
+    }
+
+    // 4. 履歴から「直前の試合のスタメン」と「過去に一度でもスタメンだったか」のリストを作成
+    const lastGameStarters = new Set(history[history.length - 1].starters);
+    const allPastStarters = new Set(history.flatMap(game => game.starters));
+
+    const changes = [];
+
+    // 5. 現在のスタメンを分析
+    currentStarters.forEach(playerName => {
+        if (!lastGameStarters.has(playerName)) {
+            // 直前の試合にいなかった
+            if (allPastStarters.has(playerName)) {
+                // ...でも過去にはスタメンだった → 復帰
+                changes.push(`${playerName}がスタメン復帰`);
+            } else {
+                // ...かつ過去にも一度もスタメンでない → 今大会初
+                changes.push(`${playerName}が今大会初スタメン`);
             }
         }
-    }
-    
+    });
+
+    // 6. 直前のスタメンを分析
+    lastGameStarters.forEach(playerName => {
+        if (!currentStarters.includes(playerName)) {
+            // 直前の試合にいたのに、現在はいない → スタメン落ち
+            changes.push(`${playerName}がスタメン落ち`);
+        }
+    });
+
     if (changes.length === 0) {
         return "前試合からスタメン変更なし。";
     }
     
-    // AIに渡す情報が多すぎないよう、主な変更点に絞る
-    return `主な変更点: ${changes.slice(0, 3).join('、')}。`;
-}
+    // 変更点を「復帰」→「初スタメン」→「落ち」の順に並べ替えて分かりやすくする
+    changes.sort((a, b) => {
+        if (a.includes('復帰')) return -1;
+        if (b.includes('復帰')) return 1;
+        if (a.includes('初スタメン')) return -1;
+        if (b.includes('初スタメン')) return 1;
+        return 0;
+    });
 
+    return `主な変更点: ${changes.join('、')}。`;
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
 /**
  * 打席結果の文字列を、シミュレーションで使える日本語とデータに変換する
  */
@@ -9984,6 +10318,10 @@ ${highlightsText}
 ${playerStatsText}
 ${ballQualityText} 
 
+// ▼▼▼ このブロックを挿入 ▼▼▼
+### データ3：今大会の主な投手登板履歴 (この試合より前)
+${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
+// ▲▲▲ 挿入ここまで ▲▲▲
 ### 執筆指示
 1.  **一人称で書く:** 必ず「私」を主語にし、個人的な感想（～驚きました、～でしょうね）を交えてください。
 2.  **現場の空気感:** 試合当日の球場の雰囲気（観客の多さ、天候など）を描写してください。
@@ -10007,7 +10345,12 @@ ${ballQualityText}
 17. **【★盗塁への言及 (重要)】**:
     - 「データ2（ボックススコア）」に**盗塁(SB)**が記録されている選手がいた場合、その選手の機動力についても、あなたの視点で分析に含めること。
     - **盗塁が0でも批判は不要です。**
-
+18.  **【★スタメン復帰】**: 「スタメン変更」情報（取材メモ外の別データとして提供）に「〇〇がスタメン復帰」とあった場合、**「監督の賭けが当たった」**という視点で、その選手の活躍（あるいは不振）をあなたの主観で分析してください。
+19.  **【★登板履歴への言及】**: 「データ3：今大会の主な投手登板履歴」が提供されている場合、その情報（例：連投の疲れ、前回の雪辱）もあなたの分析に加えてください。
+// ▼▼▼ この 2 つの指示ブロックを追加 (番号は 10, 11 になります) ▼▼▼
+20. **【連投・酷使の分析】**: 「データ3：登板履歴」を見て、もし投手が「連投」や「中1日」であったり、今大会で「投げすぎ（酷使）」の状態であったりした場合、それが今日の投球にどう影響したか、あなたの鋭い視点で分析してください。（例：「昨日120球を投げた腕で、今日も140km/hを計測するとは…彼の肩は一体どうなっているんだ」）
+21. **【雪辱と真価】**: もし投手が「登板履歴」で「前回炎上」していた場合、今日の投球が「雪辱」のマウンドであったことに触れてください。逆に、これまで「格下相手」にしか投げていなかった場合、今日の試合が「真価を問うマウンド」であったと分析してください。
+// ▲▲▲ 追加ここまで ▲▲▲
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
 - **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
@@ -10319,7 +10662,10 @@ ${ballQualityText}
 ### **【最重要】この記事の唯一の事実情報源 (ハイライト)**
 ${factListText}
 ---
-${pitcherGamelogInfo}
+// ▼▼▼ このブロックを挿入 ▼▼▼
+### 今大会の主な投手登板履歴 (この試合より前)
+${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
+// ▲▲▲ 挿入ここまで ▲▲▲
 ### **参考情報：補足**
 - **前試合からのスタメン変更**:
 ${lineupChangesText}
@@ -10374,6 +10720,18 @@ ${lineupChangesText}
 26. **【★登板履歴への言及 (重要)】**:
         - **「今大会の主な投手登板履歴」**が提供されている場合、それを参考に記事を執筆すること。
         - （例：「1回戦で2回無失点と好投した〇〇が、今日も7回から登板し、流れを引き寄せた」）
+// ▼▼▼ この 1 行を追加 ▼▼▼
+27.  **【★スタメン復帰】**: 「スタメン変更」情報に「〇〇がスタメン復帰」という記述があった場合、その選手が**試合の鍵を握る人物**として、特にドラマチックに描写してください。（例：「2試合ぶりにスタメン復帰した〇〇が、監督の期待に応えた」）
+// ▲▲
+28. **【★投手の登板履歴 (最重要)】**:
+    - 「今大会の主な投手登板履歴」(${pitcherGamelogInfo ? '情報あり' : '情報なし'}) を**必ず確認**してください。
+    - **連投/登板間隔**: もし投手が昨日や一昨日にも登板している場合、その「連投」や「中1日」の状況が投球にどう影響したかを必ず分析してください。（例：「連投の疲れからか、今日は球威がなかった」「中1日にも関わらず快投を見せた」）
+    - **酷使度**: もし投手が今大会で既に多くのイニングを投げている場合、その「酷使」が今日の試合にどう影響したか（例：「今大会既に30イニングを投げているエースは、終盤に力尽きた」）を分析してください。
+29. **【★投手の好不調の波 (重要)】**:
+    - 「登板履歴」を見て、その投手が今大会で「尻上がりに調子を上げている」のか、「前回炎上からの雪辱を果たした」のか、「前回は好投したが今日は打たれた」のか、その**パフォーマンスの波**を分析してください。
+30. **【★対戦相手の質 (裁量)】**:
+    - もし「登板履歴」で、過去の対戦相手が「格下」ばかりで、今回初めて「強豪」と対戦した場合、その「真価が問われるマウンド」であったことを描写してください。
+// ▲▲▲ 追加ここまで ▲▲▲
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -10709,6 +11067,10 @@ ${rivalryText}
 ${ballQualityText} 
 ### 試合の主なハイライト
 ${highlightsText}
+// ▼▼▼ このブロックを挿入 ▼▼▼
+### 今大会の主な投手登板履歴 (この試合より前)
+${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
+// ▲▲▲ 挿入ここまで ▲▲▲
 ### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
@@ -10716,6 +11078,7 @@ ${specialNarrativeContext}
 ### あなたがなりきるべきキャラクターと指示
 - **【常識の反映】**: あなたが熟知している「常識」（勢力図）を考慮し、この勝利/敗北がどのような意味を持つか（例：順当、波乱）を文脈に含めてください。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
+- **【★登板履歴への言及】**: 「今大会の主な投手登板履歴」に情報がある場合、**「〇〇、連投じゃん」「前の試合はイマイチだったが...」**のように、登板履歴を踏まえたコメントをすること。
 - **【★今大会の成績 (最重要)】**:
     - 「チームの背景」に**『今大会のチーム打率は.XXX』**という情報が含まれています。
     - この情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」「打率3割超えの打線相手によく抑えたわ」）にも言及してください。
@@ -10744,6 +11107,12 @@ ${specialNarrativeContext}
     - 「試合のハイライト」や「チーム別 打球品質」にある**打球の質**（「鋭い当たり」「詰まった当たり」）にも言及すること。
 - **【投打の左右の相性】**:
     - もし相手投手が**左腕（サウスポー）**であったり、**戦術的に重要な場面**であったりした場合は、投打の左右の相性についてもコメントすること。
+- **【★スタメン復帰】**: 「スタメン変更」情報に「〇〇がスタメン復帰」とあった場合、**「〇〇、スタメン復帰ｷﾀ――(ﾟ∀ﾟ)――!!」「ここで復帰させるのはアツい」**のように、その采配に注目すること。
+- **【★登板履歴への言及 (最重要)】**: 「今大会の主な投手登板履歴」の情報を必ず確認し、以下の点をコメントに含めること。
+    - **連投/登板間隔**: 「〇〇、連投じゃん」「中1日でこれはキツイ」
+    - **酷使**: 「エース投げすぎだろ」「監督は鈴木を壊す気か」
+    - **好不調の波**: 「前回炎上したのによう立ち直ったな」「こないだは良かったのに今日はアカンか」
+    - **相手の質**: 「今ま
 ### 出力形式
 【最重要】必ず以下のJSON配列形式"のみ"で出力してください。
 [ {"personality": "（キャラクター名）", "comment": "（生成したコメント）"} ]`;
@@ -14504,8 +14873,6 @@ skipSpringMainBtn.addEventListener('click', async () => {
 
 document.body.addEventListener('click', async (e) => {
 
-
-
     // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
         const teamSlot = e.target.closest('.team-slot');
@@ -14534,63 +14901,57 @@ document.body.addEventListener('click', async (e) => {
         await processMatchWin(matchId, winnerName);
     }
 
-// --- 「勢力図をアニメーションで見る」ボタン（モーダルを開く） ---
-    else if (e.target.matches('.view-analysis-btn')) {
+    // --- 「勢力図をアニメーションで見る」ボタン ---
+    if (e.target.matches('.view-analysis-btn')) {
         document.getElementById('analysis-modal').classList.remove('hidden');
-        currentBlock = 'A'; // 初期表示はAブロック
+        currentBlock = 'A';
         playBlockAnimation(currentBlock);
     }
-    // --- 【新しく追加】勢力図モーダル内のタブボタン ---
-    else if (e.target.matches('.analysis-block-tab-btn')) {
+    
+    // --- 勢力図モーダル内のタブボタン ---
+    if (e.target.matches('.analysis-block-tab-btn')) {
         const blockId = e.target.dataset.block;
         if (blockId && blockId !== currentBlock) {
             currentBlock = blockId;
-            playBlockAnimation(currentBlock);
+            playBlockAnimation(blockId);
         }
     }
+    
     // --- 勢力図モーダルを閉じるボタン ---
-    else if (e.target.matches('#analysis-modal-close-btn')) {
+    if (e.target.matches('#analysis-modal-close-btn')) {
         document.getElementById('analysis-modal').classList.add('hidden');
     }
+
     // --- 試合詳細入力ボタン ---
-    else if (e.target.matches('.details-btn')) {
+    if (e.target.matches('.details-btn')) {
         openDetailsModal(e.target.dataset.matchId);
     }
 
     // --- 【詳細モーダル内】イニング追加ボタン ---
-    else if (e.target.matches('.add-inning-btn') || e.target.matches('#add-inning-score-btn')) {
+    if (e.target.matches('.add-inning-btn') || e.target.matches('#add-inning-score-btn')) {
         e.preventDefault();
         addExtraInning();
     }
 
-// --- 【詳細モーダル内】守備ファインプレーを追加ボタン ---
-    else if (e.target.matches('.add-fielding-play-btn')) {
+    // --- 【詳細モーダル内】守備ファインプレーを追加ボタン ---
+    if (e.target.matches('.add-fielding-play-btn')) {
         e.preventDefault();
         const teamKey = e.target.dataset.teamKey;
-
-        // ▼▼▼ ここからが安全装置付きのコード ▼▼▼
-        // 1. まず、両方のテーブル要素を探しに行く
         const fieldingTableEl = document.getElementById(`fielding-table-${teamKey}`);
         const battingTableEl = document.getElementById(`batting-table-${teamKey}`);
         
-        // 2. どちらか一つでも見つからなかったら、エラーを通知して処理を中断
         if (!fieldingTableEl || !battingTableEl) {
-            console.error(`エラー: ${teamKey} の fielding-table (${fieldingTableEl}) または batting-table (${battingTableEl}) が見つかりません。`);
-            console.error("HTML側のid定義 (createFieldingTable, createPlayerBattingTable) にタイプミスがないか確認してください。");
+            console.error(`エラー: ${teamKey} の fielding-table または batting-table が見つかりません。`);
             alert("致命的なエラー：テーブル要素が見つかりません。コンソールを確認してください。");
             return;
         }
         
-        // 3. 両方見つかった場合のみ、安全に処理を続行
         const tableBody = fieldingTableEl.querySelector('tbody');
-        // ▲▲▲ 安全装置ここまで ▲▲▲
-
-        // 選手リストを取得
         const playersOnField = Array.from(battingTableEl.querySelectorAll('.player-name')).map(input => ({name: input.value.trim()})).filter(p => p.name);
         const playerOptions = playersOnField.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
         
         const newRow = tableBody.insertRow();
-        newRow.dataset.fieldingIndex = tableBody.rows.length; // 新しいインデックス
+        newRow.dataset.fieldingIndex = tableBody.rows.length;
         newRow.innerHTML = `
             <td class="w-16"><input type="number" class="fielding-inning" min="1"></td>
             <td>
@@ -14605,50 +14966,64 @@ document.body.addEventListener('click', async (e) => {
             </td>
         `;
     }
+
     // --- 【詳細モーダル内】守備ファインプレーを削除ボタン ---
-    else if (e.target.matches('.remove-fielding-play-btn')) {
+    if (e.target.matches('.remove-fielding-play-btn')) {
         e.preventDefault();
         e.target.closest('tr').remove();
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    
+
     // --- 天候ボタン ---
-    else if (e.target.matches('.weather-btn')) {
+    if (e.target.matches('.weather-btn')) {
         const weatherType = e.target.dataset.weather;
         setWeather(weatherType);
     }
 
-// --- 「チーム通算成績」ボタン（トーナメント表の 📊 ボタン） ---
-    else if (e.target.matches('.show-team-stats-btn')) {
+    // --- 「チーム通算成績」ボタン（トーナメント表の 📊 ボタン） ---
+    if (e.target.matches('.show-team-stats-btn')) {
         e.preventDefault();
         const teamName = e.target.dataset.teamName;
         if (!teamName) return;
-
-        // モーダルの中身を生成
-        renderTeamStatsModal(teamName);
-        
-        // モーダルを表示
+        renderTeamStatsModal(teamName); // 統計タブの中身だけ先に描画
         document.getElementById('team-stats-modal').classList.remove('hidden');
         document.getElementById('team-stats-modal').classList.add('flex');
     }
-    
+
     // --- チーム通算成績モーダルを閉じるボタン ---
-    else if (e.target.matches('#team-stats-modal-close')) {
+    if (e.target.matches('#team-stats-modal-close')) {
         e.preventDefault();
         document.getElementById('team-stats-modal').classList.add('hidden');
         document.getElementById('team-stats-modal').classList.remove('flex');
     }
 
-// ★★★ ソート機能（ヘッダーTHクリック） ★★★
-    else if (e.target.matches('.sortable-header')) {
+    // --- [新機能] チーム通算成績モーダルのタブ切り替え ---
+    if (e.target.matches('.team-stats-tab-btn')) {
+        e.preventDefault();
+        const btn = e.target;
+        if (btn.classList.contains('active')) return;
+        const modal = btn.closest('#team-stats-modal');
+        const tabId = btn.dataset.tab;
+        const teamName = modal.querySelector('#team-stats-modal-title').textContent.split(' ')[0];
+        modal.querySelectorAll('.team-stats-tab-btn').forEach(b => b.classList.remove('active'));
+        modal.querySelectorAll('.team-stats-tab-content').forEach(c => c.classList.add('hidden'));
+        btn.classList.add('active');
+        const contentEl = document.getElementById(`team-stats-tab-content-${tabId}`);
+        contentEl.classList.remove('hidden');
+        if (tabId === 'lineups') {
+            if (contentEl.querySelector('.loader')) {
+                renderStartingLineupHistory(teamName);
+            }
+        }
+    }
+
+    // --- ★★★ ソート機能（ヘッダーTHクリック） ★★★ ---
+    if (e.target.matches('.sortable-header')) {
         e.preventDefault();
         const header = e.target.closest('.sortable-header');
         const modal = e.target.closest('#team-stats-modal');
-        
-        const tableType = header.dataset.tableType; // 'batting' or 'pitching'
+        const tableType = header.dataset.tableType;
         const newSortKey = header.dataset.sortKey;
         const teamName = document.getElementById('team-stats-modal-title').textContent.split(' ')[0];
-
         let currentKey, currentDir;
         if (tableType === 'batting') {
             currentKey = modal.dataset.sortKeyBatting;
@@ -14657,14 +15032,10 @@ document.body.addEventListener('click', async (e) => {
             currentKey = modal.dataset.sortKeyPitching;
             currentDir = modal.dataset.sortDirPitching;
         }
-
-        let newSortDir = 'desc'; // デフォルトは降順
-        // もし同じキーがクリックされ、かつ既に降順なら、昇順に切り替える
+        let newSortDir = 'desc';
         if (newSortKey === currentKey && currentDir === 'desc') {
             newSortDir = 'asc';
         }
-
-        // モーダルのdatasetに新しいソート状態を保存
         if (tableType === 'batting') {
             modal.dataset.sortKeyBatting = newSortKey;
             modal.dataset.sortDirBatting = newSortDir;
@@ -14672,168 +15043,103 @@ document.body.addEventListener('click', async (e) => {
             modal.dataset.sortKeyPitching = newSortKey;
             modal.dataset.sortDirPitching = newSortDir;
         }
-
-        // モーダルの中身をソートした状態で再描画
         renderTeamStatsModal(teamName);
     }
-    // ★★★ ソート機能ここまで ★★★
 
-   // document.body.addEventListener('click', ...) 内の、まとめサイト関連の if ブロックを全てこれで置き換える
-// --- 「個人通算成績」ボタン（モーダルを開く） ---
-    else if (e.target.matches('.show-player-stats-btn')) {
+    // --- 「個人通算成績」ボタン（モーダルを開く） ---
+    if (e.target.matches('.show-player-stats-btn')) {
         e.preventDefault();
         const btn = e.target;
         const teamName = btn.dataset.teamName;
-        const orderKey = btn.dataset.playerOrderKey; // "1" や "1-sub-1"
-        
-        // ★★★ 押されたボタンと同じ行の「.player-name」入力欄から「最新の」選手名を取得
         const row = btn.closest('tr');
         const playerNameInput = row.querySelector('.player-name');
-        
-        if (!playerNameInput) {
-            alert('エラー: 選手名入力欄が見つかりません。');
-            return;
-        }
-        
+        if (!playerNameInput) { alert('エラー: 選手名入力欄が見つかりません。'); return; }
         const playerName = playerNameInput.value.trim();
-        
-        if (!playerName) {
-            alert('選手名が入力されていません。');
-            return;
-        }
-
-        // モーダルの中身を生成
+        if (!playerName) { alert('選手名が入力されていません。'); return; }
         renderCareerStatsModal(playerName, teamName);
-        
-        // モーダルを表示
         document.getElementById('player-stats-modal').classList.remove('hidden');
         document.getElementById('player-stats-modal').classList.add('flex');
     }
-    
+
     // --- 個人通算成績モーダルを閉じるボタン ---
-    else if (e.target.matches('#player-stats-modal-close')) {
+    if (e.target.matches('#player-stats-modal-close')) {
         e.preventDefault();
         document.getElementById('player-stats-modal').classList.add('hidden');
         document.getElementById('player-stats-modal').classList.remove('flex');
     }
-// ▼▼▼ この else if ブロックをまるごと追加 ▼▼▼
+
     // --- 【詳細モーダル内】「打順からコピー」ボタン（投手） ---
-    else if (e.target.matches('.copy-pitchers-from-batting-btn')) {
+    if (e.target.matches('.copy-pitchers-from-batting-btn')) {
         e.preventDefault();
         const teamKey = e.target.dataset.teamKey;
-        
-        // 1. 打撃テーブル(battingTable)を特定
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
-        if (!battingTable) {
-            alert('打撃テーブルが見つかりません。');
-            return;
-        }
-
-        // 2. 投手テーブル(pitchingTable)を特定
+        if (!battingTable) { alert('打撃テーブルが見つかりません。'); return; }
         const pitchingTableBody = document.getElementById(`pitching-table-${teamKey}`)?.querySelector('tbody');
-        if (!pitchingTableBody) {
-            alert('投手テーブルが見つかりません。');
-            return;
-        }
-
-        // 3. 打撃テーブルから「投」の選手をスキャン
+        if (!pitchingTableBody) { alert('投手テーブルが見つかりません。'); return; }
         const pitchersInBatting = [];
         battingTable.querySelectorAll('tbody tr').forEach(row => {
             const posSelect = row.querySelector('.player-pos');
             const nameInput = row.querySelector('.player-name');
             const throwBatSelect = row.querySelector('.player-throw-bat');
-            
-            // 守備位置が「投」で、名前が入力されている選手をリストアップ
             if (posSelect && posSelect.value === '投' && nameInput && nameInput.value.trim() !== '') {
-                pitchersInBatting.push({
-                    name: nameInput.value.trim(),
-                    throwBat: throwBatSelect ? throwBatSelect.value : ''
-                });
+                pitchersInBatting.push({ name: nameInput.value.trim(), throwBat: throwBatSelect ? throwBatSelect.value : '' });
             }
         });
-
         if (pitchersInBatting.length === 0) {
             alert('打撃テーブルに「投」と設定された選手が見つかりません。\n先に打撃テーブルの「守備」欄を「投」に設定してください。');
             return;
         }
-
-        // 4. 投手テーブルの行を更新
         const pitchingRows = pitchingTableBody.querySelectorAll('tr');
         let updatedCount = 0;
-        
         pitchersInBatting.forEach((pitcher, index) => {
             if (pitchingRows[index]) {
-                // 既存の行（または空の行）に名前と投打を自動入力
                 const nameInput = pitchingRows[index].querySelector('.pitcher-name');
                 const throwBatSelect = pitchingRows[index].querySelector('.pitcher-throw-bat');
-                
                 if (nameInput) nameInput.value = pitcher.name;
                 if (throwBatSelect) throwBatSelect.value = pitcher.throwBat;
                 updatedCount++;
             }
-            // (もし投手テーブルの行が足りない場合、自動で追加するロジックもここに追加可能)
         });
-        
         alert(`${updatedCount}人の投手を打撃テーブルからコピーしました。`);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-// ▼▼▼ この else if ブロックをまるごと追加 ▼▼▼
     // --- 【まとめサイト】スレッド再生成ボタン ---
-    else if (e.target.matches('#retry-matome-thread-btn')) {
+    if (e.target.matches('#retry-matome-thread-btn')) {
         e.preventDefault();
         const btn = e.target;
         const matchId = btn.dataset.matchId;
-
         const originalData = tournamentState.matomeThreads[matchId];
         if (!originalData || !originalData.context) {
             alert("再生成に必要な「試合終了時の情報（コンテキスト）」が見つかりません。");
             return;
         }
-
-        // 試合終了時のコンテキスト（スタメン変更や調子フラグが正しい状態）を取得
         const matchContext = originalData.context;
         const threadContentEl = document.getElementById('bbs-thread-content');
-        
         btn.disabled = true;
         btn.textContent = '生成中...';
         threadContentEl.innerHTML = `<div class="loader text-center py-8">AIがスレッドを再生成中です...（${matchContext.winnerLineupChanges || 'スタメン変更なし'}）</div>`;
-
-        // AIに再生成を依頼
         const newCommentsArray = await generateGameMatchBbsComments(matchContext);
-
-        // 1. 成功した場合 (配列)
         if (newCommentsArray && Array.isArray(newCommentsArray)) {
-            tournamentState.matomeThreads[matchId].thread = newCommentsArray; // キャッシュを上書き
+            tournamentState.matomeThreads[matchId].thread = newCommentsArray;
             saveState();
-            
-            // 再描画
             threadContentEl.innerHTML = '';
             for (const comment of newCommentsArray) {
                 const commentEl = document.createElement('div');
                 commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
-                commentEl.innerHTML = `
-                    <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
-                    <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
-                `;
+                commentEl.innerHTML = `<p class="font-semibold text-gray-700 text-sm">${comment.personality}</p><p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>`;
                 threadContentEl.appendChild(commentEl);
                 setTimeout(() => { commentEl.classList.remove('opacity-0'); }, 50);
-                await new Promise(resolve => setTimeout(resolve, 50)); // 再描画は高速で
+                await new Promise(resolve => setTimeout(resolve, 50));
                 threadContentEl.scrollTop = threadContentEl.scrollHeight;
             }
-        } 
-        // 2. 失敗した場合 (エラーオブジェクト)
-        else {
-            tournamentState.matomeThreads[matchId].thread = newCommentsArray; // エラーオブジェクトで上書き
+        } else {
+            tournamentState.matomeThreads[matchId].thread = newCommentsArray;
             saveState();
             threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの再生成に失敗しました。(エラー: ${newCommentsArray.body || '不明'})</p>`;
         }
-
         btn.disabled = false;
         btn.textContent = '再生成';
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
-    // ▼▼▼ このブロックで、統合型まとめサイト関連の処理を全て書き換える ▼▼▼
 
     // --- 「まとめサイトを見る」ボタン ---
     const showMatomeBtn = e.target.closest('#show-matome-site-btn');
@@ -14841,25 +15147,19 @@ document.body.addEventListener('click', async (e) => {
         const modal = document.getElementById('integrated-matome-modal');
         const articlesContainer = document.getElementById('matome-articles-container');
         modal.classList.remove('hidden');
-        
-        // ローダーを表示し、最新記事を読み込む
         articlesContainer.innerHTML = `<div class="loader text-center py-8">記事を読み込んでいます...</div>`;
-        
-        // 初期表示は「トップ」タブ
         document.querySelectorAll('.matome-tab-content').forEach(tab => tab.classList.add('hidden'));
         document.getElementById('matome-tab-top').classList.remove('hidden');
         document.querySelectorAll('.matome-tab-btn').forEach(btn => btn.classList.remove('active', 'bg-blue-600', 'text-white'));
         document.querySelector('.matome-tab-btn[data-tab="top"]').classList.add('active', 'bg-blue-600', 'text-white');
-
         (async () => {
             const matomeHtml = await generateMatomeSiteHtml();
             articlesContainer.innerHTML = matomeHtml;
         })();
     }
 
- // --- 設定モーダルを開く/閉じる ---
+    // --- 設定モーダルを開く/閉じる ---
     if (e.target.closest('#open-settings-btn')) {
-        // 現在の設定をモーダルに反映
         document.getElementById('toggle-article-generation').checked = tournamentState.settings.enableArticleGeneration;
         document.getElementById('toggle-bbs-generation').checked = tournamentState.settings.enableBbsGeneration;
         document.getElementById('settings-modal').classList.remove('hidden');
@@ -14868,11 +15168,9 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('settings-modal').classList.add('hidden');
     }
 
-
     // --- 統合型まとめサイトモーダルを閉じるボタン ---
     if (e.target.closest('#matome-modal-close-btn')) {
         document.getElementById('integrated-matome-modal').classList.add('hidden');
-        // BBSスレッド表示エリアも隠す
         document.getElementById('bbs-thread-display-area').classList.add('hidden');
     }
 
@@ -14885,17 +15183,12 @@ document.body.addEventListener('click', async (e) => {
         });
         tabBtn.classList.add('active', 'bg-blue-600', 'text-white');
         tabBtn.classList.remove('text-gray-700', 'hover:bg-gray-100');
-
         const tabId = tabBtn.dataset.tab;
         document.querySelectorAll('.matome-tab-content').forEach(content => {
             content.classList.add('hidden');
         });
         document.getElementById(`matome-tab-${tabId}`).classList.remove('hidden');
-
-        // タブ切り替え時にBBSスレッド表示エリアは隠す
         document.getElementById('bbs-thread-display-area').classList.add('hidden');
-
-        // 「トップ」タブに戻ったら記事を再読み込み (必要に応じて)
         if (tabId === 'top') {
             const articlesContainer = document.getElementById('matome-articles-container');
             articlesContainer.innerHTML = `<div class="loader text-center py-8">記事を読み込んでいます...</div>`;
@@ -14910,81 +15203,58 @@ document.body.addEventListener('click', async (e) => {
     const matomeLink = e.target.closest('.matome-article-link');
     if (matomeLink) {
         e.preventDefault();
-        const headline = matomeLink.dataset.headline; // ★スレッドタイトルはここから取得
+        const headline = matomeLink.dataset.headline;
         const type = matomeLink.dataset.type;
         const category = matomeLink.dataset.category;
         const matchId = matomeLink.dataset.matchId;
-
         const threadDisplayArea = document.getElementById('bbs-thread-display-area');
         const threadTitleEl = document.getElementById('bbs-thread-title');
         const threadContentEl = document.getElementById('bbs-thread-content');
-
         document.querySelectorAll('.matome-tab-content').forEach(content => content.classList.add('hidden'));
         threadDisplayArea.classList.remove('hidden');
-
         threadTitleEl.textContent = headline;
         threadContentEl.innerHTML = `<div class="loader text-center py-8">AIが掲示板の反応を生成中...</div>`;
-
         (async () => {
-            let commentsArray; // 生成されたコメント配列（またはエラー）を格納する変数
-
-            // 「再生成」ボタンの要素を取得
+            let commentsArray;
             const retryBtn = document.getElementById('retry-matome-thread-btn');
-            
-            // ゲーム内の記事（高校野球）がクリックされた場合
             if (type === 'game' && matchId) {
-                
-                // 1. データベース(tournamentState)から「生成済み」のスレッドデータを取得
                 const preGeneratedData = tournamentState.matomeThreads[matchId];
                 const preGeneratedThread = preGeneratedData ? preGeneratedData.thread : null;
-
-                // 2. 「再生成」ボタンに matchId をセットして表示する
                 if (preGeneratedData && preGeneratedData.context) {
                     retryBtn.dataset.matchId = matchId;
                     retryBtn.classList.remove('hidden');
                 } else {
-                    retryBtn.classList.add('hidden'); // コンテキストが無い場合は隠す
+                    retryBtn.classList.add('hidden');
                 }
-
-                // 3. スレッドの表示処理
                 if (preGeneratedThread) {
-                    if (Array.isArray(preGeneratedThread)) { // 3A. 成功
+                    if (Array.isArray(preGeneratedThread)) {
                         commentsArray = preGeneratedThread;
-                    } else if (preGeneratedThread.error) { // 3B. 失敗
+                    } else if (preGeneratedThread.error) {
                         threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの生成に失敗しました。(エラー: ${preGeneratedThread.body || '不明'})</p>`;
-                        return; // 処理中断
+                        return;
                     }
-                } else { // 3C. スレッド無し
+                } else {
                     threadContentEl.innerHTML = `<p class="text-center text-gray-500">この試合のまとめスレッドはまだありません。</p>`;
-                    retryBtn.classList.add('hidden'); // スレッドが無いなら再生成も隠す
-                    return; // 処理中断
+                    retryBtn.classList.add('hidden');
+                    return;
                 }
-
-            } 
-            // 現実のニュースがクリックされた場合
-            else if (type === 'real') {
-                retryBtn.classList.add('hidden'); // 現実ニュースは再生成不可
+            } else if (type === 'real') {
+                retryBtn.classList.add('hidden');
                 commentsArray = await generateRealNewsBbsComments(headline, category);
             }
-
-            // --- 4. 取得したコメント配列を描画する ---
             if (commentsArray && Array.isArray(commentsArray)) {
-                threadContentEl.innerHTML = ''; // ローダーを消す
-                // ... (既存の「ライブ感のある描画処理」forループ) ...
+                threadContentEl.innerHTML = '';
                 for (const comment of commentsArray) {
                     const commentEl = document.createElement('div');
                     commentEl.className = 'bbs-comment opacity-0 transition-opacity duration-500';
-                    commentEl.innerHTML = `
-                        <p class="font-semibold text-gray-700 text-sm">${comment.personality}</p>
-                        <p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>
-                    `;
+                    commentEl.innerHTML = `<p class="font-semibold text-gray-700 text-sm">${comment.personality}</p><p class="text-gray-800 my-1 whitespace-pre-wrap">${comment.text}</p>`;
                     threadContentEl.appendChild(commentEl);
                     setTimeout(() => { commentEl.classList.remove('opacity-0'); }, 50);
                     const delay = Math.random() * 800 + 200;
                     await new Promise(resolve => setTimeout(resolve, delay));
                     threadContentEl.scrollTop = threadContentEl.scrollHeight;
                 }
-            } else if (!commentsArray) { // real news 失敗など
+            } else if (!commentsArray) {
                 threadContentEl.innerHTML = `<p class="text-center text-red-500">スレッドの読み込みに失敗しました。</p>`;
             }
         })();
@@ -14993,12 +15263,8 @@ document.body.addEventListener('click', async (e) => {
     // --- BBSスレッドから一覧に戻るボタン ---
     if (e.target.closest('#bbs-thread-back-btn')) {
         document.getElementById('bbs-thread-display-area').classList.add('hidden');
-        document.getElementById('matome-tab-top').classList.remove('hidden'); // トップタブに戻る
+        document.getElementById('matome-tab-top').classList.remove('hidden');
     }
-    // ▲▲▲ ここまで置き換え ▲▲▲ 
-   
- // --- スキャンダル告発/無視ボタン ---
-  // document.body.addEventListener('click', ...) 内のスキャンダルボタンの処理を置き換え
 
     // --- スキャンダル告発/無視ボタン ---
     const scandalBtn = e.target.closest('.report-scandal-btn, .ignore-scandal-btn');
@@ -15006,88 +15272,59 @@ document.body.addEventListener('click', async (e) => {
         const { teamName, scandalId } = tournamentState.activeScandal;
         const scandalDef = SCANDAL_DEFINITIONS.find(s => s.id === scandalId);
         if (!scandalDef) return;
-
         const choice = scandalBtn.classList.contains('report-scandal-btn') ? 'report' : 'ignore';
         const consequence = scandalDef.consequences[choice];
-
-        // 効果を適用
         consequence.applyEffect(teamName, tournamentState);
-
-        // 結果記事を生成
         const outcomeArticle = {
             title: consequence.outcomeTitle(teamName),
             body: consequence.outcomeBody(teamName),
             timestamp: Date.now()
         };
-        
-        // 噂記事をニュースリストから削除し、結果記事を追加
         tournamentState.news = tournamentState.news.filter(n => !n.isScandalRumor);
         tournamentState.news.push(outcomeArticle);
-        
-        // スキャンダルを解決済みにする
         tournamentState.activeScandal = null;
-
-        renderTournament(tournamentState); // トーナメント表とニュースを再描画
+        renderTournament(tournamentState);
         saveState();
     }
-// --- ドキュメンタリー密着取材ボタン ---
-    // --- ドキュメンタリー密着取材ボタン（逆境） ---
-    else if (e.target.matches('.underdog-doc-btn')) { // ← クラス名を変更
+
+    // --- ドキュメンタリー密着取材ボタン（各種） ---
+    if (e.target.matches('.underdog-doc-btn')) {
         const teamName = e.target.dataset.teamName;
         const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？...`);
-        if (confirmed) {
-            startDocumentary('underdog', teamName); // ← type を渡すように変更
-        }
+        if (confirmed) startDocumentary('underdog', teamName);
     }
-
-    // ▼▼▼ ここから追加 ▼▼▼
-    // --- ドキュメンタリー密着取材ボタン（強豪） ---
-    else if (e.target.matches('.powerhouse-doc-btn')) {
+    if (e.target.matches('.powerhouse-doc-btn')) {
         const teamName = e.target.dataset.teamName;
         const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
-        if (confirmed) {
-            startDocumentary('powerhouse', teamName);
-        }
+        if (confirmed) startDocumentary('powerhouse', teamName);
     }
-
-// ▼▼▼ ここから追加 ▼▼▼
-    // --- ドキュメンタリー密着取材ボタン（古豪復活） ---
-    else if (e.target.matches('.powerhouse-revival-doc-btn')) {
+    if (e.target.matches('.powerhouse-revival-doc-btn')) {
         const teamName = e.target.dataset.teamName;
         const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
-        if (confirmed) {
-            startDocumentary('powerhouse_revival', teamName);
-        }
+        if (confirmed) startDocumentary('powerhouse_revival', teamName);
     }
-
- else if (e.target.matches('.one-man-team-doc-btn')) {
+    if (e.target.matches('.one-man-team-doc-btn')) {
         const teamName = e.target.dataset.teamName;
         const confirmed = await showConfirm(`「${teamName}」の密着ドキュメンタリーを開始しますか？\nこの大会中、他のチームは選択できなくなります。`);
-        if (confirmed) {
-            startDocumentary('one_man_team', teamName);
-        }
+        if (confirmed) startDocumentary('one_man_team', teamName);
     }
 
-    // --- 「＋ 走者プレーを追加」ボタン ---
-    else if (e.target.matches('.add-runner-play-btn')) {
+    // --- 走者プレー「追加」ボタン ---
+    if (e.target.matches('.add-runner-play-btn')) {
         e.preventDefault();
         const container = e.target.closest('.at-bat-block').querySelector('.runner-plays-container');
         if (!container) return;
-
         if (container.children.length >= 3) {
             alert('一度に追加できる走者プレーは3つまでです。');
             return;
         }
-
         const table = e.target.closest('.batting-table');
         const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => ({name: input.value.trim()})).filter(p => p.name);
         const nameOptions = playersOnField.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-
         const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
         const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
         const playOptions = baserunningPlays.map(p => `<option value="${p}">${p}</option>`).join('');
         const baseOptions = bases.map(b => `<option value="${b}">${b}</option>`).join('');
-
         const newPlayHTML = `
             <div class="runner-play-input flex gap-1 items-center mt-1">
                 <select class="runner-name w-1/3 text-xs p-1 border rounded"><option value="">-誰が-</option>${nameOptions}</select>
@@ -15099,78 +15336,70 @@ document.body.addEventListener('click', async (e) => {
         container.insertAdjacentHTML('beforeend', newPlayHTML);
     }
     
-    // --- 走者プレーの「×」削除ボタン ---
-    else if (e.target.matches('.remove-runner-play-btn')) {
+    // --- 走者プレー「削除」ボタン ---
+    if (e.target.matches('.remove-runner-play-btn')) {
         e.target.closest('.runner-play-input').remove();
     }
 
     // --- おまかせ入力ボタン ---
-    else if (e.target.matches('.quick-sim-btn')) {
+    if (e.target.matches('.quick-sim-btn')) {
         e.preventDefault();
         autoFillMatchDetails(e.target.dataset.matchId);
     }
 
     // --- 1イニングに複数打席を追加するボタン ---
-    else if (e.target.matches('.add-at-bat-btn')) {
+    if (e.target.matches('.add-at-bat-btn')) {
         e.preventDefault();
         const table = e.target.closest('.batting-table');
         const playersOnField = Array.from(table.querySelectorAll('.player-name')).map(input => ({ name: input.value.trim() })).filter(p => p.name);
-        
-        // 新しい空の打席ブロック（打者入力欄＋走者入力欄の正しいセット）を生成
         const newAtBatHTML = createBattingResultDropdowns(playersOnField, '');
-        
-        // クリックされたボタンの直前に、新しいブロックを挿入
         e.target.insertAdjacentHTML('beforebegin', newAtBatHTML);
     }
 
-   // --- 交代選手追加ボタン ---
-   // --- 【新UI】「+ 交代」ボタン（行内） ---
-    else if (e.target.matches('.add-sub-row-btn')) {
+    // --- 交代選手追加ボタン ---
+    if (e.target.matches('.add-sub-row-btn')) {
         e.preventDefault();
         const btn = e.target;
         const teamKey = btn.dataset.teamKey;
-        const currentOrder = btn.dataset.order; // 例: "3" or "3-sub-1"
-        const baseOrder = currentOrder.split('-')[0]; // 例: "3"
-        
+        const currentOrder = btn.dataset.order;
+        const baseOrder = currentOrder.split('-')[0];
         const tableBody = btn.closest('tbody');
         if (!tableBody) return;
-
-        // 1. 挿入位置を決める (同じ打順グループの最後の行)
         const allOrderRows = Array.from(tableBody.querySelectorAll(`tr[data-order^="${baseOrder}"]`));
         const targetRow = allOrderRows[allOrderRows.length - 1];
-
-        // 2. 新しい行の order を決める
         const subCount = allOrderRows.filter(row => row.dataset.order.includes('sub')).length + 1;
-        const newOrder = `${baseOrder}-sub-${subCount}`; // 例: "3-sub-1" or "3-sub-2"
-
-        // 3. 新しい行のHTMLを生成
+        const newOrder = `${baseOrder}-sub-${subCount}`;
         const newRow = document.createElement('tr');
         newRow.dataset.order = newOrder;
-
-        // 4. HTMLの中身を（model_150のロジックから）生成
         const throwBatOptionsList = [
             { val: "R/R", label: "右/右" }, { val: "R/L", label: "右/左" }, { val: "R/S", label: "右/両" },
             { val: "L/L", label: "左/左" }, { val: "L/R", label: "左/右" }, { val: "L/S", label: "左/両" }
         ];
         const tbOptionsHtml = throwBatOptionsList.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const subThrowBatSelect = `<select class="player-throw-bat w-full bg-transparent"><option value="">-投/打-</option>${tbOptionsHtml}</select>`;
-        
         const numberOptions = Array.from({length: 20}, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('');
         const posOptions = ['投', '捕', '一', '二', '三', '遊', '左', '中', '右'].map(p => `<option value="${p}">${p}</option>`).join('');
-        
-        const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 7; // ヘッダーの列数(7)
+        const numInnings = tableBody.parentElement.querySelector('thead tr').children.length - 7;
         let resultInputs = '';
         for (let j = 0; j < numInnings; j++) {
             resultInputs += `<td class="col-inning batting-result-cell align-top p-1">
-                                ${createBattingResultDropdowns(null, '')}                                 <button class="add-at-bat-btn text-xs mt-2 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 w-full font-semibold">＋ 2打席目を追加</button>
+                                ${createBattingResultDropdowns(null, '')}
+                                <button class="add-at-bat-btn text-xs mt-2 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 w-full font-semibold">＋ 2打席目を追加</button>
                              </td>`;
         }
-        
         newRow.innerHTML = `
             <td class="col-order"></td>
             <td class="col-number"><select class="player-number w-full bg-transparent"><option value=""></option>${numberOptions}</select></td>
             <td class="col-throw-bat">${subThrowBatSelect}</td>
-            <td class="col-player pl-4"><input type="text" class="player-name" placeholder="交代選手名"></td>
+            <td class="col-player pl-4">
+                <div class="flex items-center gap-1">
+                    <input type="text" class="player-name w-full" placeholder="交代選手名">
+                    <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
+                            data-team-name="${teamKey === 'team1' ? dbMatch.team1 : dbMatch.team2}" 
+                            data-player-order-key="${newOrder}" 
+                            title="通算成績を表示">📊</button>
+                </div>
+            </td>
             <td class="col-pos">
                 <div class="flex items-center justify-between">
                     <select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions}</select>
@@ -15190,38 +15419,26 @@ document.body.addEventListener('click', async (e) => {
             </td>
             ${resultInputs}
         `;
-        
-        // 5. 挿入
         targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
     }
-    // ▲▲▲ 置き換えここまで ▲▲▲
 
-    /// --- 守備変更ボタン（モーダルを開く） ---
-    else if (e.target.matches('.pos-change-btn')) {
+    // --- 守備変更ボタン（モーダルを開く） ---
+    if (e.target.matches('.pos-change-btn')) {
         const btn = e.target;
         const teamKey = btn.dataset.teamKey;
-        
-        // 同じ行の .player-name 入力欄から名前を取得
         const row = btn.closest('tr');
         const playerNameInput = row.querySelector('.player-name');
         if (!playerNameInput) return;
-        
         const playerName = playerNameInput.value.trim();
         if (!playerName) {
             alert("先に選手名を入力してください。");
             return;
         }
-
-        // モーダルを取得
         const modal = document.getElementById('substitution-modal');
-        
-        // データをモーダルにセット
         document.getElementById('sub-modal-player-name').value = playerName;
-        modal.dataset.teamKey = teamKey; // どのチームの選手か
-        modal.dataset.playerName = playerName; // どの選手か
-        modal.dataset.matchId = currentMatchIdForDetails; // どの試合か
-
-        // フォームをリセット
+        modal.dataset.teamKey = teamKey;
+        modal.dataset.playerName = playerName;
+        modal.dataset.matchId = currentMatchIdForDetails;
         document.getElementById('sub-modal-inning').value = 1;
         document.getElementById('sub-modal-top-bottom').value = '表';
         document.getElementById('sub-modal-timing-start').checked = true;
@@ -15232,42 +15449,24 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('sub-modal-runner2').checked = false;
         document.getElementById('sub-modal-runner3').checked = false;
         document.getElementById('sub-modal-new-pos').value = '';
-
-        // モーダルを表示
         modal.classList.remove('hidden');
     }   
-// --- 投手追加ボタン ---
-    else if (e.target.matches('.add-row-btn')) {
+
+    // --- 投手追加ボタン ---
+    if (e.target.matches('.add-row-btn')) {
         e.preventDefault();
         const tableId = e.target.dataset.tableId;
         const table = document.getElementById(tableId).querySelector('tbody');
         const newRow = table.insertRow();
-        
-        // ▼▼▼ 4種類のプルダウン選択肢をここで定義 ▼▼▼
-        const throwBatOptions = [
-            { val: "R/R", label: "右/右" }, { val: "R/L", label: "右/左" }, { val: "R/S", label: "右/両" },
-            { val: "L/L", label: "左/左" }, { val: "L/R", label: "左/右" }, { val: "L/S", label: "左/両" }
-        ];
-        const throwStyleOptions = [
-            { val: "over", label: "オーバー" }, { val: "three_quarter", label: "スリークォーター" },
-            { val: "side", label: "サイド" }, { val: "under", label: "アンダー" }
-        ];
-        const pitcherTypeOptions = [
-            { val: "honkaku", label: "本格派" }, { val: "sokkyu", label: "速球派" },
-            { val: "giko", label: "技巧派" }, { val: "nanto", label: "軟投派" }
-        ];
+        const throwBatOptions = [ { val: "R/R", label: "右/右" }, { val: "R/L", label: "右/左" }, { val: "R/S", label: "右/両" }, { val: "L/L", label: "左/左" }, { val: "L/R", label: "左/右" }, { val: "L/S", label: "左/両" } ];
+        const throwStyleOptions = [ { val: "over", label: "オーバー" }, { val: "three_quarter", label: "スリークォーター" }, { val: "side", label: "サイド" }, { val: "under", label: "アンダー" } ];
+        const pitcherTypeOptions = [ { val: "honkaku", label: "本格派" }, { val: "sokkyu", label: "速球派" }, { val: "giko", label: "技巧派" }, { val: "nanto", label: "軟投派" } ];
         const velocityOptions = [];
-        for (let v = 100; v <= 165; v += 5) {
-            velocityOptions.push({ val: `${v}km`, label: `${v}km帯` });
-        }
-
+        for (let v = 100; v <= 165; v += 5) { velocityOptions.push({ val: `${v}km`, label: `${v}km帯` }); }
         const tbOptionsHtml = throwBatOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const styleOptionsHtml = throwStyleOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const typeOptionsHtml = pitcherTypeOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
         const velocityOptionsHtml = velocityOptions.map(opt => `<option value="${opt.val}">${opt.label}</option>`).join('');
-        // ▲▲▲ 追加ここまで ▲▲▲
-
-        // ▼▼▼ newRow.innerHTML に3セル追加 ▼▼▼
         newRow.innerHTML = `
             <td class="col-pitcher-result"><select class="pitcher-result"><option value="" selected>-</option><option value="W">○</option><option value="L">●</option><option value="S">S</option><option value="H">H</option></select></td>
             <td class="col-pitcher-name"><input type="text" class="pitcher-name" value=""></td>
@@ -15283,22 +15482,35 @@ document.body.addEventListener('click', async (e) => {
             <td class="col-stat"><input type="number" class="pitcher-walks" value=""></td>
             <td class="col-stat"><input type="number" class="pitcher-runs" value=""></td>
             <td class="col-stat"><input type="number" class="pitcher-er" value=""></td>
-        `;        // ▲▲▲ 修正ここまで ▲▲▲
+        `;
     }
 
     // --- 先攻後攻入れ替えボタン ---
-    else if (e.target.matches('#swap-teams-btn')) {
+    if (e.target.matches('#swap-teams-btn')) {
         swapTeamDetails(e.target.dataset.matchId);
     }
 
+// ▼▼▼ このブロックを「新規追加」 ▼▼▼
+    // --- チームステータスモーダル（簡易版）を閉じるボタン ---
+    const statusModalCloseBtn = e.target.closest('#status-modal-close');
+    if (statusModalCloseBtn) {
+        e.preventDefault();
+        document.getElementById('team-status-modal').classList.add('hidden');
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
+    // ★★★★★ ここが修正箇所 ★★★★★
     // --- チーム名クリック（ステータス表示） ---
-    else if (e.target.matches('.clickable-team-name')) {
-        const teamName = e.target.dataset.teamName;
+    // (他のボタン操作と競合しないよう、ボタン以外がクリックされたかチェック)
+    const clickableTeamName = e.target.closest('.clickable-team-name');
+    if (clickableTeamName && !e.target.closest('button')) { // ★クリックされたのがボタンではないことを確認
+        const teamName = clickableTeamName.dataset.teamName;
         if(teamName && teamName !== 'null' && teamName !== '') {
             showTeamStatusModal(teamName);
         }
     }
-    // --- 記事表示ボタン（通常記事の「本文」） ---
+    // ★★★★★ 修正ここまで ★★★★★
+
     // --- 記事表示ボタン（通常記事の「本文」） ---
     const newsArticleBtn = e.target.closest('.news-article-btn');
     if (newsArticleBtn) {
@@ -15323,7 +15535,7 @@ document.body.addEventListener('click', async (e) => {
             newspaperModal.classList.remove('hidden');
         }
     }
- // ▼▼▼ 抜け落ちていたのは、このブロックです ▼▼▼
+
     // --- 掲示板の「返信する」ボタン ---
     const replyBtn = e.target.closest('.reply-btn');
     if (replyBtn) {
@@ -15333,42 +15545,30 @@ document.body.addEventListener('click', async (e) => {
         if (formContainer) {
             formContainer.classList.toggle('hidden');
         }
-        return; // 他のクリック処理と競合しないように return します
+        return; 
     }
-// document.body.addEventListener('click', ...) の中
-
     
-    // document.body.addEventListener('click', ...) 内の該当箇所を、以下のように修正・追記
-
-    // ▼▼▼ 既存の「.retry-btn」の else if ブロックを、以下の内容にまるごと置き換える ▼▼▼
     // --- AI記事の再生成ボタン（エラー記事・成功記事の両方に対応） ---
-    // --- AI記事の再生成ボタン（成功した記事用） ---
-     // --- AI記事の再生成ボタン（成功・失敗記事の両方に対応） ---
     const regenerateBtn = e.target.closest('.regenerate-btn, .retry-btn');
-    if (regenerateBtn) {
-        const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
-        const originalArticle = tournamentState.news[articleIndex];
-        if (!originalArticle || !originalArticle.context) {
-            alert("この記事は再生成できません。");
-            return;
-        }
-        articleForRegeneration = { index: articleIndex, article: originalArticle };
-        document.getElementById('feedback-include').value = '';
-        document.getElementById('feedback-exclude').value = '';
-        document.getElementById('feedback-modal').classList.remove('hidden');
-    }
+    if (regenerateBtn) {
+        const articleIndex = parseInt(regenerateBtn.dataset.index, 10);
+        const originalArticle = tournamentState.news[articleIndex];
+        if (!originalArticle || !originalArticle.context) {
+            alert("この記事は再生成できません。");
+            return;
+        }
+        articleForRegeneration = { index: articleIndex, article: originalArticle };
+        document.getElementById('feedback-include').value = '';
+        document.getElementById('feedback-exclude').value = '';
+        document.getElementById('feedback-modal').classList.remove('hidden');
+    }
     
     // --- フィードバックモーダルからの再生成実行ボタン ---
-    // ▼▼▼ このブロックで、既存の該当箇所を置き換えてください ▼▼▼
-
-   // --- フィードバックモーダルからの再生成実行ボタン ---
     const feedbackSubmitBtn = e.target.closest('#feedback-submit-btn');
     if (feedbackSubmitBtn) {
         if (!articleForRegeneration) return;
         const { index, article } = articleForRegeneration;
-        const context = article.context; // エラー記事から context を取得
-
-        // UIを準備
+        const context = article.context; 
         feedbackSubmitBtn.textContent = '生成中...';
         feedbackSubmitBtn.disabled = true;
         const userFeedback = {
@@ -15377,84 +15577,53 @@ document.body.addEventListener('click', async (e) => {
         };
         document.getElementById('feedback-modal').classList.add('hidden');
         articleForRegeneration = null;
-        tournamentState.news.splice(index, 1); // 古い記事（またはエラー）を一旦削除
+        tournamentState.news.splice(index, 1);
         renderNews(tournamentState.news);
         newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
-
-        // 非同期でAIの再生成処理を開始
         (async () => {
             let articlePromise;
-
-            // ▼▼▼ この分岐ロジック全体を置き換えてください ▼▼▼
-            
-            // ★★★ ここが最重要修正点 ★★★
-            // context.theme が存在する場合、それは「話題校記事」であると判断します。
-            // (古いセーブデータは isTopicArticle フラグを持っていないため)
-            
             if (context.isDocumentary) {
-                // 【ドキュメンタリー記事の場合】
                 const { type, teamName, matchData } = context;
                 articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
-            
             } else if (context.isBracketAnalysis) {
-                // 【組み合わせ分析記事の場合】
                 articlePromise = generateBracketAnalysisNewsArticle(tournamentState); 
-            
             } else if (context.isHadaReport) {
-                // 【羽田レポートの場合】
                 articlePromise = generateHadaReport(context);
-            
-            } else if (context.isTopicArticle || context.theme) { // ★★★ (|| context.theme) を追加 ★★★
-                // 【話題校紹介記事の場合】
-                // ランクを再計算してから関数を呼ぶ
+            } else if (context.isTopicArticle || context.theme) {
                 const rank = calculateRank(context.teamName, tournamentState); 
                 articlePromise = createTopicArticle(context.teamName, rank, context.theme); 
-                // (注: 話題校記事はユーザーフィードバックを無視し、コンテキストのみで再生成します)
-            
             } else {
-                // 【通常の試合記事の場合】
                 articlePromise = generateNewsArticle(context, userFeedback);
             }
-            // ▲▲▲ 分岐修正ここまで ▲▲▲
-
             const createErrorArticle = () => ({
                 title: "記事生成エラー", body: "記事の再生成に失敗しました。",
                 timestamp: Date.now(), error: true,
                 errorId: context.matchId || context.errorId || `regen-error-${Date.now()}`,
-                // ★各種フラグを正しく引き継ぐ
                 isDocumentary: context.isDocumentary,
                 isBracketAnalysis: context.isBracketAnalysis,
                 isHadaReport: context.isHadaReport,
-                isTopicArticle: (context.isTopicArticle || context.theme), // ★修正
-                context: context // エラーが連鎖しても context を引き継ぐ
+                isTopicArticle: (context.isTopicArticle || context.theme),
+                context: context
             });
-
             const newArticle = await articlePromise;
-
             if (newArticle && !newArticle.error) {
-                newArticle.context = context; // 新しい記事にもコンテキストを付与
-                tournamentState.news.splice(index, 0, newArticle); // 元の位置に新しい記事を挿入
-                
-                // レビューモーダルを通さず、そのまま表示する記事
-                if (!context.isBracketAnalysis && !context.isHadaReport && ( !context.isTopicArticle && !context.theme )) { // ★修正
+                newArticle.context = context;
+                tournamentState.news.splice(index, 0, newArticle);
+                if (!context.isBracketAnalysis && !context.isHadaReport && ( !context.isTopicArticle && !context.theme )) {
                     showArticleReviewModal(newArticle);
                 }
             } else {
-                tournamentState.news.splice(index, 0, createErrorArticle()); // 元の位置にエラー記事を挿入
+                tournamentState.news.splice(index, 0, createErrorArticle());
             }
-            
             saveState();
-            renderNews(tournamentState.news); // ニュース欄を再描画
+            renderNews(tournamentState.news);
             feedbackSubmitBtn.textContent = 'この指示で再生成';
             feedbackSubmitBtn.disabled = false;
         })();
     }
 
-// ▲▲▲ ここまで置き換え ▲▲▲
-
-// ▼▼▼ この else if ブロックを (model_114 の提案と) 置き換え ▼▼▼
     // --- 試合前 応援コメントボタン（モーダルを開くだけ） ---
-    else if (e.target.matches('.pre-game-cheer-btn')) {
+    if (e.target.matches('.pre-game-cheer-btn')) {
         e.preventDefault();
         const btn = e.target;
         const matchId = btn.dataset.matchId;
@@ -15463,76 +15632,59 @@ document.body.addEventListener('click', async (e) => {
             alert("対戦カードが未定のため、コメントを読み込めません。");
             return;
         }
-
         const modal = document.getElementById('pre-game-modal');
         const titleEl = document.getElementById('pre-game-title');
         const bodyEl = document.getElementById('pre-game-body');
         const tab1 = document.getElementById('pre-game-tab-team1');
         const tab2 = document.getElementById('pre-game-tab-team2');
-
-        // モーダルとタブのタイトルを設定
         titleEl.textContent = `【${match.team1} vs ${match.team2}】試合前 応援コメント`;
         tab1.textContent = `${match.team1} 応援席`;
         tab2.textContent = `${match.team2} 応援席`;
-        
-        // タブに試合情報を仕込む
         tab1.dataset.matchId = matchId;
         tab1.dataset.teamName = match.team1;
         tab1.dataset.opponentName = match.team2;
         tab2.dataset.matchId = matchId;
         tab2.dataset.teamName = match.team2;
         tab2.dataset.opponentName = match.team1;
-        
-        // タブの状態をリセット
         tab1.classList.remove('active', 'text-blue-600', 'border-blue-600');
         tab2.classList.remove('active', 'text-blue-600', 'border-blue-600');
         tab1.classList.add('text-gray-500', 'border-transparent');
         tab2.classList.add('text-gray-500', 'border-transparent');
-
-        // 本文をリセット
         bodyEl.innerHTML = `<p class="text-gray-500 text-center p-8">↑ 見たいチームの応援席タブをクリックしてください ↑</p>`;
-        
         modal.classList.remove('hidden');
     }
-    // ▲▲▲ 置き換えここまで ▲▲▲
 
-// --- 守備交代モーダル：「キャンセル」ボタン ---
-    else if (e.target.matches('#sub-modal-cancel')) {
+    // --- 守備交代モーダル：「キャンセル」ボタン ---
+    if (e.target.matches('#sub-modal-cancel')) {
         document.getElementById('substitution-modal').classList.add('hidden');
     }
 
     // --- 守備交代モーダル：「交代を記録」ボタン ---
-    else if (e.target.matches('#sub-modal-save')) {
+    if (e.target.matches('#sub-modal-save')) {
         const modal = document.getElementById('substitution-modal');
         const matchId = modal.dataset.matchId;
         const teamKey = modal.dataset.teamKey;
         const playerName = modal.dataset.playerName;
-
         const match = findMatchById(matchId);
         if (!match) {
             alert("エラー: 該当の試合が見つかりません。");
             return;
         }
-        
         const newPos = document.getElementById('sub-modal-new-pos').value;
         if (!newPos) {
             alert("「新しい守備位置」を選択してください。");
             return;
         }
-
-        // 交代データを構築
         const substitutionData = {
             playerName: playerName,
             teamKey: teamKey,
             inning: document.getElementById('sub-modal-inning').value,
             topBottom: document.getElementById('sub-modal-top-bottom').value,
-            timing: document.querySelector('input[name="sub-timing"]:checked').value, // 'start' or 'mid'
+            timing: document.querySelector('input[name="sub-timing"]:checked').value,
             newPos: newPos,
             outs: null,
             runners: null
         };
-
-        // イニング途中の場合、詳細を追加
         if (substitutionData.timing === 'mid') {
             substitutionData.outs = document.getElementById('sub-modal-outs').value;
             substitutionData.runners = {
@@ -15541,82 +15693,57 @@ document.body.addEventListener('click', async (e) => {
                 r3: document.getElementById('sub-modal-runner3').checked
             };
         }
-
-        // データを match オブジェクトに保存
         if (!match.details) match.details = {};
         if (!match.details.positionChanges) match.details.positionChanges = [];
         match.details.positionChanges.push(substitutionData);
-
-        // 保存してモーダルを閉じる
         saveState();
         alert(`${substitutionData.inning}回${substitutionData.topBottom}、${playerName}選手を${newPos}に交代しました。`);
         modal.classList.add('hidden');
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-// --- 【詳細モーダル内】「★ 注目」ボタン（トグル） ---
-    else if (e.target.matches('.mark-at-bat-btn')) {
+    // --- 【詳細モーダル内】「★ 注目」ボタン（トグル） ---
+    if (e.target.matches('.mark-at-bat-btn')) {
         e.preventDefault();
         const btn = e.target;
         const isMarked = btn.dataset.marked === 'true';
-
         if (isMarked) {
-            // 注目を解除
             btn.dataset.marked = 'false';
             btn.classList.remove('bg-yellow-300', 'border-yellow-500', 'text-yellow-900');
             btn.classList.add('bg-gray-100', 'border-gray-300', 'text-gray-500', 'hover:bg-gray-200');
         } else {
-            // 注目を設定
             btn.dataset.marked = 'true';
             btn.classList.add('bg-yellow-300', 'border-yellow-500', 'text-yellow-900');
             btn.classList.remove('bg-gray-100', 'border-gray-300', 'text-gray-500', 'hover:bg-gray-200');
         }
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-    // ▼▼▼ この else if ブロックを「新規追加」 ▼▼▼
     // --- 応援モーダル内の「チームタブ」クリック ---
-   // --- 応援モーダル内の「チームタブ」クリック ---
-    else if (e.target.matches('.pre-game-team-tab')) {
+    if (e.target.matches('.pre-game-team-tab')) {
         e.preventDefault();
         const tabBtn = e.target;
-        if (tabBtn.classList.contains('active')) return; // 既にアクティブなら何もしない
-
-        const teamKey = tabBtn.dataset.teamKey; // 'team1' or 'team2'
+        if (tabBtn.classList.contains('active')) return;
+        const teamKey = tabBtn.dataset.teamKey;
         const matchId = tabBtn.dataset.matchId;
         const teamName = tabBtn.dataset.teamName;
         const opponentName = tabBtn.dataset.opponentName;
-        
         const bodyEl = document.getElementById('pre-game-body');
-        const cacheKey = `${matchId}_${teamName}`; // キャッシュキーをチーム別に
-
-        // 他のタブを非アクティブ化
+        const cacheKey = `${matchId}_${teamName}`;
         document.querySelectorAll('.pre-game-team-tab').forEach(btn => {
             btn.classList.remove('active', 'text-blue-600', 'border-blue-600');
             btn.classList.add('text-gray-500', 'border-transparent');
         });
-        // クリックされたタブをアクティブ化
         tabBtn.classList.add('active', 'text-blue-600', 'border-blue-600');
         tabBtn.classList.remove('text-gray-500', 'border-transparent');
-
-        // 1. キャッシュを確認
         if (tournamentState.preGameComments[cacheKey]) {
             bodyEl.innerHTML = tournamentState.preGameComments[cacheKey];
             return;
         }
-
-        // 2. キャッシュがない場合、AIで生成
         bodyEl.innerHTML = `<div class="loader text-center py-8">${teamName} 応援団（OB, 在校生, 地元ファン）のコメントを生成中...</div>`;
-
-        // ランクとコメント数を決定
         const rankValues = { 'A': 10, 'B': 8, 'C': 5, 'D': 3, 'E': 2 };
         const rank = calculateRank(teamName, tournamentState);
         const opponentRank = calculateRank(opponentName, tournamentState);
         const numComments = rankValues[rank] || 2;
-
-        // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
-        // コンテキスト（文脈）を準備
-        const teamData = TEAM_DATA[teamName] || {}; // ★チームデータを取得
+        const teamData = TEAM_DATA[teamName] || {};
         const context = {
             name: teamName, 
             rank: rank,
@@ -15625,98 +15752,69 @@ document.body.addEventListener('click', async (e) => {
             round: getRoundNameFromMatchId(matchId),
             path: getTournamentPathSummary(teamName, matchId),
             detailed: DETAILED_TEAM_DATA[teamName] || null,
-            info: teamData.info || '' // ★チームの背景(info)を追加
+            info: teamData.info || ''
         };
-        // ▲▲▲ 修正ここまで ▲▲▲
-
-        // このチームの分だけAIに生成させる
-        const comments = await generatePreGameCheerComments(context, numComments); // ★contextオブジェクトを渡す
-
-        // 3. HTMLを生成して表示
+        const comments = await generatePreGameCheerComments(context, numComments);
         let html = '';
         comments.forEach(c => {
             html += `<div class="bbs-comment"><p class="font-semibold text-gray-700 text-sm">${c.personality}</p><p class="text-gray-800 my-1 whitespace-pre-wrap">${c.comment}</p></div>`;
         });
-
         bodyEl.innerHTML = html;
-        tournamentState.preGameComments[cacheKey] = html; // HTMLをチーム別キャッシュとして保存
+        tournamentState.preGameComments[cacheKey] = html;
         saveState();
     }
-
-    // ▲▲▲ 新規追加ここまで ▲▲▲
 
     // --- フィードバックモーダルの「キャンセル」ボタン ---
     if (e.target.matches('#feedback-cancel-btn')) {
         document.getElementById('feedback-modal').classList.add('hidden');
         articleForRegeneration = null;
     }
-    // ▲▲▲ ここまで追加 ▲▲▲    // ▲▲▲ ここまで追加 ▲▲▲
 
-
-
-// --- 掲示板コメントのエラー再生成ボタン ---
-    else if (e.target.matches('.retry-bbs-btn')) {
+    // --- 掲示板コメントのエラー再生成ボタン ---
+    if (e.target.matches('.retry-bbs-btn')) {
         const btn = e.target;
         const index = parseInt(btn.dataset.index, 10);
         const errorItem = tournamentState.bbsComments[index];
-        const regenType = btn.dataset.type; // 'bracket-thread' or 'match-comments'
-
+        const regenType = btn.dataset.type;
         if (!errorItem || !errorItem.context) {
             alert("再生成に必要な情報が見つかりません。");
             return;
         }
-
         btn.textContent = '生成中...';
         btn.disabled = true;
-        // エラー表示を一時的にローダーに置き換えても良い
-        // btn.closest('.article-error').innerHTML = `<div class="loader text-sm">再生成中...</div>`;
-
-        let newBbsData = null; // 再生成結果を格納する変数
-
+        let newBbsData = null;
         try {
             if (regenType === 'bracket-thread') {
-                // 組み合わせスレッドの再生成
-                newBbsData = await generateBracketBbsThread(tournamentState); // state全体を渡す
+                newBbsData = await generateBracketBbsThread(tournamentState);
             } else if (regenType === 'match-comments' && errorItem.context.matchId) {
-                // 試合後コメントの再生成
-                // contextに必要な情報が揃っているか確認
                 if (errorItem.context.winnerName && errorItem.context.dbMatch) {
-                     newBbsData = await generateBbsComments(errorItem.context); // 保存されたcontextを渡す
+                     newBbsData = await generateBbsComments(errorItem.context);
                 } else {
                     throw new Error("試合後コメント再生成のためのContext情報が不足しています。");
                 }
             } else {
                  throw new Error("不明な再生成タイプです: " + regenType);
             }
-
-            // --- 再生成結果の処理 ---
             if (newBbsData && !newBbsData.error) {
-                // 成功した場合：エラー項目を新しいデータで置き換える
-                if (Array.isArray(newBbsData)) { // generateBbsComments は配列を返す
+                if (Array.isArray(newBbsData)) {
                     tournamentState.bbsComments.splice(index, 1, ...newBbsData);
-                } else { // generateBracketBbsThread はオブジェクトを返す
+                } else {
                     tournamentState.bbsComments.splice(index, 1, newBbsData);
                 }
             } else {
-                 // 再生成に失敗した場合：エラー表示はそのまま or 更新
                  alert('再生成に失敗しました。');
-                 btn.textContent = '再生成'; // ボタンを元に戻す
+                 btn.textContent = '再生成';
                  btn.disabled = false;
-                 // エラー表示を元に戻す処理が必要な場合
-                 // const errorEl = btn.closest('.article-error');
-                 // if(errorEl) errorEl.innerHTML = `<span>${errorItem.title}</span> ... 再生性ボタンHTML ...`;
             }
         } catch(err) {
              console.error("BBS再生成中にエラー:", err);
              alert('再生成処理中にエラーが発生しました。');
-             btn.textContent = '再生成'; // ボタンを元に戻す
+             btn.textContent = '再生成';
              btn.disabled = false;
         }
-
-        renderBbsComments(tournamentState.bbsComments); // 掲示板を再描画
+        renderBbsComments(tournamentState.bbsComments);
         saveState();
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 });
     
 
