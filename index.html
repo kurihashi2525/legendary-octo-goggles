@@ -3637,6 +3637,64 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
         };
     }
 }
+
+// ▼▼▼ このブロックをまるごと「新規追加」 ▼▼▼
+
+/**
+ * ユーザーが作成したスレッド（タイトル＋本文）に対し、なんJ風の掲示板コメントをAIに生成させる
+ * @param {string} title - ユーザーが入力したスレッドタイトル
+ * @param {string} firstCommentText - ユーザーが入力した本文 (>>1)
+ * @returns {Promise<Array|null>} コメントオブジェクトの配列
+ */
+async function generateUserThreadBbsComments(title, firstCommentText) {
+    let personaPrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは少し皮肉屋で、ネットスラングを多用し、あらゆる話題に短いコメントを書き込みます。`;
+    
+    const prompt = `${personaPrompt}
+
+以下の【ユーザーが立てたスレッド】について、**リアルタイムでスレッドが進行していくかのように**、自然な流れで**30〜35個**の掲示板の反応を生成してください。
+
+### スレッドタイトル
+${title}
+
+### スレ主(>>1)の本文
+${firstCommentText}
+
+### スレッド進行の指示
+1.  **序盤 (2〜5レス):** スレ主の投稿(>>1)に対し、即座に食いつく第一陣の反応。「マジか」「草」「また〇〇か」といった短いコメントが中心。
+2.  **中盤 (6〜15レス):** 少し冷静になった住民たちが、スレ主の話題に対して様々な角度からコメントを始める。肯定、否定、煽り、全く関係ない脱線などを織り交ぜる。**「>>1」への安価（アンカー）を使って、スレ主の意見に返信するやり取りを必ず含めること。**
+3.  **終盤 (16レス以降):** ある程度議論が出尽くした後の、まとめのようなコメントや、飽きてきた住民によるおふざけが始まる。
+4.　**最終盤 (26レス以降):** スレも混沌としてきて、関係ない話題を持ってくる者や、勝手にコンプレックスを刺激され発狂するもの、ただの荒らしなどが湧き始め、グダグダになり解散する。
+
+### 出力形式（JSON配列）
+[
+    {"personality": "2: 風吹けば名無し", "comment": "（住民2のコメント）"},
+    {"personality": "3: 風吹けば名無し", "comment": "（住民3のコメント）"},
+    ...
+]`; // スレ主(1:)は除く
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const commentsJson = parseJsonFromText(rawText);
+            if (Array.isArray(commentsJson)) {
+                return commentsJson.map((c, index) => ({ // indexを調整 (2から始まるように)
+                    id: crypto.randomUUID(),
+                    personality: c.personality.startsWith(`${index + 2}:`) ? c.personality : `${index + 2}: ${c.personality}`, // 番号を2から振る
+                    text: c.comment,
+                    timestamp: Date.now() + index * 10
+                }));
+            }
+        }
+        throw new Error("AI response format error.");
+    } catch (error) {
+        console.error("AI user thread BBS generation failed:", error);
+        return null;
+    }
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -15341,14 +15399,22 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('new-thread-modal').classList.add('hidden');
     }
 
-    // ▼▼▼ [NEW] スレ立てモーダルを「実行」するボタン ▼▼▼
+    // ▼▼▼ 既存の「#new-thread-submit」の else if ブロックと、このブロックを「置き換え」 ▼▼▼
     else if (e.target.closest('#new-thread-submit')) {
         e.preventDefault();
+        
+        // ★ AIが動作中であることをユーザーに示す
+        const submitBtn = e.target.closest('#new-thread-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'AIがレス作成中...';
+
         const title = document.getElementById('new-thread-title').value.trim();
         const comment = document.getElementById('new-thread-comment').value.trim();
 
         if (!title || !comment) {
             alert('タイトルと本文の両方を入力してください。');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'スレを立てる';
             return;
         }
 
@@ -15377,25 +15443,46 @@ document.body.addEventListener('click', async (e) => {
             replies: []
         };
         
-        if (!tournamentState.matomeThreads) tournamentState.matomeThreads = {};
-        tournamentState.matomeThreads[threadId] = {
-            thread: [firstComment],
-            context: { isUserThread: true, title: title } // 再生成はしないが、目印として
-        };
+        // ★★★ ここからが修正箇所 ★★★
+        // 3. AIにレスポンスを生成させる
+        const aiComments = await generateUserThreadBbsComments(title, comment);
+        // ★★★ 修正ここまで ★★★
 
-        // 3. 保存してUIを更新
+        if (!tournamentState.matomeThreads) tournamentState.matomeThreads = {};
+        
+        // 4. スレ主のコメントとAIのレスを結合して保存
+        if (aiComments && Array.isArray(aiComments)) {
+            tournamentState.matomeThreads[threadId] = {
+                thread: [firstComment, ...aiComments], // ★ AIのレスを結合
+                context: { isUserThread: true, title: title } 
+            };
+        } else {
+             // AI生成失敗時も、スレ主のコメントだけでスレは立てる
+            tournamentState.matomeThreads[threadId] = {
+                thread: [firstComment], 
+                context: { isUserThread: true, title: title } 
+            };
+             alert('AIによるレスの自動生成に失敗しました。スレッドは作成されます。');
+        }
+
+
+        // 5. 保存してUIを更新
         saveState();
         document.getElementById('new-thread-modal').classList.add('hidden');
         
-        // 4. まとめサイトの記事一覧をリフレッシュ
+        // 6. まとめサイトの記事一覧をリフレッシュ
         const articlesContainer = document.getElementById('matome-articles-container');
         articlesContainer.innerHTML = `<div class="loader text-center py-8">スレッドを立てています...</div>`;
         (async () => {
             const matomeHtml = await generateMatomeSiteHtml();
             articlesContainer.innerHTML = matomeHtml;
         })();
+
+        // ★ ボタンの状態を元に戻す
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'スレを立てる';
     }
-    // ▲▲▲ 挿入ここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲
     // --- ★★★ ソート機能（ヘッダーTHクリック） ★★★ ---
     if (e.target.matches('.sortable-header')) {
         e.preventDefault();
