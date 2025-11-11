@@ -3640,15 +3640,33 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
 
 // ▼▼▼ このブロックをまるごと「新規追加」 ▼▼▼
 
+// ▼▼▼ 既存の generateUserThreadBbsComments 関数 (12015行目あたり) を、以下で「置き換え」 ▼▼▼
+
 /**
  * ユーザーが作成したスレッド（タイトル＋本文）に対し、なんJ風の掲示板コメントをAIに生成させる
- * @param {string} title - ユーザーが入力したスレッドタイトル
+ * (★試合の文脈（コンテキスト）をAIに渡して、本格的なレスを生成するよう強化した最終版★)
+ * * @param {string} title - ユーザーが入力したスレッドタイトル
  * @param {string} firstCommentText - ユーザーが入力した本文 (>>1)
+ * @param {string} gameContext - AIに提供する追加の試合/選手データ (formatPlayerGamelogsForPrompt などで生成)
  * @returns {Promise<Array|null>} コメントオブジェクトの配列
  */
-async function generateUserThreadBbsComments(title, firstCommentText) {
+async function generateUserThreadBbsComments(title, firstCommentText, gameContext) {
     let personaPrompt = `あなたは、日本の匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは少し皮肉屋で、ネットスラングを多用し、あらゆる話題に短いコメントを書き込みます。`;
     
+    // ★ gameContext が提供されていれば、プロンプトに「知識」として挿入する
+    const contextPrompt = gameContext 
+        ? `
+### 参考情報：静岡県高校野球の「常識」
+${PREFECTURE_LORE}
+
+### 参考情報：スレッドの話題に関連する最新データ
+${gameContext}
+`
+        : `
+### 参考情報
+(特に関連する試合データはありません。一般的な話題として返信してください。)
+`;
+
     const prompt = `${personaPrompt}
 
 以下の【ユーザーが立てたスレッド】について、**リアルタイムでスレッドが進行していくかのように**、自然な流れで**30〜35個**の掲示板の反応を生成してください。
@@ -3659,9 +3677,14 @@ ${title}
 ### スレ主(>>1)の本文
 ${firstCommentText}
 
+${contextPrompt}
+
 ### スレッド進行の指示
 1.  **序盤 (2〜5レス):** スレ主の投稿(>>1)に対し、即座に食いつく第一陣の反応。「マジか」「草」「また〇〇か」といった短いコメントが中心。
-2.  **中盤 (6〜15レス):** 少し冷静になった住民たちが、スレ主の話題に対して様々な角度からコメントを始める。肯定、否定、煽り、全く関係ない脱線などを織り交ぜる。**「>>1」への安価（アンカー）を使って、スレ主の意見に返信するやり取りを必ず含めること。**
+2.  **中盤 (6〜15レス):** - スレ主の話題に対して様々な角度からコメントを始める。肯定、否定、煽り、全く関係ない脱線などを織り交ぜる。
+    - **【★最重要】**: もし「参考情報：最新データ」が提供されている場合、その**データ（Gamelog、チーム打率、登板間隔など）**を**必ず**引用し、スレ主(>>1)の意見（例：「鈴木が凄い」）を補強したり、反論したりしてください。
+    - （例：「>>1 わかる。鈴木、これで3試合連続無失点じゃね？」「でも〇〇高校、チーム打率.180だぞ。鈴木が良くても勝てんわ」）
+    - **「>>1」への安価（アンカー）**を使って、スレ主の意見に返信するやり取りを必ず含めること。
 3.  **終盤 (16レス以降):** ある程度議論が出尽くした後の、まとめのようなコメントや、飽きてきた住民によるおふざけが始まる。
 4.　**最終盤 (26レス以降):** スレも混沌としてきて、関係ない話題を持ってくる者や、勝手にコンプレックスを刺激され発狂するもの、ただの荒らしなどが湧き始め、グダグダになり解散する。
 
@@ -3693,8 +3716,7 @@ ${firstCommentText}
         return null;
     }
 }
-// ▲▲▲ 新規追加ここまで ▲▲▲
-
+// ▲▲▲ 置き換えここまで ▲▲▲
 /**
  * 現実のニュースヘッドラインに対する、なんJ風の掲示板コメントをAIに生成させる
  * @param {string} headline - 現実のニュースの見出し
@@ -15410,6 +15432,7 @@ document.body.addEventListener('click', async (e) => {
 
         const title = document.getElementById('new-thread-title').value.trim();
         const comment = document.getElementById('new-thread-comment').value.trim();
+        const fullUserText = `${title} ${comment}`; // ★ スキャン用の結合テキスト
 
         if (!title || !comment) {
             alert('タイトルと本文の両方を入力してください。');
@@ -15434,7 +15457,7 @@ document.body.addEventListener('click', async (e) => {
         if (!tournamentState.userThreads) tournamentState.userThreads = [];
         tournamentState.userThreads.push(threadArticle);
 
-        // 2. スレッド本文（コメント）を作成
+        // 2. スレ主(>>1)のコメントを作成
         const firstComment = {
             id: crypto.randomUUID(),
             personality: '1: 風吹けば名無し (スレ主)',
@@ -15444,13 +15467,38 @@ document.body.addEventListener('click', async (e) => {
         };
         
         // ★★★ ここからが修正箇所 ★★★
-        // 3. AIにレスポンスを生成させる
-        const aiComments = await generateUserThreadBbsComments(title, comment);
+        // 3. ユーザーの入力テキストから関連情報をスキャンし、AI用のコンテキストを生成
+        
+        const mentionedTeams = new Set();
+        INITIAL_TEAM_POOL.forEach(team => {
+            if (fullUserText.includes(team)) {
+                mentionedTeams.add(team);
+            }
+        });
+
+        let gameContext = ""; // AIに渡すための情報テキスト
+        if (mentionedTeams.size > 0) {
+            // チーム情報 (打率, 盗塁, 軌跡)
+            mentionedTeams.forEach(teamName => {
+                const teamData = TEAM_DATA[teamName];
+                const teamRecord = tournamentState.teamRecords[teamName];
+                const dynamicInfo = generateDynamicTeamInfo(teamName, teamData, teamRecord); 
+                const fate = getTeamFateSummary(teamName);
+                gameContext += `\n- **${teamName}**: ${dynamicInfo} (今大会の状況: ${fate})\n`;
+            });
+
+            // 選手情報 (Gamelog)
+            // formatPlayerGamelogsForPrompt は「言及されたチーム」に所属する「言及された選手」のログを返す
+            gameContext += formatPlayerGamelogsForPrompt(mentionedTeams, fullUserText);
+        }
+        
+        // 4. AIにレスポンスを生成させる (★ gameContext を渡す)
+        const aiComments = await generateUserThreadBbsComments(title, comment, gameContext);
         // ★★★ 修正ここまで ★★★
 
         if (!tournamentState.matomeThreads) tournamentState.matomeThreads = {};
         
-        // 4. スレ主のコメントとAIのレスを結合して保存
+        // 5. スレ主のコメントとAIのレスを結合して保存
         if (aiComments && Array.isArray(aiComments)) {
             tournamentState.matomeThreads[threadId] = {
                 thread: [firstComment, ...aiComments], // ★ AIのレスを結合
@@ -15466,11 +15514,11 @@ document.body.addEventListener('click', async (e) => {
         }
 
 
-        // 5. 保存してUIを更新
+        // 6. 保存してUIを更新
         saveState();
         document.getElementById('new-thread-modal').classList.add('hidden');
         
-        // 6. まとめサイトの記事一覧をリフレッシュ
+        // 7. まとめサイトの記事一覧をリフレッシュ
         const articlesContainer = document.getElementById('matome-articles-container');
         articlesContainer.innerHTML = `<div class="loader text-center py-8">スレッドを立てています...</div>`;
         (async () => {
@@ -15478,11 +15526,12 @@ document.body.addEventListener('click', async (e) => {
             articlesContainer.innerHTML = matomeHtml;
         })();
 
-        // ★ ボタンの状態を元に戻す
+        // 8. ボタンの状態を元に戻す
         submitBtn.disabled = false;
         submitBtn.textContent = 'スレを立てる';
     }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
     // --- ★★★ ソート機能（ヘッダーTHクリック） ★★★ ---
     if (e.target.matches('.sortable-header')) {
         e.preventDefault();
