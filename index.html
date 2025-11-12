@@ -8780,17 +8780,23 @@ const previousBattingData = match.details.batting?.[teamKey];
                     const pStats = teamRecord.playerStats.pitching[playerName];
                     const careerStats = pStats.career; // 通算成績
                     
-                    if (careerStats && prevGameStats && parseInt(prevGameStats.battersFaced || 0) > 0) {
+                    // ▼▼▼ このブロックを「置き換え」▼▼▼
+                    if (careerStats && prevGameStats) {
+                        // 1. 試合出場数をリセット (名前があるだけで出場しているはず)
                         careerStats.games = (careerStats.games || 1) - 1;
-                        if (prevGameStats.result === 'W') careerStats.w--;
-                        if (prevGameStats.result === 'L') careerStats.l--;
-                        careerStats.ip -= parseFloat(prevGameStats.innings || 0);
-                        careerStats.so -= parseInt(prevGameStats.strikeouts || 0);
-                        careerStats.er -= parseInt(prevGameStats.earnedRuns || 0);
-                        careerStats.h = (careerStats.h || 0) - parseInt(prevGameStats.hits || 0);
-                        careerStats.bb = (careerStats.bb || 0) - parseInt(prevGameStats.walks || 0);
+                        
+                        // 2. 投球成績のリセット (battersFaced > 0 の場合のみ)
+                        if (parseInt(prevGameStats.battersFaced || 0) > 0) {
+                            if (prevGameStats.result === 'W') careerStats.w--;
+                            if (prevGameStats.result === 'L') careerStats.l--;
+                            careerStats.ip -= parseFloat(prevGameStats.innings || 0);
+                            careerStats.so -= parseInt(prevGameStats.strikeouts || 0);
+                            careerStats.er -= parseInt(prevGameStats.earnedRuns || 0);
+                            careerStats.h = (careerStats.h || 0) - parseInt(prevGameStats.hits || 0);
+                            careerStats.bb = (careerStats.bb || 0) - parseInt(prevGameStats.walks || 0);
+                        }
                     }
-                    
+                    // ▲▲▲ 置き換えここまで ▲▲▲                    
                     // ★ 登板履歴(gamelogs)からも、このmatchIdのデータを削除
                     if (pStats.gamelogs) {
                         pStats.gamelogs = pStats.gamelogs.filter(log => log.matchId !== currentMatchIdForDetails);
@@ -8824,6 +8830,7 @@ const previousBattingData = match.details.batting?.[teamKey];
     match.score2 = details.inningScore.team2.reduce((sum, score) => sum + score, 0);
 
     for (const teamKey of ['team1', 'team2']) {
+const playersAppearedThisGame = new Set();
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
@@ -8912,7 +8919,14 @@ const previousBattingData = match.details.batting?.[teamKey];
                             });
                         });
                     });
-                    if(gameStats.played || isNonBattingSub) { careerStats.games++; }
+                    // ▼▼▼ このブロックを「置き換え」▼▼▼
+                    if((gameStats.played || isNonBattingSub) && !playersAppearedThisGame.has(playerName)) { 
+                        careerStats.games++; 
+                        playersAppearedThisGame.add(playerName); // ★ セットに追加
+                    }
+                    // ▲▲▲ 置き換えここまで ▲▲▲
+
+
                     for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb']) {
                         careerStats[key] = (careerStats[key] || 0) + gameStats[key];
                         if (teamRecord.tournamentStats) {
@@ -8983,9 +8997,16 @@ const previousBattingData = match.details.batting?.[teamKey];
                     const pStats = teamRecord.playerStats.pitching[pitcherName];
                     const careerStats = pStats.career;
                     
+                    // ▼▼▼ ここからが修正ブロック ▼▼▼
+                    // 1. 投手名簿に名前が載った時点で「試合出場」をカウント (まだカウントされていなければ)
+                    if (pitcherData.name && !playersAppearedThisGame.has(pitcherName)) {
+                        careerStats.games = (careerStats.games || 0) + 1;
+                        playersAppearedThisGame.add(pitcherName); // ★ セットに追加
+                    }
+
+                    // 2. 実際に投球した場合（打者0は除く）のみ、投球成績を加算
                     if (pitcherData.battersFaced && parseInt(pitcherData.battersFaced) > 0) {
                         // 通算成績(career)に加算
-                        careerStats.games = (careerStats.games || 0) + 1;
                         if (pitcherData.result === 'W') careerStats.w++;
                         if (pitcherData.result === 'L') careerStats.l--;
                         careerStats.ip += parseFloat(pitcherData.innings) || 0;
@@ -9018,7 +9039,8 @@ const previousBattingData = match.details.batting?.[teamKey];
                             er: pitcherData.earnedRuns
                         });
                     }
-                }
+                    // ▲▲▲ 修正ブロックここまで ▲▲▲         
+       }
             });
         }
     }
