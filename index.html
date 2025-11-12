@@ -2056,6 +2056,33 @@ const JAPANESE_SURNAMES = [
     "小島", "大西", "杉本", "市川", "古川", "久保", "川崎", "飯田", "中田", "堀"
 ];
 
+// ▼▼▼ このブロックをまるごと「新規追加」(1191行目あたり、JAPANESE_SURNAMES の下など) ▼▼▼
+const TEAM_ROSTER_MASTER = {
+    "283学園": [
+        { number: "1", name: "白瀬", throwBat: "R/R" },
+        { number: "2", name: "有栖川", throwBat: "R/L" },
+        { number: "3", name: "姫川", throwBat: "R/R" },
+        { number: "4", name: "樋口", throwBat: "R/R" },
+        { number: "5", name: "八宮", throwBat: "R/R" },
+        { number: "6", name: "十王", throwBat: "R/L" },
+        { number: "7", name: "芹沢", throwBat: "R/S" },
+        { number: "8", name: "花海佑", throwBat: "R/R" },
+        { number: "9", name: "花海咲", throwBat: "L/L" },
+        { number: "10", name: "黛", throwBat: "R/R" },
+        { number: "11", name: "市川", throwBat: "L/L" },
+        { number: "12", name: "福丸", throwBat: "R/R" },
+        { number: "13", name: "鈴木", throwBat: "R/L" },
+        { number: "14", name: "有村", throwBat: "R/R" },
+        { number: "15", name: "田中", throwBat: "R/R" },
+        { number: "16", name: "大崎", throwBat: "R/L" },
+        { number: "17", name: "風野", throwBat: "R/R" },
+        { number: "18", name: "西城", throwBat: "R/R" },
+        { number: "19", name: "浅倉", throwBat: "R/R" },
+        { number: "20", name: "杜野", throwBat: "L/L" }
+    ]
+};
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // ▼▼▼ サウンド管理システム ▼▼▼
 
 // ▲▲▲
@@ -7885,21 +7912,13 @@ function createInningScoreTable(team1Name, team2Name, details) {
             </table>
         </div>`;
 }
+
+
+// ▼▼▼ 既存の「openDetailsModal」関数 (10563行目あたり) を、以下で「置き換え」 ▼▼▼
+
 /**
- * 新しい試合詳細モーダルを開き、各種テーブルを生成する（全ての機能を含む最終版）
- */
-/**
- * 新しい試合詳細モーダルを開き、各種テーブルを生成する（★常時縦並びレイアウト対応版）
- */
-// 【完成版】openDetailsModal
-/**
- * Opens the detailed input modal with the corrected vertical layout.
- */
-/**
- * 新しい試合詳細モーダルを開き、各種テーブルを生成する（★レイアウト問題を完全修正した最終版）
- */
-/**
- * 新しい試合詳細モーダルを開き、各種テーブルを生成する（★データ初期化の欠陥を修正した最終版）
+ * 新しい試合詳細モーダルを開き、各種テーブルを生成する
+ * (★283学園のロスター<datalist>自動生成機能を追加した最終版)
  */
 function openDetailsModal(matchId) {
     currentMatchIdForDetails = matchId;
@@ -8122,10 +8141,36 @@ function openDetailsModal(matchId) {
             </div>
     `;
 
+    // --- ★ 283学園用の自動入力<datalist>を生成・紐付け ---
+    const roster283 = TEAM_ROSTER_MASTER["283学園"];
+    if (roster283) {
+        const rosterOptionsHTML = roster283.map(p => `<option value="${p.name}"></option>`).join('');
+
+        if (match.team1 === "283学園") {
+            const datalistId = "roster-datalist-team1";
+            const datalist = document.createElement('datalist');
+            datalist.id = datalistId;
+            datalist.innerHTML = rosterOptionsHTML;
+            detailsBody.appendChild(datalist); // モーダル本体にdatalistを追加
+            // team1テーブルの全選手名入力欄にdatalistを紐付け
+            document.querySelectorAll('#batting-table-team1 .player-name').forEach(input => input.setAttribute('list', datalistId));
+        }
+        if (match.team2 === "283学園") {
+            const datalistId = "roster-datalist-team2";
+            const datalist = document.createElement('datalist');
+            datalist.id = datalistId;
+            datalist.innerHTML = rosterOptionsHTML;
+            detailsBody.appendChild(datalist); // モーダル本体にdatalistを追加
+            // team2テーブルの全選手名入力欄にdatalistを紐付け
+            document.querySelectorAll('#batting-table-team2 .player-name').forEach(input => input.setAttribute('list', datalistId));
+        }
+    }
+    // --- ★ 自動入力<datalist>の紐付けここまで ---
+
     detailsModal.classList.remove('hidden');
     updateTotalScores();
 }
- 
+// ▲▲▲ 置き換えここまで ▲▲▲ 
 
 /**
  * 投手成績のテーブルHTMLを生成する
@@ -16602,6 +16647,40 @@ document.body.addEventListener('input', (e) => {
         }
     }
     // ▲▲▲ 追加ここまで ▲▲▲
+
+// --- ★ 283学園の選手名自動入力 ---
+        else if (e.target.matches('.player-name')) {
+            const input = e.target;
+            const playerName = input.value.trim();
+            const row = input.closest('tr');
+            const table = input.closest('.batting-table');
+            if (!row || !table || !currentMatchIdForDetails) return;
+
+            const match = findMatchById(currentMatchIdForDetails);
+            if (!match) return;
+
+            // このテーブルがteam1かteam2か判定
+            const teamKey = table.id.includes('team1') ? 'team1' : 'team2';
+            const teamName = match[teamKey];
+            
+            // チームが283学園でなければ何もしない
+            const roster = TEAM_ROSTER_MASTER[teamName];
+            if (!roster) return;
+
+            // 入力された名前が名簿にあるか検索
+            const playerData = roster.find(p => p.name === playerName);
+            
+            // 名簿にデータがあれば、背番号と投打を自動入力
+            if (playerData) {
+                const numberSelect = row.querySelector('.player-number');
+                const throwBatSelect = row.querySelector('.player-throw-bat');
+                
+                if (numberSelect) numberSelect.value = playerData.number;
+                if (throwBatSelect) throwBatSelect.value = playerData.throwBat;
+            }
+        }
+        // --- ★ 自動入力ここまで ---
+// ▲▲▲ 新規追加ここまで ▲▲▲
 
 // イニングスコアが入力された場合
     else if (e.target.closest('#inning-score-table')) {
