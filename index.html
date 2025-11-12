@@ -4767,10 +4767,11 @@ const parseDate = (dateStr) => {
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
 
-// ▼▼▼ この関数を <script type="module"> 内に「新規追加」 ▼▼▼
+// ▼▼▼ 既存の「renderTeamStatsModal」関数 (10675行目あたり) を、以下で「置き換え」 ▼▼▼
+
 /**
  * チーム全員の通算成績モーダルの中身を生成・表示する
- * (★「登板履歴(Gamelogs)」タブを追加した最終版)
+ * (★「規定打席」ソートロジックを 試合数*3 に変更、投手の規定を撤廃★)
  * @param {string} teamName - チーム名
  */
 function renderTeamStatsModal(teamName) {
@@ -4781,15 +4782,12 @@ function renderTeamStatsModal(teamName) {
 
     modalTitle.textContent = `${teamName} 通算成績`;
     
-    // ▼▼▼ ここからが修正点 ▼▼▼
-    // 描画対象を、モーダル全体(modalBody)から「通算成績タブ」に変更
     const statsContentEl = document.getElementById('team-stats-tab-content-stats');
 
     if (!teamRecord || !teamRecord.playerStats) {
         statsContentEl.innerHTML = '<p class="text-center text-red-500">選手の成績データが見つかりません。</p>';
         return;
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     // --- 0. 現在のソート状態を取得（なければ選手名で昇順） ---
     const sortState = {
@@ -4814,7 +4812,7 @@ function renderTeamStatsModal(teamName) {
     let battingHtml = '';
     let pitchingHtml = '';
 
-    // --- 1. 打撃成績の計算と表示 (変更なし) ---
+    // --- 1. 打撃成績の計算と表示 (★ソートロジック修正) ---
     if (batting && Object.keys(batting).length > 0) {
         const battingArray = Object.keys(batting).map(playerName => {
             const stats = batting[playerName];
@@ -4826,19 +4824,58 @@ function renderTeamStatsModal(teamName) {
             const slg = (ab > 0) ? (tb / ab) : 0;
             const ops = obp + slg;
             return { name: playerName, ...stats, avg, obp, slg, ops };
-        }).filter(p => p.pa > 0); 
+        }).filter(p => p.pa > 0 || p.games > 0); // ★打席0でも試合出場(games > 0)なら表示
+
+        // --- ★★★ ここからが修正箇所 ★★★ ---
         const sortKey = sortState.batting.key;
         const sortDir = sortState.batting.dir === 'asc' ? 1 : -1;
+        
+        // ★ チームの総試合数を計算 (出場選手の中で最大の試合数)
+        // (今大会の試合数ではなく、全履歴の試合数を参照)
+        const totalGamesPlayed = Math.max(...battingArray.map(p => p.games || 0));
+        // ★ 規定打席を「試合数 * 3」に設定
+        const MINIMUM_PA_FOR_RANKING = totalGamesPlayed * 3;
+        
+        // 規定打席の対象となる率系のスタッツか？
+        const isRankedStat = ['avg', 'obp', 'slg', 'ops'].includes(sortKey);
+
         battingArray.sort((a, b) => {
             let valA = a[sortKey], valB = b[sortKey];
+            const paA = a.pa || 0;
+            const paB = b.pa || 0;
+
+            // 1. 率系のスタッツでソートする場合
+            if (isRankedStat) {
+                // ★ 規定打席のしきい値を MINIMUM_PA_FOR_RANKING に変更
+                const aQualified = paA >= MINIMUM_PA_FOR_RANKING;
+                const bQualified = paB >= MINIMUM_PA_FOR_RANKING;
+
+                // 両方規定打席未満なら、打席数の多い順
+                if (!aQualified && !bQualified) {
+                    return (paB - paA); 
+                }
+                // Aだけ規定打席未満なら、Aを「下」にする
+                if (!aQualified) {
+                    return 1; // 1を返すとbが先(aが後)になる
+                }
+                // Bだけ規定打席未満なら、Bを「下」にする
+                if (!bQualified) {
+                    return -1; // -1を返すとaが先(bが後)になる
+                }
+                // 両方規定打席以上なら、通常のソートへ進む
+            }
+
+            // --- 2. 通常のソートロジック ---
             if (sortKey === 'name') return valA.localeCompare(valB, 'ja') * sortDir;
             if (valA === undefined || valA === null) valA = 0;
             if (valB === undefined || valB === null) valB = 0;
             return (valA - valB) * sortDir;
         });
+        // --- ★★★ 修正ここまで ★★★ ---
+
         battingHtml = `
             <div>
-                <h4 class="stats-section-title">通算打撃成績</h4>
+                <h4 class="stats-section-title">通算打撃成績 (規定打席: ${MINIMUM_PA_FOR_RANKING})</h4>
                 <div class="overflow-x-auto">
                     <table class="career-stats-table" id="batting-stats-table">
                         <thead>
@@ -4862,13 +4899,17 @@ function renderTeamStatsModal(teamName) {
                         <tbody>
         `;
         battingArray.forEach(stats => {
+            // ★ 規定打席未満の選手は率をグレー表示
+            const isQualified = stats.pa >= MINIMUM_PA_FOR_RANKING;
+            const rateClass = isQualified ? 'stat-highlight' : 'text-gray-400';
+
             battingHtml += `
                 <tr>
                     <td class="player-name">${stats.name}</td>
-                    <td>${stats.games}</td><td>${stats.avg.toFixed(3)}</td><td class="stat-highlight">${stats.ops.toFixed(3)}</td>
+                    <td>${stats.games}</td><td class="${rateClass}">${stats.avg.toFixed(3)}</td><td class="${rateClass}">${stats.ops.toFixed(3)}</td>
                     <td>${stats.pa}</td><td>${stats.ab}</td><td>${stats.h}</td><td>${stats.hr}</td>
                     <td>${stats.rbi}</td><td>${stats.sb}</td><td>${stats.bb}</td><td>${stats.hbp}</td>
-                    <td class="stat-highlight">${stats.obp.toFixed(3)}</td><td class="stat-highlight">${stats.slg.toFixed(3)}</td>
+                    <td class="${rateClass}">${stats.obp.toFixed(3)}</td><td class="${rateClass}">${stats.slg.toFixed(3)}</td>
                 </tr>
             `;
         });
@@ -4877,7 +4918,7 @@ function renderTeamStatsModal(teamName) {
         battingHtml = `<div><h4 class="stats-section-title">通算打撃成績</h4><p class="text-sm text-gray-500">（通算打撃成績なし）</p></div>`;
     }
 
-    // --- 2. 投手成績の計算と表示 ---
+    // --- 2. 投手成績の計算と表示 (★規定投球回ロジック削除) ---
     if (pitching && Object.keys(pitching).length > 0) {
         
         // 2a. データを配列に変換し、計算値を付与
@@ -4891,14 +4932,29 @@ function renderTeamStatsModal(teamName) {
             const whip = (ip > 0) ? ((bb + h) / ip) : Infinity; 
             const k9 = (ip > 0) ? ((so * 9) / ip) : 0; 
 
-            return { name: playerName, ...stats, era, whip, k9, gamelogs: pStats.gamelogs || [] }; // ★gamelogsも配列に含める
-        }).filter(p => p && p.ip > 0); 
+            return { name: playerName, ...stats, era, whip, k9, gamelogs: pStats.gamelogs || [] };
+        }).filter(p => p && (p.ip > 0 || p.games > 0)); // ★ games > 0 (登板のみ) も許可
         
         // 2b. 配列をソート
         const sortKey = sortState.pitching.key;
         const sortDir = sortState.pitching.dir === 'asc' ? 1 : -1;
+        
+        // ★ 規定投球回ロジックを「まるごと削除」
+        const isPitchingRankedStat = ['era', 'whip', 'k9'].includes(sortKey);
+
         pitchingArray.sort((a, b) => {
             let valA = a[sortKey], valB = b[sortKey];
+            const ipA = a.ip || 0;
+            const ipB = b.ip || 0;
+
+            // ★ 規定投球回の `if (isPitchingRankedStat)` ブロックを「まるごと削除」
+
+            // 無限大(Infinity)のERAをソートのために大きな数値に変換
+            if (isPitchingRankedStat) {
+                if (valA === Infinity) valA = 999.99;
+                if (valB === Infinity) valB = 999.99;
+            }
+
             if (sortKey === 'name') return valA.localeCompare(valB, 'ja') * sortDir;
             if (valA === Infinity) valA = 999.99; 
             if (valB === Infinity) valB = 999.99;
@@ -4907,7 +4963,7 @@ function renderTeamStatsModal(teamName) {
             return (valA - valB) * sortDir;
         });
 
-        // 2c. HTMLを生成 (★gamelogsの行を追加)
+        // 2c. HTMLを生成
         pitchingHtml = `
             <div class="mt-6">
                 <h4 class="stats-section-title">通算投手成績</h4>
@@ -4932,7 +4988,9 @@ function renderTeamStatsModal(teamName) {
                         <tbody>
         `;
         pitchingArray.forEach(stats => {
-            // ★ 登板履歴(gamelogs)を行に含める
+            // ★ 規定投球回チェックを削除
+            const rateClass = 'stat-highlight'; // ★ 常にハイライト
+            
             const gamelogHtml = stats.gamelogs.length > 0 
                 ? stats.gamelogs.map(log => `(${log.round} vs ${log.opponent}: ${log.ip}回 ${log.r}失点)`).join(', ')
                 : '登板履歴なし';
@@ -4941,10 +4999,10 @@ function renderTeamStatsModal(teamName) {
                 <tr>
                     <td class="player-name">${stats.name}</td>
                     <td>${stats.games}</td><td>${stats.w}</td><td>${stats.l}</td>
-                    <td>${stats.ip.toFixed(1)}</td><td class="stat-highlight">${stats.era === 999.99 ? '----' : stats.era.toFixed(2)}</td>
-                    <td class="stat-highlight">${stats.whip === 999.99 ? '----' : stats.whip.toFixed(2)}</td>
+                    <td>${stats.ip.toFixed(1)}</td><td class="${rateClass}">${stats.era === 999.99 ? '----' : stats.era.toFixed(2)}</td>
+                    <td class="${rateClass}">${stats.whip === 999.99 ? '----' : stats.whip.toFixed(2)}</td>
                     <td>${stats.so}</td><td>${stats.h}</td><td>${stats.bb}</td><td>${stats.er}</td>
-                    <td class="stat-highlight">${stats.k9.toFixed(2)}</td>
+                    <td class="${rateClass}">${stats.k9.toFixed(2)}</td>
                 </tr>
                 <tr class="bg-gray-50">
                     <td colspan="12" class="text-left text-xs text-gray-600 p-2" style="white-space: normal;">
@@ -4960,7 +5018,7 @@ function renderTeamStatsModal(teamName) {
 
     statsContentEl.innerHTML = battingHtml + pitchingHtml;
 }
-// ▲▲▲ 新規追加ここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 
 
