@@ -1823,7 +1823,8 @@ graph TD
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">今大会 チーム成績</h4>
                 <p id="status-modal-team-stats" class="text-lg text-blue-700 font-bold"></p>
-            </div>
+<div>
+                           </div>
             
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">監督</h4>
@@ -3587,9 +3588,14 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
     - 「データ2」に**『今大会のチーム打率は.XXX』**という情報が含まれています。
     - この情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」「打率3割超えの打線相手によく抑えたわ」）にも言及すること。
 - **【投手の詳細属性】**: 「データ3（ボックススコア）」に「（右/オーバー/本格派/150km帯）」といった**投手の詳細属性**が記載されている場合、それにも言及すること。
+
+// ▼▼▼ 既存の「盗塁」の指示ブロックを、以下で「置き換え」 ▼▼▼
 - **【★盗塁への言及 (重要)】**:
     - 「データ3（個人成績）」に**盗塁(SB)**が記録されている選手がいたら、「〇〇、足はえーなw」「良い盗塁やった」と言及すること。
+    - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「姫川、今大会4盗塁目かよw」「こいつ打ちすぎだし走りすぎだろ」**といった具体的な数字に言及すること。
     - **盗塁が0でも批判は不要です。**
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 - **【★通算成績への言及 (裁量)】**:
     - 「データ2」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
     - **盗塁が0でも批判は不要です。**
@@ -5024,6 +5030,7 @@ function renderTeamStatsModal(teamName) {
 
 /**
  * チームステータスモーダルを表示する
+ * (★「今大会」のチーム成績に盗塁数を追加するよう修正)
  */
 function showTeamStatusModal(teamName) {
     const teamRecord = tournamentState.teamRecords[teamName];
@@ -5034,8 +5041,9 @@ function showTeamStatusModal(teamName) {
     const bestEl = document.getElementById('status-modal-best');
     const historyEl = document.getElementById('status-modal-history');
     const traitsEl = document.getElementById('status-modal-traits');
-    // ↓↓↓ おそらく抜けていたのがこの一行です ↓↓↓
     const coachEl = document.getElementById('status-modal-coach'); 
+    const statsEl = document.getElementById('status-modal-team-stats');
+    const careerStatsEl = document.getElementById('status-modal-career-stats'); 
 
     // チーム名を設定
     document.getElementById('status-modal-team-name').textContent = teamName;
@@ -5071,20 +5079,36 @@ function showTeamStatusModal(teamName) {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
     
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
+    // ★★★ ここからが今回の修正箇所 ★★★
     // チームの今大会成績を設定
-    const statsEl = document.getElementById('status-modal-team-stats');
     const stats = teamRecord.tournamentStats;
-    if (stats && stats.ab > 0) {
-        const avg = (stats.h / stats.ab).toFixed(3);
-        statsEl.textContent = `打率 ${avg} (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点`;
+    if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
+        const avg = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
+        const sbCount = stats.sb || 0; // 盗塁数を取得
+        // 盗塁数を表示テキストに追加
+        statsEl.textContent = `打率 ${avg} (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁`;
     } else if (stats) {
-        statsEl.textContent = `(今大会 ${stats.ab}打数 ${stats.h}安打)`;
+        // 試合には出たが打席がない場合
+        statsEl.textContent = `(今大会 ${stats.ab}打数 ${stats.h}安打) 0盗塁`;
     } else {
         statsEl.textContent = '（今大会の集計データなし）';
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
-
+    // ★★★ 修正ここまで ★★★
+    
+    // チームの「通算」成績を集計して表示
+    const careerBattingStats = teamRecord.playerStats?.batting;
+    let totalCareerSb = 0;
+    let totalCareerHr = 0;
+    if (careerBattingStats) {
+        for (const playerName in careerBattingStats) {
+            const stats = careerBattingStats[playerName];
+            totalCareerSb += stats.sb || 0;
+            totalCareerHr += stats.hr || 0;
+        }
+    }
+    if (careerStatsEl) {
+         careerStatsEl.textContent = `通算 ${totalCareerHr} 本塁打 / ${totalCareerSb} 盗塁`;
+    }
 
     // 監督情報を設定
     const teamMasterData = TEAM_DATA[teamName];
@@ -5098,7 +5122,8 @@ function showTeamStatusModal(teamName) {
     // モーダルを表示
     modal.classList.remove('hidden');
 }
-    // --- Custom Alert/Confirm ---
+// ▲▲▲ 置き換えここまで ▲▲▲
+  // --- Custom Alert/Confirm ---
     function showAlert(message) {
         alert(message);
     }
@@ -10645,7 +10670,8 @@ function getSubstitutionDescription(player) {
 }
 
 /**
- * 試合の個人成績をAIプロンプト用のテキスト形式（★背番号・盗塁付きボックススコア）にフォーマットする
+ * 試合の個人成績をAIプロンプト用のテキスト形式にフォーマットする
+ * (★選手の「今大会の通算成績」サマリーを追加した最終版)
  * @param {object} dbMatch - 試合オブジェクト
  * @returns {string} - フォーマットされたテキスト
  */
@@ -10674,12 +10700,14 @@ function formatPlayerStatsForPrompt(dbMatch) {
 
         sortedBatters.forEach(player => {
             if (!player.name) return;
-            const stats = gameStats[player.name];
-            // ★ 修正点: stats.played だけでなく、sb > 0 の場合も表示対象にする
-            if (!stats || (!stats.played && (stats.sb || 0) === 0)) return; 
+            const stats = gameStats[player.name]; // この試合の成績
+            
+            // ★ (stats.played=true) だけでなく、盗塁(sb>0)や守備交代(DEF)なども含める
+            const isNonBattingSub = player.sub_type === 'DEF' || player.sub_type === 'PR';
+            if (!stats || (!stats.played && (stats.sb || 0) === 0 && !isNonBattingSub)) return; 
 
+            const careerStats = teamRecord?.playerStats?.batting[player.name]; // 通算/Gamelog保持オブジェクト
             let statusText = "";
-            const careerStats = teamRecord?.playerStats?.batting[player.name];
             if (careerStats && careerStats.narrative_flag) {
                 const flagMap = {
                     "hot_streak": "絶好調", "powered_up": "一発警戒",
@@ -10695,16 +10723,53 @@ function formatPlayerStatsForPrompt(dbMatch) {
                 else if (player.throwBat.endsWith('/S')) batHandText = "（両打）";
             }            
 
+            // ★★★ ここからが修正箇所 ★★★
+            // 選手の「今大会」の通算成績を Gamelog から集計する
+            let tournamentTotalStatsText = "";
+            if (careerStats && careerStats.gamelogs && careerStats.gamelogs.length > 0) {
+                let tourneyStats = { sb: 0, hr: 0, h: 0, ab: 0 };
+                const currentTournamentKey = tournamentState.currentTournament;
+                
+                careerStats.gamelogs.forEach(log => {
+                    // このトーナメントのGamelogだけを抽出 (この試合(dbMatch.id)は除く)
+                    const logRound = log.round || '';
+                    let isInThisTournament = false;
+                    if (currentTournamentKey === 'summer') isInThisTournament = logRound.includes('回戦') || logRound.includes('決勝');
+                    else if (currentTournamentKey === 'autumn') isInThisTournament = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                    else if (currentTournamentKey === 'spring') isInThisTournament = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
+                    
+                    if (isInThisTournament && log.matchId !== dbMatch.id) { // この試合より「前」の成績
+                        tourneyStats.sb += log.stats?.sb || 0;
+                        tourneyStats.hr += log.stats?.hr || 0;
+                        tourneyStats.h += log.stats?.h || 0;
+                        tourneyStats.ab += log.stats?.ab || 0;
+                    }
+                });
+                
+                // 「この試合」の成績(stats)を加算
+                const thisGameSB = stats.sb || 0;
+                const thisGameHR = stats.hr || 0;
+                
+                const finalTourneySB = tourneyStats.sb + thisGameSB;
+                const finalTourneyHR = tourneyStats.hr + thisGameHR;
+                const finalTourneyH = tourneyStats.h + (stats.h || 0);
+                const finalTourneyAB = tourneyStats.ab + (stats.ab || 0);
+                const finalTourneyAvg = finalTourneyAB > 0 ? (finalTourneyH / finalTourneyAB).toFixed(3) : ".---";
+
+                // AIに渡すためのテキストを作成
+                tournamentTotalStatsText = ` (今大会: ${finalTourneyAvg}, ${finalTourneyHR}本, ${finalTourneySB}盗)`;
+            }
+            // ★★★ 修正ここまで ★★★
+
             const orderDisplay = player.order.includes('sub') ? `  - ${player.sub_type || '代'}` : `${player.order}.`;
             const playerIdentifier = `[#${player.number}] ${player.name}`; 
             
-            // ▼▼▼ この行を「盗塁(SB)」を含むように修正 ▼▼▼
             const statsLine = `${stats.ab}打数${stats.h}安打 ${stats.rbi}打点` + 
                               (stats.hr > 0 ? ` ${stats.hr}本塁打` : '') + 
-                              (stats.sb > 0 ? ` ${stats.sb}盗塁` : ''); // ★盗塁を追加
-            // ▲▲▲ 修正ここまで ▲▲▲
+                              (stats.sb > 0 ? ` ${stats.sb}盗塁` : '');
             
-            output += `${orderDisplay} ${playerIdentifier}${batHandText}${statusText}: ${statsLine}\n`; 
+            // ★ tournamentTotalStatsText を末尾に追加
+            output += `${orderDisplay} ${playerIdentifier}${batHandText}${statusText}: ${statsLine}${tournamentTotalStatsText}\n`; 
         });
         
         pitchingData.forEach(pitcher => {
@@ -10741,6 +10806,7 @@ function formatPlayerStatsForPrompt(dbMatch) {
 
     return formatTeamStats('team1') + formatTeamStats('team2');
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
  * 試合の詳細データから、AIプロンプト用の個人成績ハイライトを生成する（★投手分析強化版）
@@ -10975,9 +11041,9 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
         - 「データ1（ハイライト）」に「（★注目）」というマークが付いている打席があります。これは**ユーザー（監督）が『試合の分水嶺』だと判断した**、最も重要な打席です。
         - あなたのコラムでは、**この記事の中心的なハイライト**として、この「★注目」の打席の前後を、最もドラマチックに描写してください。
 17. **【★盗塁への言及 (重要)】**:
-    - 「データ2（ボックススコア）」に**盗塁(SB)**が記録されている選手がいた場合、その選手の機動力についても、あなたの視点で分析に含めること。
-    - **盗塁が0でも批判は不要です。**
-18.  **【★スタメン復帰】**: 「スタメン変更」情報（取材メモ外の別データとして提供）に「〇〇がスタメン復帰」とあった場合、**「監督の賭けが当たった」**という視点で、その選手の活躍（あるいは不振）をあなたの主観で分析してください。
+    - 「データ2（ボックススコア）」に**盗塁(SB)**が記録されている選手がいた場合、その選手の機動力（例：「〇〇が足でチャンスを広げ」）に言及してください。
+    - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「〇〇はこれで今大会4個目の盗塁。彼の足は本物だ」**といった具体的な数字を記事に含めてください。
+    - **盗塁が0だった場合、それについて批判的な言及（例：「なぜ走らない」）は不要です。**18.  **【★スタメン復帰】**: 「スタメン変更」情報（取材メモ外の別データとして提供）に「〇〇がスタメン復帰」とあった場合、**「監督の賭けが当たった」**という視点で、その選手の活躍（あるいは不振）をあなたの主観で分析してください。
 19.  **【★登板履歴への言及】**: 「データ3：今大会の主な投手登板履歴」が提供されている場合、その情報（例：連投の疲れ、前回の雪辱）もあなたの分析に加えてください。
 // ▼▼▼ この 2 つの指示ブロックを追加 (番号は 10, 11 になります) ▼▼▼
 20. **【連投・酷使の分析】**: 「データ3：登板履歴」を見て、もし投手が「連投」や「中1日」であったり、今大会で「投げすぎ（酷使）」の状態であったりした場合、それが今日の投球にどう影響したか、あなたの鋭い視点で分析してください。（例：「昨日120球を投げた腕で、今日も140km/hを計測するとは…彼の肩は一体どうなっているんだ」）
@@ -10987,6 +11053,10 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
 22. **【★打者の好不調の波】**: 「データ4：打者成績履歴」を熟読し、選手の**連続ヒット**や**連続無安打**の「波」に言及してください。（例：「1回戦で4タコだった〇〇くんが、今日はまるで別人のようだった」「△△くんはこれで3試合連続ヒット。完全に掴んだようだね」）
 23. **【★打者の役割分析】**: もし選手が**「代打」**で結果を出し続けていたり、**「打順変更」**で調子を上げていたりする場合、その采配と選手の適応力をあなたの視点で分析してください。
 // ▲▲▲
+24. **【★今大会の成績 (最重要)】**:
+    - 「データ5：チーム別 打球品質」の**『今大会のチーム打率は.XXX』**（※これはチーム背景情報の間違い）...
+    - （※プロンプトの記述ミスはAIが自己修正するので、ここではgenerateDynamicTeamInfoの情報を指していると解釈します）
+    - （※この指示はgenerateNewsArticleのものとほぼ同じなので、AIはplayerStatsTextにある今大会:のサマリーも参照します）
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
 - **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
@@ -11385,6 +11455,10 @@ ${lineupChangesText}
 33. **【★打者の相手の質 (裁量)】**:
     - もし「試合履歴」で、その打者が「格下相手」にしか打っておらず、今回初めて「強豪投手」に抑えられた場合、その「真価が問われた」と分析してください。
 // ▲▲▲
+34. **【★盗塁への言及 (重要)】**:
+        - 「ボックススコア」に**盗塁(SB)**が記録されている選手がいた場合（例：1盗塁）、**その選手が盗塁したという事実**（例：「〇〇が足でチャンスを広げ」）に言及してください。
+        - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「〇〇はこれで今大会4個目の盗塁」**といった具体的な数字を記事に含めてください。
+        - **盗塁が0だった場合、それについて批判的な言及（例：「なぜ走らない」）は不要です。**
 ---
 ### 編集長からの追加指示
 ${(userFeedback && userFeedback.include) ? `- **【最重要指示】** ${userFeedback.include}\n` : ''}
@@ -11755,6 +11829,10 @@ ${specialNarrativeContext}
     - **盗塁が0でも批判は不要です。**
 - **【★盗塁への言及 (重要)】**:
     - 「ハイライト」や「ボックススコア」に**盗塁**が記録されていたら、その選手の足（機動力）を褒めること。（例：「〇〇の盗塁デカかったな」「足でかき回したな」）。
+- **【★盗塁への言及 (重要)】**:
+    - 「ボックススコア」に**盗塁(SB)**が記録されている選手がいた場合、その選手の足（機動力）を褒めること。（例：「〇〇の盗塁デカかったな」「足でかき回したな」）。
+    - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「〇〇、今大会もう4盗塁かよwはえー」**といった具体的な数字に言及すること。
+    - **盗塁が0でも批判は不要です。**
     - **盗塁が0でも批判は不要です。**
 - **熱狂的な勝者チームのOB**: 「試合のハイライト」で活躍した自チームの選手を熱烈に称賛してください。
 - **上から目線の野球解説者**: 「試合のハイライト」のプレーを玄人っぽく分析してください。
@@ -13121,7 +13199,8 @@ function createHighlightsText(dbMatch, winnerName) {
             
             else if (tempRes.includes('ゴロ') && rbiMatch) description = `${playerInfo}の${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '内野'}ゴロの間に${eventText}${rbiMatch[1]}点を挙げた`;
             else if ((tempRes.includes('エラー') || tempRes.includes('失')) && rbiMatch) description = `${playerInfo}が${markPrefix}相手${direction ? direction + 'の' : ''}エラーの間に${eventText}${rbiMatch[1]}点を記録した`;
-            
+            else if (tempRes.includes('野選') && rbiMatch) description = `${playerInfo}の${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '内野'}への${eventText}野選の間に${rbiMatch[1]}点を挙げた`;
+
             else if (tempRes.includes('四球')) {
                 if (rbiMatch) description = `${playerInfo}が${markPrefix}${eventText}押し出しの四球を選び、${rbiMatch[1]}点を挙げた`;
                 else description = `${playerInfo}が${markPrefix}四球を選んだ`;
