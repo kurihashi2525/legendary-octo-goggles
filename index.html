@@ -7393,7 +7393,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
     const isSeed1 = !!seedInfo1;
     const isSeed2 = !!seedInfo2;
 
-    const showInputs = !t1Empty && !t2Empty && !dbMatch.winner;
+    const showInputs = !t1Empty && !t2Empty;
 
     let atmosphereInputs = '';
     if (showInputs) {
