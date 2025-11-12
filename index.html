@@ -8682,8 +8682,14 @@ const previousBattingData = match.details.batting?.[teamKey];
                                 else if (cleanBatterPlay.includes('三塁打')) { gameStats.h++; gameStats.tb += 3; }
                                 else if (cleanBatterPlay.includes('二塁打')) { gameStats.h++; gameStats.tb += 2; }
                                 else if (cleanBatterPlay.includes('安')) { gameStats.h++; gameStats.tb += 1; }
-                                if (cleanBatterPlay.includes('点')) { gameStats.rbi += (cleanBatterPlay.match(/(\d+)点/) || [0, 1])[1]; }
-                            }
+                               if (cleanBatterPlay.includes('点')) { 
+                    const rbiValue = (cleanBatterPlay.match(/(\d+)点/) || [0, 0])[1]; // [0, 1] を [0, 0] に修正
+                    gameStats.rbi += parseInt(rbiValue, 10); // ★ parseInt を使って数値として加算
+                }
+
+}
+
+                            
                             (runnerPlaysString || '').split(',').forEach(runnerPlay => {
                                 const parts = runnerPlay.split(' ');
                                 if (parts[0] === playerName && parts[1] === '盗塁') { gameStats.sb++; }
@@ -15987,10 +15993,21 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 交代選手追加ボタン ---
+    // --- 交代選手追加ボタン ---
     if (e.target.matches('.add-sub-row-btn')) {
         e.preventDefault();
         const btn = e.target;
         const teamKey = btn.dataset.teamKey;
+
+        // ★★★ ここからが修正箇所 ★★★
+        // エラーの原因: dbMatch が未定義だったため、ここで match を再取得します
+        const match = findMatchById(currentMatchIdForDetails);
+        if (!match) {
+            console.error("Could not find match to add substitute player.");
+            return; 
+        }
+        // ★★★ 修正ここまで ★★★
+
         const currentOrder = btn.dataset.order;
         const baseOrder = currentOrder.split('-')[0];
         const tableBody = btn.closest('tbody');
@@ -16025,7 +16042,7 @@ document.body.addEventListener('click', async (e) => {
                 <div class="flex items-center gap-1">
                     <input type="text" class="player-name w-full" placeholder="交代選手名">
                     <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
-                            data-team-name="${teamKey === 'team1' ? dbMatch.team1 : dbMatch.team2}" 
+                            data-team-name="${teamKey === 'team1' ? match.team1 : match.team2}" 
                             data-player-order-key="${newOrder}" 
                             title="通算成績を表示">📊</button>
                 </div>
@@ -16051,6 +16068,7 @@ document.body.addEventListener('click', async (e) => {
         `;
         targetRow.parentNode.insertBefore(newRow, targetRow.nextSibling);
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
     // --- 守備変更ボタン（モーダルを開く） ---
     if (e.target.matches('.pos-change-btn')) {
