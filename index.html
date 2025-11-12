@@ -4551,6 +4551,222 @@ function renderStartingLineupHistory(teamName) {
     contentEl.innerHTML = html;
 }
 
+// ▼▼▼ この関数をまるごと「新規追加」(10673行目あたり、renderTeamStatsModal の直前) ▼▼▼
+
+/**
+ * [NEW] 個人の通算成績モーダルの中身を生成・表示する
+ * (★「ReferenceError: renderCareerStatsModal is not defined」エラーを修正)
+ * @param {string} playerName - 選手名
+ * @param {string} teamName - チーム名
+ */
+function renderCareerStatsModal(playerName, teamName) {
+    const modalBody = document.getElementById('player-stats-modal-body');
+    if (!modalBody) {
+        console.error("Fatal: player-stats-modal-body element not found.");
+        return;
+    }
+    
+    modalBody.innerHTML = ''; // Clear previous content
+    
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord || !teamRecord.playerStats) {
+        modalBody.innerHTML = `<p class="text-red-500 text-center">エラー: ${teamName} のチーム記録が見つかりません。</p>`;
+        return;
+    }
+
+    const bStats = teamRecord.playerStats.batting?.[playerName];
+    const pStats = teamRecord.playerStats.pitching?.[playerName];
+
+    if (!bStats && !pStats) {
+        modalBody.innerHTML = `<p class="text-gray-500 text-center">${playerName}選手の通算成績データはまだありません。</p>`;
+        return;
+    }
+
+    let html = `
+        <div class="player-stats-header">
+            <h4 class="player-stats-name">${playerName}</h4>
+            <p class="player-stats-team">${teamName}</p>
+        </div>
+    `;
+
+    // --- 1. 打撃成績の表示 ---
+    if (bStats && bStats.pa > 0) {
+        // 必要な計算 (renderTeamStatsModalから拝借)
+        const { games = 0, pa = 0, ab = 0, h = 0, hr = 0, rbi = 0, sb = 0, bb = 0, hbp = 0, sf = 0, tb = 0 } = bStats;
+        const avg = (ab > 0) ? (h / ab).toFixed(3) : ".000";
+        const obp_numerator = h + bb + hbp;
+        const obp_denominator = ab + bb + hbp + sf;
+        const obp = (obp_denominator > 0) ? (obp_numerator / obp_denominator).toFixed(3) : ".000";
+        const slg = (ab > 0) ? (tb / ab).toFixed(3) : ".000";
+        const ops = (parseFloat(obp) + parseFloat(slg)).toFixed(3);
+
+        html += `
+            <div>
+                <h5 class="stats-section-title">通算打撃成績</h5>
+                <div class="stats-grid">
+                    <div class="stats-grid-item highlight">
+                        <span class="stats-label">打率</span>
+                        <span class="stats-value">${avg}</span>
+                    </div>
+                    <div class="stats-grid-item highlight">
+                        <span class="stats-label">OPS</span>
+                        <span class="stats-value">${ops}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">本塁打</span>
+                        <span class="stats-value">${hr}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">打点</span>
+                        <span class="stats-value">${rbi}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">試合</span>
+                        <span class="stats-value">${games}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">打数</span>
+                        <span class="stats-value">${ab}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">安打</span>
+                        <span class="stats-value">${h}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">盗塁</span>
+                        <span class="stats-value">${sb}</span>
+                    </div>
+                </div>
+                <div class="stats-grid mt-2 grid-cols-5">
+                    <div class="stats-grid-item"><span class="stats-label">打席</span><span class="stats-value text-xl">${pa}</span></div>
+                    <div class="stats-grid-item"><span class="stats-label">四球</span><span class="stats-value text-xl">${bb}</span></div>
+                    <div class="stats-grid-item"><span class="stats-label">死球</span><span class="stats-value text-xl">${hbp}</span></div>
+                    <div class="stats-grid-item"><span class="stats-label">出塁率</span><span class="stats-value text-xl">${obp}</span></div>
+                    <div class="stats-grid-item"><span class="stats-label">長打率</span><span class="stats-value text-xl">${slg}</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- 2. 投手成績の表示 ---
+    if (pStats && pStats.career && pStats.career.ip > 0) {
+        const career = pStats.career;
+        const { games = 0, w = 0, l = 0, ip = 0, so = 0, er = 0, h = 0, bb = 0 } = career;
+        const era_val = (ip > 0) ? ((er * 9) / ip) : Infinity;
+        const whip_val = (ip > 0) ? ((bb + h) / ip) : Infinity;
+        const k9_val = (ip > 0) ? ((so * 9) / ip) : 0;
+        
+        const era = (era_val === Infinity) ? "----" : era_val.toFixed(2);
+        const whip = (whip_val === Infinity) ? "----" : whip_val.toFixed(2);
+        const k9 = k9_val.toFixed(2);
+
+        html += `
+            <div>
+                <h5 class="stats-section-title">通算投手成績</h5>
+                <div class="stats-grid">
+                    <div class="stats-grid-item highlight">
+                        <span class="stats-label">防御率</span>
+                        <span class="stats-value">${era}</span>
+                    </div>
+                    <div class="stats-grid-item highlight">
+                        <span class="stats-label">WHIP</span>
+                        <span class="stats-value">${whip}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">勝利</span>
+                        <span class="stats-value">${w}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">敗北</span>
+                        <span class="stats-value">${l}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">登板</span>
+                        <span class="stats-value">${games}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">投球回</span>
+                        <span class="stats-value">${ip.toFixed(1)}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">奪三振</span>
+                        <span class="stats-value">${so}</span>
+                    </div>
+                    <div class="stats-grid-item">
+                        <span class="stats-label">K/9</span>
+                        <span class="stats-value">${k9}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // --- 3. 試合履歴 (Gamelogs) の表示 ---
+    const allGamelogs = [
+        ...(bStats?.gamelogs || []).map(log => ({ ...log, type: 'batting' })),
+        ...(pStats?.gamelogs || []).map(log => ({ ...log, type: 'pitching' }))
+    ].sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0)); // 日付順にソート
+
+    if (allGamelogs.length > 0) {
+        html += `
+            <div>
+                <h5 class="stats-section-title">今大会 試合別成績</h5>
+                <div class="space-y-2 text-sm">
+        `;
+        
+        // Gamelogを試合IDでグループ化
+        const gamesGrouped = allGamelogs.reduce((acc, log) => {
+            if (!acc[log.matchId]) {
+                acc[log.matchId] = {
+                    round: log.round,
+                    opponent: log.opponent,
+                    opponentRank: log.opponentRank,
+                    batting: null,
+                    pitching: null
+                };
+            }
+            if (log.type === 'batting') acc[log.matchId].batting = log.stats;
+            if (log.type === 'pitching') acc[log.matchId].pitching = log;
+            return acc;
+        }, {});
+
+        Object.values(gamesGrouped).reverse().forEach(game => { // 新しい試合から表示
+            let statsLine = '';
+            if (game.batting) {
+                const b = game.batting;
+                statsLine += `打: ${b.ab}-${b.h} ${b.hr}HR ${b.rbi}点 ${b.sb}盗`;
+            }
+            if (game.pitching) {
+                const p = game.pitching;
+                const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[p.result] || '';
+                statsLine += (statsLine ? ' / ' : '') + `投: ${resultMark}${p.ip}回 ${p.so}K ${p.r}失(自${p.er})`;
+            }
+            
+            html += `
+                <div class="p-2 border rounded bg-gray-50">
+                    <span class="font-semibold">${game.round} vs ${game.opponent} [${game.opponentRank}]</span>
+                    <span class="block text-gray-700">${statsLine}</span>
+                </div>
+            `;
+        });
+
+        html += `</div></div>`;
+    }
+
+    modalBody.innerHTML = html;
+}
+
+// ヘルパー関数: parseDate (gamelogソート用)
+const parseDate = (dateStr) => {
+    if (!dateStr || !dateStr.includes('/')) return null;
+    const [month, day] = dateStr.split('/').map(Number);
+    // 年は現在の大会年度を仮定 (月が1-3月の場合は翌年扱い)
+    const year = (tournamentState?.tournamentYear || new Date().getFullYear()) + (month <= 3 ? 1 : 0);
+    return new Date(year, month - 1, day);
+};
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
+
 // ▼▼▼ この関数を <script type="module"> 内に「新規追加」 ▼▼▼
 /**
  * チーム全員の通算成績モーダルの中身を生成・表示する
