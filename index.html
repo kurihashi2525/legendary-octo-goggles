@@ -13,6 +13,63 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+.player-profile-card {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb; /* border-gray-200 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            transition: all 0.2s ease-out;
+        }
+        .player-profile-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+        .player-profile-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .player-profile-number {
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 900;
+            color: #1e3a8a; /* 283学園のテーマカラー */
+            line-height: 1;
+            margin-right: 0.75rem;
+        }
+        .player-profile-name {
+            font-size: 1.125rem; /* text-xl */
+            font-weight: 700;
+            color: #1f2937; /* text-gray-800 */
+            flex-grow: 1;
+        }
+        .player-profile-grade {
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 700;
+            color: #1e3a8a;
+        }
+        .player-profile-captain {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #b91c1c; /* text-red-700 */
+            margin-left: 0.25rem;
+        }
+        .player-profile-body {
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* text-gray-600 */
+            line-height: 1.6;
+        }
+        .player-profile-body strong {
+            color: #1f2937; /* text-gray-800 */
+            font-weight: 600;
+            margin-right: 0.25rem;
+        }
+
 /* ▼▼▼ 勢力図分析アニメーション用のCSS（レイアウト修正版）▼▼▼ */
 #analysis-stage {
     background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
@@ -824,6 +881,46 @@
     background-color: #f9fafb; /* bg-gray-50 */
 }
 
+
+/* 1. ヒーローセクションのアニメーション */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down {
+            animation: fadeInDown 1.0s ease-out forwards;
+        }
+        .animate-fade-in-up {
+            opacity: 0; /* 最初は非表示 */
+            animation: fadeInUp 1.0s ease-out 0.5s forwards; /* 0.5秒遅れて開始 */
+        }
+        /* .is-visible はJSでアニメーション開始時に付与されます */
+        .animate-fade-in-up.is-visible {
+            opacity: 1;
+        }
+
+        /* 2. スクロール連動フェードイン用 */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 3. 選手カードのホバーエフェクト強化 */
+        .player-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+
 /* ▼▼▼ このブロックを <style> タグ内に「新規追加」 ▼▼▼ */
 /* チーム通算成績モーダル（ソート機能付き）のスタイル */
 .career-stats-table {
@@ -881,6 +978,242 @@
     background-color: #f9fafb; /* bg-gray-50 */
 }
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+
+/* ヒーローセクションの背景 */
+        .hero-bg {
+            background: linear-gradient(rgba(17, 24, 39, 0.7), rgba(17, 24, 39, 0.7)), url('https://images.unsplash.com/photo-1519069632080-756b57d9b542?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNjAzNTV8MHwxfGFsbHx8fHx8fHx8fDE3MTUyNDU0Njd8&ixlib=rb-4.0.3&q=80&w=1080');
+            background-size: cover;
+            background-position: center 70%;
+            background-attachment: fixed; /* 背景を固定し、パララックス（視差）効果を出す */
+        }
+        /* スローガン用の特大フォント */
+        .slogan {
+            font-size: clamp(4rem, 15vw, 10rem); /* 画面幅に応じてサイズ変更 */
+            font-weight: 900;
+            line-height: 1;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        /* セクションタイトルの下線 */
+        .section-title {
+            position: relative;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; /* ボーダーライン上に配置 */
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background-color: #1e3a8a; /* 濃い青 (283学園のテーマカラー) */
+        }
+        /* 選手カードのホバーエフェクト */
+        .player-card {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .player-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        /* ページ内リンクが飛んだ際のヘッダーのズレを調整 */
+        section[id] {
+            scroll-margin-top: 80px; /* ヘッダーの高さ分（約） */
+        }
+        /* ヘッダーナビゲーションのホバーエフェクト */
+        .nav-link {
+            position: relative;
+            transition: color 0.2s;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1e3a8a;
+            transition: width 0.3s ease-out;
+        }
+        .nav-link:hover::after,
+        .nav-link:focus::after {
+            width: 100%;
+        }
+        /* ギャラリー画像のホバーエフェクト */
+        .gallery-image {
+            transition: transform 0.3s ease-in-out, filter 0.3s ease-in-out;
+        }
+        .gallery-image:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        /* ▼▼▼ トーナメント表用のCSS ▼▼▼ */
+        .bracket-wrapper {
+            max-width: 100%;
+            overflow-x: auto; /* 横スクロールを可能にする */
+            padding: 2rem 1rem;
+            background-color: #ffffff; /* bg-white */
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .tournament-container {
+            display: flex;
+            align-items: stretch; /* 各ラウンドの高さを揃える */
+            min-width: 3200px; /* 全体の最小幅を指定 */
+        }
+        .bracket-final {
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; padding: 0 1.5rem; flex-shrink: 0;
+        }
+        .final-matchup { width: 280px; }
+        .final-matchup .match {
+            border-width: 2px; border-color: #f59e0b;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+        }
+        .final-matchup .team { font-size: 1.125rem; padding: 0.75rem 1rem; }
+        .final-matchup .score { font-size: 1.25rem; }
+        .winner-box {
+            text-align: center; margin-top: 1.5rem; padding: 0.75rem 1.5rem;
+            background-color: #fffbeb; border: 2px solid #fcd34d; border-radius: 0.375rem;
+        }
+        .winner-box h2 { font-size: 1.5rem; font-weight: 700; color: #d97706; }
+        .bracket-half { display: flex; align-items: stretch; }
+        .bracket-half.right { flex-direction: row-reverse; }
+        .round {
+            /* width: 230px; や width: 280px; などの定義は
+               index.html 側の既存の .round 定義と競合するため、ここでは除外します */
+        }
+        .round-title {
+            text-align: center; font-weight: 700; font-size: 1rem;
+            color: #4b5563; margin-bottom: 1rem; white-space: nowrap;
+        }
+        .matchup {
+            /* .matchup の定義も index.html 側と競合するため、必要なもの以外は除外 */
+        }
+        .match {
+            border: 1px solid #d1d5db; background: #fff;
+            border-radius: 0.375rem; overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .team {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0.75rem; font-size: 0.875rem; line-height: 1.25; min-height: 38px;
+        }
+        .team.winner { font-weight: 700; color: #111827; }
+        .team.loser { color: #6b7280; opacity: 0.7; }
+        .team.loser .name { text-decoration: line-through; }
+        .team .score {
+            width: 30px; text-align: right; border-left: 1px solid #e5e7eb;
+            padding-left: 0.5rem; font-size: 0.95rem; font-weight: 500;
+        }
+        .team.winner .score { color: #dc2626; font-weight: 700; }
+        .team:first-child { border-bottom: 1px solid #d1d5db; }
+        .r1 .matchup { margin: 0.25rem 0; }
+        .r1 .team { padding: 3px 6px; font-size: 11px; min-height: 28px; }
+        .r1 .team .score { width: 20px; font-size: 11px; }
+        .connector-line {
+            position: absolute; top: 50%; width: 1.5rem; height: 2px;
+            background-color: #9ca3af; z-index: 1;
+        }
+        .bracket-half.left .connector-line { right: -1.5rem; }
+        .bracket-half.right .connector-line { left: -1.5rem; }
+        .connector-path {
+            position: absolute; top: 50%; height: 100%; width: 2px;
+            background-color: #9ca3af; z-index: 0;
+        }
+        .r2 .matchup { margin: 0.5rem 0; }
+        .r2 .connector-path { top: -25%; height: 150%; }
+        .r3 .matchup { margin: 1.25rem 0; }
+        .r3 .connector-path { top: -75%; height: 250%; }
+        .r4 .matchup { margin: 3.25rem 0; }
+        .r4 .connector-path { top: -175%; height: 450%; }
+        .r5 .matchup { margin: 8rem 0; }
+        .r5 .connector-path { top: -400%; height: 900%; }
+        .bracket-half.left .connector-path { right: -1.5rem; }
+        .bracket-half.right .connector-path { left: -1.5rem; }
+        /* ▲▲▲ トーナメント表CSSここまで ▲▲▲ */
+        
+        /* ▼▼▼ 一球速報モーダル用のCSS ▼▼▼ */
+        .modal-hidden { display: none; }
+        #boxscore-modal-body {
+            background-color: #f9fafb; /* bg-gray-50 */
+            padding: 1rem;
+            border-radius: 0.25rem;
+            font-size: 12px; /* ベースのフォントサイズ */
+        }
+        /* 一球速報.com風 スコアボード */
+        .boxscore-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 14px; margin-bottom: 1rem;
+        }
+        .boxscore-table th, .boxscore-table td {
+            border: 1px solid #d1d5db; padding: 6px 8px; text-align: center;
+        }
+        .boxscore-table .team-name {
+            text-align: left; font-weight: 700; width: 20%;
+        }
+        .boxscore-table .inning-header th {
+            background-color: #374151; color: white;
+            font-weight: 500; padding: 4px 6px;
+        }
+        .boxscore-table .total-header { background-color: #374151; color: white; }
+        .boxscore-table .score-cell {
+            font-size: 1.1rem; font-weight: 700; width: 35px;
+        }
+        .boxscore-table .total-score {
+            font-size: 1.25rem; font-weight: 700; background-color: #fef9c3;
+        }
+        /* 一球速報.com風 打撃成績テーブル */
+        .batting-stats-table {
+            width: 100%; border-collapse: collapse; font-size: 12px;
+            table-layout: fixed; /* テーブルレイアウトを固定 */
+        }
+        .batting-stats-table th, .batting-stats-table td {
+            border: 1px solid #e5e7eb; padding: 5px 4px;
+            text-align: center; white-space: nowrap; /* 折り返し禁止 */
+        }
+        .batting-stats-table thead tr { background-color: #f3f4f6; }
+        .batting-stats-table .pos { width: 8%; }
+        .batting-stats-table .player { width: 20%; text-align: left; padding-left: 8px; }
+        .batting-stats-table .at-bat { width: 5%; }
+        .batting-stats-table .runs { width: 5%; }
+        .batting-stats-table .hits { width: 5%; }
+        .batting-stats-table .rbi { width: 5%; }
+        .batting-stats-table .so { width: 5%; }
+        .batting-stats-table .walks { width: 5%; }
+        .batting-stats-table .results { width: 42%; text-align: left; padding-left: 8px; white-space: normal; } /* 結果は折り返し許可 */
+        .batting-stats-table tbody tr:hover { background-color: #fef9c3; }
+        .batting-stats-table .sub-player td { background-color: #f9fafb; color: #4b5563; }
+        .batting-stats-table .sub-player .player { padding-left: 20px; }
+        .batting-stats-table .team-totals { font-weight: 700; background-color: #f3f4f6; }
+        /* 投手成績テーブル */
+        .pitching-stats-table {
+            width: 100%; border-collapse: collapse; font-size: 12px;
+            margin-top: 1rem; table-layout: fixed;
+        }
+        .pitching-stats-table th, .pitching-stats-table td {
+            border: 1px solid #e5e7eb; padding: 5px 4px;
+            text-align: center; white-space: nowrap;
+        }
+        .pitching-stats-table thead tr { background-color: #f3f4f6; }
+        .pitching-stats-table .player { width: 25%; text-align: left; padding-left: 8px; }
+        .pitching-stats-table .result { width: 6%; }
+        .pitching-stats-table .ip { width: 8%; }
+        .pitching-stats-table .bf { width: 8%; }
+        .pitching-stats-table .hits { width: 8%; }
+        .pitching-stats-table .so { width: 8%; }
+        .pitching-stats-table .walks { width: 8%; }
+        .pitching-stats-table .runs { width: 8%; }
+        .pitching-stats-table .er { width: 8%; }
+        .pitching-stats-table .era { width: 13%; }
+        /* ▲▲▲ 一球速報CSSここまで ▲▲▲ */
+
+/* ▲▲▲ 新規追加ここまで ▲▲▲ */
+
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
 .match-schedule {
@@ -973,6 +1306,30 @@
     font-size: 12px; 
     
 }
+
+/* 283学園ホームページ用ハイライト */
+        #homepage-modal #results .team.hp-team-283 {
+            background-color: #eff6ff; /* bg-blue-50 */
+            border-color: #93c5fd; /* border-blue-300 */
+        }
+        #homepage-modal #results .team.hp-team-283.winner {
+            background-color: #1e3a8a; /* bg-blue-800 */
+            color: white;
+            font-weight: 900;
+        }
+        #homepage-modal #results .team.hp-team-283.winner .score,
+        #homepage-modal #results .team.hp-team-283.winner .name {
+            color: white;
+        }
+        #homepage-modal #results .team.hp-team-283.loser {
+            background-color: #eef2ff; /* bg-indigo-50 */
+            opacity: 0.8;
+        }
+        #homepage-modal #results .team.hp-team-283.loser .name {
+            text-decoration: line-through;
+        }
+        /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+
 /* ▼▼▼ この新しいルールを追加 ▼▼▼ */
 .details-table th {
     white-space: nowrap; /* ヘッダーの文字が折り返さないようにする */
@@ -1006,6 +1363,8 @@
 .details-table[id^="pitching-table"] .col-pitcher-velocity { min-width: 80px; }
 .details-table[id^="pitching-table"] .col-stat { min-width: 60px; } /* 回数, 打者, 球数 etc. */
 /* ▲▲▲ 追加ここまで ▲▲▲ */
+
+
 
 /* 打撃成績テーブル */
 /* ★列幅設定（min-widthで最低幅を保証）★ */
@@ -1798,6 +2157,8 @@ graph TD
 </div>
 
 <div id="team-status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
+
+
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
         <div class="flex justify-between items-center border-b pb-3 mb-4">
             <h3 id="status-modal-team-name" class="text-2xl font-bold text-gray-800"></h3>
@@ -1830,6 +2191,17 @@ graph TD
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">監督</h4>
                 <div id="status-modal-coach" class="text-gray-700"></div>
             </div>
+
+<div id="status-modal-homepage-link-container" class="mt-6 border-t pt-4 text-center hidden">
+                <a id="status-modal-homepage-link" class="inline-block bg-blue-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-800 transition-colors cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 inline-block -mt-1 mr-2">
+                        <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.665l3-3Z" />
+                        <path d="M8.603 17.39a4 4 0 0 0 5.656-5.656l-3-3a4 4 0 0 0-.225-5.865.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.665l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 0 0 5.656 5.656Z" />
+                    </svg>
+                    公式ホームページへ
+                </a>
+            </div>
+
         </div>
         
     </div>
@@ -2060,30 +2432,29 @@ const JAPANESE_SURNAMES = [
 // ▼▼▼ このブロックをまるごと「新規追加」(1191行目あたり、JAPANESE_SURNAMES の下など) ▼▼▼
 const TEAM_ROSTER_MASTER = {
     "283学園": [
-        { number: "1", name: "白瀬", throwBat: "R/R" },
-        { number: "2", name: "有栖川", throwBat: "R/L" },
-        { number: "3", name: "姫川", throwBat: "R/R" },
-        { number: "4", name: "樋口", throwBat: "R/R" },
-        { number: "5", name: "八宮", throwBat: "R/R" },
-        { number: "6", name: "十王", throwBat: "R/L" },
-        { number: "7", name: "芹沢", throwBat: "R/S" },
-        { number: "8", name: "花海佑", throwBat: "R/R" },
-        { number: "9", name: "花海咲", throwBat: "L/L" },
-        { number: "10", name: "黛", throwBat: "R/R" },
-        { number: "11", name: "市川", throwBat: "L/L" },
-        { number: "12", name: "福丸", throwBat: "R/R" },
-        { number: "13", name: "鈴木", throwBat: "R/L" },
-        { number: "14", name: "有村", throwBat: "R/R" },
-        { number: "15", name: "田中", throwBat: "R/R" },
-        { number: "16", name: "大崎", throwBat: "R/L" },
-        { number: "17", name: "風野", throwBat: "R/R" },
-        { number: "18", name: "西城", throwBat: "R/R" },
-        { number: "19", name: "浅倉", throwBat: "R/R" },
-        { number: "20", name: "杜野", throwBat: "L/L" }
+        { number: "1", name: "白瀬", grade: 3, position: "投手", throwBat: "R/R", height: 184, weight: 82, origin: "東京シニア" },
+        { number: "2", name: "有栖川", grade: 3, position: "捕手", throwBat: "R/L", height: 178, weight: 78, origin: "神奈川ボーイズ" },
+        { number: "3", name: "姫川", grade: 3, position: "投手/一塁手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア" },
+        { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学" },
+        { number: "5", name: "八宮", grade: 2, position: "三塁手", throwBat: "R/R", height: 175, weight: 72, origin: "浜松ボーイズ" },
+        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス" },
+        { number: "7", name: "芹沢", grade: 2, position: "外野手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア" },
+        { number: "8", name: "花海佑", grade: 1, position: "外野手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア" },
+        { number: "9", name: "花海咲", grade: 3, position: "外野手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア", isCaptain: true },
+        { number: "10", name: "黛", grade: 2, position: "投手", throwBat: "R/R", height: 180, weight: 76, origin: "富士シニア" },
+        { number: "11", name: "市川", grade: 2, position: "投手", throwBat: "L/L", height: 179, weight: 74, origin: "静岡蒲原中学" },
+        { number: "12", name: "福丸", grade: 2, position: "捕手", throwBat: "R/R", height: 176, weight: 77, origin: "焼津リトルシニア" },
+        { number: "13", name: "鈴木", grade: 2, position: "一塁手", throwBat: "R/L", height: 181, weight: 85, origin: "愛知ボーイズ" },
+        { number: "14", name: "有村", grade: 1, position: "内野手", throwBat: "R/R", height: 173, weight: 67, origin: "福岡シニア" },
+        { number: "15", name: "田中", grade: 3, position: "内野手", throwBat: "R/R", height: 174, weight: 70, origin: "静岡服織中学" },
+        { number: "16", name: "大崎", grade: 1, position: "外野手", throwBat: "R/L", height: 170, weight: 68, origin: "三島リトルシニア" },
+        { number: "17", name: "風野", grade: 2, position: "内野手", throwBat: "R/R", height: 169, weight: 65, origin: "新潟シニア" },
+        { number: "18", name: "西城", grade: 2, position: "投手", throwBat: "R/R", height: 183, weight: 81, origin: "広島ボーイズ" },
+        { number: "19", name: "浅倉", grade: 1, position: "内野手", throwBat: "R/R", height: 168, weight: 64, origin: "長崎シニア" },
+        { number: "20", name: "杜野", grade: 1, position: "外野手", throwBat: "L/L", height: 171, weight: 67, origin: "宮城シニア" }
     ]
 };
-// ▲▲▲ 新規追加ここまで ▲▲▲
-
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▼▼▼ サウンド管理システム ▼▼▼
 
 // ▲▲▲
@@ -5030,7 +5401,7 @@ function renderTeamStatsModal(teamName) {
 
 /**
  * チームステータスモーダルを表示する
- * (★「今大会」のチーム成績に盗塁数を追加するよう修正)
+ * (★ ページジャンプバグの根本対応版)
  */
 function showTeamStatusModal(teamName) {
     const teamRecord = tournamentState.teamRecords[teamName];
@@ -5044,6 +5415,17 @@ function showTeamStatusModal(teamName) {
     const coachEl = document.getElementById('status-modal-coach'); 
     const statsEl = document.getElementById('status-modal-team-stats');
     const careerStatsEl = document.getElementById('status-modal-career-stats'); 
+    const homepageLinkContainer = document.getElementById('status-modal-homepage-link-container');
+    const homepageLink = document.getElementById('status-modal-homepage-link');
+
+    // ★★★ ここからが修正箇所 ★★★
+    // 1. 動作の前に、まずリンク属性を無効化する (ページジャンプ防止)
+    if (homepageLink) {
+        homepageLink.removeAttribute('href'); // href="#" を削除
+        homepageLink.removeAttribute('target'); // target="_blank" を削除
+        homepageLink.style.cursor = 'pointer'; // クリック可能に見せる
+    }
+    // ★★★ 修正ここまで ★★★
 
     // チーム名を設定
     document.getElementById('status-modal-team-name').textContent = teamName;
@@ -5079,21 +5461,17 @@ function showTeamStatusModal(teamName) {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
     
-    // ★★★ ここからが今回の修正箇所 ★★★
     // チームの今大会成績を設定
     const stats = teamRecord.tournamentStats;
     if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
         const avg = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
-        const sbCount = stats.sb || 0; // 盗塁数を取得
-        // 盗塁数を表示テキストに追加
+        const sbCount = stats.sb || 0;
         statsEl.textContent = `打率 ${avg} (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁`;
     } else if (stats) {
-        // 試合には出たが打席がない場合
         statsEl.textContent = `(今大会 ${stats.ab}打数 ${stats.h}安打) 0盗塁`;
     } else {
         statsEl.textContent = '（今大会の集計データなし）';
     }
-    // ★★★ 修正ここまで ★★★
     
     // チームの「通算」成績を集計して表示
     const careerBattingStats = teamRecord.playerStats?.batting;
@@ -5119,9 +5497,21 @@ function showTeamStatusModal(teamName) {
         coachEl.textContent = '情報なし';
     }
     
+    // ★★★ 2. ホームページリンクの「表示/非表示」のロジック (変更なし) ★★★
+    if (homepageLinkContainer && homepageLink) {
+        if (teamName === "283学園") {
+            homepageLink.setAttribute('data-target', 'homepage-modal'); 
+            homepageLinkContainer.classList.remove('hidden');
+        } else {
+            homepageLinkContainer.classList.add('hidden'); 
+        }
+    }
+    
     // モーダルを表示
     modal.classList.remove('hidden');
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 // ▲▲▲ 置き換えここまで ▲▲▲
   // --- Custom Alert/Confirm ---
     function showAlert(message) {
@@ -5709,6 +6099,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
             };
             // ★★★ 修正ここまで ★★★
         }
+tournamentState.homepageNews = [];
         tournamentState.autumnData = {
             regions: {
                 '東部': { blocks: [], blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
@@ -5802,6 +6193,7 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
             enableArticleGeneration: initialAiEnabled, 
             enableBbsGeneration: initialAiEnabled 
         };
+tournamentState.homepageNews = []; 
         // ★★★ 修正ここまで ★★★
 
         INITIAL_TEAM_POOL.forEach(t => {
@@ -8793,7 +9185,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 
 /**
  * 詳細データを保存し、通算成績を更新する
- * (★投手の「登板履歴(gamelogs)」の保存機能を追加した最終版)
+ * (★「三振(so)」と「得点(r)」の集計を追加した最終版)
  */
 function saveDetailedStats() {
     if (!currentMatchIdForDetails) return;
@@ -8807,7 +9199,7 @@ function saveDetailedStats() {
             const teamRecord = tournamentState.teamRecords[teamName];
             if (!teamRecord || !teamRecord.playerStats) continue;
 
-            // (Step 1) 打撃成績のリセット (変更なし)
+            // (Step 1) 打撃成績のリセット
             const previousBattingStats = match.details.playerGameStats[teamKey];
             if (previousBattingStats) {
                 for (const playerName in previousBattingStats) {
@@ -8815,14 +9207,15 @@ function saveDetailedStats() {
                     const prevGameStats = previousBattingStats[playerName]; 
                     if (careerStats && prevGameStats) {
                         if(prevGameStats.played) careerStats.games = (careerStats.games || 1) - 1;
-                        for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb']) {
+                        // ★ 'r', 'so' をリセット対象キーに追加
+                        for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb', 'r', 'so']) {
                             careerStats[key] = (careerStats[key] || 0) - (prevGameStats[key] || 0);
                         }
                     }
                 } 
             } 
             
-const previousBattingData = match.details.batting?.[teamKey];
+            const previousBattingData = match.details.batting?.[teamKey];
             if (previousBattingData) {
                 previousBattingData.forEach(prevPlayerData => {
                     const playerName = prevPlayerData.name;
@@ -8835,11 +9228,11 @@ const previousBattingData = match.details.batting?.[teamKey];
                     }
                 });
             }
-// ▲▲▲ 挿入ここまで ▲▲▲
 
-            // (Step 2) チーム今大会成績のリセット (変更なし)
+            // (Step 2) チーム今大会成績のリセット
             if (teamRecord.tournamentStats && previousBattingStats) {
-                let totals = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 };
+                // ★ 'r', 'so' をリセット対象キーに追加
+                let totals = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0 };
                 for (const playerName in previousBattingStats) {
                     const prevGameStats = previousBattingStats[playerName]; 
                     if (prevGameStats) {
@@ -8863,7 +9256,6 @@ const previousBattingData = match.details.batting?.[teamKey];
                     const pStats = teamRecord.playerStats.pitching[playerName];
                     const careerStats = pStats.career; // 通算成績
                     
-                    // ▼▼▼ このブロックを「置き換え」▼▼▼
                     if (careerStats && prevGameStats) {
                         // 1. 試合出場数をリセット (名前があるだけで出場しているはず)
                         careerStats.games = (careerStats.games || 1) - 1;
@@ -8879,7 +9271,7 @@ const previousBattingData = match.details.batting?.[teamKey];
                             careerStats.bb = (careerStats.bb || 0) - parseInt(prevGameStats.walks || 0);
                         }
                     }
-                    // ▲▲▲ 置き換えここまで ▲▲▲                    
+                    
                     // ★ 登板履歴(gamelogs)からも、このmatchIdのデータを削除
                     if (pStats.gamelogs) {
                         pStats.gamelogs = pStats.gamelogs.filter(log => log.matchId !== currentMatchIdForDetails);
@@ -8913,22 +9305,21 @@ const previousBattingData = match.details.batting?.[teamKey];
     match.score2 = details.inningScore.team2.reduce((sum, score) => sum + score, 0);
 
     for (const teamKey of ['team1', 'team2']) {
-const playersAppearedThisGame = new Set();
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord) continue;
         if (!teamRecord.playerStats) teamRecord.playerStats = { batting: {}, pitching: {} };
-        if (!teamRecord.tournamentStats) teamRecord.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 }; 
+        if (!teamRecord.tournamentStats) teamRecord.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0 }; 
 
-        // (打撃成績の集計 ... 変更なし)
+        const playersAppearedThisGame = new Set(); // ★ この試合で出場加算済みの選手を記録
+        
+        // (打撃成績の集計 ... ★ 'r', 'so' 追加)
         const battingTable = document.getElementById(`batting-table-${teamKey}`);
         if (battingTable) {
             battingTable.querySelectorAll('tbody tr').forEach(row => {
                 const nameInput = row.querySelector('.player-name');
                 if (nameInput && nameInput.value.trim() !== '') {
                     const playerName = nameInput.value.trim();
-                    // (打撃成績の集計ロジックは前回から変更なし)
-                    // ... (resultsの読み取り) ...
                     const resultCells = Array.from(row.querySelectorAll('td.col-inning'));
                     const results = resultCells.map(cell => {
                         const atBatBlocks = Array.from(cell.querySelectorAll('.at-bat-block'));
@@ -8965,11 +9356,12 @@ const playersAppearedThisGame = new Set();
                     details.batting[teamKey].push(playerData);
                     
                     if (!teamRecord.playerStats.batting[playerName]) {
-                        teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0 };
+                        teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0 };
                     }
                     const careerStats = teamRecord.playerStats.batting[playerName];
                     const isNonBattingSub = playerData.sub_type === 'DEF' || playerData.sub_type === 'PR';
-                    const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
+                    // ★ gameStats に r: 0, so: 0 を追加
+                    const gameStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0, played: false, strongHits: 0, weakHits: 0, strongOuts: 0, weakOuts: 0 };
                     
                     playerData.results.forEach(inningResultString => {
                         (inningResultString || '').split('、').forEach(atBatString => {
@@ -8988,65 +9380,61 @@ const playersAppearedThisGame = new Set();
                                 else if (cleanBatterPlay.includes('三塁打')) { gameStats.h++; gameStats.tb += 3; }
                                 else if (cleanBatterPlay.includes('二塁打')) { gameStats.h++; gameStats.tb += 2; }
                                 else if (cleanBatterPlay.includes('安')) { gameStats.h++; gameStats.tb += 1; }
-                               if (cleanBatterPlay.includes('点')) { 
-                    const rbiValue = (cleanBatterPlay.match(/(\d+)点/) || [0, 0])[1]; // [0, 1] を [0, 0] に修正
-                    gameStats.rbi += parseInt(rbiValue, 10); // ★ parseInt を使って数値として加算
-                }
-
-}
-
-                            
+                                if (cleanBatterPlay.includes('点')) { 
+                                    const rbiValue = (cleanBatterPlay.match(/(\d+)点/) || [0, 0])[1]; // [0, 1] を [0, 0] に修正
+                                    gameStats.rbi += parseInt(rbiValue, 10); // ★ parseInt を使って数値として加算
+                                }
+                                if (cleanBatterPlay.includes('三振')) gameStats.so++; // ★ 三振をカウント
+                            }
                             (runnerPlaysString || '').split(',').forEach(runnerPlay => {
                                 const parts = runnerPlay.split(' ');
                                 if (parts[0] === playerName && parts[1] === '盗塁') { gameStats.sb++; }
+                                // ★ 得点(r)をカウント
+                                if (parts[0] === playerName && (parts[1] === '生還' || (parts[1] === '進塁' && parts[2] === '本塁へ(生還)'))) {
+                                    gameStats.r++;
+                                }
                             });
                         });
                     });
-                    // ▼▼▼ このブロックを「置き換え」▼▼▼
+
+                    // ★ 出場カウントロジックを修正
                     if((gameStats.played || isNonBattingSub) && !playersAppearedThisGame.has(playerName)) { 
                         careerStats.games++; 
                         playersAppearedThisGame.add(playerName); // ★ セットに追加
                     }
-                    // ▲▲▲ 置き換えここまで ▲▲▲
-
-
-                    for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb']) {
+                    
+                    // ★ 'r', 'so' を加算対象キーに追加
+                    for (const key of ['pa', 'ab', 'h', 'hr', 'rbi', 'sb', 'bb', 'hbp', 'sf', 'tb', 'r', 'so']) {
                         careerStats[key] = (careerStats[key] || 0) + gameStats[key];
                         if (teamRecord.tournamentStats) {
                             teamRecord.tournamentStats[key] = (teamRecord.tournamentStats[key] || 0) + gameStats[key];
                         }
                     }
                     if (teamRecord.tournamentStats && (gameStats.played || isNonBattingSub)) {
-                        teamRecord.tournamentStats.games = (teamRecord.tournamentStats.games || 0) + 1;
+                        // (teamRecord.tournamentStats.games は投手側でやるのでここでは不要)
                     }
                     details.playerGameStats[teamKey][playerName] = gameStats;
-
-// (Step 4b) ★★★ バッターのGamelogを保存 ★★★
+                    
                     if (!careerStats.gamelogs) {
                         careerStats.gamelogs = [];
                     }
-                    
                     const opponentName = teamKey === 'team1' ? match.team2 : match.team1;
                     const opponentRank = opponentName ? calculateRank(opponentName, tournamentState) : 'E';
-
                     careerStats.gamelogs.push({
                         matchId: currentMatchIdForDetails,
                         date: match.schedule?.date || '不明',
                         round: getRoundNameFromMatchId(currentMatchIdForDetails),
                         opponent: opponentName,
                         opponentRank: opponentRank,
-                        order: playerData.order, // "1", "7-sub-1"
-                        sub_type: playerData.sub_type, // "PH", null
-                        stats: gameStats // { ab: 4, h: 1, ... }
+                        order: playerData.order, 
+                        sub_type: playerData.sub_type,
+                        stats: gameStats 
                     });
-                    // ★★★ Gamelog保存ここまで ★★★
                 }
             });
         }
-
-
         
-        // (投手成績の集計 ... ★gamelogs対応)
+        // (投手成績の集計 ... ★ 出場カウント修正)
         const pitchingTable = document.getElementById(`pitching-table-${teamKey}`);
         if (pitchingTable) {
             pitchingTable.querySelectorAll('tbody tr').forEach(row => {
@@ -9070,7 +9458,6 @@ const playersAppearedThisGame = new Set();
                     };
                     details.pitching[teamKey].push(pitcherData);
 
-                    // ★ 投手成績の保存構造を変更
                     if (!teamRecord.playerStats.pitching[pitcherName]) {
                         teamRecord.playerStats.pitching[pitcherName] = { 
                             career: { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0, h: 0, bb: 0 },
@@ -9080,8 +9467,7 @@ const playersAppearedThisGame = new Set();
                     const pStats = teamRecord.playerStats.pitching[pitcherName];
                     const careerStats = pStats.career;
                     
-                    // ▼▼▼ ここからが修正ブロック ▼▼▼
-                    // 1. 投手名簿に名前が載った時点で「試合出場」をカウント (まだカウントされていなければ)
+                    // ★ 出場カウント修正 (打者として出場済みでも二重カウントしない)
                     if (pitcherData.name && !playersAppearedThisGame.has(pitcherName)) {
                         careerStats.games = (careerStats.games || 0) + 1;
                         playersAppearedThisGame.add(pitcherName); // ★ セットに追加
@@ -9098,21 +9484,16 @@ const playersAppearedThisGame = new Set();
                         careerStats.h = (careerStats.h || 0) + parseInt(pitcherData.hits || 0);
                         careerStats.bb = (careerStats.bb || 0) + parseInt(pitcherData.walks || 0);
 
-                       // ★ 登板履歴(gamelogs)に「この試合のログ」を追加 (日付・相手ランク対応)
+                       // ★ 登板履歴(gamelogs)に「この試合のログ」を追加
                         const opponentName = teamKey === 'team1' ? match.team2 : match.team1;
                         const opponentRank = opponentName ? calculateRank(opponentName, tournamentState) : 'E';
                         
                         pStats.gamelogs.push({
                             matchId: currentMatchIdForDetails,
-                            // (1) 試合日 (例: "7/10")
                             date: match.schedule?.date || '不明', 
-                            // (2) ラウンド名
                             round: getRoundNameFromMatchId(currentMatchIdForDetails),
-                            // (3) 対戦相手名
                             opponent: opponentName,
-                            // (4) 対戦相手ランク
                             opponentRank: opponentRank, 
-                            // (5) 投球内容
                             result: pitcherData.result,
                             ip: pitcherData.innings,
                             h: pitcherData.hits,
@@ -9122,12 +9503,11 @@ const playersAppearedThisGame = new Set();
                             er: pitcherData.earnedRuns
                         });
                     }
-                    // ▲▲▲ 修正ブロックここまで ▲▲▲         
-       }
+                }
             });
         }
     }
-// ▲▲▲ 置き換えここまで ▲▲▲
+    
     // (守備成績の集計 ... 変更なし)
     for (const teamKey of ['team1', 'team2']) {
         const fieldingTable = document.getElementById(`fielding-table-${teamKey}`);
@@ -9154,6 +9534,260 @@ const playersAppearedThisGame = new Set();
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
+/**
+ * [NEW] 詳細入力の打席結果文字列を、ボックススコア用の短い文字列に翻訳する
+ * @param {string} atBatString - 1打席分の保存済み文字列 (例: "S:中安1点")
+ * @returns {string} - "中安" "三振" "四球" など
+ */
+function translateResultForBoxScore(atBatString) {
+    if (!atBatString) return "-";
+    let tempRes = atBatString.trim();
+    
+    // 1. 注目フラグと勢いフラグを除去
+    if (tempRes.startsWith('★:')) tempRes = tempRes.substring(3);
+    if (tempRes.startsWith('S:')) tempRes = tempRes.substring(2);
+    if (tempRes.startsWith('W:')) tempRes = tempRes.substring(2);
+
+    // 2. 打点と走塁プレーを除去
+    tempRes = tempRes.replace(/(\d+点)/, '');
+    tempRes = tempRes.replace('好走塁', '');
+    
+    // 3. 方向+結果 (例: 中安, 遊ゴ) を抽出
+    const allResultTypes = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other, '振り逃げ', '打撃妨害' ];
+    let foundResult = null;
+    let foundDirection = '';
+
+    for (const type of allResultTypes) {
+        if (tempRes.includes(type)) {
+            foundResult = type;
+            tempRes = tempRes.replace(type, '').trim();
+            break;
+        }
+    }
+    
+    if (tempRes.length > 0 && DIRECTIONS.includes(tempRes)) {
+        foundDirection = tempRes;
+    }
+
+    if (foundResult) {
+        // "安" を "安打" にしない (ボックススコア用)
+        if(foundResult === "安") foundResult = "安";
+        
+        // 方向と結果を結合 (例: 中安, 遊ゴ, 三振)
+        return (foundDirection + foundResult).trim();
+    }
+    
+    return "-"; // マッチしなかった場合
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
+/**
+ * [NEW] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
+ * @param {object} dbMatch - 試合オブジェクト (detailsを内包)
+ * @returns {string} - ボックススコア全体のHTML文字列
+ */
+function generateBoxScoreHTML(dbMatch) {
+    if (!dbMatch || !dbMatch.details) return "<p>詳細データがありません。</p>";
+    
+    const { details } = dbMatch;
+    const team1Name = dbMatch.team1;
+    const team2Name = dbMatch.team2;
+    const score1 = dbMatch.score1;
+    const score2 = dbMatch.score2;
+
+    // --- 1. チームの総ヒット数(H)と総エラー数(E)を集計 ---
+    let totalHits1 = 0;
+    let totalHits2 = 0;
+    if (details.playerGameStats) {
+        Object.values(details.playerGameStats.team1 || {}).forEach(stats => totalHits1 += (stats.h || 0));
+        Object.values(details.playerGameStats.team2 || {}).forEach(stats => totalHits2 += (stats.h || 0));
+    }
+    // (エラー(E)は現在集計していないため '0' とする)
+    const totalErrors1 = 0;
+    const totalErrors2 = 0;
+
+    // --- 2. イニングスコアボードHTML ---
+    const inningScores1 = details.inningScore?.team1 || [];
+    const inningScores2 = details.inningScore?.team2 || [];
+    const numInnings = Math.max(9, inningScores1.length, inningScores2.length);
+    
+    let inningHeaders = '';
+    let inningRow1 = '';
+    let inningRow2 = '';
+    for (let i = 1; i <= numInnings; i++) {
+        inningHeaders += `<th>${i}</th>`;
+        // 9回裏サヨナラなどで、片方のイニングデータがない場合も考慮
+        const score1_inning = (i-1 < inningScores1.length) ? inningScores1[i-1] : '';
+        const score2_inning = (i-1 < inningScores2.length) ? inningScores2[i-1] : '';
+        
+        // 9回裏サヨナラ (X表示)
+        const isSayonara = (i === 9 && score1 < score2 && inningScores2[i-1] > 0);
+        
+        inningRow1 += `<td class="score-cell">${score1_inning}</td>`;
+        inningRow2 += `<td class="score-cell">${isSayonara ? 'X' : score2_inning}</td>`;
+    }
+
+    const scoreBoardHtml = `
+        <table class="boxscore-table">
+            <thead class="inning-header">
+                <tr><th></th>${inningHeaders}<th>計</th><th>H</th><th>E</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="team-name">${team1Name}</td>
+                    ${inningRow1}
+                    <td class="total-score">${score1}</td>
+                    <td class="total-score">${totalHits1}</td>
+                    <td class="total-score">${totalErrors1}</td>
+                </tr>
+                <tr>
+                    <td class="team-name">${team2Name}</td>
+                    ${inningRow2}
+                    <td class="total-score">${score2}</td>
+                    <td class="total-score">${totalHits2}</td>
+                    <td class="total-score">${totalErrors2}</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+
+    // --- 3. 打撃・投手成績HTML (ヘルパー関数) ---
+    const generateStatsTables = (teamKey) => {
+        const teamName = dbMatch[teamKey];
+        const battingData = details.batting?.[teamKey] || [];
+        const gameStats = details.playerGameStats?.[teamKey] || {};
+        const pitchingData = details.pitching?.[teamKey] || [];
+
+        // 打順 > 交代順 でソート
+        const sortedBatters = battingData.sort((a, b) => {
+            const orderA = parseFloat(a.order.replace('-sub', '.'));
+            const orderB = parseFloat(b.order.replace('-sub', '.'));
+            return orderA - orderB;
+        });
+
+        // 打撃テーブル
+        let battingRows = '';
+        let totalAB = 0, totalR = 0, totalH = 0, totalRBI = 0, totalSO = 0, totalBB = 0;
+        
+        sortedBatters.forEach(player => {
+            if (!player.name) return;
+            const stats = gameStats[player.name];
+            // 試合に出ていない選手 (打席0, 代走/守備固めのみ) は表示
+            if (!stats || (!stats.played && (stats.sb || 0) === 0 && player.sub_type !== 'DEF' && player.sub_type !== 'PR')) return;
+
+            const isSub = player.order.includes('sub');
+            const rowClass = isSub ? 'sub-player' : '';
+            const playerName = player.name;
+            const playerPos = player.currentPos || player.pos || '?'; // 守備変更後の最終位置
+            
+            // この試合の成績 (saveDetailedStatsで集計済み)
+            const ab = stats.ab || 0;
+            const r = stats.r || 0;
+            const h = stats.h || 0;
+            const rbi = stats.rbi || 0;
+            const so = stats.so || 0;
+            const bb = (stats.bb || 0) + (stats.hbp || 0); // 四死球
+            
+            totalAB += ab; totalR += r; totalH += h; totalRBI += rbi; totalSO += so; totalBB += bb;
+
+            // 打席結果を翻訳
+            const resultsText = player.results.map(inningResults => 
+                inningResults.split('、').map(atBat => translateResultForBoxScore(atBat)).filter(res => res !== '-')
+            ).flat().join(', ');
+
+            let orderDisplay = '';
+            if (isSub) {
+                if (player.sub_type === 'PH') orderDisplay = '打';
+                else if (player.sub_type === 'PR') orderDisplay = '走';
+                else orderDisplay = '守';
+            } else {
+                orderDisplay = player.order;
+            }
+
+            battingRows += `
+                <tr class="${rowClass}">
+                    <td class="pos">${orderDisplay} ${playerPos}</td>
+                    <td class="player">${playerName}</td>
+                    <td class="at-bat">${ab}</td>
+                    <td class="runs">${r}</td>
+                    <td class="hits">${h}</td>
+                    <td class="rbi">${rbi}</td>
+                    <td class="so">${so}</td>
+                    <td class="walks">${bb}</td>
+                    <td class="results">${resultsText || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        const battingTableHtml = `
+            <h3 class="text-xl font-bold mt-6 mb-2 text-gray-800">${teamName}</h3>
+            <table class="batting-stats-table">
+                <thead>
+                    <tr>
+                        <th class="pos"></th><th class="player">選手名</th>
+                        <th class="at-bat">打</th><th class="runs">得</th><th class="hits">安</th><th class="rbi">点</th>
+                        <th class="so">三</th><th class="walks">四</th><th class="results">打席結果</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${battingRows}
+                    <tr class="team-totals">
+                        <td class="player" colspan="2">合計</td>
+                        <td class="at-bat">${totalAB}</td>
+                        <td class="runs">${totalR}</td>
+                        <td class="hits">${totalH}</td>
+                        <td class="rbi">${totalRBI}</td>
+                        <td class="so">${totalSO}</td>
+                        <td class="walks">${totalBB}</td>
+                        <td class="results"></td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+
+        // 投手テーブル
+        let pitchingRows = '';
+        if (pitchingData.length > 0) {
+            pitchingData.forEach(p => {
+                if (!p.name || !p.innings) return;
+                const ip = parseFloat(p.innings) || 0;
+                const er = parseInt(p.earnedRuns) || 0;
+                const era = (ip > 0) ? ((er * 9) / ip).toFixed(2) : "0.00";
+                const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[p.result] || '';
+                
+                pitchingRows += `
+                    <tr>
+                        <td class="result">${resultMark}</td>
+                        <td class="player">${p.name}</td>
+                        <td class="ip">${p.innings}</td>
+                        <td class="bf">${p.battersFaced || '-'}</td>
+                        <td class="hits">${p.hits || '0'}</td>
+                        <td class="so">${p.strikeouts || '0'}</td>
+                        <td class="walks">${p.walks || '0'}</td>
+                        <td class="runs">${p.runs || '0'}</td>
+                        <td class="er">${p.earnedRuns || '0'}</td>
+                        <td class="era">${era}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        const pitchingTableHtml = `
+            <table class="pitching-stats-table">
+                <thead><tr><th class="result"></th><th class="player">投手名</th><th class="ip">回</th><th class="bf">打者</th><th class="hits">安</th><th class="so">三</th><th class="walks">四</th><th class="runs">失</th><th class="er">自</th><th class="era">防御率</th></tr></thead>
+                <tbody>${pitchingRows}</tbody>
+            </table>
+        `;
+
+        return battingTableHtml + pitchingTableHtml;
+    };
+
+    // --- 4. 最終的なHTMLを組み立て ---
+    return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2');
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
 
 /**
  * [新機能] あるチームの、指定された試合ID「以前」の
@@ -12294,6 +12928,119 @@ ${teamInfoPromptPart}
 }
 
 /**
+ * (ホームページ用) 2024年決勝 (283 vs 菊川) の架空ボックススコアHTMLを生成する
+ */
+function generate2024FinalBoxScore() {
+    const team1 = "常葉菊川"; // 先攻
+    const team2 = "283学園";  // 後攻
+    const score1 = 2;
+    const score2 = 5;
+
+    // --- 1. イニングスコアボード ---
+    const scoreBoardHtml = `
+        <table class="boxscore-table">
+            <thead class="inning-header">
+                <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>計</th><th>H</th><th>E</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="team-name">${team1}</td>
+                    <td class="score-cell">1</td><td class="score-cell">0</td><td class="score-cell">1</td>
+                    <td class="score-cell">0</td><td class="score-cell">0</td><td class="score-cell">0</td>
+                    <td class="score-cell">0</td><td class="score-cell">0</td><td class="score-cell">0</td>
+                    <td class="total-score">${score1}</td>
+                    <td class="total-score">6</td>
+                    <td class="total-score">1</td>
+                </tr>
+                <tr>
+                    <td class="team-name">${team2}</td>
+                    <td class="score-cell">0</td><td class="score-cell">0</td><td class="score-cell">2</td>
+                    <td class="score-cell">0</td><td class="score-cell">1</td><td class="score-cell">0</td>
+                    <td class="score-cell">2</td><td class="score-cell">0</td><td class="score-cell">X</td>
+                    <td class="total-score">${score2}</td>
+                    <td class="total-score">10</td>
+                    <td class="total-score">0</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+
+    // --- 2. 常葉菊川 (先攻) ---
+    const team1Html = `
+        <h3 class="text-xl font-bold mt-6 mb-2 text-gray-800">${team1}</h3>
+        <table class="batting-stats-table">
+            <thead>
+                <tr>
+                    <th class="pos"></th><th class="player">選手名</th>
+                    <th class="at-bat">打</th><th class="runs">得</th><th class="hits">安</th><th class="rbi">点</th>
+                    <th class="so">三</th><th class="walks">四</th><th class="results">打席結果</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="pos">遊</td><td class="player">1. 坂本 [3年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">1</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">中安, 三振, 遊ゴ, 二飛</td></tr>
+                <tr><td class="pos">中</td><td class="player">2. 森 [2年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">1</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">投ゴ, 左安, 中飛, 三ゴ</td></tr>
+                <tr><td class="pos">右</td><td class="player">3. 岡田 [3年]</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">1</td><td class="so">1</td><td class="walks">0</td><td class="results">中安①, 三ゴ, 三振, 左飛</td></tr>
+                <tr><td class="pos">三</td><td class="player">4. 近藤 [3年]</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">二ゴ, 遊ゴ, 中安, 二飛</td></tr>
+                <tr><td class="pos">捕</td><td class="player">5. 土方 [3年]</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">2</td><td class="walks">0</td><td class="results">三振, 二ゴ, 三振, 一ゴ</td></tr>
+                <tr><td class="pos">一</td><td class="player">6. 宮本 [3年]</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">1</td><td class="so">1</td><td class="walks">0</td><td class="results">三振, 中安①, 遊ゴ, 一ゴ</td></tr>
+                <tr><td class="pos">左</td><td class="player">7. 上泉 [3年]</td><td class="at-bat">3</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">二ゴ, 左飛, 遊ゴ</td></tr>
+                <tr class="sub-player"><td class="pos">打</td><td class="player">└ 疋田 [2年]</td><td class="at-bat">1</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">三振</td></tr>
+                <tr><td class="pos">二</td><td class="player">8. 柳生 [2年]</td><td class="at-bat">3</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">左飛, 遊安, 二ゴ</td></tr>
+                <tr><td class="pos">投</td><td class="player">9. 沖田 [3年]</td><td class="at-bat">2</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">投ゴ, 一ゴ</td></tr>
+                <tr class="sub-player"><td class="pos">投</td><td class="player">└ 拝 [3年]</td><td class="at-bat">1</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">二ゴ</td></tr>
+                <tr class="team-totals"><td class="player" colspan="2">合計</td><td class="at-bat">34</td><td class="runs">2</td><td class="hits">6</td><td class="rbi">2</td><td class="so">6</td><td class="walks">0</td><td class="results"></td></tr>
+            </tbody>
+        </table>
+        <table class="pitching-stats-table">
+            <thead><tr><th class="result"></th><th class="player">投手名</th><th class="ip">回</th><th class="bf">打者</th><th class="hits">安</th><th class="so">三</th><th class="walks">四</th><th class="runs">失</th><th class="er">自</th><th class="era">防御率</th></tr></thead>
+            <tbody>
+                <tr><td class="result">●</td><td class="player">沖田 (3年)</td><td class="ip">6.0</td><td class="bf">28</td><td class="hits">7</td><td class="so">5</td><td class="walks">1</td><td class="runs">3</td><td class="er">2</td><td class="era">3.00</td></tr>
+                <tr><td class="result"></td><td class="player">拝 (3年)</td><td class="ip">2.0</td><td class="bf">8</td><td class="hits">3</td><td class="so">1</td><td class="walks">0</td><td class="runs">2</td><td class="er">2</td><td class="era">9.00</td></tr>
+            </tbody>
+        </table>
+    `;
+
+    // --- 3. 283学園 (後攻) ---
+    const team2Html = `
+        <h3 class="text-xl font-bold mt-6 mb-2 text-gray-800">${team2}</h3>
+        <table class="batting-stats-table">
+            <thead>
+                <tr>
+                    <th class="pos"></th><th class="player">選手名</th>
+                    <th class="at-bat">打</th><th class="runs">得</th><th class="hits">安</th><th class="rbi">点</th>
+                    <th class="so">三</th><th class="walks">四</th><th class="results">打席結果</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="pos">中</td><td class="player">1. 花海 咲 [2年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">1</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">三振, 中安, 遊ゴ, 二ゴ</td></tr>
+                <tr><td class="pos">二</td><td class="player">2. 佐藤 健太 [3年]</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">三飛, 三振, 中飛, 左安</td></tr>
+                <tr><td class="pos">遊</td><td class="player">3. 十王 翔希 [2年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">1</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">遊ゴ, 右安, 中飛, 一ゴ</td></tr>
+                <tr><td class="pos">投</td><td class="player">4. 姫川 友紀 [2年]</td><td class="at-bat">3</td><td class="runs">1</td><td class="hits">1</td><td class="rbi">2</td><td class="so">0</td><td class="walks">1</td><td class="results">二ゴ, <span style="color:red;font-weight:bold;">中本②</span>, 四球, 左飛</td></tr>
+                <tr class="sub-player"><td class="pos">投</td><td class="player">└ 白瀬 咲耶 [2年]</td><td class="at-bat">1</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">投ゴ</td></tr>
+                <tr><td class="pos">一</td><td class="player">5. 高橋 龍 [3年] (C)</td><td class="at-bat">4</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">1</td><td class="so">1</td><td class="walks">0</td><td class="results">三振, 二ゴ, 右安①, 遊ゴ</td></tr>
+                <tr><td class="pos">捕</td><td class="player">6. 有栖川 夏葉 [2年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">2</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">左安, 中安, 二ゴ, 遊ゴ</td></tr>
+                <tr><td class="pos">三</td><td class="player">7. 田中 浩二 [3年]</td><td class="at-bat">4</td><td class="runs">1</td><td class="hits">2</td><td class="rbi">2</td><td class="so">1</td><td class="walks">0</td><td class="results">三振, 右安, <span style="color:red;font-weight:bold;">右二②</span>, 三ゴ</td></tr>
+                <tr><td class="pos">左</td><td class="player">8. 渡辺 翔 [3年]</td><td class="at-bat">3</td><td class="runs">0</td><td class="hits">1</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">二ゴ, 三振, 左安</td></tr>
+                <tr class="sub-player"><td class="pos">打</td><td class="player">└ 樋口 円香 [1年]</td><td class="at-bat">1</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">三振</td></tr>
+                <tr><td class="pos">右</td><td class="player">9. 鈴木 一郎 [3年]</td><td class="at-bat">3</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">1</td><td class="walks">0</td><td class="results">三振, 中飛, 左飛</td></tr>
+                <tr class="sub-player"><td class="pos">打</td><td class="player">└ 鈴木(1年) [1年]</td><td class="at-bat">1</td><td class="runs">0</td><td class="hits">0</td><td class="rbi">0</td><td class="so">0</td><td class="walks">0</td><td class="results">二ゴ</td></tr>
+                <tr class="team-totals"><td class="player" colspan="2">合計</td><td class="at-bat">35</td><td class="runs">5</td><td class="hits">10</td><td class="rbi">5</td><td class="so">6</td><td class="walks">1</td><td class="results"></td></tr>
+            </tbody>
+        </table>
+        <table class="pitching-stats-table">
+            <thead><tr><th class="result"></th><th class="player">投手名</th><th class="ip">回</th><th class="bf">打者</th><th class="hits">安</th><th class="so">三</th><th class="walks">四</th><th class="runs">失</th><th class="er">自</th><th class="era">防御率</th></tr></thead>
+            <tbody>
+                <tr><td class="result">○</td><td class="player">姫川 友紀 (2年)</td><td class="ip">6.0</td><td class="bf">24</td><td class="hits">5</td><td class="so">4</td><td class="walks">0</td><td class="runs">2</td><td class="er">2</td><td class="era">3.00</td></tr>
+                <tr><td class="result">Ｓ</td><td class="player">白瀬 咲耶 (2年)</td><td class="ip">3.0</td><td class="bf">10</td><td class="hits">1</td><td class="so">1</td><td class="walks">0</td><td class="runs">0</td><td class="er">0</td><td class="era">0.00</td></tr>
+            </tbody>
+        </table>
+    `;
+
+    return scoreBoardHtml + team1Html + team2Html;
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
+/**
      * AIにナムコグループからのお知らせを生成させる
      */
     async function generateNamcoNews(state, type, matchData = null) {
@@ -14054,7 +14801,7 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
 
 /**
  * トーナメント表をたどり、次の対戦相手の情報を特定する
- * (★決勝戦勝利時のバグを修正した最終版)
+ * (★「次の試合のスケジュール」も返すよう修正した最終版)
  * @param {string} teamName - チーム名
  * @param {string} currentMatchId - そのチームが勝利した現在の試合ID
  * @returns {object|null} - 次の対戦相手に関する詳細情報
@@ -14066,16 +14813,15 @@ function findNextOpponent(teamName, currentMatchId) {
     const idParts = currentMatchId.split('-');
     const side = idParts[0];
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     if (side === 'F') {
         // 決勝戦に勝利した場合
         return { 
             opponentName: '優勝', 
             roundName: '大会終了',
-            opponentRank: '' // ★「undefined」バグを防ぐため、空文字を追加
+            opponentRank: '',
+            nextMatchSchedule: null // ★次の試合なし
         };
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     const roundNum = parseInt(idParts[1].slice(1));
     const matchNum = parseInt(idParts[2].slice(1));
@@ -14106,7 +14852,8 @@ function findNextOpponent(teamName, currentMatchId) {
         return {
             opponentName: opponentName,
             opponentRank: calculateRank(opponentName, tournamentState),
-            roundName: roundName
+            roundName: roundName,
+            nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
         };
     } else {
         // 相手が未定の場合、その相手を決める試合を探しに行く
@@ -14123,13 +14870,20 @@ function findNextOpponent(teamName, currentMatchId) {
                     rank1: calculateRank(feederMatch.team1, tournamentState),
                     team2: feederMatch.team2,
                     rank2: calculateRank(feederMatch.team2, tournamentState)
-                }
+                },
+                nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
             };
         }
         
-        return { opponentName: '（未定）', opponentRank: '?', roundName: roundName };
+        return { 
+            opponentName: '（未定）', 
+            opponentRank: '?', 
+            roundName: roundName,
+            nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
+        };
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
  * 複数走者に対応した走塁入力欄のHTMLを生成する
@@ -14878,13 +15632,21 @@ let hadaReportPromise = Promise.resolve(null);
         }
     }
 
+let homepageNewsPromise = Promise.resolve(null);
+    // ★ 283学園の試合だった場合、ホームページのお知らせを生成する
+    if (tournamentState.settings.enableArticleGeneration && (winnerName === "283学園" || loserName === "283学園")) {
+        homepageNewsPromise = generateHomepageNewsUpdate(matchContext);
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // --- 5. AIコンテンツの処理と最終的な画面更新 ---
   // ▼▼▼ この Promise.all を修正 ▼▼▼
-    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread] = await Promise.all([
+    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread, generatedHomepageNews] = await Promise.all([ 
         articlePromise, 
         commentsPromise,
         hadaReportPromise,
-        matomeThreadPromise // ★追加
+        matomeThreadPromise,
+        homepageNewsPromise
     ]);
     // ▲▲▲ 修正ここまで ▲▲▲
 
@@ -14967,6 +15729,14 @@ let hadaReportPromise = Promise.resolve(null);
     }
     // ▲▲▲ 追加ここまで ▲▲▲
 
+// --- ホームページお知らせの処理 (新設) ---
+    if (generatedHomepageNews && !generatedHomepageNews.error) {
+        if (!tournamentState.homepageNews) tournamentState.homepageNews = [];
+        // [ { title, body, timestamp } ] の形式で保存
+        tournamentState.homepageNews.unshift(generatedHomepageNews);
+    }
+    // ▲▲▲ 新規追加ここまで ▲▲▲
+
     // --- スキャンダル、画面更新、保存処理 (変更なし) ---
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
@@ -15003,8 +15773,20 @@ let hadaReportPromise = Promise.resolve(null);
     }
     // ▲▲▲ 置き換えここまで ▲▲▲
 
+// ▼▼▼ このブロックを「新規追加」 ▼▼▼
+    // --- 6. ボックススコアHTMLの自動生成 ---
+    if (dbMatch.details) {
+        try {
+            dbMatch.boxScoreHtml = generateBoxScoreHTML(dbMatch);
+        } catch (e) {
+            console.error("ボックススコアHTMLの自動生成に失敗しました:", e);
+            dbMatch.boxScoreHtml = null;
+        }
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- 6. 試合結果に基づき、選手の「一時的な状態異常」フラグを付与 ---
+    // --- 7. 試合結果に基づき、選手の「一時的な状態異常」フラグを付与 ---
     if (dbMatch.details && dbMatch.details.playerGameStats) {
         for (const teamKey of ['team1', 'team2']) {
             const teamName = dbMatch[teamKey];
@@ -15176,6 +15958,158 @@ async function loadSoundEffects() {
         console.error("効果音の読み込みに失敗しました:", e);
     }
 }
+
+// ▼▼▼ この2つの関数ブロックをまるごと「新規追加」(13058行目あたり、startLotteryEvent の直前) ▼▼▼
+
+/**
+ * [NEW] ホームページモーダル専用の、最新トーナメント表HTMLを生成する
+ * (283学園のハイライト付き、表示専用)
+ * @param {object} state - tournamentState
+ * @returns {string} - トーナメント表全体のHTML
+ */
+function generateHomepageBracketHTML(state) {
+    const { matches, teams, seeds } = state;
+    if (!teams || teams.length < 32) { // 64チーム制のみ対応
+        return '<p class="text-center text-gray-500">（64チーム制トーナメントのデータがありません）</p>';
+    }
+
+    const bracketContentWrapper = document.createElement('div');
+    bracketContentWrapper.className = 'tournament-container'; // ホームページ用のクラス
+
+    const leftBracketEl = document.createElement('div');
+    leftBracketEl.className = 'bracket-half left';
+
+    const rightBracketEl = document.createElement('div');
+    rightBracketEl.className = 'bracket-half right';
+    
+    // 決勝戦の準備 (renderMainBracketと同様)
+    const finalRound = 6;
+    const semiFinalRound = 5;
+    const leftChampion = state.matches[`L-R${semiFinalRound}-M1`]?.winner ?? null;
+    const rightChampion = state.matches[`R-R${semiFinalRound}-M1`]?.winner ?? null;
+    const finalMatch = state.matches['F-R1-M1'] || {};
+    const finalTeam1 = finalMatch.team1 ?? leftChampion;
+    const finalTeam2 = finalMatch.team2 ?? rightChampion;
+    const finalEl = document.createElement('div');
+    finalEl.className = 'bracket-final';
+    finalEl.innerHTML = `
+        <div class="round-title">決勝</div>
+        <div class="final-matchup">
+            ${createHomepageMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, seeds)}
+        </div>
+        <div class="winner-box">
+            <h2>${finalMatch.winner ? `🏆 優勝 ${finalMatch.winner}` : '🏆'}</h2>
+        </div>
+    `;
+
+    // --- 左右のハーフを生成 ---
+    const roundNameMap = { 1: "1回戦", 2: "2回戦", 3: "3回戦", 4: "準々決勝", 5: "準決勝" };
+    
+    // 左ハーフ
+    let parentEl = leftBracketEl;
+    for (let r = 1; r <= semiFinalRound; r++) {
+        const roundEl = document.createElement('div');
+        roundEl.className = `round r${r}`;
+        roundEl.innerHTML = `<div class="round-title">${roundNameMap[r]}</div>`;
+        const numMatchesInRound = 32 / Math.pow(2, r);
+        for (let m = 1; m <= numMatchesInRound; m++) {
+            const matchId = `L-R${r}-M${m}`;
+            const dbMatch = matches[matchId] || {};
+            const team1 = dbMatch.team1 || (r > 1 ? matches[`L-R${r-1}-M${(m*2)-1}`]?.winner : teams[(m-1)*2]) || null;
+            const team2 = dbMatch.team2 || (r > 1 ? matches[`L-R${r-1}-M${(m*2)}`]?.winner : teams[(m-1)*2 + 1]) || null;
+            roundEl.innerHTML += createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds);
+        }
+        parentEl.appendChild(roundEl);
+    }
+
+    // 右ハーフ
+    parentEl = rightBracketEl;
+    for (let r = 1; r <= semiFinalRound; r++) {
+        const roundEl = document.createElement('div');
+        roundEl.className = `round r${r}`;
+        roundEl.innerHTML = `<div class="round-title">${roundNameMap[r]}</div>`;
+        const numMatchesInRound = 32 / Math.pow(2, r);
+        for (let m = 1; m <= numMatchesInRound; m++) {
+            const matchId = `R-R${r}-M${m}`;
+            const dbMatch = matches[matchId] || {};
+            const baseIndex = 32; // 右ハーフの開始インデックス
+            const team1 = dbMatch.team1 || (r > 1 ? matches[`R-R${r-1}-M${(m*2)-1}`]?.winner : teams[baseIndex + (m-1)*2]) || null;
+            const team2 = dbMatch.team2 || (r > 1 ? matches[`R-R${r-1}-M${(m*2)}`]?.winner : teams[baseIndex + (m-1)*2 + 1]) || null;
+            roundEl.innerHTML += createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds);
+        }
+        parentEl.appendChild(roundEl);
+    }
+    
+    bracketContentWrapper.append(leftBracketEl, finalEl, rightBracketEl);
+    return bracketContentWrapper.outerHTML;
+}
+
+/**
+ * [NEW] ホームページモーダル専用の、1試合分のHTMLを生成する
+ * (★「一球速報」ボタンの表示ロジックを追加した最終版)
+ */
+function createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
+    const is283Team = (name) => name === "283学園" || name === "283学園B";
+
+    const t1Empty = !team1;
+    const t2Empty = !team2;
+    
+    // 283学園のハイライトクラス
+    const team1Class = is283Team(team1) ? 'hp-team-283' : '';
+    const team2Class = is283Team(team2) ? 'hp-team-283' : '';
+    
+    // 勝敗クラス
+    const winnerClass1 = (dbMatch.winner === team1 && !t1Empty) ? 'winner' : '';
+    const loserClass1 = (dbMatch.winner && dbMatch.winner !== team1 && !t1Empty) ? 'loser' : '';
+    const winnerClass2 = (dbMatch.winner === team2 && !t2Empty) ? 'winner' : '';
+    const loserClass2 = (dbMatch.winner && dbMatch.winner !== team2 && !t2Empty) ? 'loser' : '';
+    
+    // シード表示
+    const seedInfo1 = seeds.find(s => s.team === team1);
+    const seedInfo2 = seeds.find(s => s.team === team2);
+    const seedLabel1 = seedInfo1 ? `[${seedInfo1.rank}] ` : '';
+    const seedLabel2 = seedInfo2 ? `[${seedInfo2.rank}] ` : '';
+
+    const roundClassMatch = matchId.includes('-R1-M') ? 'r1' : ''; // 1回戦だけフォントを小さくする
+
+    // ★★★ ここからが修正箇所 ★★★
+    let footerButtonHTML = '';
+    // 試合が終了し、かつボックススコアデータが存在する場合
+    if (dbMatch.winner && dbMatch.boxScoreHtml) {
+        footerButtonHTML = `
+            <div class="matchup-footer mt-1 text-center">
+                <button class="boxscore-btn text-xs bg-blue-600 text-white font-bold px-3 py-1 rounded hover:bg-blue-700" data-match-id="${matchId}">
+                    一球速報
+                </button>
+            </div>
+        `;
+    }
+    // ★★★ 修正ここまで ★★★
+
+
+    // 2024年のHTML構造に準拠した「表示専用」HTML
+    return `
+        <div class="matchup ${roundClassMatch}">
+            <div class="match">
+                <div class="team ${team1Class} ${winnerClass1} ${loserClass1}">
+                    <span class="name">${seedLabel1}${team1 || '---'}</span>
+                    <span class="score">${dbMatch.score1 ?? ''}</span>
+                </div>
+                <div class="team ${team2Class} ${winnerClass2} ${loserClass2}">
+                    <span class="name">${seedLabel2}${team2 || '---'}</span>
+                    <span class="score">${dbMatch.score2 ?? ''}</span>
+                </div>
+            </div>
+            ${footerButtonHTML} ${matchId.includes('-R1-M') ? '' : '<div class="connector-line"></div>'}
+            ${matchId.includes('-R2-M') ? '<div class="connector-path"></div>' : ''}
+            ${matchId.includes('-R3-M') ? '<div class="connector-path"></div>' : ''}
+            ${matchId.includes('-R4-M') ? '<div class="connector-path"></div>' : ''}
+            ${matchId.includes('-R5-M') ? '<div class="connector-path"></div>' : ''}
+        </div>
+    `;
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 
 /**
  * 抽選会イベントを開始する
@@ -15516,6 +16450,78 @@ ${promptDataText}
     };
 }
      
+/**
+ * [NEW] スクロール連動アニメーション用のIntersection Observer
+ */
+function setupScrollAnimation() {
+    const scrollContainer = document.getElementById('homepage-scroll-container');
+    if (!scrollContainer) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                // 一度表示されたら監視を解除（オプション）
+                // observer.unobserve(entry.target);
+            } else {
+                 // スクロールアウトしたら非表示に戻す場合（オプション）
+                 // entry.target.classList.remove('is-visible');
+            }
+        });
+    }, {
+        root: scrollContainer, // 監視対象をモーダルのスクロールコンテナに設定
+        rootMargin: '0px',
+        threshold: 0.1 // 10%見えたらトリガー
+    });
+
+    // モーダル内の全セクションを監視対象に追加
+    scrollContainer.querySelectorAll('.fade-in-section').forEach(section => {
+        observer.observe(section);
+    });
+}
+
+/**
+ * [NEW] ホームページモーダルを開く/閉じるアニメーションのトリガー
+ */
+function toggleHomepageModal(show) {
+    const modal = document.getElementById('homepage-modal');
+    if (!modal) return;
+
+    if (show) {
+        // モーダルを開く
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // ヒーローセクションのアニメーションをリセット＆トリガー
+        const slogan = modal.querySelector('.slogan');
+        const subtitle = modal.querySelector('.animate-fade-in-up');
+        if (slogan) slogan.classList.remove('animate-fade-in-down');
+        if (subtitle) subtitle.classList.remove('is-visible');
+        
+        // requestAnimationFrame を挟むことで、クラスの再適用を確実にする
+        requestAnimationFrame(() => {
+            if (slogan) slogan.classList.add('animate-fade-in-down');
+            if (subtitle) subtitle.classList.add('is-visible');
+        });
+
+        // スクロール連動アニメーションをセットアップ
+        setupScrollAnimation();
+        
+    } else {
+        // モーダルを閉じる
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // 閉じる時にアニメーションクラスをリセット（次回開くときのため）
+        modal.querySelectorAll('.fade-in-section').forEach(section => {
+            section.classList.remove('is-visible');
+        });
+        modal.querySelector('.slogan')?.classList.remove('animate-fade-in-down');
+        modal.querySelector('.animate-fade-in-up')?.classList.remove('is-visible');
+    }
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
     async function initializeApp() {
   SoundManager.init(); 
  // --- 1. Preload the background image ---
@@ -15755,7 +16761,106 @@ skipSpringMainBtn.addEventListener('click', async () => {
         generateSummaryBtn.textContent = 'ベスト8ハイライト記事を生成';
     });
 
+/**
+ * [NEW] 283学園ホームページ用の「お知らせ」記事をAIに生成させる
+ * @param {object} matchContext - 試合の全コンテキストデータ
+ * @returns {Promise<object|null>} - { title, body, timestamp }
+ */
+async function generateHomepageNewsUpdate(matchContext) {
+    const { winnerName, loserName, dbMatch, matchId, nextOpponent } = matchContext;
+    
+    // 283学園が勝ったかどうか
+    const is283Match = (winnerName === "283学園" || loserName === "283学園");
+    if (!is283Match) return null;
+    
+    const teamName = "283学園";
+    const result = (winnerName === teamName) ? '勝利' : '敗北';
+    const opponentName = (winnerName === teamName) ? loserName : winnerName;
+    const score = (winnerName === teamName) 
+        ? `${dbMatch.score1} - ${dbMatch.score2}` 
+        : `${dbMatch.score2} - ${dbMatch.score1}`;
+    const roundName = getRoundNameFromMatchId(matchId);
+
+    // 1. 戦評の生成
+    let summary = dbMatch.summary || matchContext.highlights?.[0]?.description || "熱戦が繰り広げられました。";
+    if (result === '敗北') {
+        summary = `惜しくも${opponentName}に敗れ、今大会の挑戦は終了となりました。`;
+    }
+
+    // 2. 次の試合情報の生成
+    let nextMatchText = "";
+    if (result === '勝利' && nextOpponent) {
+        if (nextOpponent.opponentName === '優勝') {
+            nextMatchText = "次戦はありません（県大会優勝）。たくさんのご声援ありがとうございました！";
+        } else {
+            const opponent = nextOpponent.decidingMatch 
+                ? `${nextOpponent.decidingMatch.team1} と ${nextOpponent.decidingMatch.team2} の勝者`
+                : (nextOpponent.opponentName || '（未定）');
+            
+            const schedule = nextOpponent.nextMatchSchedule;
+            const location = schedule?.stadiumFull || '未定';
+            const date = schedule?.date || '未定';
+            const gameNum = schedule?.game ? `第${schedule.game}試合` : '';
+
+            nextMatchText = `次戦（${nextOpponent.roundName}）は、${opponent}と対戦します。\n` +
+                            `日時: ${date} ${gameNum}\n` +
+                            `場所: ${location}\n\n` +
+                            `引き続きのご声援をよろしくお願いいたします。`;
+        }
+    } else if (result === '敗北') {
+        nextMatchText = "皆様の熱い声援が、選手の力となりました。心より感謝申し上げます。\n新チームでの再起にご期待ください。";
+    }
+
+    // 3. AIにプロンプトを送信
+    const prompt = `あなたは「283学園」野球部の広報担当者です。
+以下の試合結果データに基づき、学園のホームページに掲載する「お知らせ」記事のタイトルと本文を、丁寧な「です・ます調」で生成してください。
+
+### 試合データ
+- **大会名:** ${tournamentNameMap[tournamentState.currentTournament] || '大会'} ${roundName}
+- **自チーム:** ${teamName}
+- **対戦相手:** ${opponentName}
+- **結果:** ${teamName} の ${result}
+- **スコア:** ${score}
+- **簡単な戦評(AI生成):** ${summary}
+- **次の試合情報(テキスト):** ${nextMatchText}
+
+### 指示
+1.  **タイトル:** 「【野球部】（大会名 ラウンド） 試合結果のお知らせ」という形式にしてください。
+2.  **本文:**
+    - 試合が行われたこと、対戦相手、スコア、勝敗を報告してください。
+    - 「簡単な戦評」を自然な文章に直して挿入してください。
+    - 最後に「次の試合情報」をそのまま挿入してください。
+    - 全体を、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
+
+### 出力形式 (JSON)
+{"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文、改行は\\nを使用）"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const newsJson = parseJsonFromText(rawText);
+            if (newsJson && newsJson.title && newsJson.body) {
+                return { ...newsJson, timestamp: Date.now() };
+            }
+        }
+        throw new Error("AIからの応答が予期した形式ではありません。");
+    } catch (error) {
+        console.error("283学園ホームページニュースの生成に失敗しました:", error);
+        return {
+            title: "記事生成エラー",
+            body: "AI広報担当者との通信に失敗しました。",
+            timestamp: Date.now(),
+            error: true
+        };
+    }
+}
+
 document.body.addEventListener('click', async (e) => {
+
+
+
 
     // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
@@ -15900,6 +17005,29 @@ document.body.addEventListener('click', async (e) => {
         }
     }
 
+// --- [NEW] 試合後 ボックススコア表示ボタン (トーナメント表の「一球速報」) ---
+    else if (e.target.closest('.boxscore-btn')) {
+        e.preventDefault();
+        const matchId = e.target.closest('.boxscore-btn').dataset.matchId;
+        const dbMatch = findMatchById(matchId);
+        
+        if (!dbMatch || !dbMatch.boxScoreHtml) {
+            alert("ボックススコアデータが見つかりません。詳細入力が正しく保存されているか確認してください。");
+            return;
+        }
+        
+        const modal = document.getElementById('boxscore-modal');
+        const modalTitle = document.getElementById('boxscore-modal-title');
+        const modalBody = document.getElementById('boxscore-modal-body');
+        
+        modalTitle.textContent = `ボックススコア: ${dbMatch.team1} vs ${dbMatch.team2} (${getRoundNameFromMatchId(matchId)})`;
+        modalBody.innerHTML = dbMatch.boxScoreHtml;
+        
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('flex');
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // ▼▼▼ [NEW] スレ立てモーダルを開くボタン ▼▼▼
     else if (e.target.closest('#open-new-thread-modal-btn')) {
         e.preventDefault();
@@ -15915,6 +17043,131 @@ document.body.addEventListener('click', async (e) => {
         e.preventDefault();
         document.getElementById('new-thread-modal').classList.add('hidden');
     }
+
+/// --- [NEW] 283学園ホームページモーダルを開くボタン ---
+   else if (e.target.closest('#status-modal-homepage-link')) {
+        e.preventDefault();
+        const modalId = e.target.closest('#status-modal-homepage-link').dataset.target;
+        if (modalId === 'homepage-modal') {
+            
+            // 1. 最新のトーナメント表を描画
+            const homepageBracketPlaceholder = document.getElementById('current-tournament-bracket-container');
+            if (homepageBracketPlaceholder) {
+                const currentBracketHTML = generateHomepageBracketHTML(tournamentState);
+                if(currentBracketHTML.trim() !== "") {
+                    homepageBracketPlaceholder.innerHTML = currentBracketHTML;
+                } else {
+                    homepageBracketPlaceholder.innerHTML = '<p class="text-center text-gray-500">（トーナメントがまだ開始されていません）</p>';
+                }
+            }
+
+            // 2. 最新の「お知らせ」を動的に描画
+            const dynamicNewsListEl = document.getElementById('homepage-dynamic-news-list');
+            if (dynamicNewsListEl) {
+                const homepageNews = tournamentState.homepageNews || [];
+                if (homepageNews.length > 0) {
+                    dynamicNewsListEl.innerHTML = homepageNews.map(article => {
+                        if (article.error) return '';
+                        const bodyForAttr = article.body.replace(/\n/g, '&#10;').replace(/"/g, '&quot;');
+                        
+                        return `
+                            <li class="border-b border-gray-200 pb-3 mb-3 last:border-b-0">
+                                <span class="text-sm text-red-600 font-bold">NEW!</span>
+                                <span class="text-sm text-gray-500">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</span>
+                                <p class-"font-semibold text-gray-800 hover:text-blue-600 cursor-pointer homepage-news-item" 
+                                   data-article-body="${bodyForAttr}" 
+                                   data-article-title="${article.title.replace(/"/g, '&quot;')}">
+                                    ${article.title}
+                                </p>
+                            </li>
+                        `;
+                    }).join('');
+                    dynamicNewsListEl.classList.remove('hidden');
+                } else {
+                    dynamicNewsListEl.innerHTML = '';
+                    dynamicNewsListEl.classList.add('hidden');
+                }
+            }
+
+            // ★★★ 3. アニメーション付きでモーダルを開く ★★★
+            toggleHomepageModal(true);
+            
+            // チームステータスモーダルは閉じない（上に重ねる）
+        }
+    }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
+// --- [NEW] (ホームページ内) 動的お知らせクリック ---
+    else if (e.target.closest('.homepage-news-item')) {
+        e.preventDefault();
+        const p = e.target.closest('p');
+        const title = p.dataset.articleTitle;
+        const body = p.dataset.articleBody.replace(/&#10;/g, '\n'); // 改行を元に戻す
+        
+        // 既存の一球速報モーダルを流用して表示
+        const modal = document.getElementById('boxscore-modal');
+        const modalTitle = document.getElementById('boxscore-modal-title');
+        const modalBody = document.getElementById('boxscore-modal-body');
+        
+        modalTitle.textContent = title;
+        // 本文を <pre> タグで囲むことで、\n の改行をそのまま表示する
+        modalBody.innerHTML = `<pre class="p-4 whitespace-pre-wrap leading-relaxed text-sm">${body}</pre>`;
+        
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('flex');
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
+    // --- [NEW] 283学園ホームページモーダルを閉じるボタン ---
+   else if (e.target.closest('#homepage-modal-close')) {
+        e.preventDefault();
+        // ★★★ 4. アニメーション付きでモーダルを閉じる ★★★
+        toggleHomepageModal(false);
+    }
+    // --- [NEW] (ホームページ内) ボックススコア表示ボタン ---
+    else if (e.target.closest('#show-boxscore-btn-2024')) {
+        e.preventDefault();
+        const modal = document.getElementById('boxscore-modal');
+        const modalBody = document.getElementById('boxscore-modal-body');
+        
+        // 架空のスコア表HTMLを生成
+        const boxScoreHtml = generate2024FinalBoxScore(); 
+        
+        document.getElementById('boxscore-modal-title').textContent = "ボックススコア: 283学園 vs 常葉菊川 (2024年 決勝)";
+        modalBody.innerHTML = boxScoreHtml;
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('flex'); // hidden ではなく flex で表示
+    }
+
+    // --- [NEW] ボックススコアモーダルを閉じるボタン ---
+    else if (e.target.closest('#boxscore-modal-close')) {
+        e.preventDefault();
+        const modal = document.getElementById('boxscore-modal');
+        modal.classList.add('modal-hidden');
+        modal.classList.remove('flex');
+    }
+
+    // --- [NEW] (ホームページ内) 動的お知らせクリック ---
+    else if (e.target.closest('#homepage-dynamic-news-list p')) {
+        e.preventDefault();
+        const p = e.target.closest('p');
+        const title = p.dataset.articleTitle;
+        const body = p.dataset.articleBody.replace(/&#10;/g, '\n'); // 改行を元に戻す
+        
+        // 既存の一球速報モーダルを流用して表示
+        const modal = document.getElementById('boxscore-modal');
+        const modalTitle = document.getElementById('boxscore-modal-title');
+        const modalBody = document.getElementById('boxscore-modal-body');
+        
+        modalTitle.textContent = title;
+        // 本文を <pre> タグで囲むことで、\n の改行をそのまま表示する
+        modalBody.innerHTML = `<pre class="p-4 whitespace-pre-wrap leading-relaxed text-sm">${body}</pre>`;
+        
+        modal.classList.remove('modal-hidden');
+        modal.classList.add('flex');
+    }
+
+// ▲▲▲ 新規追加ここまで ▲▲▲
 
     // ▼▼▼ 既存の「#new-thread-submit」の else if ブロックと、このブロックを「置き換え」 ▼▼▼
     else if (e.target.closest('#new-thread-submit')) {
@@ -17268,6 +18521,587 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
             <button id="sub-modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">
                 キャンセル
             </button>
+        </div>
+    </div>
+</div>
+
+
+<div id="homepage-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col">
+        <div class="flex-shrink-0 flex justify-between items-center border-b p-4 bg-gray-50 rounded-t-lg">
+            <h3 class="text-xl font-bold text-blue-700">283学園 高等学校 - 硬式野球部</h3>
+            <button id="homepage-modal-close" class="text-gray-500 hover:text-gray-700 text-3xl">&times;</button>
+        </div>
+        
+        <div id="homepage-scroll-container" class="flex-grow overflow-y-auto" style="font-family: 'Noto Sans JP', sans-serif; background-color: #f4f7fa;">
+            
+            <header class="bg-white shadow-sm sticky top-0 z-50">
+                <div class="container mx-auto px-4 sm:px-6 py-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <a href="#" class="text-3xl font-extrabold text-gray-900 flex items-center">
+                                <svg class="h-10 w-10 mr-2 text-blue-700" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                <span class="text-blue-700">283</span>学園
+                            </a>
+                        </div>
+                        <nav class="hidden md:flex space-x-6">
+                            <a href="#about" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">野球部について</a>
+                            <a href="#players" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">選手紹介</a>
+                            <a href="#facility" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">施設紹介</a>
+                            <a href="#school-song" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">校歌</a>
+                            <a href="#results" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">戦績</a>
+                            <a href="#gallery" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">ギャラリー</a>
+                            <a href="#access" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">アクセス</a>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+
+            <section class="hero-bg text-white py-40 px-6">
+                <div class="container mx-auto text-center">
+                    <h1 class="slogan tracking-wider animate-fade-in-down">強</h1>
+                    <p class="text-xl sm:text-3xl font-light mt-4 max-w-3xl mx-auto text-shadow-lg animate-fade-in-up">
+                        個の技量に頼らず、一人ひとりの力を集めて戦う。
+                    </p>
+                </div>
+            </section>
+
+            <div class="container mx-auto px-4 sm:px-6 py-20">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+
+                    <main class="lg:col-span-2 space-y-20">
+
+                        <section id="about" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-6">野球部について</h2>
+                            <span class="inline-block bg-blue-700 text-white text-sm font-bold px-4 py-1 rounded-full mb-6">昨年度県大会王者・第1シード</span>
+                            <div class="space-y-5 text-gray-700 leading-relaxed text-base">
+                                <p>昨年度、創部まもなくして夏の県大会初優勝を果たし、第1シード校として今大会に臨みます。しかし、初出場となった昨夏の甲子園では初戦（対 浦和学院 7-9）で敗退。全国の舞台での「一勝」の重みを痛感しました。</p>
+                                <p>名将・天井努監督の下、昨年の経験を糧に「県大会連覇」と、その先の「甲子園での一勝」を揺るぎない目標として掲げています。王者としてのプレッシャーをはねのけ、チームスローガンである<strong class="font-bold text-blue-700">『強』</strong>を体現します。</p>
+                            </div>
+                            <div class="mt-10 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                                <h4 class="text-xl font-bold text-gray-800 mb-3">監督・部長あいさつ</h4>
+                                <div class="flex items-start space-x-4">
+                                    <div class="flex-shrink-0 w-24 h-24 bg-gray-300 rounded-md flex items-center justify-center text-gray-500 text-xs">[監督イメージ]</div>
+                                    <div>
+                                        <p class="text-gray-700 italic">「我々の強みは、守備の一体感と打線のつながりです。姫川、白瀬を中心とした投手リレーは全国でもピカイチと自負しています。個の力に頼らず、全員の力を集めて『強い』チームとして戦います。」</p>
+                                        <p class="text-right font-bold text-gray-800 mt-3">- 283学園野球部 監督　天井 努</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="philosophy" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">指導方針・練習内容</h2>
+                            <div class="space-y-6 text-gray-700 leading-relaxed">
+                                <div>
+                                    <h4 class="text-xl font-bold text-blue-700 mb-2">1. ID野球とデータ解析</h4>
+                                    <p>天井監督の指導の下、全試合・全練習を映像データ化。専属アナリストが常駐する「データ解析室」にて、選手のフォーム、打球傾向、投球の回転数に至るまでを徹底的に分析。科学的根拠に基づいた「ID野球」がチームの基盤です。</p>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-bold text-blue-700 mb-2">2. 「二軍」制度の導入（283学園B）</h4>
+                                    <p>部員数100名超に対応するため、他校にはない「二軍（283学園B）」制度を導入。七草はづきコーチの指導の下、Bチームも独自の練習試合を重ね、Aチームと常に入れ替え戦を行う環境を整備。この熾烈な内部競争が、王者としての層の厚さを生み出しています。</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="players" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">注目選手</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="player-card border p-5 rounded-lg bg-gray-50"><div class="flex justify-between items-baseline"><h5 class="text-xl font-bold text-blue-700">姫川 (3年・投手)</h5><span class="text-xs font-medium bg-red-100 text-red-800 px-2 py-0.5 rounded-full">プロ注目</span></div><p class="text-gray-700 mt-2">投打の中心。MAX151kmの直球とスプリットで圧倒する怪物。高校通算42本塁打。</p></div>
+                                <div class="player-card border p-5 rounded-lg bg-gray-50"><h5 class="text-xl font-bold text-blue-700">白瀬 (3年・投手)</h5><p class="text-gray-700 mt-2">絶対的守護神。MAX155kmの伸び上がるストレートが武器。春の静岡高戦で完全試合を達成。</p></div>
+                                <div class="player-card border p-5 rounded-lg bg-white"><h5 class="text-xl font-bold text-gray-800">花海 咲 (3年・中堅手)</h5><p class="text-gray-700 mt-2">1年夏からレギュラーの経験豊富なスラッガー。走攻守三拍子揃った攻守の要。</p></div>
+                                <div class="player-card border p-5 rounded-lg bg-blue-50 border-blue-200"><div class="flex justify-between items-baseline"><h5 class="text-xl font-bold text-blue-700">花海 佑 (1年・右翼手)</h5><span class="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">1年生</span></div><p class="text-gray-700 mt-2">1年生のスーパースター。兄・咲との連携も抜群。入学以来、既に通算13本塁打を記録。</p></div>
+                            </div>
+                        </section>
+
+                        <section id="roster" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">部員紹介 (2025年度 夏)</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">1</span>
+                                        <span class="player-profile-name">白瀬</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[投]</strong> <strong>[右投/右打]</strong><br>
+                                        184cm / 82kg<br>
+                                        出身: 東京シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">2</span>
+                                        <span class="player-profile-name">有栖川</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[捕]</strong> <strong>[右投/左打]</strong><br>
+                                        178cm / 78kg<br>
+                                        出身: 神奈川ボーイズ
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">3</span>
+                                        <span class="player-profile-name">姫川</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[投/一]</strong> <strong>[右投/右打]</strong><br>
+                                        182cm / 80kg<br>
+                                        出身: 大阪シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">4</span>
+                                        <span class="player-profile-name">樋口</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[二]</strong> <strong>[右投/右打]</strong><br>
+                                        170cm / 68kg<br>
+                                        出身: 静岡葵中学
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">5</span>
+                                        <span class="player-profile-name">八宮</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[三]</strong> <strong>[右投/右打]</strong><br>
+                                        175cm / 72kg<br>
+                                        出身: 浜松ボーイズ
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">6</span>
+                                        <span class="player-profile-name">十王</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[遊]</strong> <strong>[右投/左打]</strong><br>
+                                        176cm / 70kg<br>
+                                        出身: 名古屋ドリームス
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">7</span>
+                                        <span class="player-profile-name">芹沢</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[外]</strong> <strong>[右投/両打]</strong><br>
+                                        172cm / 69kg<br>
+                                        出身: 沼津シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">8</span>
+                                        <span class="player-profile-name">花海佑</span>
+                                        <span class="player-profile-grade">1年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[外]</strong> <strong>[右投/右打]</strong><br>
+                                        177cm / 73kg<br>
+                                        出身: 北海道シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">9</span>
+                                        <span class="player-profile-name">花海咲</span>
+                                        <span class="player-profile-grade">3年<span class="player-profile-captain">(主将)</span></span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[外]</strong> <strong>[左投/左打]</strong><br>
+                                        178cm / 75kg<br>
+                                        出身: 北海道シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">10</span>
+                                        <span class="player-profile-name">黛</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[投]</strong> <strong>[右投/右打]</strong><br>
+                                        180cm / 76kg<br>
+                                        出身: 富士シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">11</span>
+                                        <span class="player-profile-name">市川</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[投]</strong> <strong>[左投/左打]</strong><br>
+                                        179cm / 74kg<br>
+                                        出身: 静岡蒲原中学
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">12</span>
+                                        <span class="player-profile-name">福丸</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[捕]</strong> <strong>[右投/右打]</strong><br>
+                                        176cm / 77kg<br>
+                                        出身: 焼津リトルシニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">13</span>
+                                        <span class="player-profile-name">鈴木</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[一]</strong> <strong>[右投/左打]</strong><br>
+                                        181cm / 85kg<br>
+                                        出身: 愛知ボーイズ
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">14</span>
+                                        <span class="player-profile-name">有村</span>
+                                        <span class="player-profile-grade">1年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[内]</strong> <strong>[右投/右打]</strong><br>
+                                        173cm / 67kg<br>
+                                        出身: 福岡シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">15</span>
+                                        <span class="player-profile-name">田中</span>
+                                        <span class="player-profile-grade">3年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[内]</strong> <strong>[右投/右打]</strong><br>
+                                        174cm / 70kg<br>
+                                        出身: 静岡服織中学
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">16</span>
+                                        <span class="player-profile-name">大崎</span>
+                                        <span class="player-profile-grade">1年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[外]</strong> <strong>[右投/左打]</strong><br>
+                                        170cm / 68kg<br>
+                                        出身: 三島リトルシニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">17</span>
+                                        <span class="player-profile-name">風野</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[内]</strong> <strong>[右投/右打]</strong><br>
+                                        169cm / 65kg<br>
+                                        出身: 新潟シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">18</span>
+                                        <span class="player-profile-name">西城</span>
+                                        <span class="player-profile-grade">2年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[投]</strong> <strong>[右投/右打]</strong><br>
+                                        183cm / 81kg<br>
+                                        出身: 広島ボーイズ
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">19</span>
+                                        <span class="player-profile-name">浅倉</span>
+                                        <span class="player-profile-grade">1年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[内]</strong> <strong>[右投/右打]</strong><br>
+                                        168cm / 64kg<br>
+                                        出身: 長崎シニア
+                                    </div>
+                                </div>
+                                <div class="player-profile-card">
+                                    <div class="player-profile-header">
+                                        <span class="player-profile-number">20</span>
+                                        <span class="player-profile-name">杜野</span>
+                                        <span class="player-profile-grade">1年</span>
+                                    </div>
+                                    <div class="player-profile-body">
+                                        <strong>[外]</strong> <strong>[左投/左打]</strong><br>
+                                        171cm / 67kg<br>
+                                        出身: 宮城シニア
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section id="facility" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">施設紹介</h2>
+                            <p class="text-gray-700 leading-relaxed mb-6">ナムコグループの全面的な支援により、本校は全国トップクラスの練習環境を誇ります。天候に左右されない全天候型の屋内練習場、最新鋭の機器を備えたトレーニングルーム、専属アナリストが常駐するデータ解析室が、選手たちの成長を加速させます。</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border rounded-lg overflow-hidden shadow-sm">
+                                    <img src="https://source.unsplash.com/random/800x600/?baseball,gym" alt="屋内練習場" class="w-full h-48 object-cover">
+                                    <div class="p-4 bg-gray-50"><h4 class="font-bold">屋内練習場「TSUBASA DOME」</h4><p class="text-sm text-gray-600">ブルペン4箇所、フリーバッティング3箇所を完備。</p></div>
+                                </div>
+                                <div class="border rounded-lg overflow-hidden shadow-sm">
+                                    <img src="https://source.unsplash.com/random/800x600/?technology,data" alt="データ解析室" class="w-full h-48 object-cover">
+                                    <div class="p-4 bg-gray-50"><h4 class="font-bold">データ解析室</h4><p class="text-sm text-gray-600">全選手の投球・打撃フォームを常時モニタリング。</p></div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <section id="school-song" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">283学園 校歌</h2>
+                            <div class="text-center max-w-lg mx-auto">
+                                <p class="text-sm text-gray-600">作詞: 天井 努　/　作曲: 283学園音楽科</p>
+                                <div class="mt-6"><p class="text-lg leading-relaxed text-gray-800">一、<br>蒼き空 仰ぎ見る<br>我らが学び舎 283学園<br>若き翼（つばさ） 胸に抱き<br>未来（あす）へと羽ばたく 強い意志<br>ああ 輝ける光よ 我らにあれ</p></div>
+                                <div class="mt-8"><p class="text-lg leading-relaxed text-gray-800">二、<br>遠州の風 受けながら<br>真理（まこと）を求めん 友と共に<br>鍛えし知恵 磨きし技<br>『強』なる理想を 追い求めて<br>ああ 誇り高き 我らが 283学園</p></div>
+                            </div>
+                        </section>
+
+                        <section id="results" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                            
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">2025年 選手権静岡大会 (最新の戦績)</h2>
+                            <p class="text-gray-700 leading-relaxed mb-6">
+                                現在進行中、または終了した最新の大会の戦績です。試合が終了すると、このトーナメント表も更新されます。
+                            </p>
+                            <div id="current-tournament-bracket-container" class="bracket-wrapper">
+                                <p class="text-center text-gray-500">（現在のトーナメント表を読み込み中...）</p>
+                            </div>
+                            
+                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8 mt-12">2024年 選手権静岡大会 (昨年度)</h2>
+                            
+                            <p class="text-gray-700 leading-relaxed mb-6">
+                                姫川(2年)、花海咲(2年)ら、現3年生が中心となり、創部以来初の「夏の甲子園」出場を果たした大会の全軌跡です。
+                            </p>
+                            <div class="bracket-wrapper">
+                                <div class="tournament-container">
+                                    <div class="bracket-half left">
+                                        <div class="round r1">
+                                            <div class="round-title">1回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">20</span></div><div class="team loser"><span class="name">新居</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">浜松開誠館</span><span class="score">7</span></div><div class="team loser"><span class="name">初星学園</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">聖隷クリストファー</span><span class="score">10</span></div><div class="team loser"><span class="name">浜松特支</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">日大三島</span><span class="score">8</span></div><div class="team loser"><span class="name">裾野</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">掛川西</span><span class="score">5</span></div><div class="team loser"><span class="name">富士宮北</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">東海大翔洋</span><span class="score">6</span></div><div class="team loser"><span class="name">美城学園</span><span class="score">2</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">藤枝明誠</span><span class="score">11</span></div><div class="team loser"><span class="name">沼津高専</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡学園</span><span class="score">9</span></div><div class="team loser"><span class="name">三島南</span><span class="score">2</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">浜松市立</span><span class="score">7</span></div><div class="team loser"><span class="name">御殿場南</span><span class="score">6</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">磐田東</span><span class="score">4</span></div><div class="team loser"><span class="name">浜松学院</span><span class="score">3</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">焼津水産</span><span class="score">5</span></div><div class="team loser"><span class="name">御殿場西</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">科学技術</span><span class="score">8</span></div><div class="team loser"><span class="name">誠恵</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡</span><span class="score">8</span></div><div class="team loser"><span class="name">小山</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">知徳</span><span class="score">5</span></div><div class="team loser"><span class="name">虎府島総合</span><span class="score">4</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静清</span><span class="score">10</span></div><div class="team loser"><span class="name">富士東</span><span class="score">9</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span>283学園B</span><span class="score">5</span></div><div class="team loser"><span class="name">伊豆伊東</span><span class="score">3</span></div></div></div>
+                                        </div>
+                                        <div class="round r2">
+                                            <div class="round-title">2回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">11</span></div><div class="team loser"><span class="name">浜松開誠館</span><span class="score">1</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">聖隷クリストファー</span><span class="score">5</span></div><div class="team loser"><span class="name">日大三島</span><span class="score">3</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">掛川西</span><span class="score">4</span></div><div class="team loser"><span class="name">東海大翔洋</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">藤枝明誠</span><span class="score">6</span></div><div class="team loser"><span class="name">静岡学園</span><span class="score">4</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">磐田東</span><span class="score">7</span></div><div class="team loser"><span class="name">浜松市立</span><span class="score">3</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">科学技術</span><span class="score">5</span></div><div class="team loser"><span class="name">焼津水産</span><span class="score">2</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡</span><span class="score">7</span></div><div class="team loser"><span class="name">知徳</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span>静清</span><span class="score">7</span></div><div class="team loser hp-team-283"><span class="name">283学園B</span><span class="score">0</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r3">
+                                            <div class="round-title">3回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">10</span></div><div class="team loser"><span class="name">聖隷クリストファー</span><span class="score">2</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">藤枝明誠</span><span class="score">5</span></div><div class="team loser"><span class="name">掛川西</span><span class="score">1</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">科学技術</span><span class="score">3</span></div><div class="team loser"><span class="name">磐田東</span><span class="score">2</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡</span><span class="score">4</span></div><div class="team loser"><span class="name">静清</span><span class="score">3</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r4">
+                                            <div class="round-title">準々決勝</div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">8</span></div><div class="team loser"><span class="name">藤枝明誠</span><span class="score">3</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡</span><span class="score">7</span></div><div class="team loser"><span class="name">科学技術</span><span class="score">0</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r5">
+                                            <div class="round-title">準決勝</div>
+                                            <div class="matchup"><div class="match"><div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">6</span></div><div class="team loser"><span class="name">静岡</span><span class="score">1</span></div></div><div class="connector-line"></div></div>
+                                        </div>
+                                    </div>
+                                    <div class="bracket-final">
+                                        <div class="round-title">決勝</div>
+                                        <div class="final-matchup">
+                                            <div class="match">
+                                                <div class="team winner hp-team-283"><span class="name">283学園</span><span class="score">5</span></div>
+                                                <div class="team loser"><span class="name">常葉菊川</span><span class="score">2</span></div>
+                                            </div>
+                                            <button id="show-boxscore-btn-2024" class="mt-2 w-full text-sm bg-blue-600 text-white font-bold px-4 py-2 rounded hover:bg-blue-700 transition-all">
+                                                決勝戦ボックススコア
+                                            </button>
+                                            </div>
+                                        <div class="winner-box">
+                                            <h2>🏆 優勝 283学園</h2>
+                                        </div>
+                                    </div>
+                                    <div class="bracket-half right">
+                                        <div class="round r1">
+                                            <div class="round-title">1回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span>常葉菊川</span><span class="score">15</span></div><div class="team loser"><span class="name">川根</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">浜松工業</span><span class="score">6</span></div><div class="team loser"><span class="name">島田工業</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">765総合高校</span><span class="score">8</span></div><div class="team loser"><span class="name">袋井</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">常葉橘</span><span class="score">10</span></div><div class="team loser"><span class="name">桐陽</span><span class="score">1</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">駿河総合</span><span class="score">7</span></div><div class="team loser"><span class="name">飛龍</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">加藤学園</span><span class="score">11</span></div><div class="team loser"><span class="name">磐田南</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">伊豆総合</span><span class="score">5</span></div><div class="team loser"><span class="name">富士宮西</span><span class="score">4</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">韮山</span><span class="score">6</span></div><div class="team loser"><span class="name">市立沼津</span><span class="score">3</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">三島北</span><span class="score">10</span></div><div class="team loser"><span class="name">湖西</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">富士市立</span><span class="score">7</span></div><div class="team loser"><span class="name">熱海</span><span class="score">1B</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">オイスカ浜松国際</span><span class="score">4</span></div><div class="team loser"><span class="name">静岡市立</span><span class="score">3</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">浜松商業</span><span class="score">9</span></div><div class="team loser"><span class="name">城南静岡</span><span class="score">2</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡商業</span><span class="score">7</span></div><div class="team loser"><span class="name">浜松南</span><span class="score">0</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">島田</span><span class="score">4</span></div><div class="team loser"><span class="name">伊豆中央</span><span class="score">2</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">沼津城北</span><span class="score">8</span></div><div class="team loser"><span class="name">浜松城北工業</span><span class="score">7</span></div></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">天竜</span><span class="score">5</span></div><div class="team loser"><span class="name">下田</span><span class="score">0</span></div></div></div>
+                                        </div>
+                                        <div class="round r2">
+                                            <div class="round-title">2回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">常葉菊川</span><span class="score">9</span></div><div class="team loser"><span class="name">浜松工業</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span>常葉橘</span><span class="score">4</span></div><div class="team loser"><span class="name">765総合高校</span><span class="score">3</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">駿河総合</span><span class="score">5</span></div><div class="team loser"><span class="name">加藤学園</span><span class="score">4</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">韮山</span><span class="score">8</span></div><div class="team loser"><span class="name">伊豆総合</span><span class="score">1B</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">三島北</span><span class="score">8</span></div><div class="team loser"><span class="name">富士市立</span><span class="score">1G</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">浜松商業</span><span class="score">6</span></div><div class="team loser"><span class="name">オイスカ浜松国際</span><span class="score">5</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡商業</span><span class="score">10</span></div><div class="team loser"><span class="name">島田</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">天竜</span><span class="score">4</span></div><div class="team loser"><span class="name">沼津城北</span><span class="score">0</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r3">
+                                            <div class="round-title">3回戦</div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">常葉菊川</span><span class="score">7</span></div><div class="team loser"><span class="name">常葉橘</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span>韮山</span><span class="score">5</span></div><div class="team loser"><span class="name">駿河総合</span><span class="score">2</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">三島北</span><span class="score">2</span></div><div class="team loser"><span class="name">浜松商業</span><span class="score">0</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡商業</span><span class="score">6</span></div><div class="team loser"><span class="name">天竜</span><span class="score">1</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r4">
+                                            <div class="round-title">準々決勝</div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">常葉菊川</span><span class="score">7</span></div><div class="team loser"><span class="name">韮山</span><span class="score">1</span></div></div><div class="connector-line"></div></div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">静岡商業</span><span class="score">3</span></div><div class="team loser"><span class="name">三島北</span><span class="score">0</span></div></div><div class="connector-line"></div><div class="connector-path"></div></div>
+                                        </div>
+                                        <div class="round r5">
+                                            <div class="round-title">準決勝</div>
+                                            <div class="matchup"><div class="match"><div class="team winner"><span class="name">常葉菊川</span><span class="score">4</span></div><div class_name="name">静岡商業</span><span class="score">3</span></div></div><div class="connector-line"></div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-6 mt-12">
+                            <div><h3 class="text-xl font-bold text-gray-800">2023年（2年生）</h3><hr class="my-2"><p class="text-sm text-gray-600">秋季静岡大会 優勝 / 選手権静岡大会 決勝敗退 (対 765総合 2-3) / 春季静岡大会 決勝敗退 (対 加藤学園 1-2)</p></div>
+                            <div><h3 class="text-xl font-bold text-gray-800">2022年（1年生）</h3><hr class="my-2"><p class="text-sm text-gray-600">秋季静岡大会 準決勝敗退 / 選手権静岡大会 準決勝敗退</p></div>
+                            <div><h3 class="text-xl font-bold text-gray-800">2021年（創部2年目）</h3><hr class="my-2"><p class="text-sm text-gray-600">秋季静岡大会 準々決勝敗退 / 選手権静岡大会 4回戦敗退</p></div>
+                            <div><h3 class="text-xl font-bold text-gray-800">2020年（創部1年目）</h3><hr class="my-2"><p class="text-sm text-gray-600">秋季静岡大会 2回戦敗退 / 選手権静岡大会 2回戦敗退</p></div>
+                        </div>
+                    </section>
+
+                    <section id="ob-career" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                        <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">OBの主な進路 (架空)</h2>
+                        <p class="text-gray-700 leading-relaxed mb-6">創部まもないながら、卒業生は野球を継続する道を選んでいます。2025年春、初の卒業生（創部3年目に入学した世代）が新たなステージへと羽ばたきました。</p>
+                        <div class="overflow-x-auto"><table class="w-full min-w-[600px] text-left text-sm"><thead class="bg-gray-100"><tr><th class="px-4 py-3 font-semibold">選手名 (ダミー)</th><th class="px-4 py-3 font-semibold">卒業年度</th><th class="px-4 py-3 font-semibold">ポジション</th><th class="px-4 py-3 font-semibold">主な進路</th></tr></thead><tbody class="divide-y divide-gray-200"><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">高山 翼</td><td class="px-4 py-3">2025年3月卒 (3期生)</td><td class="px-4 py-3">投手</td><td class="px-4 py-3 font-semibold">東京六大学リーグ (進学)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">早川 瞬</td><td class="px-4 py-3">2025年3月卒 (3期生)</td><td class="px-4 py-3">内野手</td><td class="px-4 py-3 font-semibold">社会人野球 (ナムコグループ)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">伊集院 北斗</td><td class="px-4 py-3">2024年3月卒 (2期生)</td><td class="px-4 py-3">外野手</td><td class="px-4 py-3 font-semibold">東都大学リーグ (進学)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">天ヶ瀬 冬馬</td><td class="px-4 py-3">2023年3月卒 (1期生)</td><td class="px-4 py-3">捕手</td><td class="px-4 py-3 font-semibold">独立リーグ (中退)</td></tr></tbody></table></div>
+                    </section>
+
+                    <section id="gallery" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                        <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">ギャラリー</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,victory" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,victory" alt="昨夏 優勝の瞬間" class="w-full h-full object-cover"></a>
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,pitcher" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,pitcher" alt="姫川の投球フォーム" class="w-full h-full object-cover"></a>
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,stadium" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,stadium" alt="甲子園での試合風景" class="w-full h-full object-cover"></a>
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,batter" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,batter" alt="花海佑のバッティング" class="w-full h-full object-cover"></a>
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,practice" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,practice" alt="室内練習場での打撃練習" class="w-full h-full object-cover"></a>
+                            <a href="https://source.unsplash.com/random/1200x800/?baseball,team" target="_blank" class="gallery-image aspect-video rounded-lg overflow-hidden shadow-md"><img src="https://source.unsplash.com/random/800x600/?baseball,team" alt="チーム全員での円陣" class="w-full h-full object-cover"></a>
+                        </div>
+                    </section>
+
+                    <section id="access" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                        <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">アクセス</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div><img src="https://source.unsplash.com/random/800x600/?map" alt="地図" class="w-full h-64 object-cover rounded-lg"></div>
+                            <div class="text-gray-700">
+                                <h4 class="text-lg font-semibold mb-2">283学園 高等学校</h4>
+                                <p class="mb-4">〒430-XXXX 静岡県浜松市（ダミー住所）</p>
+                                <h5 class="font-semibold mb-1">電車でお越しの場合</h5>
+                                <p class="mb-4">JR「浜松駅」よりバスで約20分、「283学園前」下車すぐ。</p>
+                                <h5 class="font-semibold mb-1">お車でお越しの場合</h5>
+                                <p>東名高速道路「浜松IC」より約15分。<br>(※来客用駐車場には限りがございます)</p>
+                            </div>
+                        </div>
+                    </section>
+
+                </main>
+
+                <aside id="news" class="lg:col-span-1">
+                    <div class="bg-white p-6 rounded-xl shadow-xl sticky top-24">
+                        <h3 class="text-xl font-bold text-blue-800 section-title mb-6">お知らせ</h3>
+                        
+                        <ul id="homepage-dynamic-news-list" class="space-y-4 mb-6 border-b pb-4 hidden">
+                            </ul>
+                        
+                        <ul class="space-y-4">
+                            <li><span class="text-sm text-gray-500">2025/11/10</span><p class="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer">文化祭「283フェスティバル」開催のお知らせ</p></li>
+                            <li><span class="text-sm text-gray-500">2025/11/05</span><p class="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer">【野球部】夏の選手権大会 組み合わせ決定</p></li>
+                            <li><span class="text-sm text-gray-500">2025/11/01</span><p class="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer">【野球部】春季大会優勝、第1シード決定！</p></li>
+                            <li><span class="text-sm text-gray-500">2025/10/28</span><p class="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer">【野球部】1年生・花海佑 練習試合で2HR</p></li>
+                            <li><span class="text-sm text-gray-500">2025/10/20</span><p class="font-semibold text-gray-800 hover:text-blue-600 cursor-pointer">オープンキャンパスの申し込みを開始しました。</p></li>
+                        </ul>
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+
+        <footer class="bg-gray-900 text-gray-400 py-16 mt-16">
+            <div class="container mx-auto px-6 text-center">
+                <p class="font-bold text-2xl text-white">283学園 高等学校</p>
+                <p class="text-sm mt-3">〒430-XXXX 静岡県浜松市（ダミー住所）</p>
+                <p class="text-sm mt-1">TEL: 053-XXX-XXXX / FAX: 053-XXX-XXXX</p>
+                <div class="mt-8 border-t border-gray-700 pt-8">
+                     <p class="text-xs">Powered by Namco Group</p>
+                    <p class="text-xs mt-1">&copy; 2025 Tsubasa Gakuen High School. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+        
+    </div>
+</div>
+</div>
+
+<div id="boxscore-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 modal-hidden items-center justify-center z-[160]">
+    <div class="bg-white p-4 md:p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 id="boxscore-modal-title" class="text-xl font-bold text-gray-800">ボックススコア</h3>
+            <button id="boxscore-modal-close" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        <div id="boxscore-modal-body" class="overflow-y-auto flex-grow">
+            <div class="loader text-center py-16">ボックススコアを読み込み中...</div>
         </div>
     </div>
 </div>
