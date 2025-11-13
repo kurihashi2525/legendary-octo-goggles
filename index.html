@@ -70,6 +70,120 @@
             margin-right: 0.25rem;
         }
 
+
+
+       
+        #campus-map-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; 
+            margin: 1.5rem auto; /* 上下にマージン、左右にauto */
+            aspect-ratio: 16 / 9;
+            background-color: #e5e7eb; /* bg-gray-200 */
+            border-radius: 0.5rem; /* rounded-lg */
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+        }
+        #campus-map-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(30%) brightness(1.1);
+        }
+
+        /* 2. ホットスポット (+) ボタン */
+        .hotspot {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-color: #1e3a8a; /* 283学園テーマカラー */
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s ease-out;
+            /* 脈動アニメーション */
+            animation: hotspotPulse 2s infinite ease-in-out;
+        }
+        .hotspot:hover {
+            transform: scale(1.2);
+            animation-play-state: paused; /* ホバー中は脈動を停止 */
+        }
+        @keyframes hotspotPulse {
+            0% { transform: scale(1); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); }
+            50% { transform: scale(1.1); box-shadow: 0 6px 25px rgba(30, 58, 138, 0.7); }
+            100% { transform: scale(1); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); }
+        }
+        .hotspot > span {
+            pointer-events: none; /* 中の+マークがクリックを邪魔しないように */
+        }
+
+        /* 3. ホットスポット・ポップアップ */
+        .hotspot-popup {
+            position: absolute;
+            width: 280px;
+            background-color: white;
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 60; /* ヘッダー(z-50)より手前 */
+            /* アニメーション用 */
+            opacity: 0;
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            pointer-events: none; /* 見えないときはクリックさせない */
+            transform: translateY(0);
+        }
+        .hotspot-popup.visible {
+            opacity: 1;
+            transform: translateY(-10px); /* 少し浮き上がる */
+            pointer-events: auto;
+        }
+        .hotspot-popup-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        .hotspot-popup-content {
+            padding: 1rem;
+        }
+        .hotspot-popup-title {
+            font-weight: 700;
+            font-size: 1.125rem; /* text-lg */
+            color: #1e3a8a; /* 283学園テーマカラー */
+            margin-bottom: 0.5rem;
+        }
+        .hotspot-popup-text {
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* text-gray-600 */
+        }
+        .hotspot-popup-close {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 28px;
+            height: 28px;
+            background-color: #4b5563; /* text-gray-600 */
+            color: white;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+
 /* ▼▼▼ 勢力図分析アニメーション用のCSS（レイアウト修正版）▼▼▼ */
 #analysis-stage {
     background: radial-gradient(ellipse at center, rgba(15, 23, 42, 1) 0%, rgba(0, 0, 0, 1) 100%);
@@ -2429,6 +2543,26 @@ const JAPANESE_SURNAMES = [
     "小島", "大西", "杉本", "市川", "古川", "久保", "川崎", "飯田", "中田", "堀"
 ];
 
+// ▼▼▼ このブロックを「新規追加」(11984行目あたり) ▼▼▼
+const FACILITY_DATA = {
+    "ground": {
+        title: "メイングラウンド",
+        text: "甲子園と同じ黒土と天然芝を使用。両翼100m、センター122mの広さを誇り、ナイター設備も完備しています。",
+        imgSrc: "https://images.unsplash.com/photo-1515512210878-38904790e8c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+    },
+    "dome": {
+        title: "屋内練習場「TSUBASA DOME」",
+        text: "天候に左右されない全天候型ドーム。ブルペン4箇所、フリーバッティング3箇所を完備し、雨の日でも実戦的な練習が可能です。",
+        imgSrc: "https://images.unsplash.com/photo-1578899653835-34a162d355e0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+    },
+    "data-lab": {
+        title: "データ解析室",
+        text: "天井監督のID野球の心臓部。全選手の投球・打撃フォームを常時モニタリングし、AIによる分析がリアルタイムで行われます。",
+        imgSrc: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+    }
+};
+
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▼▼▼ このブロックをまるごと「新規追加」(1191行目あたり、JAPANESE_SURNAMES の下など) ▼▼▼
 const TEAM_ROSTER_MASTER = {
     "283学園": [
@@ -17028,6 +17162,59 @@ document.body.addEventListener('click', async (e) => {
     }
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
+// --- [NEW] (ホームページ内) インタラクティブ・マップ ホットスポット ---
+    else if (e.target.closest('.hotspot')) {
+        e.preventDefault();
+        const hotspot = e.target.closest('.hotspot');
+        const popup = document.getElementById('hotspot-popup');
+        const dataId = hotspot.dataset.id;
+        const data = FACILITY_DATA[dataId];
+
+        if (!data || !popup) return;
+
+        // 1. データをポップアップに注入
+        document.getElementById('hotspot-popup-title').textContent = data.title;
+        document.getElementById('hotspot-popup-text').textContent = data.text;
+        document.getElementById('hotspot-popup-image').src = data.imgSrc;
+        
+        // 2. ポップアップの位置をホットスポットの近くに調整
+        const hotspotRect = hotspot.getBoundingClientRect();
+        const mapRect = document.getElementById('campus-map-container').getBoundingClientRect();
+        
+        // ホットスポットの「マップコンテナ内での」相対Y座標
+        const hotspotYInMap = hotspotRect.top - mapRect.top; 
+        
+        // マップの下半分にある場合はポップアップを「上」に、上半分なら「下」に出す
+        if (hotspotYInMap > (mapRect.height / 2)) {
+            popup.style.top = 'auto';
+            popup.style.bottom = `${mapRect.height - hotspotYInMap + 20}px`; // ホットスポットの真上 (20pxオフセット)
+        } else {
+            popup.style.top = `${hotspotYInMap + hotspotRect.height + 20}px`; // ホットスポットの真下 (20pxオフセット)
+            popup.style.bottom = 'auto';
+        }
+        
+        // X座標はホットスポットの左端に合わせる (CSSのtransformは使わない方がシンプル)
+        popup.style.left = `${hotspot.offsetLeft}px`;
+        // transform をリセット
+        popup.style.transform = 'translateY(-10px)'; // 上に浮き上がるアニメーション用
+
+        // 3. 表示
+        popup.classList.remove('hidden');
+        // 'visible' クラスを少し遅れて追加してCSSアニメーションを発火
+        setTimeout(() => popup.classList.add('visible'), 10);
+    }
+    
+    // --- [NEW] (ホームページ内) ホットスポット・ポップアップを閉じる ---
+    else if (e.target.closest('#hotspot-popup-close-btn')) {
+        e.preventDefault();
+        const popup = document.getElementById('hotspot-popup');
+        popup.classList.remove('visible');
+        popup.style.transform = 'translateY(0)'; // 元の位置に戻る
+        // アニメーションが終わるのを待ってから隠す
+        setTimeout(() => popup.classList.add('hidden'), 300);
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // ▼▼▼ [NEW] スレ立てモーダルを開くボタン ▼▼▼
     else if (e.target.closest('#open-new-thread-modal-btn')) {
         e.preventDefault();
@@ -18860,21 +19047,27 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
                             </div>
                         </section>
                         
-                        <section id="facility" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
+                       <section id="facility" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
                             <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">施設紹介</h2>
-                            <p class="text-gray-700 leading-relaxed mb-6">ナムコグループの全面的な支援により、本校は全国トップクラスの練習環境を誇ります。天候に左右されない全天候型の屋内練習場、最新鋭の機器を備えたトレーニングルーム、専属アナリストが常駐するデータ解析室が、選手たちの成長を加速させます。</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="border rounded-lg overflow-hidden shadow-sm">
-                                    <img src="https://source.unsplash.com/random/800x600/?baseball,gym" alt="屋内練習場" class="w-full h-48 object-cover">
-                                    <div class="p-4 bg-gray-50"><h4 class="font-bold">屋内練習場「TSUBASA DOME」</h4><p class="text-sm text-gray-600">ブルペン4箇所、フリーバッティング3箇所を完備。</p></div>
-                                </div>
-                                <div class="border rounded-lg overflow-hidden shadow-sm">
-                                    <img src="https://source.unsplash.com/random/800x600/?technology,data" alt="データ解析室" class="w-full h-48 object-cover">
-                                    <div class="p-4 bg-gray-50"><h4 class="font-bold">データ解析室</h4><p class="text-sm text-gray-600">全選手の投球・打撃フォームを常時モニタリング。</p></div>
+                            <p class="text-gray-700 leading-relaxed mb-6">ナムコグループの全面的な支援により、本校は全国トップクラスの練習環境を誇ります。マップ上の「<span class="font-bold text-blue-700">+</span>」アイコンをクリックして、各施設をご覧ください。</p>
+                            
+                            <div id="campus-map-container">
+                                <img id="campus-map-image" src="https://img.freepik.com/premium-vector/university-campus-map-vector-illustration_147933-461.jpg" alt="283学園 キャンパスマップ">
+
+                                <div class="hotspot" style="top: 60%; left: 25%;" data-id="ground"><span>+</span></div>
+                                <div class="hotspot" style="top: 35%; left: 45%;" data-id="dome"><span>+</span></div>
+                                <div class="hotspot" style="top: 20%; left: 70%;" data-id="data-lab"><span>+</span></div>
+                                
+                                <div id="hotspot-popup" class="hotspot-popup hidden">
+                                    <button id="hotspot-popup-close-btn" class="hotspot-popup-close">&times;</button>
+                                    <img id="hotspot-popup-image" src="" alt="施設写真" class="hotspot-popup-image">
+                                    <div class="hotspot-popup-content">
+                                        <h4 id="hotspot-popup-title" class="hotspot-popup-title"></h4>
+                                        <p id="hotspot-popup-text" class="hotspot-popup-text"></p>
+                                    </div>
                                 </div>
                             </div>
-                        </section>
-                        
+                        </section>                        
                         <section id="school-song" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
                             <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">283学園 校歌</h2>
                             <div class="text-center max-w-lg mx-auto">
