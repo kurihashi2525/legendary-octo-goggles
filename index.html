@@ -18627,103 +18627,8 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
 <script>
     mermaid.initialize({ startOnLoad: true });
 </script>
-<div id="pre-game-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[150]">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div class="flex justify-between items-center border-b pb-3 mb-4">
-            <h3 id="pre-game-title" class="text-xl font-bold">試合前 応援コメント</h3>
-            <button id="pre-game-modal-close" class="text-gray-400 hover:text-gray-600">&times;</button>
-        </div>
-        
-        <div class="flex border-b mb-4">
-            <button id="pre-game-tab-team1" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team1">
-                （チーム1）
-            </button>
-            <button id="pre-game-tab-team2" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team2">
-                （チーム2）
-            </button>
-        </div>
-        <div id="pre-game-body" class="overflow-y-auto space-y-3 p-2 bg-gray-50 rounded min-h-[200px]">
-            <p class="text-gray-500 text-center p-8">↑ 見たいチームの応援席タブをクリックしてください ↑</p>
-        </div>
-    </div>
-</div>
 
-<div id="substitution-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[150]">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-        <h3 class="text-xl font-bold mb-4 border-b pb-3">守備交代</h3>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">選手名</label>
-                <input type="text" id="sub-modal-player-name" class="w-full bg-gray-100 p-2 border rounded" readonly>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="sub-modal-inning" class="block text-sm font-medium text-gray-700">イニング</label>
-                    <input type="number" id="sub-modal-inning" value="1" min="1" max="20" class="w-full p-2 border rounded">
-                </div>
-                <div>
-                    <label for="sub-modal-top-bottom" class="block text-sm font-medium text-gray-700">表 / 裏</label>
-                    <select id="sub-modal-top-bottom" class="w-full p-2 border rounded bg-white">
-                        <option value="表">表</option>
-                        <option value="裏">裏</option>
-                    </select>
-                </div>
-            </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">交代タイミング</label>
-                <div class="flex gap-4 mt-1">
-                    <label><input type="radio" name="sub-timing" id="sub-modal-timing-start" value="start" checked> イニング開始時</label>
-                    <label><input type="radio" name="sub-timing" id="sub-modal-timing-mid" value="mid"> イニング途中</label>
-                </div>
-            </div>
-
-            <div id="sub-modal-mid-inning-details" class="hidden space-y-3 p-3 bg-gray-50 rounded border">
-                <div>
-                    <label for="sub-modal-outs" class="block text-sm font-medium text-gray-700">アウトカウント</label>
-                    <select id="sub-modal-outs" class="w-full p-2 border rounded bg-white">
-                        <option value="0">0アウト</option>
-                        <option value="1">1アウト</option>
-                        <option value="2">2アウト</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">ランナー状況</label>
-                    <div class="flex gap-4 mt-1">
-                        <label><input type="checkbox" id="sub-modal-runner1"> 1塁</label>
-                        <label><input type="checkbox" id="sub-modal-runner2"> 2塁</label>
-                        <label><input type="checkbox" id="sub-modal-runner3"> 3塁</label>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <label for="sub-modal-new-pos" class="block text-sm font-medium text-gray-700">新しい守備位置</label>
-                <select id="sub-modal-new-pos" class="w-full p-2 border rounded bg-white">
-                    <option value="">- 選択 -</option>
-                    <option value="投">投手 (投)</option>
-                    <option value="捕">捕手 (捕)</option>
-                    <option value="一">一塁手 (一)</option>
-                    <option value="二">二塁手 (二)</option>
-                    <option value="三">三塁手 (三)</option>
-                    <option value="遊">遊撃手 (遊)</option>
-                    <option value="左">左翼手 (左)</option>
-                    <option value="中">中堅手 (中)</option>
-                    <option value="右">右翼手 (右)</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="mt-6 text-center border-t pt-4">
-            <button id="sub-modal-save" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 mr-4">
-                交代を記録
-            </button>
-            <button id="sub-modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">
-                キャンセル
-            </button>
-        </div>
-    </div>
-</div>
 
 
 <div id="homepage-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
@@ -19333,6 +19238,106 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         </div>
     </div>
 </div>
+
+<div id="pre-game-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden flex items-center justify-center z-[200]">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 id="pre-game-title" class="text-xl font-bold">試合前 応援コメント</h3>
+                <button id="pre-game-modal-close" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            
+            <div class="flex border-b mb-4">
+                <button id="pre-game-tab-team1" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team1">
+                    （チーム1）
+                </button>
+                <button id="pre-game-tab-team2" class="pre-game-team-tab py-2 px-4 font-semibold text-gray-500 border-b-2 border-transparent" data-team-key="team2">
+                    （チーム2）
+                </button>
+            </div>
+            <div id="pre-game-body" class="overflow-y-auto space-y-3 p-2 bg-gray-50 rounded min-h-[200px]">
+                <p class="text-gray-500 text-center p-8">↑ 見たいチームの応援席タブをクリックしてください ↑</p>
+            </div>
+        </div>
+    </div>
+
+<div id="substitution-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[150]">
+
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
+        <h3 class="text-xl font-bold mb-4 border-b pb-3">守備交代</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">選手名</label>
+                <input type="text" id="sub-modal-player-name" class="w-full bg-gray-100 p-2 border rounded" readonly>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="sub-modal-inning" class="block text-sm font-medium text-gray-700">イニング</label>
+                    <input type="number" id="sub-modal-inning" value="1" min="1" max="20" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="sub-modal-top-bottom" class="block text-sm font-medium text-gray-700">表 / 裏</label>
+                    <select id="sub-modal-top-bottom" class="w-full p-2 border rounded bg-white">
+                        <option value="表">表</option>
+                        <option value="裏">裏</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">交代タイミング</label>
+                <div class="flex gap-4 mt-1">
+                    <label><input type="radio" name="sub-timing" id="sub-modal-timing-start" value="start" checked> イニング開始時</label>
+                    <label><input type="radio" name="sub-timing" id="sub-modal-timing-mid" value="mid"> イニング途中</label>
+                </div>
+            </div>
+
+            <div id="sub-modal-mid-inning-details" class="hidden space-y-3 p-3 bg-gray-50 rounded border">
+                <div>
+                    <label for="sub-modal-outs" class="block text-sm font-medium text-gray-700">アウトカウント</label>
+                    <select id="sub-modal-outs" class="w-full p-2 border rounded bg-white">
+                        <option value="0">0アウト</option>
+                        <option value="1">1アウト</option>
+                        <option value="2">2アウト</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ランナー状況</label>
+                    <div class="flex gap-4 mt-1">
+                        <label><input type="checkbox" id="sub-modal-runner1"> 1塁</label>
+                        <label><input type="checkbox" id="sub-modal-runner2"> 2塁</label>
+                        <label><input type="checkbox" id="sub-modal-runner3"> 3塁</label>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label for="sub-modal-new-pos" class="block text-sm font-medium text-gray-700">新しい守備位置</label>
+                <select id="sub-modal-new-pos" class="w-full p-2 border rounded bg-white">
+                    <option value="">- 選択 -</option>
+                    <option value="投">投手 (投)</option>
+                    <option value="捕">捕手 (捕)</option>
+                    <option value="一">一塁手 (一)</option>
+                    <option value="二">二塁手 (二)</option>
+                    <option value="三">三塁手 (三)</option>
+                    <option value="遊">遊撃手 (遊)</option>
+                    <option value="左">左翼手 (左)</option>
+                    <option value="中">中堅手 (中)</option>
+                    <option value="右">右翼手 (右)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-6 text-center border-t pt-4">
+            <button id="sub-modal-save" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 mr-4">
+                交代を記録
+            </button>
+            <button id="sub-modal-cancel" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400">
+                キャンセル
+            </button>
+        </div>
+    </div>
+</div>
+
 
     </body>
 </html>
