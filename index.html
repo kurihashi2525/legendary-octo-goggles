@@ -17162,6 +17162,19 @@ document.body.addEventListener('click', async (e) => {
     }
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
+// --- [NEW] (ホームページ内) スマホメニューの開閉 ---
+    else if (e.target.closest('#mobile-menu-button')) {
+        e.preventDefault();
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.toggle('hidden');
+    }
+    // --- [NEW] (ホームページ内) スマホメニューのリンククリック時に閉じる ---
+    else if (e.target.closest('.mobile-nav-link')) {
+        const menu = document.getElementById('mobile-menu');
+        menu.classList.add('hidden');
+    }
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 // --- [NEW] (ホームページ内) インタラクティブ・マップ ホットスポット ---
     else if (e.target.closest('.hotspot')) {
         e.preventDefault();
@@ -18723,27 +18736,49 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
         <div id="homepage-scroll-container" class="flex-grow overflow-y-auto" style="font-family: 'Noto Sans JP', sans-serif; background-color: #f4f7fa;">
             
             <header class="bg-white shadow-sm sticky top-0 z-50">
-                <div class="container mx-auto px-4 sm:px-6 py-4">
+                <div class="container mx-auto px-4 sm:px-6 py-3 md:py-4">
                     <div class="flex justify-between items-center">
                         <div>
-                            <a href="#" class="text-3xl font-extrabold text-gray-900 flex items-center">
-                                <svg class="h-10 w-10 mr-2 text-blue-700" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                            <a href="#" class="text-2xl md:text-3xl font-extrabold text-gray-900 flex items-center">
+                                <svg class="h-8 w-8 md:h-10 md:w-10 mr-2 text-blue-700" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                                 <span class="text-blue-700">283</span>学園
                             </a>
                         </div>
-                        <nav class="hidden md:flex space-x-6">
+                        
+                        <nav class="hidden md:flex space-x-4 lg:space-x-6 text-sm lg:text-base">
                             <a href="#about" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">野球部について</a>
                             <a href="#players" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">選手紹介</a>
+                            <a href="#roster" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">部員紹介</a>
                             <a href="#facility" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">施設紹介</a>
                             <a href="#school-song" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">校歌</a>
                             <a href="#results" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">戦績</a>
                             <a href="#gallery" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">ギャラリー</a>
                             <a href="#access" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">アクセス</a>
                         </nav>
+
+                        <div class="md:hidden">
+                            <button id="mobile-menu-button" class="text-gray-500 hover:text-blue-700 focus:outline-none p-2">
+                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="mobile-menu" class="hidden md:hidden bg-gray-50 border-t border-gray-200 absolute w-full shadow-lg">
+                    <div class="flex flex-col px-4 py-2 space-y-1">
+                        <a href="#about" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">野球部について</a>
+                        <a href="#players" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">選手紹介</a>
+                        <a href="#roster" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">部員紹介</a>
+                        <a href="#facility" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">施設紹介</a>
+                        <a href="#school-song" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">校歌</a>
+                        <a href="#results" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">戦績</a>
+                        <a href="#gallery" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">ギャラリー</a>
+                        <a href="#access" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700">アクセス</a>
                     </div>
                 </div>
             </header>
-
             <section class="hero-bg text-white py-40 px-6">
                 <div class="container mx-auto text-center">
                     <h1 class="slogan tracking-wider animate-fade-in-down">強</h1>
