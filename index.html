@@ -8280,21 +8280,34 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
         calledGameInfo = `<div class="text-center text-xs text-red-600 font-bold mt-1">(${dbMatch.calledInning}回コールド)</div>`;
     }
 
+    // ▼▼▼ 修正：フッター（ボタン類）の生成ロジック ▼▼▼
     let footer = '';
-    if (dbMatch.winner && dbMatch.boxScoreHtml) {
-        footer = `<div class="matchup-footer">
-                    <button class="boxscore-btn text-sm bg-blue-600 text-white font-bold px-4 py-1 rounded hover:bg-blue-700" data-match-id="${matchId}">
-                        一球速報
-                    </button>
-                  </div>`;
-    } else if (!t1Empty && !t2Empty && !dbMatch.winner) {
+
+    // パターンA：勝者が決まっている場合（試合終了後）
+    if (dbMatch.winner) {
+        let buttonsHtml = '';
+
+        // 1. 一球速報ボタン（データがある場合のみ表示）
+        if (dbMatch.boxScoreHtml) {
+            buttonsHtml += `<button class="boxscore-btn text-sm bg-blue-600 text-white font-bold px-3 py-1 rounded hover:bg-blue-700" data-match-id="${matchId}">一球速報</button>`;
+        }
+
+        // 2. ★詳細入力ボタン（ここに追加！修正用として残します）
+        // 少しマージン（ml-1）をつけて並べます
+        buttonsHtml += `<button class="details-btn ml-1" data-match-id="${matchId}">詳細入力</button>`;
+
+        footer = `<div class="matchup-footer flex justify-center items-center">${buttonsHtml}</div>`;
+    } 
+    // パターンB：まだ勝者が決まっていない場合（試合前）
+    else if (!t1Empty && !t2Empty) {
         footer = `<div class="matchup-footer">
                     <button class="details-btn" data-match-id="${matchId}">詳細入力</button>
                     <button class="quick-sim-btn text-lg" data-match-id="${matchId}" title="このスコアでおまかせ入力">🎲</button>
                     <button class="pre-game-cheer-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" data-match-id="${matchId}">応援</button>
                   </div>`;
     }
-        
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     return `<div class="matchup ${specialMatchClass}" data-match-id="${matchId}">
                 ${content}
                 ${calledGameInfo} 
