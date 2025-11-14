@@ -15813,7 +15813,7 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
 
 /**
  * トーナメント表をたどり、次の対戦相手の情報を特定する
- * (★「次の試合のスケジュール」も返すよう修正した最終版)
+ * (★「準決勝勝利時」の相手特定ロジックを修正した最終版)
  * @param {string} teamName - チーム名
  * @param {string} currentMatchId - そのチームが勝利した現在の試合ID
  * @returns {object|null} - 次の対戦相手に関する詳細情報
@@ -15831,7 +15831,7 @@ function findNextOpponent(teamName, currentMatchId) {
             opponentName: '優勝', 
             roundName: '大会終了',
             opponentRank: '',
-            nextMatchSchedule: null // ★次の試合なし
+            nextMatchSchedule: null
         };
     }
 
@@ -15842,6 +15842,7 @@ function findNextOpponent(teamName, currentMatchId) {
 
     let nextMatchId, roundName;
     if (roundNum === finalRound - 1) {
+        // ★ 準決勝 (R5) -> 決勝 (F-R1-M1)
         nextMatchId = 'F-R1-M1';
         roundName = '決勝';
     } else if (roundNum < finalRound - 1) {
@@ -15850,7 +15851,7 @@ function findNextOpponent(teamName, currentMatchId) {
         const roundNameMap = { [finalRound - 1]: "準決勝", [finalRound - 2]: "準々決勝" };
         roundName = roundNameMap[nextRoundNum] || `${nextRoundNum}回戦`;
     } else {
-        return null;
+        return null; // 既に決勝より後 (ありえないが)
     }
 
     const nextMatch = allMatches[nextMatchId];
@@ -15861,19 +15862,36 @@ function findNextOpponent(teamName, currentMatchId) {
     else if (nextMatch.team2 && nextMatch.team2 !== teamName) opponentName = nextMatch.team2;
 
     if (opponentName) {
+        // 相手が既に決まっている場合
         return {
             opponentName: opponentName,
             opponentRank: calculateRank(opponentName, tournamentState),
             roundName: roundName,
-            nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
+            nextMatchSchedule: nextMatch.schedule
         };
     } else {
-        // 相手が未定の場合、その相手を決める試合を探しに行く
-        const feederMatchNumber = matchNum % 2 === 1 ? matchNum + 1 : matchNum - 1;
-        const feederMatchId = `${side}-R${roundNum}-M${feederMatchNumber}`;
+        // 相手が未定の場合
+        
+        // ★★★ ここからが今回の修正箇所 ★★★
+        let feederMatchId;
+        
+        // 1. 次の試合が決勝戦 (F-R1-M1) かつ、相手がまだ決まっていない場合
+        if (nextMatchId === 'F-R1-M1') {
+            // 反対側の山の準決勝IDを特定する (side は 'L' または 'R')
+            const opponentFeederSide = (side === 'L' ? 'R' : 'L');
+            feederMatchId = `${opponentFeederSide}-R${roundNum}-M1`; // 準決勝はM1しかない
+        }
+        // 2. (既存のロジック) 決勝戦以外で、相手が未定の場合
+        else {
+            const feederMatchNumber = matchNum % 2 === 1 ? matchNum + 1 : matchNum - 1;
+            feederMatchId = `${side}-R${roundNum}-M${feederMatchNumber}`;
+        }
+        // ★★★ 修正ここまで ★★★
+
         const feederMatch = allMatches[feederMatchId];
 
         if (feederMatch && feederMatch.team1 && feederMatch.team2) {
+            // 相手を決める試合のカードが揃っている場合
             return {
                 opponentName: '（未定）',
                 roundName: roundName,
@@ -15883,15 +15901,16 @@ function findNextOpponent(teamName, currentMatchId) {
                     team2: feederMatch.team2,
                     rank2: calculateRank(feederMatch.team2, tournamentState)
                 },
-                nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
+                nextMatchSchedule: nextMatch.schedule
             };
         }
         
+        // (フォールバック) 相手を決める試合のカードもまだ揃っていない場合
         return { 
             opponentName: '（未定）', 
             opponentRank: '?', 
             roundName: roundName,
-            nextMatchSchedule: nextMatch.schedule // ★次の試合のスケジュールを返す
+            nextMatchSchedule: nextMatch.schedule
         };
     }
 }
