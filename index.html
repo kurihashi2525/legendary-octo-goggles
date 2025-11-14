@@ -9684,9 +9684,8 @@ function saveDetailedStats() {
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
- * [NEW] 詳細入力の打席結果文字列を、ボックススコア用の短い文字列に翻訳する
- * @param {string} atBatString - 1打席分の保存済み文字列 (例: "S:中安1点")
- * @returns {string} - "中安" "三振" "四球" など
+ * [修正版] 詳細入力の打席結果文字列を、ボックススコア用の短い文字列に翻訳する
+ * (★文字数順にソートして「犠飛」が「飛」に誤判定されるのを防ぐ)
  */
 function translateResultForBoxScore(atBatString) {
     if (!atBatString) return "-";
@@ -9702,7 +9701,16 @@ function translateResultForBoxScore(atBatString) {
     tempRes = tempRes.replace('好走塁', '');
     
     // 3. 方向+結果 (例: 中安, 遊ゴ) を抽出
-    const allResultTypes = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other, '振り逃げ', '打撃妨害' ];
+    // ★★★ 修正: 文字数の多い順 (.sort((a, b) => b.length - a.length)) に並べ替えてから判定する
+    const allResultTypes = [ 
+        ...BATTING_RESULTS.hits, 
+        ...BATTING_RESULTS.outs, 
+        ...BATTING_RESULTS.walks, 
+        ...BATTING_RESULTS.sacrifices, 
+        ...BATTING_RESULTS.other, 
+        '振り逃げ', '打撃妨害' 
+    ].sort((a, b) => b.length - a.length);
+
     let foundResult = null;
     let foundDirection = '';
 
@@ -9719,16 +9727,12 @@ function translateResultForBoxScore(atBatString) {
     }
 
     if (foundResult) {
-        // "安" を "安打" にしない (ボックススコア用)
         if(foundResult === "安") foundResult = "安";
-        
-        // 方向と結果を結合 (例: 中安, 遊ゴ, 三振)
         return (foundDirection + foundResult).trim();
     }
     
-    return "-"; // マッチしなかった場合
+    return "-";
 }
-// ▲▲▲ 新規追加ここまで ▲▲▲
 
 /**
  * [NEW] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
@@ -14089,8 +14093,16 @@ function createHighlightsText(dbMatch, winnerName) {
             else if (tempRes.includes('安')) description = `${playerInfo}が${markPrefix}${strengthPrefix ? strengthPrefix + ' ' : ''}${direction ? direction + 'への' : ''}${eventText}${rbiText}ヒットを放った`;
             
             else if (tempRes.includes('犠飛')) description = `${playerInfo}が${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '外野'}への${eventText}犠牲フライ${rbiMatch ? `で${rbiMatch[1]}点` : 'で1点'}を挙げた`;
-            else if (tempRes.includes('犠打')) description = `${playerInfo}が${markPrefix}${direction ? direction + 'へ' : ''}送りバントを決めた`;
-            
+           else if (tempRes.includes('犠打')) {
+                if (rbiMatch) {
+                    // 打点がある場合 = スクイズ
+                    description = `${playerInfo}が${markPrefix}${direction ? direction + 'へ' : ''}スクイズを決めて${eventText}${rbiMatch[1]}点を挙げた`;
+                } else {
+                    // 打点がない場合 = 送りバント
+                    description = `${playerInfo}が${markPrefix}${direction ? direction + 'へ' : ''}送りバントを決めた`;
+                }
+            }
+            // ▲▲▲ 修正ここまで ▲▲▲            
             else if (tempRes.includes('ゴロ') && rbiMatch) description = `${playerInfo}の${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '内野'}ゴロの間に${eventText}${rbiMatch[1]}点を挙げた`;
             else if ((tempRes.includes('エラー') || tempRes.includes('失')) && rbiMatch) description = `${playerInfo}が${markPrefix}相手${direction ? direction + 'の' : ''}エラーの間に${eventText}${rbiMatch[1]}点を記録した`;
             else if (tempRes.includes('野選') && rbiMatch) description = `${playerInfo}の${markPrefix}${strengthPrefixOut ? strengthPrefixOut + ' ' : ''}${direction || '内野'}への${eventText}野選の間に${rbiMatch[1]}点を挙げた`;
@@ -14289,26 +14301,37 @@ function createHighlightsText(dbMatch, winnerName) {
                         if (!runnerPlay) return;
                         const runnerPlayParts = runnerPlay.trim().split(' ');
                         if (runnerPlayParts.length < 2) return;
+                        
                         const runnerName = runnerPlayParts[0];
-                        const play = runnerPlayParts[1]; // 例: "盗塁", "盗塁死", "進塁"
-                        const detail = runnerPlayParts.slice(2).join(' ') || ''; // 例: "二塁へ", "生還"
+                        const play = runnerPlayParts[1];
+                        const detail = runnerPlayParts.slice(2).join(' ') || '';
+                        
                         let description = `${runnerName}が`;
 
-                        if (play === '盗塁') description += `盗塁成功（${detail}）`;
+                        if (play === '盗塁') {
+                            if (detail.includes('本塁')) description += `ホームスチール（重盗）を成功させた`;
+                            else description += `盗塁成功（${detail}）`;
+                        }
                         else if (play === 'タッチアップ') description += `タッチアップから${detail}`;
                         else if (play === '生還' || (play === '進塁' && detail.includes('生還'))) description += `ホームイン`;
+                        
+                        else if (play === '送球間に進塁') {
+                            if (detail.includes('本塁')) description += `キャッチャーの送球の隙を突き、ホームを陥れる好走塁を見せた`;
+                            else description += `送球の間に${detail}進塁する好走塁を見せた`;
+                        }
+
                         else if (play === '盗塁死') description += `盗塁失敗`;
                         else if (play === '牽制死') description += `牽制アウト`;
                         else if (play === '走塁死') description += `走塁死`;
                         else if (play === '挟殺プレーでアウト') description += `挟殺アウト`;
                         else if (play.includes('アウト')) description += `走塁中にアウト`;
-                        else if (play === '進塁') description += `進塁して${detail}`;
                         else description += `${play} ${detail}`.trim();
 
                         highlights.push({ type: 'baserunning', inning: currentInning, team: teamName, player: runnerName, description: description });
                         keyPlayerNames.add(runnerName);
                     });
                 }
+                // ▲▲▲ 修正ここまで ▲▲▲
             }); // finalOrderedPlays.forEach の終わり
 
            // ▼▼▼ D. 次のイニングの先頭打者を正確に更新 ▼▼▼
@@ -14852,27 +14875,22 @@ function simulateHalfInningUntilOuts(battingOrder, inningIndex, targetOuts, star
 // ▲▲▲ ヘルパー関数ここまで ▲▲▲
 
 /**
- * 1打席分の入力ブロックHTMLを生成する（打球の勢い(Strength)対応・バグ修正版）
- * @param {Array<object>} playersOnField - 現在出場中の選手リスト
- * @param {string} atBatString - 1打席分の保存済み文字列 (例: "S:中安1点")
- * @returns {string} - 生成されたHTML
+ * [修正版] 1打席分の入力ブロックHTMLを生成する
+ * (★文字数順にソートして「犠飛」が「飛」に誤判定されるのを防ぐ)
  */
 function createBattingResultDropdowns(playersOnField, atBatString = '') {
     // 1. 保存された文字列を「打者プレー」と「走者プレー」に分離
     const [batterPlay, runnerPlaysString] = (atBatString || '').split(';');
     
-    // 2. ★★★ 修正点 ★★★
-    // tempResult をここで「先に」定義する
     let tempResult = (batterPlay || '').trim();
-    // ▲▲▲ 修正ここまで ▲▲▲
 
-   // ▼▼▼ この「勢い」と「注目」のパース処理を追加 ▼▼▼
+    // 3. 勢いと注目のパース
     let selectedStrength = '';
-    let isMarked = false; // ★注目フラグ
+    let isMarked = false;
 
     if (tempResult.startsWith('★:')) {
         isMarked = true;
-        tempResult = tempResult.substring(3); // "★:" を削除
+        tempResult = tempResult.substring(3);
     }
     if (tempResult.startsWith('S:')) {
         selectedStrength = 'S:';
@@ -14881,7 +14899,6 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
         selectedStrength = 'W:';
         tempResult = tempResult.substring(2);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     // 4. 残りの情報（結果、方向、打点など）をパースする
     let selectedResult = '', selectedDirection = '', selectedRbi = '', selectedRunnerPlay = '';
@@ -14896,20 +14913,31 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
             selectedRunnerPlay = '好走塁';
             tempResult = tempResult.replace('好走塁', '').trim();
         }
-        const allResultTypes = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ];
+        
+        // ★★★ 修正: ここでも文字数の多い順にソートする ★★★
+        const allResultTypes = [ 
+            ...BATTING_RESULTS.hits, 
+            ...BATTING_RESULTS.outs, 
+            ...BATTING_RESULTS.walks, 
+            ...BATTING_RESULTS.sacrifices, 
+            ...BATTING_RESULTS.other 
+        ].sort((a, b) => b.length - a.length);
+
         for (const type of allResultTypes) {
             if (tempResult.includes(type)) {
                 selectedResult = type;
-                tempResult = tempResult.replace(type, '').trim();
-                break;
+                tempResult = tempResult.replace(type, '').trim(); // 見つかったら削除
+                break; // 最初に見つかったもの（長い方）で確定
             }
         }
+        
         if (tempResult.length > 0 && DIRECTIONS.includes(tempResult)) {
             selectedDirection = tempResult;
         }
     }
 
     // 5. HTMLを生成する
+    // (プルダウンの選択肢順序は変えなくて良いが、selectedの判定は修正後のselectedResultを使う)
     const resultOptions = [ ...BATTING_RESULTS.hits, ...BATTING_RESULTS.outs, ...BATTING_RESULTS.walks, ...BATTING_RESULTS.sacrifices, ...BATTING_RESULTS.other ]
         .map(r => `<option value="${r}" ${selectedResult === r ? 'selected' : ''}>${r}</option>`).join('');
     const directionOptions = DIRECTIONS.map(d => `<option value="${d}" ${selectedDirection === d ? 'selected' : ''}>${d}</option>`).join('');
@@ -14930,21 +14958,18 @@ function createBattingResultDropdowns(playersOnField, atBatString = '') {
                     <select class="batting-result-part w-[15%] text-xs p-1 border rounded result-strength bg-red-50"><option value="">-勢い-</option>${strengthOptions}</select>
                     <select class="batting-result-part w-[20%] text-xs p-1 border rounded result-runner-play bg-yellow-50"><option value="">-走塁-</option>${runnerPlayOptions}</select>
                 </div>
-
-<div class="w-12 flex-shrink-0">
+                <div class="w-12 flex-shrink-0">
                     <button class="mark-at-bat-btn w-full h-full text-xs font-bold p-1 rounded border ${isMarked ? 'bg-yellow-300 border-yellow-500 text-yellow-900' : 'bg-gray-100 border-gray-300 text-gray-500 hover:bg-gray-200'}"
                             data-marked="${isMarked ? 'true' : 'false'}"
                             title="この打席を「注目の打席」としてAIにマークします">
                         ★ 注目
                     </button>
                 </div>
-
             </div>
             ${createRunnerInputsHTML(playersOnField, runnerPlaysString)}
         </div>
     `;
 }
-
 
 /**
  * トーナメント表をたどり、次の対戦相手の情報を特定する
@@ -15042,8 +15067,9 @@ function findNextOpponent(teamName, currentMatchId) {
  * 複数走者に対応した走塁入力欄のHTMLを生成する（区切り文字バグ修正版）
  */
 function createRunnerInputsHTML(playersOnField, runnerPlaysString = '') {
-    const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
-    const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
+    // ▼▼▼ 修正：「送球間に進塁」を追加 ▼▼▼
+    const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '送球間に進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
+    // ▲▲▲ 修正ここまで ▲▲▲    const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
     
     // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
     const runnerEvents = runnerPlaysString ? runnerPlaysString.split(',') : [];
