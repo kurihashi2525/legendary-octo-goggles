@@ -15070,7 +15070,9 @@ function findNextOpponent(teamName, currentMatchId) {
 function createRunnerInputsHTML(playersOnField, runnerPlaysString = '') {
     // ▼▼▼ 修正：「送球間に進塁」を追加 ▼▼▼
     const baserunningPlays = ['盗塁', '盗塁死', 'タッチアップ', '進塁', '送球間に進塁', '生還', '走塁死', '牽制死', '挟殺プレーでアウト'];
-    // ▲▲▲ 修正ここまで ▲▲▲    const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
+    // ▲▲▲ 修正ここまで ▲▲▲    
+
+const bases = ['一塁へ', '二塁へ', '三塁へ', '本塁へ(生還)'];
     
     // ▼▼▼【重要修正】区切り文字を「、」から「,」に変更▼▼▼
     const runnerEvents = runnerPlaysString ? runnerPlaysString.split(',') : [];
