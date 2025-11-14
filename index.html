@@ -6573,11 +6573,11 @@ tournamentState.homepageNews = [];
 
     // (R2以降の割り当て)
     scheduleRoundMatches(
-        Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
+        shuffleArray(Object.keys(tournamentState.matches).filter(id => id.includes('-R2-'))), 
         ["7/14", "7/15"], STADIUM_DATA, 2 
     );
     scheduleRoundMatches(
-        Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
+        shuffleArray(Object.keys(tournamentState.matches).filter(id => id.includes('-R3-'))), 
         ["7/17", "7/18"], ROUND_3_STADIUMS, 2
     );
     scheduleRoundMatches(
@@ -6592,6 +6592,7 @@ tournamentState.homepageNews = [];
         Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
         ["7/25"], FINAL_STAGE_STADIUMS, 1 
     );
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     // ★★★ ここからが修正箇所 ★★★
     
