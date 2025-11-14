@@ -1792,7 +1792,7 @@
 
         <div id="setup" class="setup-card">
              <div class="w-full">
-                 <h2 class="text-xl font-semibold mb-4 border-b pb-2 setup-header">参加チーム (64チーム)</h2>
+                 <h2 class="text-xl font-semibold mb-4 border-b pb-2 setup-header">参加チーム (126チーム)</h2>
                  <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
              </div>
              <div class="mt-8 text-center">
@@ -1856,12 +1856,15 @@
                 </div>
                <div class="ml-auto">
                     <div class="flex items-center justify-end space-x-2">
-                        <button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
-                        <button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
-                        <button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
-<button id="skip-r4-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準々決勝スキップ</button>
-<button id="skip-r5-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準決勝スキップ</button>
+                       
+<button id="skip-r1-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">1回戦スキップ</button>
+<button id="skip-r2-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">2回戦スキップ</button>
+<button id="skip-r3-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">3回戦スキップ</button>
+<button id="skip-r4-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">4回戦スキップ</button>
+<button id="skip-r5-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準々決勝スキップ</button>
+<button id="skip-r6-btn" class="hidden bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 shadow-md">準決勝スキップ</button>
 <button id="skip-final-btn" class="hidden bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md">決勝スキップ</button>
+
 
                         <span id="save-feedback" class="text-gray-600 font-bold opacity-0 transition-opacity duration-500"></span>
 <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
@@ -2659,15 +2662,16 @@ const SCANDAL_DEFINITIONS = [
     const namcoNewsSection = document.getElementById('namco-news-section');
     const namcoNewsContent = document.getElementById('namco-news-content');
     const tournamentYearDisplay = document.getElementById('tournament-year-display');
-    const generateSummaryBtn = document.getElementById('generate-summary-btn');
-    const skipR1Btn = document.getElementById('skip-r1-btn');
-    const skipR2Btn = document.getElementById('skip-r2-btn');
-    const skipR3Btn = document.getElementById('skip-r3-btn');
+    const    skipR1Btn = document.getElementById('skip-r1-btn');
+    const    skipR2Btn = document.getElementById('skip-r2-btn');
+       const skipR3Btn = document.getElementById('skip-r3-btn');
+       const skipR4Btn = document.getElementById('skip-r4-btn');
+       const skipR5Btn = document.getElementById('skip-r5-btn');
+       const skipR6Btn = document.getElementById('skip-r6-btn'); 
+       const skipFinalBtn = document.getElementById('skip-final-btn');
+       const generateSummaryBtn = document.getElementById('generate-summary-btn');
 
-    const skipLoader = document.getElementById('skip-loader');
-const skipR4Btn = document.getElementById('skip-r4-btn');
-const skipR5Btn = document.getElementById('skip-r5-btn');
-const skipFinalBtn = document.getElementById('skip-final-btn');
+
     // Autumn Tournament UI
     const autumnRegionalContainer = document.getElementById('autumn-regional-blocks-container');
     const autumnRankingContainer = document.getElementById('autumn-ranking-playoffs-container');
@@ -2870,7 +2874,7 @@ const TEAM_ROSTER_MASTER = {
     },
     "浜松特支": {
         name_yomi: "はままつとくし",
-        region: "中部",
+        region: "西部",
         type: "公立",
         deviation: 45,
         best: "なし",
@@ -3326,7 +3330,7 @@ const TEAM_ROSTER_MASTER = {
     },
     "富士市立": {
         name_yomi: "ふじいちりつ",
-        region: "西部",
+        region: "東部",
         type: "私立",
         deviation: 61,
         best: "県大会ベスト8",
@@ -3473,7 +3477,298 @@ const TEAM_ROSTER_MASTER = {
         last: "初戦敗退",
         info: "長年の部員不足から昨年まで連合チームとして出場していたが、今年から待望の単独出場を果たす。部員の多くが野球経験の浅い1年生で、チームはまだ発展途上。中田監督は、まずは公式戦で戦う経験を積ませ、チームの土台作りを進めている段階。今大会は未来への第一歩となる。。",
         coach: { name: '中田 島蔵', style: '全員野球', experience: '中堅' }
+    },
+"浜松修学舎": {
+        name_yomi: "はままつしゅうがくしゃ", region: "西部", type: "私立", deviation: 55,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "近年急速に力をつけている私立校。豊富な練習量と「修学舎メソッド」と呼ばれる独自の育成法で、上位を虎視眈々と狙う。",
+        coach: { name: '高橋 正和', style: '総合力', experience: '中堅' }
+    },
+    "浜松日体": {
+        name_yomi: "はままつにったい", region: "西部", type: "私立", deviation: 58,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "文武両道を掲げる私立校。安定した実力を持ち、毎年トーナメント中盤の壁となる。",
+        coach: { name: '渡辺 徹', style: '堅実', experience: '中堅' }
+    },
+    "掛川工業": {
+        name_yomi: "かけがわこうぎょう", region: "西部", type: "公立", deviation: 43,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "掛川西、掛川東とは異なる、工業高校らしい実直な野球が持ち味。",
+        coach: { name: '掛布 雅之', style: '積極打撃', experience: 'プロOB' }
+    },
+    "清水東": {
+        name_yomi: "しみずひがし", region: "中部", type: "公立", deviation: 68,
+        best: "県大会ベスト4", last: "県大会2回戦",
+        info: "全国に名を轟かせるサッカー部の影に隠れがちだが、野球部も県内屈指の進学校として知性溢れるプレーを見せる。",
+        coach: { name: '長谷部 誠', style: 'データ野球', experience: '期待の若手' }
+    },
+    "島田樟誠": {
+        name_yomi: "しまだしょうせい", region: "中部", type: "私立", deviation: 45,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "近年、野球部の強化に力を入れている私立校。粘り強い戦いが持ち味。",
+        coach: { name: '佐々木 恭介', style: '総合力', experience: 'ベテラン' }
+    },
+    "富士宮東": {
+        name_yomi: "ふじのみやひがし", region: "東部", type: "公立", deviation: 47,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "富士山麓の地元選手で構成されたチーム。地の利を活かした戦いをしたい。",
+        coach: { name: '工藤 公康', style: '投手中心', experience: 'プロOB' }
+    },
+    "浜名": {
+        name_yomi: "はまな", region: "西部", type: "公立", deviation: 55,
+        best: "県大会ベスト4", last: "県大会3回戦",
+        info: "「浜名スマイル」を合言葉に、常に全力疾走と笑顔を絶やさない好チーム。公立校ながら安定して上位に進出する実力を持つ。",
+        coach: { name: '山田 太郎', style: '全員野球', experience: '中堅' }
+    },
+    "掛川東": {
+        name_yomi: "かけがわひがし", region: "西部", type: "公立", deviation: 63,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "文武両道を掲げる進学校。掛川西のライバル校の一つとして、安定した実力を持つ。",
+        coach: { name: '東山 紀之', style: '堅実', experience: '中堅' }
+    },
+    "島田商業": {
+        name_yomi: "しまだしょうぎょう", region: "中部", type: "公立", deviation: 52,
+        best: "甲子園出場", last: "県大会2回戦",
+        info: "「島商（しましょう）」の愛称で知られる古豪。近年は中堅に甘んじているが、伝統の堅実な「島商野球」で復活を目指す。",
+        coach: { name: '池谷 幸雄', style: '堅実', experience: 'ベテラン' }
+    },
+    "清水桜が丘": {
+        name_yomi: "しみずさくらがおか", region: "中部", type: "公立", deviation: 57,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "清水商業と庵原高校の統合校。サッカー部が有名だが、野球部も「清商（キヨショウ）」時代の勝負強さを受け継ぐ。",
+        coach: { name: '大榎 克己', style: '堅実', experience: '中堅' }
+    },
+    "沼津商業": {
+        name_yomi: "ぬまづしょうぎょう", region: "東部", type: "公立", deviation: 49,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "東部の伝統ある商業高校。緻密なデータ分析と機動力を絡めた「考える野球」が持ち味。",
+        coach: { name: '小宮山 悟', style: 'データ野球', experience: 'ベテラン' }
+    },
+    "田方農業": {
+        name_yomi: "たがたのうぎょう", region: "伊豆", type: "公立", deviation: 42,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "伊豆地区の雄。農業実習で鍛えた体力と、粘り強さが持ち味。「タノウ」の愛称で親しまれる。",
+        coach: { name: '桑田 真澄', style: '育成上手', experience: 'プロOB' }
+    },
+    "浜松湖南": {
+        name_yomi: "はままつこなん", region: "西部", type: "公立", deviation: 54,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "毎年安定した力を持つ中堅校。上位進出を虎視眈々と狙う。",
+        coach: { name: '小林 幹英', style: '堅実', experience: '中堅' }
+    },
+    "沼津東": {
+        name_yomi: "ぬまづひがし", region: "東部", type: "公立", deviation: 69,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "東部地区屈指の進学校。伝統的に「文武両道」を掲げ、知的なプレーで相手を翻弄する。",
+        coach: { name: '古田 敦也', style: 'データ野球', experience: 'プロOB' }
+    },
+    "吉原": {
+        name_yomi: "よしわら", region: "東部", type: "公立", deviation: 51,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "富士市を代表する公立校の一つ。粘り強い守備と、つなぐ打線で上位進出を狙う。",
+        coach: { name: '吉井 理人', style: '投手中心', experience: '中堅' }
+    },
+    "浜松大平台": {
+        name_yomi: "はままつおおひらだい", region: "西部", type: "公立", deviation: 40,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "比較的新しい公立校。まずはトーナメント中盤進出が目標。",
+        coach: { name: '大野 豊', style: '投手中心', experience: 'プロOB' }
+    },
+    "藤枝西": {
+        name_yomi: "ふじえだにし", region: "中部", type: "公立", deviation: 48,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "サッカーの強豪・藤枝東のライバル校。野球部も負けじと、粘り強い全員野球で勝利を目指す。",
+        coach: { name: '西 勇輝', style: '全員野球', experience: '期待の若手' }
+    },
+    "磐田農業": {
+        name_yomi: "いわたのうぎょう", region: "西部", type: "公立", deviation: 42,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "農業実習で鍛えた地力と体力が自慢。「磐農（いわたのう）」ナインが泥臭く白球を追う。",
+        coach: { name: '野村 謙二郎', style: '機動力野球', experience: 'ベテラン' }
+    },
+    "静岡西": {
+        name_yomi: "しずおかにし", region: "中部", type: "公立", deviation: 50,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "典型的な公立の中堅チーム。堅実な守備からリズムを作りたい。",
+        coach: { name: '西崎 幸広', style: '投手中心', experience: '中堅' }
+    },
+    "浜松江之島": {
+        name_yomi: "はままつえのしま", region: "西部", type: "公立", deviation: 45,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "粘り強い守備と小技を絡めた攻撃が持ち味のチーム。",
+        coach: { name: '中村 剛', style: '堅実', experience: '中堅' }
+    },
+    "浜松西": {
+        name_yomi: "はままつにし", region: "西部", type: "公立", deviation: 69,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "県内トップクラスの進学校。少ない練習時間を効率的に使い、知性で戦う。",
+        coach: { name: '鈴木 一郎', style: 'データ野球', experience: '中堅' }
+    },
+    "池新田": {
+        name_yomi: "いけしんでん", region: "西部", type: "公立", deviation: 44,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "御前崎市に位置する。海風で鍛えた強肩とパワーが武器の、侮れない中堅校。",
+        coach: { name: '池山 隆寛', style: '積極打撃', experience: '中堅' }
+    },
+    "磐田北": {
+        name_yomi: "いわたきた", region: "西部", type: "公立", deviation: 53,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "地元の選手を中心に構成された、地域密着型の公立校。",
+        coach: { name: '山本 浩二', style: '全員野球', experience: 'ベテラン' }
+    },
+    "磐田西": {
+        name_yomi: "いわたにし", region: "西部", type: "公立", deviation: 51,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "粘り強い野球が信条。接戦に持ち込み勝機を伺う。",
+        coach: { name: '渡辺 俊介', style: '守備重視', experience: '中堅' }
+    },
+    "小笠": {
+        name_yomi: "おがさ", region: "西部", type: "公立", deviation: 50,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "かつてはベスト8にも名を連ねた古豪。近年は安定した力を見せ、復活の兆しがある。",
+        coach: { name: '高橋 昭雄', style: '機動力野球', experience: 'ベテラン' }
+    },
+    "御殿場": {
+        name_yomi: "ごてんば", region: "東部", type: "公立", deviation: 43,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "富士山の麓、標高の高いグラウンドで鍛えられた足腰が自慢。",
+        coach: { name: '槙原 寛己', style: '堅実', experience: '中堅' }
+    },
+    "相良": {
+        name_yomi: "さがら", region: "中部", type: "公立", deviation: 47,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "牧之原市の実力校。投手力を中心とした堅実な試合運びで、シード校撃破を狙う。",
+        coach: { name: '相川 亮二', style: '守備重視', experience: '中堅' }
+    },
+    "佐久間": {
+        name_yomi: "さくま", region: "西部", type: "公立", deviation: 35,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "浜松市天竜区の山間部に位置する。部員不足に悩みながらも、地域の期待を背負って戦う。",
+        coach: { name: '佐々木 朗希', style: '投手中心', experience: '新任' }
+    },
+    "静岡北": {
+        name_yomi: "しずおかきた", region: "中部", type: "私立", deviation: 52,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "スポーツ科も擁する私立校。個々の身体能力は高いが、チームとしてのまとまりが課題。",
+        coach: { name: '高田 繁', style: '機動力野球', experience: 'ベテラン' }
+    },
+    "静岡農業": {
+        name_yomi: "しずおかのうぎょう", region: "中部", type: "公立", deviation: 46,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "「静農（しずのう）」の愛称。実習で培った粘り強さと体力が武器。",
+        coach: { name: '稲葉 篤紀', style: '全員野球', experience: '中堅' }
+    },
+    "清水西": {
+        name_yomi: "しみずにし", region: "中部", type: "公立", deviation: 47,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "粘り強い守備が持ち味の公立校。接戦に持ち込みたい。",
+        coach: { name: '西 清孝', style: '守備重視', experience: 'ベテラン' }
+    },
+    "清流館": {
+        name_yomi: "せいりゅうかん", region: "中部", type: "公立", deviation: 45,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "焼津市にある比較的新しい高校。吉田高校と大井川高校が統合。地域の期待を背負い、上位を目指す。",
+        coach: { name: '川上 憲伸', style: '投手中心', experience: 'プロOB' }
+    },
+    "遠江総合": {
+        name_yomi: "とおとうみそうごう", region: "西部", type: "公立", deviation: 42,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "森町・周智高校の後継校。地域の星として、まずは初戦突破、そして上位進出を目指す。",
+        coach: { name: '遠山 奬志', style: '堅実', experience: '中堅' }
+    },
+    "榛原": {
+        name_yomi: "はいばら", region: "中部", type: "公立", deviation: 59,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "「榛高（はいこう）」の愛称。進学校ながら、機動力を絡めた攻撃的な野球で上位を伺う。",
+        coach: { name: '原 辰徳', style: '超攻撃型', experience: 'ベテラン' }
+    },
+    "浜北西": {
+        name_yomi: "はまきたにし", region: "西部", type: "公立", deviation: 50,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "「北西（きたにし）」の愛称。堅実な守備と粘り強い打撃で、強豪校に食らいつく。",
+        coach: { name: '西 俊児', style: '守備重視', experience: '中堅' }
+    },
+    "浜松北": {
+        name_yomi: "はままつきた", region: "西部", type: "公立", deviation: 70,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "静岡県トップクラスの進学校。限られた時間で超効率的な練習をこなす。",
+        coach: { name: '北別府 学', style: 'データ野球', experience: 'ベテラン' }
+    },
+    "浜松湖東": {
+        name_yomi: "はままつことう", region: "西部", type: "公立", deviation: 60,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "進学校の一つだが、野球部の練習も熱心。隙のない堅実な野球で勝ち上がる。",
+        coach: { name: '佐藤 健', style: '堅実', experience: '中堅' }
+    },
+    "浜松湖北": {
+        name_yomi: "はままつこほく", region: "西部", type: "公立", deviation: 45,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "引佐、気賀、三ケ日の3校が統合して誕生。奥浜名湖の広大な敷地で鍛えた総合力で勝負する。",
+        coach: { name: '北川 博敏', style: '積極打撃', experience: '中堅' }
+    },
+    "浜松東": {
+        name_yomi: "はままつひがし", region: "西部", type: "公立", deviation: 62,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "浜松市内の有力進学校。分析力と堅実な守備で上位を狙う。",
+        coach: { name: '東尾 修', style: '投手中心', experience: 'ベテラン' }
+    },
+    "富岳館": {
+        name_yomi: "ふがくかん", region: "東部", type: "公立", deviation: 44,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "富士宮市にある。農業系の学科も持つ総合高校。富士山のような、どっしりとした戦いを見せたい。",
+        coach: { name: '富田 勝', style: '堅実', experience: 'ベテラン' }
+    },
+    "袋井商業": {
+        name_yomi: "ふくろいしょうぎょう", region: "西部", type: "公立", deviation: 48,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "商業高校ならではの緻密な分析と、伝統的な「守りの野球」で勝利を目指す。",
+        coach: { name: '伊藤 裕季', style: '守備重視', experience: 'ベテラン' }
+    },
+    "富士": {
+        name_yomi: "ふじ", region: "東部", type: "公立", deviation: 65,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "東部地区の伝統ある進学校。スマートな試合運びと、ここ一番での集中力が光る。",
+        coach: { name: '斎藤 雅樹', style: '投手中心', experience: 'ベテラン' }
+    },
+    "藤枝北": {
+        name_yomi: "ふじえだきた", region: "中部", type: "公立", deviation: 46,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "サッカーの強豪として知られるが、野球部も地元選手を中心に奮闘している。",
+        coach: { name: '山田 暢久', style: '全員野球', experience: '中堅' }
+    },
+    "藤枝東": {
+        name_yomi: "ふじえだひがし", region: "中部", type: "公立", deviation: 65,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "「サッカー王国」の一角を担う超名門校。野球部もその伝統を受け継ぎ、フィジカルの強さを活かしたプレーが持ち味。",
+        coach: { name: '中山 雅史', style: '積極打撃', experience: '期待の若手' }
+    },
+    "焼津中央": {
+        name_yomi: "やいづちゅうおう", region: "中部", type: "公立", deviation: 61,
+        best: "県大会ベスト16", last: "県大会3回戦",
+        info: "文武両道を掲げる進学校。効率的な練習で、上位進出を狙う。",
+        coach: { name: '石田 雅昭', style: 'データ野球', experience: '中堅' }
+    },
+    "横須賀": {
+        name_yomi: "よこすか", region: "西部", type: "公立", deviation: 52,
+        best: "県大会ベスト8", last: "県大会2回戦",
+        info: "「スカ」の愛称で知られる古豪。近年は安定した実力を保持しており、上位進出も珍しくない。",
+        coach: { name: '衣笠 祥雄', style: '根性野球', experience: 'ベテラン' }
+    },
+    "吉原工業": {
+        name_yomi: "よしわらこうぎょう", region: "東部", type: "公立", deviation: 44,
+        best: "県大会2回戦", last: "初戦敗退",
+        info: "「ヨシコウ」の愛称。工業高校らしい、ひたむきなプレーが信条。",
+        coach: { name: '高橋 由伸', style: '積極打撃', experience: 'プロOB' }
+    },
+    "星陵": {
+        name_yomi: "せいりょう", region: "東部", type: "私立", deviation: 60,
+        best: "県大会ベスト8", last: "県大会3回戦",
+        info: "富士宮市にある私立校。中高一貫の強みを活かし、投打にバランスの取れたチームを編成する。",
+        coach: { name: '星野 仙一', style: '投手中心', experience: '名将' }
     }
+
+
+
 };
 
 
@@ -4627,6 +4922,7 @@ function advanceWinnerToNextRound(match, winnerName, state) {
 
 /**
  * 密着ドキュメンタリーを開始し、序章の記事を生成する
+ * (★128チーム制＝1ブロック32チームに対応)
  * @param {'underdog' | 'powerhouse'} type - ドキュメンタリーの種類
  * @param {string} teamName - 取材対象のチーム名
  */
@@ -4649,15 +4945,16 @@ async function startDocumentary(type, teamName) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
         matchDataForArticle.opponent = opponentName;
         matchDataForArticle.opponentRank = calculateRank(opponentName, tournamentState);
-        
-        // ▼▼▼ ここからが新しい処理 ▼▼▼
-        // 相手の昨年の成績をTEAM_DATAから直接取得
         matchDataForArticle.opponentRecord = TEAM_DATA[opponentName]?.last || '情報なし';
 
+        // ★★★ ここからが修正箇所 ★★★
         const teamIndex = tournamentState.teams.indexOf(teamName);
-        const blockIndex = Math.floor(teamIndex / 16);
-        const blockStart = blockIndex * 16;
-        const blockEnd = blockStart + 16;
+        const blockSize = Math.floor(tournamentState.teams.length / 4); // 128 / 4 = 32
+        const blockIndex = Math.floor(teamIndex / blockSize);
+        const blockStart = blockIndex * blockSize;
+        const blockEnd = blockStart + blockSize;
+        // ★★★ 修正ここまで ★★★
+        
         const blockTeams = tournamentState.teams.slice(blockStart, blockEnd);
         
         let toughestRivalName = null;
@@ -4665,7 +4962,7 @@ async function startDocumentary(type, teamName) {
         const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
 
         blockTeams.forEach(rivalName => {
-            if (rivalName === teamName) return;
+            if (rivalName === teamName || rivalName === '(BYE)') return; // 自分と不戦勝は除外
             const rivalRank = calculateRank(rivalName, tournamentState);
             if (rankValues[rivalRank] > highestRankValue) {
                 highestRankValue = rankValues[rivalRank];
@@ -4675,38 +4972,33 @@ async function startDocumentary(type, teamName) {
         
         if (toughestRivalName) {
             matchDataForArticle.toughestRival = toughestRivalName;
-            // 最強ライバルの昨年の成績もTEAM_DATAから直接取得
             matchDataForArticle.toughestRivalRecord = TEAM_DATA[toughestRivalName]?.last || '情報なし';
         }
-        // ▲▲▲
     }
     
     const article = await generateDocumentaryArticle('intro', type, teamName, matchDataForArticle);
-    
-    // ▲▲▲
 
     if (article) {
-        tournamentState.news.push(article);
-    } else {
-        // 失敗した場合、再生成に必要な情報を「context」として保存する
-        tournamentState.news.push({
-            title: "ドキュメンタリー記事生成エラー",
-            body: `「${teamName}」のドキュメンタリー記事の生成に失敗しました。`,
-            timestamp: Date.now(),
-            error: true,
-            // ★★★ ここからが重要 ★★★
+        tournamentState.news.push(article);
+    } else {
+        tournamentState.news.push({
+            title: "ドキュメンタリー記事生成エラー",
+            body: `「${teamName}」のドキュメンタリー記事の生成に失敗しました。`,
+            timestamp: Date.now(),
+            error: true,
             context: {
-                isDocumentary: true, // ドキュメンタリーであるという目印
+                isDocumentary: true,
                 type: type,
                 teamName: teamName,
                 matchData: matchDataForArticle
             }
-            // ★★★ ここまで ★★★
-        });
-    }
+        });
+    }
     renderNews(tournamentState.news);
     saveState();
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 
 
 async function generateDocumentaryArticle(phase, type, teamName, matchData = null, userFeedback = null) {
@@ -6133,33 +6425,29 @@ function getTournamentPathSummary(teamName, currentMatchId) {
 
 /**
      * 試合IDからラウンド名を取得するヘルパー関数
-     * (★決勝戦(F-R1-M1)の判定ロジックを修正した最終版)
+     * (★秋季大会＝32チーム制のラウンド名に対応)
      */
     function getRoundNameFromMatchId(matchId) {
         if (!matchId) return "不明なラウンド";
 
-        // ▼▼▼ ここが修正箇所です ▼▼▼
-        // 決勝戦 (Final) の判定を最優先し、ここで return させる
         if (matchId.startsWith('F-R1-')) {
             return "決勝";
         }
         
         // --- 地区予選の判定 (秋季・春季) ---
         if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-            return "地区予選/順位決定戦";
+            return "地区予選/代表決定戦"; // 修正
         }
         if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
             return "地区予選";
         }
 
         // --- 本戦ラウンドの判定 ---
-        // (決勝 "F-" は既に上で処理済みなので、ここでは "L-" "R-" "S-" "A-" などだけが対象)
         if (!matchId.includes('-R')) {
-             // 'L-' や 'R-' が含まないID（例: 東部-B1-R0-M1）もここで処理
              if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'main_round1') {
                  return "県大会1回戦";
              }
-             return "不明なラウンド"; // フォールバック
+             return "不明なラウンド";
         }
         
         const roundNum = parseInt(matchId.split('-')[1].slice(1));
@@ -6170,22 +6458,32 @@ function getTournamentPathSummary(teamName, currentMatchId) {
              return springRoundMap[roundNum] || `${roundNum}回戦`;
         }
         
-        // 秋の県大会本戦
+        // ★★★ ここからが修正箇所 (秋の大会) ★★★
         if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase === 'main') {
-             const roundNameMap_16 = { 4: '決勝', 3: '準決勝', 2: '準々決勝', 1: '1回戦' };
-             return roundNameMap_16[roundNum] || `${roundNum}回戦`;
+             // 32チーム = 5ラウンド (R1, R2, R3(準々), R4(準決), F(決勝))
+             const roundNameMap_32 = { 4: '準決勝', 3: '準々決勝', 2: '2回戦', 1: '1回戦' };
+             return roundNameMap_32[roundNum] || `${roundNum}回戦`;
         }
+        // ★★★ 修正ここまで ★★★
         
-        // 夏の大会 (64チームT)
+        // 夏の大会 (128チームT)
         if (tournamentState.currentTournament === 'summer') {
-            const finalRound = 6;
-            const roundNameMap_64 = { [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝' };
-            return roundNameMap_64[roundNum] || `${roundNum}回戦`;
+            const numTeams = tournamentState.teams.length; // 128
+            const finalRound = Math.log2(numTeams); // 7
+
+            const roundNameMap_128 = { 
+                [finalRound-1]: '準決勝',   // R6
+                [finalRound-2]: '準々決勝', // R5
+                [finalRound-3]: '4回戦'     // R4
+            };
+            return roundNameMap_128[roundNum] || `${roundNum}回戦`;
         }
         
-        // 上記以外 (例: 'L-R1-M1' だが大会が不明な場合)
+        // 上記以外
         return `${roundNum}回戦`;
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
     
 /**
@@ -6326,15 +6624,12 @@ function scheduleRoundMatches(matchIds, dates, stadiumList, gamesPerDayPerStadiu
 
 
 
-// ▼▼▼ この関数をまるごと追加してください ▼▼▼
 /**
  * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
- */
-/**
- * 指定されたブロックのアニメーションを再生する（トーナメント表示版）
+ * (★128チーム制＝1ブロック32チーム＝5ラウンドに対応)
  */
 async function playBlockAnimation(blockId) {
-    // タブのアクティブ表示を更新
+    // (タブのアクティブ表示は変更なし)
     document.querySelectorAll('.analysis-block-tab-btn').forEach(btn => {
         const isActive = btn.dataset.block === blockId;
         btn.classList.toggle('bg-cyan-500', isActive);
@@ -6354,23 +6649,29 @@ async function playBlockAnimation(blockId) {
     }
     const narration = analysisData[blockId];
     
-    // ... (以降のコードは変更ありません) ...
+    // ★★★ ここからが修正箇所 ★★★
+    // 1ブロック32チーム
+    const blockSize = 32; 
     const blockTeams = tournamentState.teams.slice(
-        (blockId.charCodeAt(0) - 65) * 16, 
-        (blockId.charCodeAt(0) - 64) * 16
+        (blockId.charCodeAt(0) - 65) * blockSize, 
+        (blockId.charCodeAt(0) - 64) * blockSize
     );
+    // ★★★ 修正ここまで ★★★
 
     stage.innerHTML = '';
     narrationTextEl.textContent = '';
     
+    // ★★★ 修正箇所 (R1〜R5まで追加) ★★★
     stage.innerHTML = `
         <div id="r1-col" class="round-column"></div>
         <div id="r2-col" class="round-column"></div>
         <div id="r3-col" class="round-column"></div>
         <div id="r4-col" class="round-column"></div>
+        <div id="r5-col" class="round-column"></div>
     `;
 
-    for(let i = 0; i < 8; i++) {
+    // 1回戦 (16試合)
+    for(let i = 0; i < 16; i++) { // 8 -> 16
         const matchupEl = document.createElement('div');
         matchupEl.className = 'analysis-matchup';
         matchupEl.innerHTML = `
@@ -6381,9 +6682,15 @@ async function playBlockAnimation(blockId) {
         stage.querySelector('#r1-col').appendChild(matchupEl);
     }
     
-    for(let i = 0; i < 4; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
-    for(let i = 0; i < 2; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
-    stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
+    // 2回戦 (8試合)
+    for(let i = 0; i < 8; i++) { stage.querySelector('#r2-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    // 3回戦 (4試合)
+    for(let i = 0; i < 4; i++) { stage.querySelector('#r3-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    // 4回戦 (2試合)
+    for(let i = 0; i < 2; i++) { stage.querySelector('#r4-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div><div class="analysis-team">???</div><div class="matchup-connector"></div><div class="round-connector"></div></div>'; }
+    // 準々決勝 (1試合)
+    stage.querySelector('#r5-col').innerHTML += '<div class="analysis-matchup"><div class="analysis-team">???</div></div>';
+    // ★★★ 修正ここまで ★★★
 
     await new Promise(r => setTimeout(r, 100));
     document.querySelectorAll('.analysis-team').forEach((el, i) => {
@@ -6403,56 +6710,50 @@ async function playBlockAnimation(blockId) {
         }
     });
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▼▼▼ この関数をまるごと追加してください ▼▼▼
 /**
- * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる（データ分析強化版）
- * @param {object} state - tournamentState
- * @returns {Promise<object|null>}
- */
-/**
- * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる（ハイブリッド版・APIエラー対策済み）
- * @param {object} state - tournamentState
- * @returns {Promise<object|null>}
+ * AIに各ブロックの勢力図を分析させ、ナレーション原稿を生成させる
+ * (★128チーム制＝1ブロック32チームに対応)
  */
 async function generateBlockAnalysisArticle(state) {
     const { teams, seeds } = state;
     const blocks = { A: [], B: [], C: [], D: [] };
+
+    // ★★★ 修正箇所 ★★★
+    const numBlocks = 4;
+    const blockSize = Math.floor(teams.length / numBlocks); // 128 / 4 = 32
+
     teams.forEach((team, i) => {
-        if (i < 16) blocks.A.push(team);
-        else if (i < 32) blocks.B.push(team);
-        else if (i < 48) blocks.C.push(team);
-        else blocks.D.push(team);
+        if (i < blockSize) blocks.A.push(team); // 0-31
+        else if (i < blockSize * 2) blocks.B.push(team); // 32-63
+        else if (i < blockSize * 3) blocks.C.push(team); // 64-95
+        else blocks.D.push(team); // 96-127
     });
+    // ★★★ 修正ここまで ★★★
 
     const blockAnalysisData = {};
     for (const blockId in blocks) {
         const blockTeams = blocks[blockId];
-        // ▼▼▼ このブロックを置き換えてください ▼▼▼
         const teamDetails = blockTeams.map(teamName => {
             const rank = calculateRank(teamName, state);
-            const isSeed = seeds.includes(teamName);
+            const isSeed = seeds.some(s => s.team === teamName); // ★ シード判定を修正
             const teamData = TEAM_DATA[teamName];
-            const tags = teamData?.tags || [];
+            const tags = []; // タグは廃止されたが、互換性のため残す
+            const hasStoryTag = false; // 同上
 
-            // 物語性のあるタグを持っているか
-            const hasStoryTag = tags.includes('逆境') || tags.includes('ワンマンチーム') || tags.includes('最後の夏') || tags.includes('古豪');
-            
-            // A/Bランク、シード校、または「物語タグ」を持つチームは、詳細情報を渡す
             if (isSeed || ['A', 'B'].includes(rank) || hasStoryTag) {
                 const info = teamData?.info || '';
-                // タグと、短縮した背景情報を渡す
-                return `${teamName}(${rank}${isSeed ? 'S' : ''}) [タグ: ${tags.join(',')}, 背景: ${info.substring(0, 40)}...]`;
+                return `${teamName}(${rank}${isSeed ? 'S' : ''}) [背景: ${info.substring(0, 40)}...]`;
             } 
-            // Cランクはタグのみ渡す
             else if (['C'].includes(rank)) {
-                 return `${teamName}(${rank}) [タグ: ${tags.join(',')}]`;
+                 return `${teamName}(${rank})`;
             } 
-            // D/Eランクはランクのみ
             else {
                 return `${teamName}(${rank})`;
             }
         }).join(', ');
-        // ▲▲▲ 置き換えここまで ▲▲▲        blockAnalysisData[blockId] = teamDetails;
+        blockAnalysisData[blockId] = teamDetails;
     }
 
     const prompt = `あなたは高校野球の解説者です。以下の各ブロックのチームリストを分析し、それぞれの見どころを**150字程度**のナレーション原稿にまとめてください。
@@ -6486,10 +6787,69 @@ async function generateBlockAnalysisArticle(state) {
         return null;
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
    
+
+// ▼▼▼ この関数を「新規追加」(10400行目あたり、createNewTournament の直前) ▼▼▼
+
+/**
+ * [NEW] 128チーム制トーナメントの「(BYE)」(不戦勝)を自動処理する
+ */
+function processByes(state) {
+    const r1MatchIds = Object.keys(state.matches).filter(id => id.includes('-R1-'));
+    let byesProcessed = 0;
+
+    r1MatchIds.forEach(matchId => {
+        const match = state.matches[matchId];
+        if (match.winner) return; // 既に処理済み
+
+        const team1 = match.team1;
+        const team2 = match.team2;
+        let winnerName = null;
+
+        if (team1 === '(BYE)' && team2 !== '(BYE)') {
+            winnerName = team2;
+        } else if (team2 === '(BYE)' && team1 !== '(BYE)') {
+            winnerName = team1;
+        } else if (team1 === '(BYE)' && team2 === '(BYE)') {
+            // 両方BYE (ありえないはずだが、念のため)
+            match.winner = '(BYE)'; // 勝者もBYE
+            winnerName = '(BYE)';
+        }
+
+        if (winnerName) {
+            byesProcessed++;
+            match.winner = winnerName;
+            match.summary = "不戦勝";
+            
+            // 次のラウンドに進める
+            const idParts = matchId.split('-');
+            const side = idParts[0]; // 'L' or 'R'
+            const matchNum = parseInt(idParts[2].slice(1)); // 1-32
+            
+            const nextRoundNum = 2; // R2
+            const nextMatchId = `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
+            const nextMatch = state.matches[nextMatchId];
+            
+            if (nextMatch) {
+                const slot = (matchNum % 2 !== 0 ? 1 : 2); // 奇数ならteam1, 偶数ならteam2
+                nextMatch[`team${slot}`] = winnerName;
+            }
+        }
+    });
+
+    if (byesProcessed > 0) {
+        console.log(`${byesProcessed}件の不戦勝(BYE)を自動処理しました。`);
+        // BYE処理後にトーナメント表を再描画
+        renderTournament(state);
+        saveState();
+    }
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
 /**
  * 新しいトーナメントを開始するメイン関数
- * (★R2以降の全試合オブジェクトを事前生成し、スケジュールが正しく割り当てられるよう修正した最終版)
+ * (★夏季大会を128チーム・7ラウンド制・BYE 16枠固定配置・112校選抜に対応)
  */
 async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {
     setupEl.classList.add('hidden');
@@ -6499,11 +6859,10 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     if (tournamentState.teamRecords) {
         for (const teamName in tournamentState.teamRecords) {
             const record = tournamentState.teamRecords[teamName];
-            record.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 };
+            record.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, r: 0, so: 0 };
         }
     }
     
-    // 大会移行時に、前の大会のコントロールボタンを確実に非表示にする
     autumnControls.classList.add('hidden');
     startMainTournamentBtn.classList.add('hidden');
     startRankingPlayoffsBtn.classList.add('hidden');
@@ -6522,21 +6881,17 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
 
     // --- 秋季大会の開始 ---
     if (nextTournamentType === 'autumn') {
-        // ... (秋季大会のロジックは変更なし) ...
         tournamentState.currentTournament = 'autumn';
         tournamentState.autumnPhase = 'regional_blocks';
         if (!isNext) {
             tournamentState.tournamentYear = 2025;
-            // ★★★ 修正箇所 ★★★
-            // スタート画面のトグルから設定を読み込む
             const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
             tournamentState.settings = { 
                 enableArticleGeneration: initialAiEnabled, 
                 enableBbsGeneration: initialAiEnabled 
             };
-            // ★★★ 修正ここまで ★★★
         }
-tournamentState.homepageNews = [];
+        tournamentState.homepageNews = [];
         tournamentState.autumnData = {
             regions: {
                 '東部': { blocks: [], blockWinners: [], blockRunnersUp: [], ranking: [], finalReps: [] },
@@ -6554,7 +6909,6 @@ tournamentState.homepageNews = [];
     }
     // --- 春季大会の開始 ---
     else if (nextTournamentType === 'spring') {
-        // ... (春季大会のロジックは変更なし) ...
         tournamentState.currentTournament = 'spring';
         tournamentState.autumnPhase = null;
         
@@ -6609,47 +6963,49 @@ tournamentState.homepageNews = [];
         return;
     }    
     
-    // --- 夏季大会の開始 ---
+    // ===========================================
+    // --- ★★★ 夏季大会 (128チーム制) の開始 ★★★ ---
+    // ===========================================
     mainBracketWrapper.classList.remove('hidden');
     tournamentState.is16team = false;
     tournamentState.currentTournament = 'summer';
+    
+    const numTeamsInTournament = 128; // 128チーム制
+    const finalRound = 7; // 7ラウンド制 (R1...R6, F)
 
-    if (isNext) { // 春から夏への移行時
+    if (isNext) { 
         tournamentState.tournamentYear++;
     }
     
+    // (1年目、またはリセット時)
     if (!isNext) { 
         tournamentState.tournamentYear = 2025;
         tournamentState.teamRecords = {};
-        const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-        
-        // ★★★ 修正箇所 ★★★
-        // スタート画面のトグルから設定を読み込む
         const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
         tournamentState.settings = { 
             enableArticleGeneration: initialAiEnabled, 
             enableBbsGeneration: initialAiEnabled 
         };
-tournamentState.homepageNews = []; 
-        // ★★★ 修正ここまで ★★★
-
+        tournamentState.homepageNews = []; 
         INITIAL_TEAM_POOL.forEach(t => {
-            const historicalRank = historicalRanks.find(hr => hr.name === t);
+            const historicalRank = getRankFromHistoryString(TEAM_DATA[t].last);
             tournamentState.teamRecords[t] = { 
                 wins: 0, losses: 0, best: null, history: [],
-                lastFinish: historicalRank ? historicalRank.rank : 64, 
+                lastFinish: historicalRank, 
                 previousRank: null,
                 teamTraits: [], 
                 previousStarters: null,
                 roster: null,
-                tournamentStats: { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 } 
+                playerStats: { batting: {}, pitching: {} },
+                tournamentStats: { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, r: 0, so: 0 } 
             };
         });
     }
     
-    let teams;
+    let teams; // 128スロットの配列
     let seeds = []; // {team, rank}
 
+    // (シード校の決定ロジックは変更なし)
     if (isNext) { 
         const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
             .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
@@ -6662,7 +7018,7 @@ tournamentState.homepageNews = [];
             if (teamName === '常葉菊川') return 2;
             if (teamName === '静岡') return 3;
             if (teamName === '掛川西') return 4;
-            const rank = historicalRanks.find(hr => hr.name === teamName)?.rank || 64;
+            const rank = historicalRanks.find(hr => hr.name === teamName)?.rank || 128;
             if (rank === 8) return 8; 
             return rank;
         };
@@ -6674,32 +7030,93 @@ tournamentState.homepageNews = [];
         seeds = adjustedHistoricalRanks.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 }));
     }
     
+    // (組み合わせの決定)
     if (predeterminedTeams) {
         teams = predeterminedTeams;
     } else {
         const seedTeamsList = seeds.map(s => s.team);
-        const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t));
-        const shuffledNonSeeds = shuffleArray(nonSeeds);
-        teams = Array(64).fill(null);
+        
+        // --- ★★★ [NEW] 112校選抜 + 16BYE固定配置ロジック ★★★ ---
+        
+        // 1. 全チーム(126校)からシード(8校)を除く
+        let nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t)); // 118校
+        nonSeeds = shuffleArray(nonSeeds);
+
+        // 2. ノーシード校から抽選参加する104校を選抜
+        const participatingNonSeeds = nonSeeds.slice(0, 104);
+        // (溢れた14校は今大会不参加)
+        
+        teams = Array(numTeamsInTournament).fill(null); // 128スロット
+        
+        // 3. シード校（8校）を固定配置
+        // (各32チームブロックの先頭に配置)
         const seedPlacements = {};
-        const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56];
+        const seedPositionsTemplate = [0, 64, 32, 96, 16, 80, 48, 112]; 
+        
         const rank1_4 = seeds.filter(s => s.rank <= 4).sort((a, b) => a.rank - b.rank);
-        seedPlacements[seedPositionsTemplate[0]] = rank1_4.find(s => s.rank === 1).team; 
-        seedPlacements[seedPositionsTemplate[1]] = rank1_4.find(s => s.rank === 2).team; 
-        seedPlacements[seedPositionsTemplate[2]] = rank1_4.find(s => s.rank === 4).team; 
-        seedPlacements[seedPositionsTemplate[3]] = rank1_4.find(s => s.rank === 3).team; 
+        seedPlacements[seedPositionsTemplate[0]] = rank1_4.find(s => s.rank === 1).team; // Aブロック (0)
+        seedPlacements[seedPositionsTemplate[1]] = rank1_4.find(s => s.rank === 2).team; // Cブロック (64)
+        seedPlacements[seedPositionsTemplate[2]] = rank1_4.find(s => s.rank === 4).team; // Bブロック (32)
+        seedPlacements[seedPositionsTemplate[3]] = rank1_4.find(s => s.rank === 3).team; // Dブロック (96)
+        
         const rank5_8 = shuffleArray(seeds.filter(s => s.rank > 4));
+        const remainingSeedSlots = [16, 80, 48, 112]; // 残りのシード枠
         rank5_8.forEach((seed, i) => { 
-            seedPlacements[seedPositionsTemplate[i + 4]] = seed.team; 
+            seedPlacements[remainingSeedSlots[i]] = seed.team; 
         });
-        let nonSeedIndex = 0;
-        for (let i = 0; i < 64; i++) {
-            teams[i] = seedPlacements[i] ? seedPlacements[i] : shuffledNonSeeds[nonSeedIndex++];
+        
+        for (const position in seedPlacements) {
+            teams[position] = seedPlacements[position];
         }
+
+        // 4. BYE（16校）を固定配置
+        // (各16チームの山（シード校の山）に2つずつ配置)
+        const byePositions = [
+            // Aブロック (0-31)
+            4, 12,  // 1シード (0) の山
+            20, 28, // 5-8シード (16) の山
+            // Bブロック (32-63)
+            36, 44, // 4シード (32) の山
+            52, 60, // 5-8シード (48) の山
+            // Cブロック (64-95)
+            68, 76, // 2シード (64) の山
+            84, 92, // 5-8シード (80) の山
+            // Dブロック (96-127)
+            100, 108, // 3シード (96) の山
+            116, 124  // 5-8シード (112) の山
+        ];
+
+        byePositions.forEach(slot => {
+            teams[slot] = '(BYE)';
+        });
+        
+        // 5. ノーシード校（104校）を、残りの 104 スロットに配置
+        const teamsToPlace = shuffleArray(participatingNonSeeds); // 104校
+        
+        let nonSeedIndex = 0;
+        for (let i = 0; i < numTeamsInTournament; i++) {
+            if (teams[i] === null) { // スロットが空（シードでもBYEでもない）
+                if(nonSeedIndex < teamsToPlace.length) {
+                    teams[i] = teamsToPlace[nonSeedIndex];
+                    nonSeedIndex++;
+                } else {
+                    // 万が一、計算が合わず空きスロットが余った場合 (保険)
+                    console.warn(`空きスロット ${i} がありましたが、配置するチームが残っていません。`);
+                }
+            }
+        }
+        
+        if (nonSeedIndex !== 104) {
+             console.error(`抽選ロジックエラー: 104校を配置する予定でしたが、${nonSeedIndex}校しか配置されませんでした。`);
+        }
+        // --- ★★★ 新ロジックここまで ★★★
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
     
+    
+    // (トーナメントstateの初期化)
     tournamentState.teams = teams;
-    tournamentState.matches = {}; // ★ matches をリセット
+    tournamentState.matches = {};
     tournamentState.news = [];
     tournamentState.documentary = { target: null, type: null };
     tournamentState.activeScandal = null;
@@ -6714,7 +7131,7 @@ tournamentState.homepageNews = [];
     tournamentState.matomeThreads = {}; 
     tournamentState.userThreads = [];
 
-    // --- 1. R1 (1回戦) の試合オブジェクトを作成 ---
+    // --- 1. R1 (1回戦) の試合オブジェクトを作成 (★64試合) ---
     const round1Setup = teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
         else acc[acc.length - 1].team2 = team;
@@ -6722,8 +7139,9 @@ tournamentState.homepageNews = [];
     }, []);
 
     round1Setup.forEach((match, index) => {
-        const side = index < 16 ? 'L' : 'R';
-        const matchNum = index < 16 ? index + 1 : index - 15;
+        // ★ 32 -> 64 に変更
+        const side = index < 32 ? 'L' : 'R';
+        const matchNum = index < 32 ? index + 1 : index - 31;
         const matchId = `${side}-R1-M${matchNum}`;
         const rivalryType = checkRivalry(match.team1, match.team2);
         tournamentState.matches[matchId] = { 
@@ -6739,19 +7157,13 @@ tournamentState.homepageNews = [];
         };
     });
 
-    // --- 2. R2, R3, R4, R5, F の「空の箱」をあらかじめ作成 ---
-    const numTeams = teams.length; // 64
-    const finalRound = Math.log2(numTeams); // 6
-    
-    for (let r = 2; r < finalRound; r++) { // r = 2 (2回戦) ～ 5 (準決勝)
-        const numMatchesInRound = numTeams / Math.pow(2, r); // 16, 8, 4, 2
+    // --- 2. R2, R3, R4, R5, R6 の「空の箱」を作成 ---
+    for (let r = 2; r < finalRound; r++) { // R2〜R6
+        const numMatchesInRound = numTeamsInTournament / Math.pow(2, r); // 32, 16, 8, 4, 2
         
         for (let m = 1; m <= numMatchesInRound / 2; m++) {
-            // Left side
             const matchIdL = `L-R${r}-M${m}`;
             tournamentState.matches[matchIdL] = { id: matchIdL, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
-            
-            // Right side
             const matchIdR = `R-R${r}-M${m}`;
             tournamentState.matches[matchIdR] = { id: matchIdR, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
         }
@@ -6760,9 +7172,8 @@ tournamentState.homepageNews = [];
     // F-R1-M1 (決勝戦)
     tournamentState.matches['F-R1-M1'] = { id: 'F-R1-M1', team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
     
-    // --- 3. 全ラウンドのスケジュールを割り当て ---
-    // (R1のスケジュール割り当て ... 変更なし)
-    const datesR1 = ["7/10", "7/11", "7/12"];
+    // --- 3. 全ラウンドのスケジュールを割り当て (128チーム制) ---
+    const datesR1 = ["7/10", "7/11", "7/12", "7/13"];
     const gamesPerDayPerStadiumR1 = 2;
     const matchIdsR1 = Object.keys(tournamentState.matches).filter(id => id.includes('-R1-'));
     
@@ -6872,39 +7283,42 @@ tournamentState.homepageNews = [];
             };
         }
     });
-    // (R1の割り当てここまで)
-
+    
     // (R2以降の割り当て)
     scheduleRoundMatches(
-        shuffleArray(Object.keys(tournamentState.matches).filter(id => id.includes('-R2-'))), 
-        ["7/14", "7/15"], STADIUM_DATA, 2 
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
+        ["7/15", "7/16"], STADIUM_DATA, 2 
     );
     scheduleRoundMatches(
-        shuffleArray(Object.keys(tournamentState.matches).filter(id => id.includes('-R3-'))), 
-        ["7/17", "7/18"], ROUND_3_STADIUMS, 2
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
+        ["7/18", "7/19"], ROUND_3_STADIUMS, 2
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R4-')), 
-        ["7/20"], FINAL_STAGE_STADIUMS, 4
+        ["7/21"], ROUND_3_STADIUMS, 2
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R5-')), 
-        ["7/23"], FINAL_STAGE_STADIUMS, 2
+        ["7/23"], FINAL_STAGE_STADIUMS, 4
     );
     scheduleRoundMatches(
-        Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
-        ["7/25"], FINAL_STAGE_STADIUMS, 1 
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R6-')), 
+        ["7/25"], FINAL_STAGE_STADIUMS, 2
     );
-    // ▲▲▲ 修正ここまで ▲▲▲
-
-    // ★★★ ここからが修正箇所 ★★★
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.startsWith('F-R1-')), 
+        ["7/27"], FINAL_STAGE_STADIUMS, 1
+    );
+    
     
     // 4. 画面とAIの初期化
     renderTournament(tournamentState); 
     
-    // 5. 設定をチェックし、AI生成を実行するか判断
+    // 5. 不戦勝(BYE)の自動処理
+    processByes(tournamentState);
+    
+    // 6. 設定をチェックし、AI生成を実行するか判断
     if (tournamentState.settings.enableArticleGeneration) {
-        // AIがオンの場合：通常通りAI機能を実行
         (async () => {
             const newFeuds = await generateDynamicFeuds(tournamentState);
             if (newFeuds && newFeuds.length > 0) {
@@ -6984,18 +7398,15 @@ tournamentState.homepageNews = [];
         saveState();
         
     } else {
-        // AIがオフの場合：AI関連の処理をすべてスキップ
         saveState(); 
         renderTournament(tournamentState); 
-        
-        // ローダーの代わりにメッセージを表示
         newsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる自動記事生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
         bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる掲示板生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
         namcoNewsSection.classList.add('hidden');
     }
-    // ★★★ 修正ここまで ★★★
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
 /**
  * AIに組み合わせ抽選時に「話題校紹介」の記事を数本生成させる
  * (★E, D, C, B, Aランクから各1校ずつ、計5校ピックアップ)
@@ -7303,15 +7714,15 @@ ${lore}
 
 /**
  * AIに組み合わせ抽選結果の詳細分析に基づいた展望ニュース記事を生成させる
- * (★勢力図アニメーションのフラグを削除し、通常記事として扱う最終版)
+ * (★128チーム制＝7ラウンド制に対応)
  */
 async function generateBracketAnalysisNewsArticle(state) {
     const { teams, seeds } = state;
     if (teams.length < 8) return null; 
 
-    // --- トーナメント表の詳細分析ロジック ---
-    const numBlocks = Math.max(1, Math.ceil(teams.length / 16));
-    const blockSize = Math.floor(teams.length / numBlocks);
+    // --- トーナメント表の詳細分析ロジック (★128チーム制に改修) ---
+    const numBlocks = 4;
+    const blockSize = Math.floor(teams.length / numBlocks); // 128 / 4 = 32
     const blockData = [];
     const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
     const getTeamRank = (teamName) => calculateRank(teamName, state);
@@ -7331,7 +7742,10 @@ async function generateBracketAnalysisNewsArticle(state) {
         const matchupsR1 = [];
         const potentialR2 = [];
         const potentialR3 = [];
+        const potentialR4 = [];
+        const potentialR5 = []; // 準々決勝 (Best 8)
 
+        // 1回戦 (R1) の分析
         for (let j = 0; j < blockTeams.length; j += 2) {
             const team1 = blockTeams[j];
             const team2 = blockTeams[j + 1];
@@ -7345,6 +7759,7 @@ async function generateBracketAnalysisNewsArticle(state) {
             }
         }
 
+        // 2回戦 (R2) の予測
         if (blockTeams.length >= 4) {
             for (let j = 0; j < matchupsR1.length; j += 2) {
                  const winner1Match = matchupsR1[j];
@@ -7357,16 +7772,21 @@ async function generateBracketAnalysisNewsArticle(state) {
                  }
             }
         }
-        if (teams.length === 64 && blockTeams.length >= 8) {
+        
+        // 準々決勝 (R5) の予測
+        if (teams.length === 128 && blockTeams.length >= 32) {
              const blockSeeds = strongTeamsInBlock.filter(t => seeds.some(s => s.team === t)); 
              if (blockSeeds.length >= 2) {
-                 potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
+                 // 簡易的に、ブロック内のシード校同士が当たると予測
+                 potentialR5.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
              }
+             // (R3, R4 の予測は複雑すぎるため、ここでは省略)
         }
 
         blockData.push({
             name: blockName, teams: blockTeams, strongTeams: strongTeamsInBlock,
-            matchupsR1: matchupsR1, potentialR2: potentialR2, potentialR3: potentialR3
+            matchupsR1: matchupsR1, potentialR2: potentialR2, 
+            potentialR3: potentialR3, potentialR4: potentialR4, potentialR5: potentialR5 // R5を追加
         });
     }
     // --- (分析ロジックここまで) ---
@@ -7375,7 +7795,8 @@ async function generateBracketAnalysisNewsArticle(state) {
     let blockSummary = '';
     let crushR1 = [];
     let goodCardsR2 = [];
-    let goodCardsR3 = [];
+    let goodCardsR5 = []; // R3 -> R5 (準々決勝) に変更
+    
     blockData.forEach(block => {
         const strongTeamNames = block.strongTeams.map(team => 
             `${team} ${getSeedRankString(team, state.seeds)}`
@@ -7391,7 +7812,7 @@ async function generateBracketAnalysisNewsArticle(state) {
             }
         });
         goodCardsR2.push(...block.potentialR2.map(card => `${block.name}: ${card}`));
-        goodCardsR3.push(...block.potentialR3.map(card => `${block.name}: ${card}`));
+        goodCardsR5.push(...block.potentialR5.map(card => `${block.name}: ${card}`)); // R3 -> R5
     });
 
     blockData.sort((a, b) => b.strongTeams.length - a.strongTeams.length);
@@ -7403,7 +7824,7 @@ async function generateBracketAnalysisNewsArticle(state) {
     analysisText += `恵まれたブロック: ${blessedBlock.name} (${blessedBlock.strongTeams.length}校)\n`;
     if (crushR1.length > 0) analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
     if (goodCardsR2.length > 0) analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
-    if (goodCardsR3.length > 0) analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
+    if (goodCardsR5.length > 0) analysisText += `準々決勝での注目カード(予想):\n  - ${goodCardsR5.join('\n  - ')}\n`; // R3 -> R5
     // --- (分析テキストまとめここまで) ---
 
     // --- 記事生成用プロンプト (変更なし) ---
@@ -7425,7 +7846,7 @@ ${analysisText}
     1. 組み合わせが決定したことを伝える導入。
     2. 各ブロックの有力校に触れつつ、特に「死のブロック (${deathBlock.name})」と「恵まれたブロック (${blessedBlock.name})」について、シードランクも交えて詳しく解説してください。
     3. Cランクの実力校がどのブロックでシード校を脅かす存在（ダークホース）になりそうか、具体的な校名を挙げて分析してください。
-    4. 勝ち上がりを予想し、2回戦や3回戦で実現しそうな好カードについても触れてください。
+    4. 勝ち上がりを予想し、2回戦や準々決勝(R5)で実現しそうな好カードについても触れてください。
     5. 【AI記者の注目株】: あなたが「今大会の一押しチーム（推し）」を1校選び、そのチームが持つドラマ性（例：「逆境」「最後の夏」「古豪復活」など）を熱く語るコラム欄を設けてください。
     6. 最後に、3年生最後の夏としてのドラマ性や、甲子園への切符をかけた熱い戦いへの期待を述べて締めくくってください。
 - 文体: 熱意が伝わる、ややドラマチックなスポーツ記事の文体で記述してください。
@@ -7434,24 +7855,20 @@ ${analysisText}
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
 
-    // --- AIへのリクエストと結果の処理 ---
+    // --- AIへのリクエストと結果の処理 (変更なし) ---
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
             
-            // ▼▼▼ ここが今回の修正箇所 ▼▼▼
             if (article && article.title && article.body) {
                 return { 
                     ...article, 
                     timestamp: Date.now(), 
-                    // isAnalysisArticle: true, // ★このフラグを削除 (またはコメントアウト)
                     context: { isBracketAnalysis: true } 
                 }; 
             }
-            // ▲▲▲ 修正ここまで ▲▲▲
-
         }
         throw new Error("AIからの応答が、正しい記事形式ではありません。");
     } catch (error) {
@@ -7466,6 +7883,8 @@ ${analysisText}
         };
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 
 // --- Tournament Animation Logic ---
 
@@ -7779,7 +8198,7 @@ nextBtn.addEventListener('click', () => {
 
 /**
  * AIに組み合わせ抽選結果に基づいた、なんJ風の掲示板スレッド（タイトル＋コメント群）を生成させる
- * (★シードランク認識 最終版)
+ * (★128チーム制＝7ラウンド制に対応)
  */
 async function generateBracketBbsThread(state) {
     const { teams, seeds } = state;
@@ -7787,13 +8206,13 @@ async function generateBracketBbsThread(state) {
         return null; 
     }
 
-    // --- トーナメント表の詳細分析ロジック ---
-    const numBlocks = Math.max(1, Math.ceil(teams.length / 16)); 
-    const blockSize = Math.floor(teams.length / numBlocks);
-    const blockData = []; 
-    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 }; 
-    const getTeamRank = (teamName) => calculateRank(teamName, state); 
-    const getTeamRegion = (teamName) => TEAM_DATA[teamName]?.region || '不明'; 
+    // --- トーナメント表の詳細分析ロジック (★128チーム制に改修) ---
+    const numBlocks = 4;
+    const blockSize = Math.floor(teams.length / numBlocks); // 128 / 4 = 32
+    const blockData = [];
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    const getTeamRank = (teamName) => calculateRank(teamName, state);
+    const getTeamRegion = (teamName) => TEAM_DATA[teamName]?.region || '不明';
 
     let nicheMatchups = []; 
 
@@ -7806,13 +8225,14 @@ async function generateBracketBbsThread(state) {
 
         const strongTeamsInBlock = blockTeams.filter(team => {
             const rank = getTeamRank(team);
-            return seeds.some(s => s.team === team) || ['A', 'B'].includes(rank); // ★シード判定を修正
+            return seeds.some(s => s.team === team) || ['A', 'B'].includes(rank);
         });
 
-        const matchupsR1 = []; 
-        const potentialR2 = []; 
-        const potentialR3 = []; 
+        const matchupsR1 = [];
+        const potentialR2 = [];
+        const potentialR5 = []; // 準々決勝 (Best 8)
 
+        // 1回戦 (R1) の分析
         for (let j = 0; j < blockTeams.length; j += 2) {
             const team1 = blockTeams[j];
             const team2 = blockTeams[j + 1];
@@ -7826,15 +8246,14 @@ async function generateBracketBbsThread(state) {
             matchupsR1.push(matchup);
 
             if ((seeds.some(s => s.team === team1) || ['A', 'B'].includes(rank1)) && (seeds.some(s => s.team === team2) || ['A', 'B'].includes(rank2))) {
-                matchup.isCrush = true; 
+                matchup.isCrush = true;
             }
             
-            // ... (マニアックな注目カードの抽出ロジックは変更なし) ...
             const rankDiff = Math.abs(rankValues[rank1] - rankValues[rank2]);
-            const isStrong1 = rankValues[rank1] >= 4; // A or B
-            const isStrong2 = rankValues[rank2] >= 4; // A or B
-            const isMid1 = rankValues[rank1] === 3; // C
-            const isMid2 = rankValues[rank2] === 3; // C
+            const isStrong1 = rankValues[rank1] >= 4;
+            const isStrong2 = rankValues[rank2] >= 4;
+            const isMid1 = rankValues[rank1] === 3;
+            const isMid2 = rankValues[rank2] === 3;
             if (region1 === region2 && !matchup.isCrush && rankValues[rank1] <= 3 && rankValues[rank2] <= 3) {
                  if (nicheMatchups.length < 3) {
                     nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `${region1}地区対決` });
@@ -7847,14 +8266,10 @@ async function generateBracketBbsThread(state) {
                     reason: `Cランクが強豪に挑む注目カード` 
                 });
             }
-            else if (rankDiff <= 1 && rankValues[rank1] <= 2 && rankValues[rank2] <= 2) {
-                 if (nicheMatchups.length < 3 && !nicheMatchups.some(nm => nm.match.includes(team1) || nm.match.includes(team2))) {
-                    nicheMatchups.push({ block: blockName, match: `${team1}(${rank1}) vs ${team2}(${rank2})`, reason: `実力伯仲の下位対決` });
-                 }
-            }
         } // End of 1回戦カード分析ループ
 
-        if (blockTeams.length >= 4) { 
+        // 2回戦 (R2) の予測
+        if (blockTeams.length >= 4) {
             for (let j = 0; j < matchupsR1.length; j += 2) {
                 const winner1Match = matchupsR1[j];
                 const winner2Match = matchupsR1[j + 1];
@@ -7866,16 +8281,12 @@ async function generateBracketBbsThread(state) {
                 }
             }
         }
-        if (teams.length === 64 && blockTeams.length >= 8) { 
-             const blockSeeds = strongTeamsInBlock.filter(t => seeds.some(s => s.team === t)); // ★シード判定を修正
+        
+        // 準々決勝 (R5) の予測
+        if (teams.length === 128 && blockTeams.length >= 32) {
+             const blockSeeds = strongTeamsInBlock.filter(t => seeds.some(s => s.team === t));
              if (blockSeeds.length >= 2) {
-                 potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
-             }
-             if (blockSeeds.length >= 1 && strongTeamsInBlock.length > blockSeeds.length) {
-                 const topNonSeed = strongTeamsInBlock.find(t => !seeds.some(s => s.team === t));
-                 if (topNonSeed) {
-                     potentialR3.push(`${blockSeeds[0]} vs ${topNonSeed} (予想)`);
-                 }
+                 potentialR5.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`);
              }
         }
 
@@ -7885,19 +8296,17 @@ async function generateBracketBbsThread(state) {
             strongTeams: strongTeamsInBlock,
             matchupsR1: matchupsR1,
             potentialR2: potentialR2,
-            potentialR3: potentialR3
+            potentialR5: potentialR5
         });
     } // End of ブロック分析ループ
 
     // --- 分析結果をテキストにまとめる ---
-    // ▼▼▼ このブロックを修正 ▼▼▼
     let blockSummary = '';
     let crushR1 = []; 
     let goodCardsR2 = []; 
-    let goodCardsR3 = []; 
+    let goodCardsR5 = []; 
 
     blockData.forEach(block => {
-        // ★有力校リストにシードランクを追加
         const strongTeamNames = block.strongTeams.map(team => 
             `${team} ${getSeedRankString(team, state.seeds)}`
         ).join(', ');
@@ -7906,14 +8315,13 @@ async function generateBracketBbsThread(state) {
         
         block.matchupsR1.forEach(m => {
             if (m.isCrush) {
-                // ★1回戦の潰し合いにもシードランクを追加
                 const team1Info = `${m.team1}${getSeedRankString(m.team1, state.seeds)}(${m.rank1})`;
                 const team2Info = `${m.team2}${getSeedRankString(m.team2, state.seeds)}(${m.rank2})`;
                 crushR1.push(`${block.name}: ${team1Info} vs ${team2Info}`);
             }
         });
         goodCardsR2.push(...block.potentialR2.map(card => `${block.name}: ${card}`));
-        goodCardsR3.push(...block.potentialR3.map(card => `${block.name}: ${card}`));
+        goodCardsR5.push(...block.potentialR5.map(card => `${block.name}: ${card}`));
     });
 
     blockData.sort((a, b) => b.strongTeams.length - a.strongTeams.length);
@@ -7925,24 +8333,21 @@ async function generateBracketBbsThread(state) {
     analysisText += `恵まれたブロック: ${blessedBlock.name} (${blessedBlock.strongTeams.length}校)\n`;
     if (crushR1.length > 0) {
         analysisText += `1回戦での有力校潰し合い:\n  - ${crushR1.join('\n  - ')}\n`;
-    } else {
-        analysisText += `1回戦での有力校同士の直接対決はなし。\n`;
     }
     if (goodCardsR2.length > 0) {
         analysisText += `2回戦での注目カード(予想):\n  - ${goodCardsR2.join('\n  - ')}\n`;
     }
-     if (goodCardsR3.length > 0) {
-        analysisText += `3回戦での注目カード(予想):\n  - ${goodCardsR3.join('\n  - ')}\n`;
+     if (goodCardsR5.length > 0) {
+        analysisText += `準々決勝での注目カード(予想):\n  - ${goodCardsR5.join('\n  - ')}\n`;
     }
     if (nicheMatchups.length > 0) {
         analysisText += `その他の注目1回戦カード:\n${nicheMatchups.map(nm => `  - ${nm.block}ブロック: ${nm.match} (${nm.reason})`).join('\n')}\n`;
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
     // --- (分析ロジックここまで) ---
 
     // --- スレッド生成用プロンプト ---
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
-夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを30〜40個**生成してください。
+夏の高校野球大会の組み合わせ抽選会が終わりました。以下の詳細な分析結果を基に、**なんJらしいスレッドタイトル**と、そのスレッド内での**リアルタイムな反応コメントを7〜10個**生成してください。
 
 ### 参考情報：静岡県高校野球の「常識」（勢力図）
 ${PREFECTURE_LORE}
@@ -7954,32 +8359,24 @@ ${analysisText}
 - **【常識の反映（最重要）】**: あなたが熟知している「常識」（勢力図）に基づき、コメントしてください。
 - **【★シードランク言及】**: 分析結果に「(第1シード)」などの情報が含まれています。**「第1シードの283、余裕のブロックで草」「第3シードの静岡、いきなりノーシードの強豪と当たってて可哀想」**のように、シードランクにも具体的に言及してください。
 - **分析結果への反応:**
-    - 「死のブロック (${deathBlock.name})」に入ったチームへの同情や煽り。「〇〇終わったなw」「ここ勝ち上がるのマジでキツイやろ」
-    - 「恵まれたブロック (${blessedBlock.name})」への反応。「△△はクジ運良すぎ」「決勝まで余裕やん」
-    - 1回戦での有力校潰し合い (${crushR1.length}件) について。「初戦からこれとか勿体ねえ」「いきなり事実上の決勝かよ」
-    - 2, 3回戦で実現しそうな好カード予想について。「□□ vs ◇◇は絶対見たい」「もし実現したら熱いな」
+    - 「死のブロック (${deathBlock.name})」に入ったチームへの同情や煽り。
+    - 「恵まれたブロック (${blessedBlock.name})」への反応。
+    - 1回戦での有力校潰し合い (${crushR1.length}件) について。「初戦からこれとか勿体ねえ」
+    - 準々決勝(R5)で実現しそうな好カード予想について。「〇〇ブロックは準々決勝が事実上の決勝だな」
 - **★マニアックな視点 (超重要)★:**
-    - **特定の無名校・中堅校のファンになりきること。**具体的な学校名を挙げて**当事者目線のコメントを**必ず複数**生成してください。
-    - 分析結果にある「その他の注目1回戦カード」に挙げられているような、**下位・中堅校同士の対決**について、「〇〇と△△どっち勝つかな」「ここは潰し合いだな」「正直どうでもいいw」といったコメントも生成してください。
-- **個人的な視点:**
-    - 自分の応援するチーム (架空で良い) の組み合わせに対する一喜一憂。「ワイの母校、初戦から強豪で草」「よっしゃ！いけるやん！」
-    - シード校や注目校に対するコメント。「王者〇〇のブロック楽すぎ」「△△はノーシードだけど怖いぞ」
+    - 「その他の注目1回戦カード」に挙げられているような、**下位・中堅校同士の対決**についてコメントすること。
 - **なんJらしさ:**
     - 短い煽りレス。「は？」「雑魚w」「ファーwww」
     - 他のコメントへの安価 (>>) 付きの返信やツッコミ。
-    - 全く関係ない野球ネタや時事ネタへの脱線 (少しだけ)。
-    - 草 (w) や顔文字 (^^;) などを適度に使う。
-- **スレッドの流れ:** 序盤は組み合わせへの驚き、中盤で各ブロック分析や有力校・マニアックなカードへの言及、終盤は少し脱線しつつ盛り上がる、という自然な流れを意識してください。
 
 ### 出力形式
 【最重要】必ず以下のJSON形式"のみ"で出力すること。解説や前置きは一切不要です。
 {
-  "threadTitle": "（例：【速報】夏の高校野球組み合わせ決定www 死のブロックは〇〇！今年の組み合わせはヤバすぎるｗｗｗ）",
+  "threadTitle": "（例：【速報】夏の高校野球組み合わせ決定www 死のブロックは〇〇！）",
   "comments": [
     {"personality": "1: 風吹けば名無し", "comment": "（スレ主のコメント）"},
-    {"personality": "2: 風吹けば名無し", "comment": "（>>1 うおおおお）"},
-    {"personality": "3: 熱海高校応援民", "comment": "（下田か…！勝てるやろ！）"}
-    // ... (合計35〜45個のコメント) ...
+    {"personality": "2: 風吹けば名無し", "comment": "（>>1 うおおおお）"}
+    // ... (合計7〜10個のコメント) ...
   ]
 }`;
 
@@ -8018,26 +8415,30 @@ ${analysisText}
         };
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
  * 大会終了時に、全チームの最終順位をteamRecordsに記録し、履歴を更新する
+ * (★128チーム制＝7ラウンド制に対応)
  */
 function updateTournamentFinishRecords() {
     const { matches, teams } = tournamentState;
     if (!teams || teams.length === 0) return;
 
-    const numTeams = teams.length;
-    const finalRound = Math.log2(numTeams);
+    const numTeams = teams.length; // 128
+    const finalRound = Math.log2(numTeams); // 7
 
     // 最終順位を決定する
     const getRoundLosers = (round, side) => {
         const losers = [];
-        const numMatches = (numTeams / 2) / Math.pow(2, round - 1);
+        // ★ 128チーム制 (R1=64試合) に対応
+        const numMatches = (numTeams / 2) / Math.pow(2, round - 1); 
         for (let m = 1; m <= numMatches; m++) {
             const match = matches[`${side}-R${round}-M${m}`];
             if (match && match.winner) {
                 const loser = match.winner === match.team1 ? match.team2 : match.team1;
-                if (loser) losers.push(loser);
+                // ★ 不戦勝(BYE)は集計しない
+                if (loser && loser !== '(BYE)') losers.push(loser);
             }
         }
         return losers;
@@ -8047,42 +8448,44 @@ function updateTournamentFinishRecords() {
     if (finalMatch && finalMatch.winner) {
         const winner = finalMatch.winner;
         const runnerUp = finalMatch.winner === finalMatch.team1 ? finalMatch.team2 : finalMatch.team1;
-        if (tournamentState.teamRecords[winner]) tournamentState.teamRecords[winner].lastFinish = 1;
-        if (tournamentState.teamRecords[runnerUp]) tournamentState.teamRecords[runnerUp].lastFinish = 2;
+        if (winner && tournamentState.teamRecords[winner]) tournamentState.teamRecords[winner].lastFinish = 1;
+        if (runnerUp && tournamentState.teamRecords[runnerUp]) tournamentState.teamRecords[runnerUp].lastFinish = 2;
     }
 
-    // 準決勝以前の敗退順位を記録
-    for (let r = finalRound - 1; r >= 1; r--) {
-        const finishRank = Math.pow(2, finalRound - r + 1);
+    // ★★★ 修正箇所 ★★★
+    // 準決勝(R6)以前の敗退順位を記録
+    for (let r = finalRound - 1; r >= 1; r--) { // R6 から R1 までループ
+        // 敗退したラウンドの順位を計算 (例: R1敗退 -> 128位, R6敗退 -> 4位)
+        const finishRank = Math.pow(2, finalRound - r); 
+        
         getRoundLosers(r, 'L').concat(getRoundLosers(r, 'R')).forEach(t => {
-            if (t && tournamentState.teamRecords[t]) tournamentState.teamRecords[t].lastFinish = finishRank;
+            if (t && tournamentState.teamRecords[t]) {
+                tournamentState.teamRecords[t].lastFinish = finishRank;
+            }
         });
     }
+    // ★★★ 修正ここまで ★★★
 
-    // ★★★ ここからが戦績履歴と最高成績の更新処理 ★★★
+    // 戦績履歴と最高成績の更新 (変更なし)
     Object.keys(tournamentState.teamRecords).forEach(team => {
         const record = tournamentState.teamRecords[team];
-        if(!record.lastFinish) return; // 試合に参加していない場合はスキップ
+        if(!record.lastFinish) return;
 
-        // 今回の大会結果オブジェクトを作成
         const newHistoryRecord = {
             year: tournamentState.tournamentYear,
             tournament: tournamentState.currentTournament,
             rank: record.lastFinish
         };
 
-        // 履歴の先頭に追加 (新しいものが常に一番上に来るように)
         if (!record.history) record.history = [];
         record.history.unshift(newHistoryRecord);
 
-        // 最高成績を更新
-        // (bestが未設定か、今回の成績の方が良い(rankの数字が小さい)場合に更新)
         if (!record.best || newHistoryRecord.rank < record.best.rank) {
             record.best = newHistoryRecord;
         }
     });
-    // ★★★ ここまで ★★★
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
  /**
      * 現在のトーナメント状態に基づいてUI全体を再描画する
@@ -8333,8 +8736,9 @@ async function skipSpringMainTournament() {
     skipSpringMainBtn.textContent = '春季県大会2回戦以降をスキップ';
 }
 
-    /**
-     * メインのトーナメント表（64チームまたは16チーム）を描画する
+   /**
+     * メインのトーナメント表（128, 32, 16チーム制に対応）を描画する
+     * (★32チーム制＝左右8試合ずつに振り分けるよう修正)
      */
     function renderMainBracket(data) {
         if (!data.teams || data.teams.length === 0) {
@@ -8343,7 +8747,7 @@ async function skipSpringMainTournament() {
         };
 
         const { matches, teams, seeds } = data;
-        const numTeams = teams.length;
+        const numTeams = teams.length; // 128 (夏), 32 (秋), 16 (春)
 
         const bracketContentWrapper = document.createElement('div');
         bracketContentWrapper.className = 'flex flex-row';
@@ -8354,8 +8758,8 @@ async function skipSpringMainTournament() {
         const rightBracketEl = document.createElement('div');
         rightBracketEl.className = 'bracket-half right';
         
-        const finalRound = Math.log2(numTeams);
-        const semiFinalRound = finalRound - 1;
+        const finalRound = Math.log2(numTeams); // 128->7, 32->5, 16->4
+        const semiFinalRound = finalRound - 1; // 準決勝のラウンド番号 (R6, R4, R3)
         
         const leftChampion = data.matches[`L-R${semiFinalRound}-M1`]?.winner ?? null;
         const rightChampion = data.matches[`R-R${semiFinalRound}-M1`]?.winner ?? null;
@@ -8368,14 +8772,19 @@ async function skipSpringMainTournament() {
         finalEl.className = 'bracket-final';
         finalEl.innerHTML = `<div class="final-title">決勝</div><div class="final-matchup" data-match-id="F-R1-M1">${createMatchHTML('F-R1-M1', finalTeam1, finalTeam2, finalMatch, seeds)}</div><div class="winner-box" id="tournament-winner">${finalMatch.winner ? `🏆 ${finalMatch.winner} 🏆` : '🏆'}</div>`;
 
+        // 1回戦の全試合を生成 (128->64試合, 32->16試合, 16->8試合)
         const round1Setup = teams.reduce((acc, team, i) => {
             if (i % 2 === 0) acc.push({ team1: team, team2: null });
             else acc[acc.length - 1].team2 = team;
             return acc;
         }, []);
         
-        const leftHalfSetup = round1Setup.slice(0, round1Setup.length / 2);
-        const rightHalfSetup = round1Setup.slice(round1Setup.length / 2);
+        // ★★★ ここからが修正箇所 (全試合を半分に分割) ★★★
+        const halfMatches = round1Setup.length / 2; // 64->32, 16->8, 8->4
+        
+        const leftHalfSetup = round1Setup.slice(0, halfMatches);
+        const rightHalfSetup = round1Setup.slice(halfMatches);
+        // ★★★ 修正ここまで ★★★
 
         generateHalf(leftBracketEl, leftHalfSetup, 'L', matches, seeds);
         generateHalf(rightBracketEl, rightHalfSetup, 'R', matches, seeds);
@@ -8390,19 +8799,31 @@ async function skipSpringMainTournament() {
             nextTournamentBtn.classList.add('hidden');
         }
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
-    /**
+   /**
      * トーナメント表の片側（レフトまたはライト）を描画するヘルパー関数
+     * (★32チーム制＝5ラウンド制のラウンド名に対応)
      */
     function generateHalf(containerEl, setup, side, allMatches, seeds) {
         containerEl.innerHTML = '';
-        const numMatchesInFirstRound = setup.length;
-        const numTeamsOnSide = numMatchesInFirstRound * 2;
-        const numRounds = Math.log2(numTeamsOnSide);
+        const numMatchesInFirstRound = setup.length; // 32 (夏), 8 (秋), 4 (春)
+        const numTeamsOnSide = numMatchesInFirstRound * 2; // 64 (夏), 16 (秋), 8 (春)
+        const numRounds = Math.log2(numTeamsOnSide); // 6 (夏), 4 (秋), 3 (春)
 
-        const roundNameMap = tournamentState.is16team
-            ? { 1: "1回戦", 2: "準々決勝", 3: "準決勝" }
-            : { 1: "1回戦", 2: "2回戦", 3: "3回戦", 4: "準々決勝", 5: "準決勝" };
+        // ★★★ ここからが修正箇所 (ラウンド名マップの動的切り替え) ★★★
+        let roundNameMap;
+        
+        if (numRounds === 6) { // 夏 (128チーム制 / 64チームハーフ)
+            roundNameMap = { 1: "1回戦", 2: "2回戦", 3: "3回戦", 4: "4回戦", 5: "準々決勝", 6: "準決勝" };
+        } else if (numRounds === 4) { // 秋 (32チーム制 / 16チームハーフ)
+            roundNameMap = { 1: "1回戦", 2: "2回戦", 3: "準々決勝", 4: "準決勝" };
+        } else if (numRounds === 3) { // 春 (16チーム制 / 8チームハーフ)
+            roundNameMap = { 1: "2回戦", 2: "準々決勝", 3: "準決勝" };
+        } else {
+            roundNameMap = {}; // デフォルト
+        }
+        // ★★★ 修正ここまで ★★★
 
         const roundElements = [];
         for (let i = 0; i < numRounds; i++) {
@@ -8419,51 +8840,32 @@ async function skipSpringMainTournament() {
             roundElements.push(roundEl);
         }
 
-        // ▼▼▼ このループをまるごと置き換える ▼▼▼
+        // 1回戦の描画
         setup.forEach((matchSetup, index) => {
             const matchId = `${side}-R1-M${index + 1}`;
-            let dbMatch = allMatches[matchId] || {}; // 既存の match データを取得
-
-            // ★修正点：
-            // 抽選時の setup (matchSetup) ではなく、
-            // 現在の試合データ (dbMatch) の team1 と team2 を優先して使用する。
-            // これにより、swapTeamDetails で入れ替えた結果が反映される。
+            let dbMatch = allMatches[matchId] || {};
             const team1 = dbMatch.team1 || matchSetup.team1;
             const team2 = dbMatch.team2 || matchSetup.team2;
-            
-            // createMatchHTML には dbMatch の team1, team2 を渡す
             roundElements[0].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
         });
-        // ▲▲▲ 置き換えここまで ▲▲▲
-
-        // ▼▼▼ この 2回戦以降のループ (for (let r = 2; ...)) を修正 ▼▼▼
+        
+        // 2回戦以降の描画
         for (let r = 2; r <= numRounds; r++) {
             const numMatchesInRound = numMatchesInFirstRound / Math.pow(2, r - 1);
             for (let m = 1; m <= numMatchesInRound; m++) {
                 const matchId = `${side}-R${r}-M${m}`;
-                
-                // 1. まず、この試合のデータベースを取得する
                 const dbMatch = allMatches[matchId] || {};
-
-                // 2. この試合に進出してくるはずの、前のラウンドの試合IDを取得
                 const prevMatch1Id = `${side}-R${r - 1}-M${(m * 2) - 1}`;
                 const prevMatch2Id = `${side}-R${r - 1}-M${m * 2}`;
-
-                // 3. 前のラウンドの勝者 (デフォルトのチーム名) を取得
                 const prevWinner1 = allMatches[prevMatch1Id]?.winner || null;
                 const prevWinner2 = allMatches[prevMatch2Id]?.winner || null;
-
-                // 4. 【重要】表示するチーム名は、dbMatch (入れ替え情報) を優先し、
-                //    それが無ければデフォルト (前の勝者) を使う
                 const team1 = dbMatch.team1 || prevWinner1;
                 const team2 = dbMatch.team2 || prevWinner2;
-
-                // 5. 修正された team1, team2 を使ってHTMLを生成
                 roundElements[r - 1].insertAdjacentHTML('beforeend', createMatchHTML(matchId, team1, team2, dbMatch, seeds));
             }
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
  // ▼▼▼ 既存の「createMatchHTML」関数 (12489行目あたり) を、以下で「置き換え」 ▼▼▼
 
@@ -8933,66 +9335,52 @@ function renderRegionMap(data) {
     
     /**
      * スキップボタンの表示・非表示を制御する
-     * (★ユーザーの要望に基づき、R2以降のスキップボタンがラウンド完了まで消えないよう修正した最終版)
+     * (★128チーム制＝7ラウンド制に対応)
+     * (★★ 変数宣言をグローバル化する修正 ★★)
      */
     function checkTournamentProgress() {
-        // ボタン要素の取得
-        const skipR1Btn = document.getElementById('skip-r1-btn');
-        const skipR2Btn = document.getElementById('skip-r2-btn');
-        const skipR3Btn = document.getElementById('skip-r3-btn');
-        const skipR4Btn = document.getElementById('skip-r4-btn');
-        const skipR5Btn = document.getElementById('skip-r5-btn');
-        const skipFinalBtn = document.getElementById('skip-final-btn');
-        const generateSummaryBtn = document.getElementById('generate-summary-btn');
+        // ★★★ 修正箇所 ★★★
+        // ここで const や let を使わず、グローバル変数を参照するようにする
+                // ★★★ 修正ここまで ★★★
+        
+        const allSkipButtons = [skipR1Btn, skipR2Btn, skipR3Btn, skipR4Btn, skipR5Btn, skipR6Btn, skipFinalBtn, generateSummaryBtn];
 
-        // 夏の大会以外では、全てのスキップボタンを非表示にする
         if (tournamentState.is16team || !tournamentState.matches || Object.keys(tournamentState.matches).length === 0 || tournamentState.currentTournament !== 'summer') {
-            [skipR1Btn, skipR2Btn, skipR3Btn, skipR4Btn, skipR5Btn, skipFinalBtn, generateSummaryBtn].forEach(btn => btn?.classList.add('hidden'));
+            allSkipButtons.forEach(btn => btn?.classList.add('hidden'));
             return;
         }
 
         const matchIds = Object.keys(tournamentState.matches);
+        const numTeams = tournamentState.teams.length;
+        const finalRound = Math.log2(numTeams);
 
         const getRoundStatus = (roundNumber) => {
             const played = matchIds.filter(id => id.includes(`-R${roundNumber}-M`) && tournamentState.matches[id]?.winner).length;
-            const total = 64 / Math.pow(2, roundNumber);
+            const total = numTeams / Math.pow(2, roundNumber);
             return { total, played };
         };
-
-        const r1 = getRoundStatus(1);
-        const r2 = getRoundStatus(2);
-        const r3 = getRoundStatus(3);
-        const r4 = getRoundStatus(4); // 準々決勝
-        const r5 = getRoundStatus(5); // 準決勝
+        
+        const r1_status = getRoundStatus(1);
+        const r2_status = getRoundStatus(2);
+        const r3_status = getRoundStatus(3);
+        const r4_status = getRoundStatus(4);
+        const r5_status = getRoundStatus(5);
+        const r6_status = getRoundStatus(6);
         const finalMatch = tournamentState.matches['F-R1-M1'];
 
-        // ▼▼▼ ここからが今回の修正箇所です ▼▼▼
+        skipR1Btn.classList.toggle('hidden', r1_status.played === r1_status.total);
+        skipR2Btn.classList.toggle('hidden', !(r1_status.played === r1_status.total && r2_status.played !== r2_status.total));
+        skipR3Btn.classList.toggle('hidden', !(r2_status.played === r2_status.total && r3_status.played !== r3_status.total));
+        skipR4Btn.classList.toggle('hidden', !(r3_status.played === r3_status.total && r4_status.played !== r4_status.total));
+        skipR5Btn.classList.toggle('hidden', !(r4_status.played === r4_status.total && r5_status.played !== r5_status.total));
+        skipR6Btn.classList.toggle('hidden', !(r5_status.played === r5_status.total && r6_status.played !== r6_status.total));
+        skipFinalBtn.classList.toggle('hidden', !(r6_status.played === r6_status.total && (!finalMatch || !finalMatch.winner)));
         
-        // R1: 1回戦が「すべて」終わったら隠す
-        skipR1Btn.classList.toggle('hidden', r1.played === r1.total);
-
-        // R2: (1回戦が完了) 且つ (2回戦が「まだ」完了していない) 場合に表示
-        // (修正前: r2.played === 0 だったので、1試合でもやると消えていた)
-        skipR2Btn.classList.toggle('hidden', !(r1.played === r1.total && r2.played !== r2.total));
-
-        // R3: (2回戦が完了) 且つ (3回戦が「まだ」完了していない) 場合に表示
-        skipR3Btn.classList.toggle('hidden', !(r2.played === r2.total && r3.played !== r3.total));
-
-        // R4: (3回戦が完了) 且つ (4回戦が「まだ」完了していない) 場合に表示
-        skipR4Btn.classList.toggle('hidden', !(r3.played === r3.total && r4.played !== r4.total));
-
-        // R5: (4回戦が完了) 且つ (5回戦が「まだ」完了していない) 場合に表示
-        skipR5Btn.classList.toggle('hidden', !(r4.played === r4.total && r5.played !== r5.total));
-
-        // Final: (5回戦が完了) 且つ (決勝が「まだ」完了していない) 場合に表示
-        skipFinalBtn.classList.toggle('hidden', !(r5.played === r5.total && (!finalMatch || !finalMatch.winner)));
-        
-        // ▲▲▲ 修正ここまで ▲▲▲
-
-        // ベスト8まとめ記事ボタンのロジック (変更なし)
+        // ベスト16 (R4) 終了時点で R5(準々決勝) がまだなら
         const summaryGenerated = tournamentState.news.some(n => n.summaryType === 'best8');
-        generateSummaryBtn.classList.toggle('hidden', !(r3.played === r3.total && r4.played === 0 && !summaryGenerated));
+        generateSummaryBtn.classList.toggle('hidden', !(r4_status.played === r4_status.total && r5_status.played === 0 && !summaryGenerated));
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
  * 決勝戦を自動でスキップする
@@ -10734,9 +11122,14 @@ function getRoundSortKey(matchId) {
 
     /**
      * 【重要修正】ラウンドを自動でスキップする
-     * (★単一の要約記事ではなく、全試合で processMatchWin を呼び出し、個別の試合記録を残すよう変更)
+     * (★128チーム制、BYE対応版)
      */
     async function skipRound(roundNumber) {
+
+// ▼▼▼ この1行を「新規追加」 ▼▼▼
+        const skipLoader = document.getElementById('skip-loader');
+        // ▲▲▲ 新規追加ここまで ▲▲▲
+
         const btnId = `skip-r${roundNumber}-btn`;
         const btn = document.getElementById(btnId);
         if (btn) {
@@ -10745,9 +11138,11 @@ function getRoundSortKey(matchId) {
         }
         skipLoader.classList.remove('hidden');
 
-        const matchIds = [];
-        const numMatchesInRoundSide = (tournamentState.teams.length / 2) / Math.pow(2, roundNumber - 1);
+        // ★ 128チーム制に対応
+        const numTeams = tournamentState.teams.length;
+        const numMatchesInRoundSide = (numTeams / 2) / Math.pow(2, roundNumber - 1); // R1=32, R2=16...
 
+        const matchIds = [];
         ['L', 'R'].forEach(side => {
             for (let i = 1; i <= numMatchesInRoundSide; i++) {
                 matchIds.push(`${side}-R${roundNumber}-M${i}`);
@@ -10758,10 +11153,20 @@ function getRoundSortKey(matchId) {
         for (const matchId of matchIds) {
             const match = tournamentState.matches[matchId];
             
-            // ★ 既に勝者が決まっている試合（＝手動で操作した試合）はスキップ
             if (!match || match.winner || !match.team1 || !match.team2) {
                 continue;
             }
+
+            // ★★★ BYE(不戦勝)の処理 ★★★
+            if (match.team1 === '(BYE)') {
+                await processMatchWin(matchId, match.team2); // team2の不戦勝
+                continue;
+            }
+            if (match.team2 === '(BYE)') {
+                await processMatchWin(matchId, match.team1); // team1の不戦勝
+                continue;
+            }
+            // ★★★ BYE処理ここまで ★★★
 
             const { team1, team2 } = match;
             const rank1 = calculateRank(team1, tournamentState);
@@ -10783,105 +11188,186 @@ function getRoundSortKey(matchId) {
 
             const [winnerScore, loserScore] = generateAutoScore(winnerRank, loserRank);
 
-            // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
-            
-            // 1. スコアを match オブジェクトに設定
             match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
             match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
             
-            // 2. ★個別の試合処理関数を呼び出す★
-            // (これにより、AI記事/BBS生成、勝者進行、ティッカー更新などが自動で行われる)
             await processMatchWin(matchId, winnerName);
-
-            // ▲▲▲ 修正ここまで ▲▲▲
         }
         
-        // --- ステップ2：勝者を次のラウンドに進める処理 (不要) ---
-        // (processMatchWin が個別に実行するため、ここでの一括処理は不要になりました)
-        
-        // --- ステップ3：UIの更新とダイジェスト記事の生成 (修正) ---
-        
-        // ★ラウンド全体の要約記事(generateSkipRoundSummaryArticle)の呼び出しを削除
-        // (個別の記事が生成されるようになったため)
-
-        renderTournament(tournamentState); // トーナメント表を最終的に再描画
-        
-        // ★AIが生成したエラー記事や、レビュー待ちでない記事を反映するために News も再描画
+        renderTournament(tournamentState);
         renderNews(tournamentState.news); 
-        
         saveState();
         
         if (btn) {
-            btn.classList.add('hidden'); // 完了したらボタンを隠す
+            btn.classList.add('hidden');
             btn.disabled = false;
             btn.textContent = `${roundNumber}回戦スキップ`;
         }
         skipLoader.classList.add('hidden');
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 // --- NEW Autumn Tournament System ---
 
-    /**
- * [秋季大会 ステージ1] 地区ブロック予選を開始する（伊豆地区追加・最終版）
- */
-/**
- * [秋季大会 ステージ1] 地区ブロック予選を開始する（伊豆地区追加・最終版）
+  /**
+ * [秋季大会 ステージ1] 地区ブロック予選を開始する
+ * (★32チーム制＝東8, 中10, 西13, 伊豆1 の動的ブロック分けに対応)
  */
 async function setupAutumnRegionalBlocks() {
     tournamentState.autumnPhase = 'regional_blocks';
     
+    // 1. 全チームを地区別に振り分け (126校)
     const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
     INITIAL_TEAM_POOL.forEach(teamName => {
         const region = TEAM_DATA[teamName]?.region;
-        if (region) teamsByRegion[region].push(teamName);
+        if (region && teamsByRegion[region]) {
+            teamsByRegion[region].push(teamName);
+        }
     });
 
-    // 主要3地区のブロック分け
-    ['東部', '中部', '西部'].forEach(region => {
+    // ★★★ ここからが新ロジック ★★★
+    // 2. 各地区の県大会出場枠を定義
+    const regionQuotas = {
+        '東部': 8,
+        '中部': 10,
+        '西部': 13
+    };
+
+    // 3. 主要3地区（東部・中部・西部）の動的ブロック分け
+    for (const region of ['東部', '中部', '西部']) {
         let regionalTeams = shuffleArray(teamsByRegion[region]);
         const blocks = [];
-        for (let i = 0; i < 4; i++) { // 4ブロック作成
-            const blockTeams = regionalTeams.splice(0, 5); // 5チームずつ
-            if (blockTeams.length === 0) continue;
+        const numBlocks = regionQuotas[region]; // ★ 新しい枠数（8, 10, 13）
+        
+        // チーム数を各ブロックに均等に振り分ける
+        const baseBlockSize = Math.floor(regionalTeams.length / numBlocks); // (例: 43チーム / 13枠 = 3)
+        let remainder = regionalTeams.length % numBlocks; // (例: 43 % 13 = 4)
+        
+        for (let i = 0; i < numBlocks; i++) {
+            let blockSize = baseBlockSize;
+            if (remainder > 0) {
+                blockSize++; // 余りを前のブロックから順に+1する
+                remainder--;
+            }
+            if (blockSize === 0) continue;
 
+            const blockTeams = regionalTeams.splice(0, blockSize);
             const blockId = `${region}-B${i+1}`;
             
-            const playInMatchId = `${blockId}-R0-M1`;
-            const semi1Id = `${blockId}-R1-M1`;
-            const semi2Id = `${blockId}-R1-M2`;
-            const finalId = `${blockId}-R2-M1`;
-
-            const matches = {
-                [playInMatchId]: { id: playInMatchId, team1: blockTeams[0], team2: blockTeams[1], winner: null, score1: '', score2: '', summary: '' },
-                [semi1Id]: { id: semi1Id, team1: null, team2: blockTeams[2], winner: null, score1: '', score2: '', summary: '' },
-                [semi2Id]: { id: semi2Id, team1: blockTeams[3], team2: blockTeams[4], winner: null, score1: '', score2: '', summary: '' },
-                [finalId]: { id: finalId, team1: null, team2: null, winner: null, score1: '', score2: '', summary: '' }
-            };
-            blocks.push({ id: blockId, teams: blockTeams, matches });
+            // ★ 動的なチーム数でトーナメントを生成
+            const blockMatches = createDynamicBracketMatches(blockId, blockTeams);
+            
+            blocks.push({ id: blockId, teams: blockTeams, matches: blockMatches });
+            // 全試合を秋季大会のマスターリストにも追加
+            if (!tournamentState.autumnData.allMatches) tournamentState.autumnData.allMatches = {};
+            Object.assign(tournamentState.autumnData.allMatches, blockMatches);
         }
         tournamentState.autumnData.regions[region].blocks = blocks;
-    });
+        // ★ 敗者復活戦(repechageBracket)のロジックは削除
+    }
 
-    // 伊豆地区の4チームトーナメントを作成
+    // --- 4. 伊豆地区（1枠）の動的トーナメント (変更なし) ---
     const izuTeams = shuffleArray(teamsByRegion['伊豆']);
-    const izuBracketId = '伊豆-AUTUMN';
-    const izuMatches = {
-        [`${izuBracketId}-R1-M1`]: { id: `${izuBracketId}-R1-M1`, team1: izuTeams[0], team2: izuTeams[1], winner: null, score1: '', score2: '' },
-        [`${izuBracketId}-R1-M2`]: { id: `${izuBracketId}-R1-M2`, team1: izuTeams[2], team2: izuTeams[3], winner: null, score1: '', score2: '' },
-        [`${izuBracketId}-R2-M1`]: { id: `${izuBracketId}-R2-M1`, team1: null, team2: null, winner: null, score1: '', score2: '' } // 決勝
-    };
-    tournamentState.autumnData.regions['伊豆'].izuBracket = {
-        id: izuBracketId,
-        teams: izuTeams,
-        matches: izuMatches
-    };
+    if (izuTeams.length > 0) {
+        const izuBracketId = '伊豆-AUTUMN';
+        const izuMatches = createDynamicBracketMatches(izuBracketId, izuTeams);
+        tournamentState.autumnData.regions['伊豆'].izuBracket = {
+            id: izuBracketId,
+            teams: izuTeams,
+            matches: izuMatches
+        };
+        if (!tournamentState.autumnData.allMatches) tournamentState.autumnData.allMatches = {};
+        Object.assign(tournamentState.autumnData.allMatches, izuMatches);
+    }
+    // ★★★ 新ロジックここまで ★★★
 
     renderTournament(tournamentState);
     saveState();
 }
-   
+// ▲▲▲ 置き換えここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲   
+
 /**
- * [秋季大会 ステージ1 UI] 地区ブロック予選を描画する（伊豆地区追加・最終版）
+ * [NEW HELPER] 任意のチーム数でトーナメントの試合オブジェクトを自動生成する
+ * (例: 11チームなら、5チームが1回戦、3チームが2回戦免除)
+ * @param {string} bracketId - '東部-B1' や '伊豆-AUTUMN' などのプレフィックス
+ * @param {Array<string>} teams - そのブロックに参加する全チームの配列
+ * @returns {object} - 全試合の matches オブジェクト
+ */
+function createDynamicBracketMatches(bracketId, teams) {
+    const numTeams = teams.length;
+    if (numTeams === 0) return {};
+    if (numTeams === 1) return {}; // 1チームのみは試合なし
+
+    const matches = {};
+    const rounds = []; // 各ラウンドの試合IDを入れる [ ['R1-M1', 'R1-M2'], ['R2-M1'] ]
+    
+    // 1. 2のべき乗の数（トーナメントサイズ）を見つける (例: 11チーム -> 16)
+    const tournamentSize = Math.pow(2, Math.ceil(Math.log2(numTeams)));
+    const numRounds = Math.log2(tournamentSize); // (例: 16 -> 4ラウンド)
+    
+    // 2. 1回戦を免除(シード)されるチーム数を計算
+    const numByes = tournamentSize - numTeams; // (例: 16 - 11 = 5チームがシード)
+    // 3. 1回戦を行うチーム数を計算
+    const numFirstRoundTeams = numTeams - numByes; // (例: 11 - 5 = 6チームが1回戦)
+    
+    let teamsInNextRound = []; // 次のラウンドに進むチーム/勝者ID
+    let teamIndex = 0; // チーム配列のインデックス
+
+    // --- 4. 1回戦 (R1) を生成 ---
+    if (numFirstRoundTeams > 0) {
+        const round1Matches = [];
+        const numMatchesR1 = numFirstRoundTeams / 2; // (例: 6 / 2 = 3試合)
+        for (let i = 0; i < numMatchesR1; i++) {
+            const matchId = `${bracketId}-R1-M${i + 1}`;
+            const team1 = teams[teamIndex++];
+            const team2 = teams[teamIndex++];
+            matches[matchId] = { id: matchId, team1: team1, team2: team2, winner: null, score1: '', score2: '' };
+            round1Matches.push(matchId);
+            teamsInNextRound.push(`winner_of_${matchId}`); // 勝者IDを次ラウンドへ
+        }
+        rounds.push(round1Matches);
+    }
+    
+    // --- 5. 1回戦免除(シード)のチームを次ラウンドに追加 ---
+    for (let i = 0; i < numByes; i++) {
+        teamsInNextRound.push(teams[teamIndex++]);
+    }
+
+    // --- 6. 2回戦 (R2) から決勝 (Final) までを自動生成 ---
+    for (let r = 2; r <= numRounds; r++) {
+        const roundMatches = [];
+        const teamsInThisRound = shuffleArray(teamsInNextRound); // 前のラウンドからの進出者をシャッフル
+        teamsInNextRound = []; // 次のラウンドのリストをリセット
+        
+        const numMatchesInRound = teamsInThisRound.length / 2;
+        for (let i = 0; i < numMatchesInRound; i++) {
+            const matchId = `${bracketId}-R${r}-M${i + 1}`;
+            const team1 = teamsInThisRound[i * 2];
+            const team2 = teamsInThisRound[i * 2 + 1];
+            
+            // チーム名か、前の試合の勝者IDかを解決
+            const resolvedTeam1 = team1.startsWith('winner_of_') ? null : team1;
+            const resolvedTeam2 = team2.startsWith('winner_of_') ? null : team2;
+            
+            matches[matchId] = { id: matchId, team1: resolvedTeam1, team2: resolvedTeam2, winner: null, score1: '', score2: '' };
+            roundMatches.push(matchId);
+            teamsInNextRound.push(`winner_of_${matchId}`); // 勝者IDを次ラウンドへ
+            
+            // 前の試合と今の試合をリンクする (winner_of... を辿る)
+            if (team1.startsWith('winner_of_')) matches[team1.replace('winner_of_', '')].nextMatchId = matchId;
+            if (team2.startsWith('winner_of_')) matches[team2.replace('winner_of_', '')].nextMatchId = matchId;
+        }
+        rounds.push(roundMatches);
+    }
+    
+    return matches;
+}
+// ▲▲▲ 新規追加ここまで ▲▲▲
+
+/**
+ * [秋季大会 ステージ1 UI] 地区ブロック予選を描画する
+ * (★動的トーナメント描画・敗者復活廃止に対応)
  */
 function renderAutumnRegionalBlocks() {
     let html = `<h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">秋季大会 地区予選</h2>`;
@@ -10892,29 +11378,38 @@ function renderAutumnRegionalBlocks() {
         const regionData = tournamentState.autumnData.regions[region];
         if (!regionData.blocks) continue;
 
+        // ★★★ 修正箇所 ★★★
+        const quota = regionData.blocks.length; // 8, 10, 13
+
         html += `
             <div class="p-4 border-2 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区 (5枠)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">${region}地区 (${quota}枠)</h3>
+                <h4 class="font-bold text-center text-lg mb-2">代表決定ブロック</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     ${regionData.blocks.map(block => `
                         <div class="p-3 border rounded-lg bg-gray-50">
-                            <h4 class="font-bold text-center mb-2">ブロック ${block.id.split('-')[1]}</h4>
-                            ${create5TeamBlockHTML(block)}
+                            <h4 class="font-bold text-center mb-2">ブロック ${block.id.split('-')[1]} (${block.teams.length}チーム)</h4>
+                            <div class="flex items-center justify-center space-x-2 text-xs">
+                                ${createDynamicBracketHTML(block.id, block.matches)}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
-            </div>
+                </div>
         `;
+        // ★★★ 修正ここまで ★★★
     }
 
-    // 伊豆地区の描画
+    // 伊豆地区の描画 (変更なし)
     const izuData = tournamentState.autumnData.regions['伊豆'];
     if (izuData && izuData.izuBracket) {
         html += `
             <div class="p-4 border-2 rounded-lg shadow-md">
                 <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-purple-700">伊豆地区 (1枠)</h3>
                 <div class="flex justify-center">
-                    ${create4TeamBlockHTML(izuData.izuBracket)}
+                    <div class="flex items-center justify-center space-x-2 text-xs">
+                        ${createDynamicBracketHTML(izuData.izuBracket.id, izuData.izuBracket.matches)}
+                    </div>
                 </div>
             </div>
         `;
@@ -10924,40 +11419,9 @@ function renderAutumnRegionalBlocks() {
     autumnRegionalContainer.innerHTML = html;
     checkAutumnRegionalBlocksComplete();
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
-    /**
-     * 5チーム構成のブロックトーナメントHTMLを生成する
-     * @param {object} blockData - 対象ブロックのデータ
-     */
-    // 【修正対象2】
-function create5TeamBlockHTML(blockData) {
-    const { id, matches } = blockData;
-    const playIn = matches[`${id}-R0-M1`];
-    const semi1 = matches[`${id}-R1-M1`];
-    const semi2 = matches[`${id}-R1-M2`];
-    const final = matches[`${id}-R2-M1`];
-
-    // 試合の進行状況を更新
-    semi1.team1 = playIn.winner;
-    final.team1 = semi1.winner;
-    final.team2 = semi2.winner;
-
-    return `
-        <div class="flex items-center justify-center space-x-2 text-xs">
-            <div class="flex flex-col justify-around h-full space-y-4">
-                <div class="w-40">${createMatchHTML(playIn.id, playIn.team1, playIn.team2, playIn, [])}</div>
-                <div class="w-40">${createMatchHTML(semi2.id, semi2.team1, semi2.team2, semi2, [])}</div>
-            </div>
-            <div class="flex flex-col justify-center h-full w-40">
-                ${createMatchHTML(semi1.id, semi1.team1, semi1.team2, semi1, [])}
-            </div>
-            <div class="flex flex-col justify-center h-full w-40">
-                ${createMatchHTML(final.id, final.team1, final.team2, final, [])}
-            </div>
-        </div>
-    `;
-}
-
+  
     /**
      * [秋季大会 ステージ2] 地区内順位決定戦を開始する
      */
@@ -11027,40 +11491,57 @@ function renderAutumnRankingTournaments() {
     autumnRankingContainer.innerHTML = html;
     checkAutumnRankingTournamentsComplete();
 }
-    /**
-     * [秋季大会 ステージ3] 県大会本戦を開始する
-     */
-   // 【修正対象4】
+    
+
 /**
- * [秋季大会 ステージ3] 県大会本戦を開始する（組み合わせロジックを修正した完全版）
+ * [秋季大会 ステージ3] 県大会本戦を開始する
+ * (★32チーム制トーナメントに対応)
  */
 async function setupAutumnMainTournament() {
     tournamentState.autumnPhase = 'main';
-    tournamentState.is16team = true;
+    tournamentState.is16team = false; // ★ 16チーム制ではない (32チーム)
 
-    // --- 代表チームのリストを作成 ---
+    // --- 1. 代表チームのリストを作成 (32チーム) ---
     const finalReps = [];
-    // 1. 伊豆地区の代表
-    const izuWinner = tournamentState.autumnData.regions['伊豆'].finalReps[0];
-    if (izuWinner) finalReps.push(izuWinner.team);
-
-    // 2. 主要3地区の代表
-    for (const region of ['東部', '中部', '西部']) {
-        const regionData = tournamentState.autumnData.regions[region];
-        // 2-1. ブロック優勝した4チーム
-        finalReps.push(...regionData.blockWinners);
-        // 2-2. 敗者復活戦を勝ち上がった1チーム
-        const repFinal = regionData.repechageBracket.matches[`${region}-REP-R2-M1`];
-        if (repFinal.winner) {
-            finalReps.push(repFinal.winner);
+    
+    // (A) 伊豆地区の代表 (1チーム)
+    const izuData = tournamentState.autumnData.regions['伊豆'];
+    if (izuData.izuBracket) {
+        const izuMatches = izuData.izuBracket.matches;
+        const izuFinalId = Object.keys(izuMatches).find(id => !izuMatches[id].nextMatchId);
+        if (izuFinalId && izuMatches[izuFinalId].winner) {
+            finalReps.push({ team: izuMatches[izuFinalId].winner, rank: 1, region: '伊豆' });
         }
     }
 
-    // --- トーナメントデータを作成 ---
-    tournamentState.teams = shuffleArray(finalReps); // 16チームをシャッフル
-    tournamentState.matches = {};
-    tournamentState.seeds = []; //秋季県大会はシードなし
+    // (B) 主要3地区の代表 (東8 + 中10 + 西13 = 31チーム)
+    for (const region of ['東部', '中部', '西部']) {
+        const regionData = tournamentState.autumnData.regions[region];
+        // ブロック優勝校をすべて追加
+        regionData.blocks.forEach((block, index) => {
+            const finalMatchId = Object.keys(block.matches).find(id => !block.matches[id].nextMatchId);
+            if (finalMatchId && block.matches[finalMatchId].winner) {
+                finalReps.push({ team: block.matches[finalMatchId].winner, rank: index + 1, region: region });
+            }
+        });
+        // ★ 敗者復活(repechageBracket)からの集計ロジックを削除
+    }
 
+    // --- 2. 予選敗退チームの成績を記録 ---
+    const repTeamNames = finalReps.map(r => r.team);
+    INITIAL_TEAM_POOL.forEach(teamName => {
+        if (TEAM_DATA[teamName]?.region && !repTeamNames.includes(teamName)) {
+            // 県大会に出場できなかったチーム
+            if(tournamentState.teamRecords[teamName]) tournamentState.teamRecords[teamName].lastFinish = 64; // 秋は予選敗退
+        }
+    });
+
+    // --- 3. 32チームでトーナメントを生成 ---
+    tournamentState.teams = shuffleArray(repTeamNames); // 32チームをシャッフル
+    tournamentState.matches = {};
+    tournamentState.seeds = []; // 秋季県大会はシードなし
+
+    // (32チーム = 16試合)
     const round1Setup = tournamentState.teams.reduce((acc, team, i) => {
         if (i % 2 === 0) acc.push({ team1: team, team2: null });
         else acc[acc.length - 1].team2 = team;
@@ -11068,44 +11549,65 @@ async function setupAutumnMainTournament() {
     }, []);
 
     round1Setup.forEach((match, index) => {
-        const side = index < 4 ? 'L' : 'R';
-        const matchNum = index < 4 ? index + 1 : index - 3;
+        const side = index < 8 ? 'L' : 'R'; // 16試合 / 2 = 8
+        const matchNum = index < 8 ? index + 1 : index - 7;
         const matchId = `${side}-R1-M${matchNum}`;
         tournamentState.matches[matchId] = { id: matchId, team1: match.team1, team2: match.team2, winner: null, score1: '', score2: '', details: null, summary: '' };
     });
 
-// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
-    // --- 全ラウンドのスケジュールを割り当て (16チーム・新ルール版) ---
-    const finalRoundAutumn = 4;
+    // --- 4. R2, R3, R4, F の「空の箱」を作成 ---
+    const numTeams = 32;
+    const finalRound = Math.log2(numTeams); // 5
+    for (let r = 2; r < finalRound; r++) { // R2, R3, R4
+        const numMatchesInRound = numTeams / Math.pow(2, r); // 8, 4, 2
+        for (let m = 1; m <= numMatchesInRound / 2; m++) {
+            const matchIdL = `L-R${r}-M${m}`;
+            tournamentState.matches[matchIdL] = { id: matchIdL, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+            const matchIdR = `R-R${r}-M${m}`;
+            tournamentState.matches[matchIdR] = { id: matchIdR, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+        }
+    }
+    tournamentState.matches['F-R1-M1'] = { id: 'F-R1-M1', team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
+    
+    // --- 5. スケジュールを割り当て (32チーム・5ラウンド制) ---
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R1-')), 
-        ["9/15", "9/16"], ROUND_3_STADIUMS, 2 // 1回戦 (主要4球場) ※3回戦用球場を流用
+        ["9/15", "9/16"], ROUND_3_STADIUMS, 2 // R1(16試合) -> 4球場*2日*2試合=16スロット
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R2-')), 
-        ["9/18"], FINAL_STAGE_STADIUMS, 4 // 準々決勝 (草薙で4試合)
+        ["9/18"], ROUND_3_STADIUMS, 2 // R2(8試合) -> 4球場*1日*2試合=8スロット
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R3-')), 
-        ["9/21"], FINAL_STAGE_STADIUMS, 2 // 準決勝 (草薙で2試合)
+        ["9/20"], FINAL_STAGE_STADIUMS, 4 // R3(4試合) -> 1球場*1日*4試合
+    );
+    scheduleRoundMatches(
+        Object.keys(tournamentState.matches).filter(id => id.includes('-R4-')), 
+        ["9/22"], FINAL_STAGE_STADIUMS, 2 // R4(準決 2試合) -> 1球場*1日*2試合
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('F-R1-')), 
-        ["9/23"], FINAL_STAGE_STADIUMS, 1 // 決勝 (草薙で1試合)
+        ["9/24"], FINAL_STAGE_STADIUMS, 1 // 決勝 (1試合)
     );
-    // ▲▲▲ 置き換えここまで ▲▲▲
+    // ★★★ 修正ここまで ★★★
+    
     renderTournament(tournamentState);
     saveState();
 
-    // --- 記事生成などの後続処理 (変更なし) ---
+    // --- 6. 記事生成 (変更なし) ---
     const currentTournamentName = "秋季県大会本戦";
     newsContainer.innerHTML = `<div class="loader">AI記者が${currentTournamentName}の展望記事を執筆中...</div>`;
     bbsCommentsContainer.innerHTML = `<div class="loader">AIが組み合わせを分析中...</div>`;
 
+    // 16チーム制(is16team=true)として展望記事を生成させる
+    tournamentState.is16team = true; // ★ AI記事生成時のみ、一時的に16チーム制として扱う
     const [previewArticle, bracketComments] = await Promise.all([
-        generateNewsArticle({ matchId: 'preview' }), // ★簡易contextを渡す
-    generateBracketReactionComments(tournamentState)
-]);
+        generateNewsArticle({ matchId: 'preview' }),
+        generateBracketReactionComments(tournamentState)
+    ]);
+    tournamentState.is16team = false; // ★ 元に戻す
+
     if (previewArticle) tournamentState.news.unshift(previewArticle);
     if (bracketComments && bracketComments.length > 0) tournamentState.bbsComments.push(...bracketComments);
     
@@ -11113,11 +11615,16 @@ async function setupAutumnMainTournament() {
     renderBbsComments(tournamentState.bbsComments);
     saveState();
 }
-    /**
+// ▲▲▲ 置き換えここまで ▲▲▲
+
+
+/**
      * 秋季地区ブロック予選がすべて終了したかチェックする
+     * (★敗者復活を廃止し、県大会本戦へ直行するよう修正)
      */
     function checkAutumnRegionalBlocksComplete() {
     let allBlocksFinished = true;
+    
     // 東部・中部・西部のチェック
     for (const region of ['東部', '中部', '西部']) {
         const regionData = tournamentState.autumnData.regions[region];
@@ -11125,33 +11632,42 @@ async function setupAutumnMainTournament() {
             allBlocksFinished = false; break;
         }
         for (const block of regionData.blocks) {
-            const finalMatch = block.matches[`${block.id}-R2-M1`];
-            if (!finalMatch.winner) {
+            const finalMatchId = Object.keys(block.matches).find(id => !block.matches[id].nextMatchId);
+            if (!finalMatchId || !block.matches[finalMatchId].winner) {
                 allBlocksFinished = false; break;
             }
         }
         if (!allBlocksFinished) break;
     }
 
-    // ▼▼▼ このブロックが修正箇所 ▼▼▼
     // 伊豆地区のチェック
     if (allBlocksFinished) {
         const izuData = tournamentState.autumnData.regions['伊豆'];
-        if (!izuData.izuBracket || !izuData.izuBracket.matches[`伊豆-AUTUMN-R2-M1`].winner) {
-            allBlocksFinished = false;
+        if (izuData.izuBracket) {
+            const izuMatches = izuData.izuBracket.matches;
+            const izuFinalId = Object.keys(izuMatches).find(id => !izuMatches[id].nextMatchId);
+            if (!izuFinalId || !izuMatches[izuFinalId].winner) {
+                allBlocksFinished = false;
+            }
+        } else if (izuData.teams?.length > 0) {
+             allBlocksFinished = false;
         }
     }
-    // ▲▲▲
 
+    // ★★★ ここからが修正箇所 ★★★
     if (allBlocksFinished) {
         autumnControls.classList.remove('hidden');
-        startRankingPlayoffsBtn.classList.remove('hidden');
+        startRankingPlayoffsBtn.classList.add('hidden'); // 敗者復活ボタンは隠す
+        startMainTournamentBtn.classList.remove('hidden'); // ★ 県大会本戦ボタンを表示
+        skipAutumnBlocksBtn.classList.add('hidden');
     } else {
         autumnControls.classList.add('hidden');
         startRankingPlayoffsBtn.classList.add('hidden');
+        startMainTournamentBtn.classList.add('hidden');
     }
+    // ★★★ 修正ここまで ★★★
 }
-
+// ▲▲▲ 置き換えここまで ▲▲▲
     /**
      * 秋季地区内順位決定戦がすべて終了したかチェックする
      */
@@ -11339,34 +11855,56 @@ function renderSpringRegionalQualifiers() {
 }
 
 /**
- * 4チーム構成のブロックトーナメントHTMLを生成する
+ * [NEW HELPER] matchesオブジェクトからトーナメント表のHTMLを再帰的に生成する
+ * @param {string} bracketId - '東部-B1' など
+ * @param {object} matches - このブロックの全試合 matches オブジェクト
+ * @returns {string} - トーナメント表のHTML
  */
-function create4TeamBlockHTML(blockData, isRepechage = false) {
-    if (!blockData || !blockData.matches) return '<div></div>';
-    const { id, matches } = blockData;
-    const semi1 = matches[`${id}-R1-M1`];
-    const semi2 = matches[`${id}-R1-M2`];
-    const final = matches[`${id}-R2-M1`];
-    if (!semi1 || !semi2 || !final) return '<div></div>';
+function createDynamicBracketHTML(bracketId, matches) {
+    const finalMatchId = Object.keys(matches).find(id => !matches[id].nextMatchId);
+    if (!finalMatchId) return "（試合なし）";
 
-    // 試合の進行状況を更新
-    final.team1 = semi1.winner;
-    final.team2 = semi2.winner;
+    // 再帰的にHTMLを構築する内部関数
+    function buildMatchHTML(matchId) {
+        const match = matches[matchId];
+        if (!match) return "（エラー）";
 
-    const placeholder = isRepechage ? 'ブロック準優勝校' : '---';
+        // この試合の入力元となる前の試合を探す
+        const prevMatch1 = Object.values(matches).find(m => m.nextMatchId === matchId && (m.id.endsWith('M1') || m.id.endsWith('M3') || m.id.endsWith('M5')));
+        const prevMatch2 = Object.values(matches).find(m => m.nextMatchId === matchId && (m.id.endsWith('M2') || m.id.endsWith('M4') || m.id.endsWith('M6')));
+        
+        // （左側）前の試合がある場合は、再帰的に呼び出す
+        const leftHtml = prevMatch1 ? buildMatchHTML(prevMatch1.id) : '';
+        // （右側）前の試合がある場合は、再帰的に呼び出す
+        const rightHtml = prevMatch2 ? buildMatchHTML(prevMatch2.id) : '';
 
-    return `
-        <div class="flex items-center justify-center space-x-2 text-xs">
-            <div class="space-y-4 w-40">
-                ${createMatchHTML(semi1.id, semi1.team1 || placeholder, semi1.team2 || placeholder, semi1, [])}
-                ${createMatchHTML(semi2.id, semi2.team1 || placeholder, semi2.team2 || placeholder, semi2, [])}
-            </div>
-            <div class="w-40">
-                ${createMatchHTML(final.id, final.team1, final.team2, final, [])}
-            </div>
-        </div>
-    `;
+        // チーム名が null の場合は、前の試合の勝者（`---`）を表示
+        const team1 = match.team1 || (prevMatch1 ? (prevMatch1.winner || '---') : '---');
+        const team2 = match.team2 || (prevMatch2 ? (prevMatch2.winner || '---') : '---');
+        
+        // この試合自身のHTML
+        const currentMatchHtml = createMatchHTML(matchId, team1, team2, match, []);
+
+        if (leftHtml || rightHtml) {
+            // 前の試合がある場合 (2回戦以降)
+            return `
+                <div class="flex items-center justify-center space-x-2">
+                    <div class="flex flex-col justify-around space-y-4">
+                        ${leftHtml}
+                        ${rightHtml}
+                    </div>
+                    <div class="w-40">${currentMatchHtml}</div>
+                </div>
+            `;
+        } else {
+            // これが1回戦の場合
+            return `<div class="w-40">${currentMatchHtml}</div>`;
+        }
+    }
+
+    return buildMatchHTML(finalMatchId);
 }
+// ▲▲▲ 新規追加ここまで ▲▲▲
 
 /**
  * 春季地区予選がすべて終了したかチェックする
@@ -16199,223 +16737,156 @@ function clearPreviousAiContent(matchId) {
 
 
 
+// ▼▼▼ 既存の「processMatchWin」関数 (16428行目あたり) を、以下で「まるごと置き換え」 ▼▼▼
+
 /**
- * 試合の勝者を処理する中心的関数（全機能統合・実行順序修正・事実確認削除の最終版）
+ * 試合の勝者を処理する中心的関数（全機能統合・128チーム制対応）
  */
 async function processMatchWin(matchId, winnerName) {
-    // --- 1. 試合データの特定と基本情報の設定 ---
     let dbMatch = findMatchById(matchId);
     if (!dbMatch || !dbMatch.team1 || !dbMatch.team2) return;
-// ▼▼▼ このブロックをまるごと置き換え ▼▼▼
-    // --- 再処理（再生成）の確認 ---
+    
+    // (BYE) 相手の試合はAI処理をスキップ
+    if (dbMatch.team1 === '(BYE)' || dbMatch.team2 === '(BYE)') {
+        console.log("BYE match processing skipped by AI.");
+        // BYEの勝者進行は processByes で処理されるため、ここでは何もせず終了
+        return;
+    }
+
+    // --- 1. 再処理（再生成）の確認 ---
     if (dbMatch.winner) {
-        // 既に勝者が決まっている場合
         const confirmed = await showConfirm(
             `この試合（${dbMatch.team1} vs ${dbMatch.team2}）は既に「${dbMatch.winner}」の勝利で処理済みです。\n\n` +
             "「詳細入力」でデータを修正しましたか？\n" +
             "「はい」を押すと、現在の詳細入力データを基に、AI記事と掲示板をすべて再生成します。\n\n" +
             "（注意：この操作は元に戻せません）"
         );
-        
-        if (!confirmed) {
-            return; // ユーザーが「いいえ」を押したら中断
-        }
-        
-        // ★ ユーザーが「はい」を押した場合、古いAIコンテンツを削除
+        if (!confirmed) return;
         clearPreviousAiContent(matchId);
-        
-        // ★ 勝者をリセットして、新しい勝者（winnerName）で上書きする
-        // （※通算成績は `saveDetailedStats` でリセット済みと仮定）
         dbMatch.winner = null; 
-        
     } else {
-        // （勝者がまだ決まっていない、通常の初回処理の場合）
-        // 試合開始前に、両チームの古い「一時フラグ」をすべてリセット
+        // (初回処理の場合、一時フラグをリセット)
         for (const teamName of [dbMatch.team1, dbMatch.team2]) {
             const teamRecord = tournamentState.teamRecords[teamName];
-            if (!teamRecord || !teamRecord.playerStats || !teamRecord.playerStats.batting) continue;
-            
-            // 全選手の batting と pitching のフラグをリセット
+            if (!teamRecord || !teamRecord.playerStats) continue;
             for (const playerName in teamRecord.playerStats.batting) {
-                teamRecord.playerStats.batting[playerName].narrative_flag = null;
+                if(teamRecord.playerStats.batting[playerName]) teamRecord.playerStats.batting[playerName].narrative_flag = null;
             }
             for (const playerName in teamRecord.playerStats.pitching) {
-                teamRecord.playerStats.pitching[playerName].narrative_flag = null;
+                if(teamRecord.playerStats.pitching[playerName]) teamRecord.playerStats.pitching[playerName].narrative_flag = null;
             }
         }
     }
-    // ▲▲▲ 置き換えここまで ▲▲▲
 
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     dbMatch.winner = winnerName;
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
-
-    // --- スコアの読み取り（優先度変更） ---
-    // (A) スキップ機能によってスコアが既にdbMatchに設定されているか？
+    // --- スコアの読み取り ---
     const scoresAlreadySetBySkip = (dbMatch.score1 !== '' && dbMatch.score2 !== '' && (dbMatch.score1 != null) && (dbMatch.score2 != null));
-
     if (!scoresAlreadySetBySkip) {
-        // (B) スコアが設定されていない場合（＝手動クリック）、HTMLから読み取る
         const matchEl = document.querySelector(`.matchup[data-match-id="${matchId}"]`);
         if (matchEl) {
             const score1El = matchEl.querySelector('[data-team-pos="1"]');
             const score2El = matchEl.querySelector('[data-team-pos="2"]');
-            
             if (score1El && score2El && score1El.value !== '' && score2El.value !== '') {
-                // HTML入力欄から取得
                 dbMatch.score1 = score1El.value;
                 dbMatch.score2 = score2El.value;
             } else {
-                // 手動クリックだがHTML入力が空だった (0-0扱い)
                 dbMatch.score1 = '0';
                 dbMatch.score2 = '0';
             }
             dbMatch.summary = matchEl.querySelector('.match-summary-input')?.value || '';
-        } else {
-            // (フォールバック) HTML要素が見つからなかった (0-0扱い)
-            dbMatch.score1 = '0';
-            dbMatch.score2 = '0';
         }
     }
-    // (C) scoresAlreadySetBySkip が true の場合は、何もしない (dbMatchのスコア(5-2など)をそのまま使用)
     
-    // ▲▲▲ 修正ここまで ▲▲▲
-
-// ▼▼▼ ここからコールドゲーム判定（修正版） ▼▼▼
+    // (コールドゲーム判定)
     dbMatch.calledGame = false;
     dbMatch.calledInning = null;
-    let earliestCalledInning = null; // コールドが成立した最初のイニングを記録する変数
-
-    // 詳細入力があり、イニングスコアが存在し、最低5イニング以上のデータがある場合のみ判定
-    if (dbMatch.details && dbMatch.details.inningScore &&
-        dbMatch.details.inningScore.team1 && dbMatch.details.inningScore.team2 &&
-        dbMatch.details.inningScore.team1.length >= 5)
+    let earliestCalledInning = null;
+    if (dbMatch.details && dbMatch.details.inningScore && dbMatch.details.inningScore.team1.length >= 5)
     {
         const inningScores1 = dbMatch.details.inningScore.team1;
         const inningScores2 = dbMatch.details.inningScore.team2;
-        const actualNumInningsRecorded = inningScores1.length; // 記録されているイニング数
-
+        const actualNumInningsRecorded = inningScores1.length;
         let cumulativeScore1 = 0;
         let cumulativeScore2 = 0;
 
-        // 1回から記録されている最終イニングまで、各イニング終了時点のスコア差をチェック
         for (let i = 0; i < actualNumInningsRecorded; i++) {
             cumulativeScore1 += parseInt(inningScores1[i] || 0);
             cumulativeScore2 += parseInt(inningScores2[i] || 0);
-            const currentInning = i + 1; // 現在チェックしているイニング (1始まり)
+            const currentInning = i + 1;
             const scoreDiff = Math.abs(cumulativeScore1 - cumulativeScore2);
 
-            // 【重要】チェックはイニング終了時点で行う
-            // 5回終了時点で10点差以上か？
-            if (currentInning === 5 && scoreDiff >= 10) {
-                earliestCalledInning = 5;
-                break; // 5回コールド成立なら以降のチェック不要
-            }
-            // 6回終了時点で10点差以上か？
-            if (currentInning === 6 && scoreDiff >= 10) {
-                earliestCalledInning = 6;
-                break; // 6回コールド成立
-            }
-            // 7回終了時点で7点差以上か？ (10点差も含む)
-            if (currentInning === 7 && scoreDiff >= 7) {
-                earliestCalledInning = 7;
-                break; // 7回コールド成立
-            }
-            // 8回終了時点で7点差以上か？ (10点差も含む)
-            if (currentInning === 8 && scoreDiff >= 7) {
-                earliestCalledInning = 8;
-                break; // 8回コールド成立
-            }
-            // ★★★ 9回以降のコールドはルール上ないので、ここでループは実質終了 ★★★
+            if (currentInning === 5 && scoreDiff >= 10) { earliestCalledInning = 5; break; }
+            if (currentInning === 6 && scoreDiff >= 10) { earliestCalledInning = 6; break; }
+            if (currentInning === 7 && scoreDiff >= 7) { earliestCalledInning = 7; break; }
+            if (currentInning === 8 && scoreDiff >= 7) { earliestCalledInning = 8; break; }
         }
-
-        // earliestCalledInning が見つかっていれば、コールド成立と記録
         if (earliestCalledInning !== null) {
             dbMatch.calledGame = true;
-            dbMatch.calledInning = earliestCalledInning; // ★成立したイニングを記録
+            dbMatch.calledInning = earliestCalledInning;
         }
     }
-    // ▲▲▲ コールドゲーム判定ここまで ▲▲▲
 
-
-    // ▼▼▼ 修正箇所 ▼▼▼
-    // --- ★★★ 勝者を次のラウンドに進める処理を先に実行 ★★★ ---
-    // 秋季/春季の地区予選・順位決定戦「以外」の場合（つまり夏大会 or 秋/春の県大会本戦）
+    // --- 勝者を次のラウンドに進める処理 (128チーム制対応) ---
     if (!(tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') &&
         !(tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers'))
     {
-        // 勝敗数を記録 (teamRecordsが存在する場合のみ)
         if(tournamentState.teamRecords[winnerName]) tournamentState.teamRecords[winnerName].wins++;
         if(tournamentState.teamRecords[loserName]) tournamentState.teamRecords[loserName].losses++;
 
         const idParts = matchId.split('-');
         const side = idParts[0];
 
-        // 決勝戦('F')以外の場合、次のラウンドへ進める
         if (side !== 'F') {
             const roundNum = parseInt(idParts[1].slice(1));
-            const numTeamsInTournament = tournamentState.teams.length; // 現在の大会のチーム数を取得
-            const finalRound = Math.log2(numTeamsInTournament); // 現在の大会の最終ラウンド数を計算
+            const numTeamsInTournament = tournamentState.teams.length; // 128
+            const finalRound = Math.log2(numTeamsInTournament); // 7
 
-            // 最終ラウンドより前のラウンドの場合のみ進行処理を行う
-            if (roundNum < finalRound) {
+            if (roundNum < finalRound) { // R1...R6
                 const matchNum = parseInt(idParts[2].slice(1));
                 const nextRoundNum = roundNum + 1;
+                
                 let nextMatchId = (nextRoundNum === finalRound) ? 'F-R1-M1' : `${side}-R${nextRoundNum}-M${Math.ceil(matchNum / 2)}`;
-
-                // 次の試合オブジェクトがなければ作成
+                
                 if (!tournamentState.matches[nextMatchId]) {
                     tournamentState.matches[nextMatchId] = { id: nextMatchId, team1: null, team2: null, winner: null, score1: '', score2: '', details: null, summary: '' };
                 }
 
-                // 勝者を次の試合の正しいスロット (team1 or team2) に書き込む
                 let slot;
                 if (nextRoundNum === finalRound) { // 次が決勝の場合
-                    slot = (side === 'L' ? 1 : 2); // 左ならteam1, 右ならteam2
-                } else { // 決勝以外の場合
-                    slot = (matchNum % 2 !== 0 ? 1 : 2); // 奇数試合ならteam1, 偶数試合ならteam2
+                    slot = (side === 'L' ? 1 : 2);
+                } else {
+                    slot = (matchNum % 2 !== 0 ? 1 : 2);
                 }
                 tournamentState.matches[nextMatchId][`team${slot}`] = winnerName;
 
-// ▼▼▼ このブロックを追加 ▼▼▼
-                // 次の試合の両チームが揃ったかチェック
                 const nextMatch = tournamentState.matches[nextMatchId];
                 if (nextMatch.team1 && nextMatch.team2) {
                     nextMatch.rivalryType = checkRivalry(nextMatch.team1, nextMatch.team2);
                 }
-                // ▲▲▲ 追加ここまで ▲▲▲
             }
-
         }
-        // 決勝戦終了時の処理は後続 (手順4の最後) に移動
     }
-    // --- ★★★ 勝者進行処理ここまで ★★★ ---
-    // ▲▲▲ 修正箇所ここまで ▲▲▲
 
-
-    // --- 2. 試合後のデータ更新（ティッカー、称号、スタメン記録など） ---
+    // --- 2. 試合後のデータ更新 ---
     const newHeadline = generateTickerHeadline({ winnerName, loserName, score1: dbMatch.score1, score2: dbMatch.score2 });
     if (newHeadline) {
         tournamentState.tickerHeadlines.unshift(newHeadline);
         if (tournamentState.tickerHeadlines.length > 20) tournamentState.tickerHeadlines.pop();
-        updateTicker(); // ティッカー表示を更新
+        updateTicker();
     }
-
     
-
-    // ジャイアントキリング称号の付与判定
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
     const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) { // ランク差が2以上あれば
+    if ((rankValues[loserRank] - rankValues[winnerRank]) >= 2) {
         const winnerRecord = tournamentState.teamRecords[winnerName];
         if (winnerRecord && !winnerRecord.teamTraits.includes('giant_killer')) {
-            winnerRecord.teamTraits.push('giant_killer'); // 称号を追加
+            winnerRecord.teamTraits.push('giant_killer');
         }
     }
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- チーム全体の打球の質を集計 ---
+
     let team1QualityText = "（打球品質データなし）";
     let team2QualityText = "（打球品質データなし）";
     
@@ -16437,7 +16908,6 @@ async function processMatchWin(matchId, winnerName) {
         const team1Quality = calculateQuality('team1');
         const team2Quality = calculateQuality('team2');
 
-        // AIが読みやすいようにテキスト化する
         const formatQualityText = (teamName, quality) => {
             if (quality.totalAB === 0) return `(${teamName}: データなし)`;
             const totalHits = quality.sH + quality.wH;
@@ -16448,140 +16918,121 @@ async function processMatchWin(matchId, winnerName) {
         team1QualityText = formatQualityText(dbMatch.team1, team1Quality);
         team2QualityText = formatQualityText(dbMatch.team2, team2Quality);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
+
     // --- 3. AIコンテンツ生成の準備と実行 ---
-    // ★★★ この時点で findNextOpponent が正しい情報を取得できる ★★★
     const matchContext = createMatchContext(matchId, winnerName, team1QualityText, team2QualityText);
     if (!matchContext) {
         console.error("AIコンテンツ生成に必要なmatchContextの作成に失敗しました。");
-        renderTournament(tournamentState); // とりあえず画面は更新
+        renderTournament(tournamentState);
         saveState();
-        return; // AI処理を中断
+        return;
     }
 
     let articlePromise = Promise.resolve(null);
     let commentsPromise = Promise.resolve(null);
-let hadaReportPromise = Promise.resolve(null);
-// ▼▼▼ この1行を追加 ▼▼▼
+    let hadaReportPromise = Promise.resolve(null);
     let matomeThreadPromise = Promise.resolve(null);
-    // ▲▲▲ 追加ここまで ▲▲▲
+    let homepageNewsPromise = Promise.resolve(null); // ★
 
-    // 設定に応じてAI記事生成を開始
     if (tournamentState.settings.enableArticleGeneration) {
         newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
         const documentary = tournamentState.documentary;
 
-        // ドキュメンタリー対象チームの試合かどうかで生成関数を切り替え
         if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
             const isWin = documentary.target === winnerName;
             const opponentName = isWin ? loserName : winnerName;
-            const opponentData = TEAM_DATA[opponentName]; // TEAM_DATAから相手情報を取得
+            const opponentData = TEAM_DATA[opponentName];
 
             const matchInfoForArticle = {
                 round: matchId.includes('-R') ? parseInt(matchId.split('-R')[1].split('-')[0]) : 1,
                 opponent: opponentName,
-                score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`, // 勝者のスコアが先
-                highlights: matchContext.highlights, // createMatchContextで生成済みのものを使用
+                score: isWin ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`,
+                highlights: matchContext.highlights,
                 summary: dbMatch.summary,
-                opponentInfo: opponentData?.info || '対戦相手の情報なし' // 相手の背景情報
+                opponentInfo: opponentData?.info || '対戦相手の情報なし'
             };
 
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
 
-            if (!isWin) tournamentState.documentary = { target: null, type: null }; // 敗退したらドキュメンタリー終了
+            if (!isWin) tournamentState.documentary = { target: null, type: null };
         } else {
-            // 通常の記事生成
             articlePromise = generateNewsArticle(matchContext);
         }
     }
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- 羽田レポート生成 (確率で実行) ---
     const isNotableGame = (winnerRank === 'A' || winnerRank === 'B' || loserRank === 'A' || loserRank === 'B');
-
     if (tournamentState.settings.enableArticleGeneration && isNotableGame && Math.random() < 0.25) {
-        // 注目校の試合の場合、25%の確率で羽田レポートも生成
         hadaReportPromise = generateHadaReport(matchContext);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-    // 設定に応じてAI掲示板コメント生成を開始
     if (tournamentState.settings.enableBbsGeneration) {
         bbsCommentsContainer.innerHTML = `<div class="loader">AIが掲示板を監視中...</div>`;
-        commentsPromise = generateBbsComments(matchContext); // 修正済み関数を呼び出し
-// ▼▼▼ この1行を追加 ▼▼▼
-        matomeThreadPromise = generateGameMatchBbsComments(matchContext); // ★まとめスレもここで生成
-        // ▲▲▲ 追加ここまで ▲▲▲
+        commentsPromise = generateBbsComments(matchContext);
+        matomeThreadPromise = generateGameMatchBbsComments(matchContext);
+    }
+    
+    // ★ 283学園の試合だった場合、ホームページのお知らせを生成する
+    if (tournamentState.settings.enableArticleGeneration && (winnerName === "283学園" || loserName === "283学園")) {
+        homepageNewsPromise = generateHomepageNewsUpdate(matchContext);
     }
 
     // --- 4. トーナメント進行ロジック (秋季・春季の特殊処理) ---
-    // ★★★ 上で実行済みの Summer/Main Tournament 以外の進行処理がここに来る ★★★
     if (tournamentState.currentTournament === 'autumn' && tournamentState.autumnPhase !== 'main') {
-        // 秋季地区ブロック予選の勝者進行
         const [region, bracketId, roundStr, matchStr] = matchId.split('-');
-        if (bracketId.startsWith('B')) { // 通常のブロック
+        if (bracketId.startsWith('B')) {
             const block = tournamentState.autumnData.regions[region].blocks.find(b => b.id === `${region}-${bracketId}`);
             if (block) {
                 const roundNum = parseInt(roundStr.slice(1));
                 const matchNum = parseInt(matchStr.slice(1));
-                if (roundNum === 0) { // プレイインマッチ
+                if (roundNum === 0) {
                     block.matches[`${block.id}-R1-M1`].team1 = winnerName;
-                } else if (roundNum === 1) { // 準決勝
+                } else if (roundNum === 1) {
                     const finalMatch = block.matches[`${block.id}-R2-M1`];
                     if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-                } else if (roundNum === 2) { // 決勝
+                } else if (roundNum === 2) {
                     tournamentState.autumnData.regions[region].blockWinners.push(winnerName);
                     tournamentState.autumnData.regions[region].blockRunnersUp.push(loserName);
                 }
             }
-        } else if (bracketId === 'AUTUMN' && region === '伊豆') { // 伊豆地区
+        } else if (bracketId === 'AUTUMN' && region === '伊豆') {
              const izuBracket = tournamentState.autumnData.regions['伊豆'].izuBracket;
              if(izuBracket){
                 const roundNum = parseInt(roundStr.slice(1));
                 const matchNum = parseInt(matchStr.slice(1));
-                if (roundNum === 1) { // 準決勝
+                if (roundNum === 1) {
                     const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
                     if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-                } else if (roundNum === 2) { // 決勝
+                } else if (roundNum === 2) {
                     tournamentState.autumnData.regions['伊豆'].finalReps.push({ team: winnerName, rank: 1 });
                 }
              }
         }
-        // 秋季地区順位決定戦の勝者進行
         else if (tournamentState.autumnPhase === 'regional_ranking') {
             const roundNum = parseInt(roundStr.slice(1));
             const matchNum = parseInt(matchStr.slice(1));
-            const isChamp = bracketId === 'CHAMP'; // 本来は廃止されているが念のため
-            const bracket = tournamentState.autumnData.regions[region]?.repechageBracket; // 敗者復活のみ
+            const bracket = tournamentState.autumnData.regions[region]?.repechageBracket;
 
-            if (bracket && roundNum === 1) { // 敗者復活1回戦
-                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`]; // 5位決定戦
+            if (bracket && roundNum === 1) {
+                const finalMatch = bracket.matches[`${bracket.id}-R2-M1`];
                 if (matchNum === 1) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
-            } else if (bracket && roundNum === 2) { // 5位決定戦
+            } else if (bracket && roundNum === 2) {
                 tournamentState.autumnData.regions[region].finalReps.push({ team: winnerName, rank: 5 });
-                // 敗退チーム(loserName)の順位は記録しない (県大会に出られないため)
             }
         }
     } else if (tournamentState.currentTournament === 'spring' && tournamentState.springPhase === 'regional_qualifiers') {
-        // 春季地区予選の勝者進行
         const [region, bracketType] = matchId.split('-');
-        // 代表決定ブロック
         if (bracketType.startsWith('SB')) {
             const block = tournamentState.springData.regions[region].blocks.find(b => b.id === `${region}-${bracketType}`);
             if (block) {
-                // 準決勝以前の試合の場合、勝者を決勝に進める
                 if (matchId.includes('-R1-') || matchId.includes('-R0-')) {
-                    // 決勝戦のIDを見つける (R2-M1 or R1-M1 for 2/3 team blocks)
                     const finalMatchKey = Object.keys(block.matches).find(k => k.includes('-R2-') || (Object.keys(block.matches).length <= 2 && k.includes('-R1-')));
                     if (finalMatchKey) {
                         const finalMatch = block.matches[finalMatchKey];
-                        // どっちの山から来たかで team1 or team2 に入れる
                         if (matchId.endsWith('M1')) finalMatch.team1 = winnerName; else finalMatch.team2 = winnerName;
                     }
-                } else { // 決勝戦の場合、敗者を敗者復活トーナメントに送る
+                } else {
                     const repBracket = tournamentState.springData.regions[region].repechageBracket;
-                    repBracket.teams.push(loserName); // 敗者復活に参加するチームリストに追加
-                    // 敗者復活トーナメントの空きスロットに敗者をセット
+                    repBracket.teams.push(loserName);
                     if (repBracket.teams.length === 1) repBracket.matches[`${repBracket.id}-R1-M1`].team1 = loserName;
                     if (repBracket.teams.length === 2) repBracket.matches[`${repBracket.id}-R1-M1`].team2 = loserName;
                     if (repBracket.teams.length === 3) repBracket.matches[`${repBracket.id}-R1-M2`].team1 = loserName;
@@ -16589,126 +17040,98 @@ let hadaReportPromise = Promise.resolve(null);
                 }
             }
         }
-        // 第5代表決定トーナメント (敗者復活)
         else if (bracketType.startsWith('SREP')) {
              const repBracket = tournamentState.springData.regions[region].repechageBracket;
              if (repBracket){
-                const finalMatch = repBracket.matches[`${repBracket.id}-R2-M1`]; // 代表決定戦
-                 // 1回戦の勝者を代表決定戦に進める
+                const finalMatch = repBracket.matches[`${repBracket.id}-R2-M1`];
                 if (matchId.endsWith('M1')) finalMatch.team1 = winnerName;
                 if (matchId.endsWith('M2')) finalMatch.team2 = winnerName;
              }
         }
-        // 伊豆地区予選
         else if (bracketType.startsWith('SIZU')) {
             const izuBracket = tournamentState.springData.regions['伊豆'].izuBracket;
             if(izuBracket){
-                const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`]; // 決勝戦
-                // 準決勝の勝者を決勝に進める
-                 if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) { // 3チームの場合の準決勝
-                     finalMatch.team1 = winnerName; // 不戦勝の team2 は setupSpringRegionalQualifiers で設定済み
-                 } else if (matchId.endsWith('M1')) { // 4チームの場合の準決勝1
+                const finalMatch = izuBracket.matches[`${izuBracket.id}-R2-M1`];
+                 if (izuBracket.teams.length === 3 && matchId.includes('-R1-')) {
                      finalMatch.team1 = winnerName;
-                 } else if (matchId.endsWith('M2')) { // 4チームの場合の準決勝2
+                 } else if (matchId.endsWith('M1')) {
+                     finalMatch.team1 = winnerName;
+                 } else if (matchId.endsWith('M2')) {
                      finalMatch.team2 = winnerName;
                  }
             }
         }
     }
-    // 決勝戦終了時の後処理 (先に勝者進行処理を行ったため、ここでは最終成績記録と甲子園/センバツ処理のみ)
     else if (matchId.startsWith('F-R1-M1')) {
-        updateTournamentFinishRecords(); // 全チームの最終順位を記録
+        updateTournamentFinishRecords();
 
         if (tournamentState.currentTournament === 'summer') {
-            // 夏大会優勝 → 甲子園シミュレーション
             const winnerRecord = tournamentState.teamRecords[winnerName];
-            if (winnerRecord) { // 念のため存在確認
+            if (winnerRecord) {
                 const winnerRank = calculateRank(winnerName, tournamentState);
-                const koshienResultKey = simulateKoshien(winnerRank); // ランクに基づき甲子園の結果を決定
+                const koshienResultKey = simulateKoshien(winnerRank);
                 const koshienResult = KOSHIEN_RESULTS[koshienResultKey];
-                winnerRecord.lastFinish = koshienResult.rank; // 最終成績を甲子園のものに更新
-                const newHistoryRecord = { year: tournamentState.tournamentYear, tournament: 'summer_koshien', rank: koshienResult.rank }; // 'summer_koshien' として記録
-                winnerRecord.history.unshift(newHistoryRecord); // 履歴に追加
-                // 最高成績も更新
+                winnerRecord.lastFinish = koshienResult.rank;
+                const newHistoryRecord = { year: tournamentState.tournamentYear, tournament: 'summer_koshien', rank: koshienResult.rank };
+                winnerRecord.history.unshift(newHistoryRecord);
                 if (!winnerRecord.best || newHistoryRecord.rank < winnerRecord.best.rank) {
                     winnerRecord.best = newHistoryRecord;
                 }
-                // 甲子園結果の記事生成を非同期で開始 (完了を待たない)
                 generateKoshienSummaryArticle(winnerName, koshienResult.label, 'summer')
                     .then(koshienArticle => {
                         if(koshienArticle) {
                             tournamentState.news.push(koshienArticle);
-                            renderNews(tournamentState.news); // 記事ができたら再描画
-                            saveState(); // 保存
+                            renderNews(tournamentState.news);
+                            saveState();
                         }
                     });
             }
         } else if (tournamentState.currentTournament === 'autumn') {
-            // 秋大会優勝/準優勝 → センバツ選出判定
-            tournamentState.senbatsuTeams = []; // リセット
+            tournamentState.senbatsuTeams = [];
             const finalists = [winnerName, loserName];
             const selectionPromises = finalists.map(async (teamName) => {
-                // 70%の確率で選出 (仮の確率)
                 if (Math.random() < 0.70) {
                     tournamentState.senbatsuTeams.push(teamName);
-                    // 選出記事生成を非同期で開始
-                    const senbatsuArticle = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai'); // 'tokai' タイプで呼び出し
+                    const senbatsuArticle = await generateKoshienSummaryArticle(teamName, 'センバツ出場決定', 'tokai');
                     if (senbatsuArticle) {
                         tournamentState.news.push(senbatsuArticle);
                     }
                 }
             });
-            // 全ての選出記事生成が終わるのを待つ
             await Promise.all(selectionPromises);
-            // 記事ができたら再描画・保存
             renderNews(tournamentState.news);
             saveState();
         }
     }
 
-let homepageNewsPromise = Promise.resolve(null);
-    // ★ 283学園の試合だった場合、ホームページのお知らせを生成する
-    if (tournamentState.settings.enableArticleGeneration && (winnerName === "283学園" || loserName === "283学園")) {
-        homepageNewsPromise = generateHomepageNewsUpdate(matchContext);
-    }
-// ▲▲▲ 新規追加ここまで ▲▲▲
-
-// --- 5. AIコンテンツの処理と最終的な画面更新 ---
-  // ▼▼▼ この Promise.all を修正 ▼▼▼
-    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread, generatedHomepageNews] = await Promise.all([ 
+    // --- 5. AIコンテンツの処理と最終的な画面更新 ---
+    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread, generatedHomepageNews] = await Promise.all([
         articlePromise, 
         commentsPromise,
         hadaReportPromise,
         matomeThreadPromise,
         homepageNewsPromise
     ]);
-    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // ▼▼▼ ここから BBSコメントのエラーハンドリングを修正 ▼▼▼
     if (generatedComments) {
-        // AIが配列を返し、かつエラーオブジェクトを含まないかチェック
         if (Array.isArray(generatedComments) && !generatedComments.some(c => c.error)) {
             const validComments = generatedComments.filter(comment => !comment.error);
             if (validComments.length > 0) {
-                tournamentState.bbsComments.push(...validComments); // 成功コメントをBBSに追加
+                tournamentState.bbsComments.push(...validComments);
             }
-        // AIが配列を返したが、中にエラーオブジェクトが含まれる場合の処理
         } else if (Array.isArray(generatedComments)) {
             const errorCommentData = generatedComments.find(comment => comment.error);
             if (errorCommentData && errorCommentData.context) {
-                // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
                 tournamentState.bbsComments.push({
-                    title: "掲示板コメント生成エラー", // renderBbsCommentsで表示するためtitleを追加
-                    body: "AIによるコメント生成に一部失敗しました。", // bodyは使われないが一応保持
+                    title: "掲示板コメント生成エラー",
+                    body: "AIによるコメント生成に一部失敗しました。",
                     timestamp: Date.now(),
                     error: true,
                     errorId: `error-${matchId}-bbs-partial`,
                     context: errorCommentData.context
                 });
             }
-        // AIがオブジェクト形式のエラーを返した場合 (例: { error: true, ... })
         } else if (generatedComments.error) {
-            // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
             tournamentState.bbsComments.push({
                 title: generatedComments.title || "掲示板コメント生成エラー",
                 body: generatedComments.body || "AIによるコメント生成に失敗しました。",
@@ -16717,22 +17140,17 @@ let homepageNewsPromise = Promise.resolve(null);
                 errorId: generatedComments.errorId || `error-${matchId}-bbs`,
                 context: generatedComments.context || matchContext
             });
-        // 予期しない形式の場合
         } else {
             console.error("Unexpected format from generateBbsComments:", generatedComments);
-            // ★★★ 変更点: newsではなくbbsCommentsにエラーを追加 ★★★
             tournamentState.bbsComments.push({ title: "掲示板コメント形式エラー", body:"予期しないデータ形式です。", timestamp: Date.now(), error: true, context: matchContext });
         }
     }
-    // ▲▲▲ BBSコメントのエラーハンドリング修正ここまで ▲▲▲  
 
-    // --- 記事の処理 (変更なし) ---
     if (generatedArticle) {
         if (!generatedArticle.error) {
              generatedArticle.context = matchContext;
              showArticleReviewModal(generatedArticle);
         } else {
-            // エラー記事をニュースリストに追加
             const errorArticle = {
                 title: generatedArticle.title || "記事生成エラー",
                 body: generatedArticle.body || "AI記者との通信に失敗しました。",
@@ -16745,41 +17163,28 @@ let homepageNewsPromise = Promise.resolve(null);
         }
     }
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- 羽田レポートの処理 ---
     if (generatedHadaReport) {
-        // 成功しても失敗しても、news配列に追加する
         tournamentState.news.push(generatedHadaReport);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-// --- まとめスレッドの処理 (新設) ---
     if (generatedMatomeThread) {
-        // 成功（コメント配列）しても失敗（エラーオブジェクト）しても、matchIdをキーに保存する
         tournamentState.matomeThreads[matchId] = {
-            thread: generatedMatomeThread, // スレッド本体（またはエラー）
-            context: matchContext         // ★再生成用の「試合終了時の情報」
+            thread: generatedMatomeThread,
+            context: matchContext
         };
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
-// --- ホームページお知らせの処理 (新設) ---
     if (generatedHomepageNews && !generatedHomepageNews.error) {
         if (!tournamentState.homepageNews) tournamentState.homepageNews = [];
-        // [ { title, body, timestamp } ] の形式で保存
         tournamentState.homepageNews.unshift(generatedHomepageNews);
     }
-    // ▲▲▲ 新規追加ここまで ▲▲▲
 
-    // --- スキャンダル、画面更新、保存処理 (変更なし) ---
     if (!tournamentState.activeScandal && Math.random() < 0.1) {
         triggerScandalEvent(winnerName, loserName);
     }
 
-    renderTournament(tournamentState); // この中で renderBbsComments が呼ばれる
-// 勝者と敗者の前回のスタメン情報を記録 (詳細データがある場合)
-    // ▼▼▼ このブロックをまるごと置き換え ▼▼▼
-    // --- 試合後のロスター情報（背番号、ポジション、投打）を記録 ---
+    renderTournament(tournamentState);
+
     if (dbMatch.details && dbMatch.details.batting) {
         for (const teamKey of ['team1', 'team2']) {
             const teamName = dbMatch[teamKey];
@@ -16787,27 +17192,22 @@ let homepageNewsPromise = Promise.resolve(null);
             const battingData = dbMatch.details.batting[teamKey];
             
             if (teamRecord && battingData && battingData.length > 0) {
-                // 1. スタメン変更検知用に「スタメン」だけを previousStarters に保存 (既存のロジック)
                 teamRecord.previousStarters = battingData
                     .filter(p => p.order && !p.order.toString().includes('sub'))
                     .map(p => ({ order: p.order, name: p.name, pos: p.pos }));
                 
-                // 2. 「全選手」の情報を teamRoster に保存 (★新機能★)
-                // (打席結果(results)や変遷(posHistoryDisplay)を除外し、基本情報のみを保存)
                 teamRecord.roster = battingData.map(p => ({
                     order: p.order,
                     name: p.name,
                     number: p.number,
-                    pos: p.currentPos || p.pos, // ★変遷後の最新ポジションを保存
+                    pos: p.currentPos || p.pos,
                     throwBat: p.throwBat,
                     sub_type: p.sub_type
                 }));
             }
         }
     }
-    // ▲▲▲ 置き換えここまで ▲▲▲
 
-// ▼▼▼ このブロックを「新規追加」 ▼▼▼
     // --- 6. ボックススコアHTMLの自動生成 ---
     if (dbMatch.details) {
         try {
@@ -16817,48 +17217,47 @@ let homepageNewsPromise = Promise.resolve(null);
             dbMatch.boxScoreHtml = null;
         }
     }
-// ▲▲▲ 新規追加ここまで ▲▲▲
 
-// ▼▼▼ このブロックをまるごと追加 ▼▼▼
-    // --- 7. 試合結果に基づき、選手の「一時的な状態異常」フラグを付与 ---
+    // --- 7. 選手の「一時的な状態異常」フラグを付与 ---
     if (dbMatch.details && dbMatch.details.playerGameStats) {
         for (const teamKey of ['team1', 'team2']) {
             const teamName = dbMatch[teamKey];
             const teamRecord = tournamentState.teamRecords[teamName];
             if (!teamRecord) continue;
 
-            // ▼▼▼ 打撃フラグの付与ロジックを修正 ▼▼▼
             const battingStats = dbMatch.details.playerGameStats[teamKey] || {};
             for (const playerName in battingStats) {
                 const stats = battingStats[playerName];
                 const careerStats = teamRecord.playerStats.batting[playerName];
                 if (!stats || !careerStats) continue;
 
-                // 4打数0安打でも、"鋭い凡退(strongOuts)"が多ければ "不振(slumping)" にしない
-                if (stats.ab >= 4 && stats.h === 0 && stats.strongOuts <= 1) {
-                    careerStats.narrative_flag = "slumping"; // 4タコ以上で、かつ鋭い当たりが少なかった場合のみ不振
+                if (stats.pa > 0) {
+                    if (stats.h >= 4 || stats.hr >= 2 || stats.rbi >= 5) {
+                        careerStats.narrative_flag = "peak";
+                    } else if (stats.h >= 3 || stats.hr >= 1 || stats.rbi >= 3) {
+                        careerStats.narrative_flag = "hot";
+                    } else if (stats.ab >= 3 && stats.h === 0) {
+                        if (stats.strongOuts >= 2) {
+                            careerStats.narrative_flag = "cold";
+                        } else {
+                            careerStats.narrative_flag = "slump";
+                        }
+                    } else {
+                        careerStats.narrative_flag = "normal";
+                    }
+                } else {
+                     careerStats.narrative_flag = "normal";
                 }
-                // 3安打以上でも、"詰まったヒット(weakHits)"が多ければ "絶好調(hot_streak)" にしない
-                else if (stats.h >= 3 && stats.weakHits <= 1) {
-                    careerStats.narrative_flag = "hot_streak"; // 猛打賞で、かつ詰まった当たりが少なかった場合のみ絶好調
-                }
-                else if (stats.hr >= 1) careerStats.narrative_flag = "powered_up"; // HR (これは勢い関係なし)
-                else if (stats.rbi >= 3) careerStats.narrative_flag = "clutch_hitter"; // 固め打ち (これも勢い関係なし)
             }
-            // ▲▲▲ 修正ここまで ▲▲▲
 
-            // ▼▼▼ 投手フラグの付与ロジックを修正 ▼▼▼
             const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
             pitchingData.forEach(pitcher => {
                 const careerStats = teamRecord.playerStats.pitching[pitcher.name];
                 if (!careerStats) return;
 
-                // 相手打線の打球の勢いを集計
                 const opponentTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
                 const opponentBattingStats = dbMatch.details.playerGameStats[opponentTeamKey] || {};
-                let totalStrongOuts = 0;
-                let totalWeakOuts = 0;
-                let totalStrongHits = 0;
+                let totalStrongOuts = 0, totalWeakOuts = 0, totalStrongHits = 0;
                 for (const oppPlayerName in opponentBattingStats) {
                     const oppStats = opponentBattingStats[oppPlayerName];
                     totalStrongOuts += oppStats.strongOuts || 0;
@@ -16869,18 +17268,34 @@ let homepageNewsPromise = Promise.resolve(null);
                 const innings = parseFloat(pitcher.innings || 0);
                 const earnedRuns = parseInt(pitcher.earnedRuns || 0);
                 const strikeouts = parseInt(pitcher.strikeouts || 0);
-
-                if (pitcher.result === 'W' && innings >= 7 && earnedRuns === 0) careerStats.narrative_flag = "dominant"; // 完封 (変更なし)
-                else if (strikeouts >= 10) careerStats.narrative_flag = "dominant"; // 2桁奪三振 (変更なし)
-                else if (pitcher.result === 'W' && totalWeakOuts >= 5) careerStats.narrative_flag = "crafty_pitcher"; // 詰まらせる技巧派
-                else if (pitcher.result === 'L' && totalStrongHits >= 5) careerStats.narrative_flag = "unlucky"; // 運が悪い (鋭い当たりを打たれすぎ)
-                else if (pitcher.result === 'L' && earnedRuns >= 5) careerStats.narrative_flag = "seeking_redemption"; // 炎上 (変更なし)
-                else if (pitcher.result === 'L' && innings >= 7 && earnedRuns <= 2) careerStats.narrative_flag = "tough_loss"; // 孤軍奮闘 (変更なし)
+                const walks = parseInt(pitcher.walks || 0);
+                const hits = parseInt(pitcher.hits || 0);
+                const pitches = parseInt(pitcher.pitches || 0);
+                
+                if (innings >= 5) {
+                    if ((innings >= 7 && earnedRuns === 0) || strikeouts >= 10) {
+                        careerStats.narrative_flag = "peak";
+                    } else if (innings >= 6 && earnedRuns <= 2 && pitcher.result !== 'L') {
+                        careerStats.narrative_flag = "hot";
+                    } else if (totalWeakOuts >= 5 && earnedRuns <= 3) {
+                         careerStats.narrative_flag = "hot";
+                    } else if (earnedRuns >= 5) {
+                        careerStats.narrative_flag = "slump";
+                    } else if (walks >= 5 || (hits >= 8 && innings <= 6)) {
+                        careerStats.narrative_flag = "cold";
+                    } else {
+                        careerStats.narrative_flag = "normal";
+                    }
+                    if (pitcher.result === 'L' && totalStrongHits >= 5) careerStats.narrative_flag = "unlucky";
+                    if (pitcher.result === 'L' && innings >= 7 && earnedRuns <= 2) careerStats.narrative_flag = "tough_loss";
+                } else if (pitches >= 100) {
+                    careerStats.narrative_flag = "fatigued";
+                } else {
+                    careerStats.narrative_flag = "normal";
+                }
             });
-            // ▲▲▲ 修正ここまで ▲▲▲
         }
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     saveState();
 
@@ -16894,8 +17309,8 @@ let homepageNewsPromise = Promise.resolve(null);
             }
         }
     }
-} // processMatchWin 関数の終了
-// processMatchWin 関数の終了
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
  * スキャンダルイベントを発生させる
@@ -17217,54 +17632,58 @@ function createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
 
 /**
  * 抽選会イベントを開始する
- * (★シード校のランク決定ロジックを追加した最終版)
+ * (★128チーム制＝128スロットに対応)
  */
 async function startLotteryEvent() {
     const lotteryModal = document.getElementById('lottery-modal');
     lotteryModal.classList.remove('hidden');
     lotteryModal.classList.add('flex');
 
-    // ▼▼▼ シード校決定ロジックを (createNewTournamentから) ここに移動 ▼▼▼
+    // (シード校決定ロジックは変更なし)
     const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-    historicalRanks.sort((a, b) => a.rank - b.rank); // TEAM_DATAの成績順
-    // シード校にランク1〜8を付与
+    historicalRanks.sort((a, b) => a.rank - b.rank);
     const seeds = historicalRanks.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 })); 
-    // ▲▲▲ シード校決定ここまで ▲▲▲
     
-    // 抽選順を決める（シード校が先、ノーシードはシャッフル）
-    const seedTeamsList = seeds.map(s => s.team);
-    const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t));
-    const lotteryOrder = [...seedTeamsList, ...shuffleArray(nonSeeds)];
-
-    // 簡易トーナメント表を作成
+    // ★★★ ここからが修正箇所 ★★★
+    // 簡易トーナメント表を作成 (128チーム分)
     const leftBracket = document.getElementById('lottery-bracket-left');
     const rightBracket = document.getElementById('lottery-bracket-right');
     leftBracket.innerHTML = '';
     rightBracket.innerHTML = '';
-    for(let i=0; i<64; i++){
+    for(let i=0; i<128; i++){ // 64 -> 128
         const slot = document.createElement('div');
         slot.className = 'lottery-slot';
         slot.dataset.index = i;
         slot.innerHTML = `<span>${i+1}.</span> <span class="team-name-placeholder">---</span>`;
-        document.getElementById(i < 32 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
+        // 64未満は左、64以上は右
+        document.getElementById(i < 64 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
     }
+    // ★★★ 修正ここまで ★★★
 
-    // ボタンのイベントリスナーを設定
-    document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds); // ★ランク付きseedsを渡す
-    
+    // (ボタンイベントリスナーは変更なし)
+    document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds);
     document.getElementById('skip-lottery-btn').onclick = () => {
         lotteryModal.classList.add('hidden');
-        SoundManager.stopBgm(); // スキップ時もBGMを停止
-        createNewTournament(false, 'summer'); // ★引数(predeterminedTeams)なしで呼ぶ
+        SoundManager.stopBgm();
+        createNewTournament(false, 'summer');
     };
 
-    // BGM再生開始
+    // (抽選順の決定ロジックは変更なし)
+    const seedTeamsList = seeds.map(s => s.team);
+    const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t));
+    
+    // ★ 不戦勝(BYE)を抽選対象に追加
+    const byesNeeded = 128 - nonSeeds.length - seeds.length;
+    const byes = Array(byesNeeded).fill('(BYE)');
+    const lotteryOrder = [...seedTeamsList, ...shuffleArray([...nonSeeds, ...byes])];
+
     SoundManager.startBgm();
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
  * 抽選会のアニメーションを実行する
- * (★AIオフ設定に対応)
+ * (★128チーム制・7ラウンド制に対応した最終版)
  * @param {Array<string>} lotteryOrder - 全チームの抽選順 (シード校が先)
  * @param {Array<object>} seeds - シード校8チームのランク付きオブジェクト配列
  */
@@ -17273,10 +17692,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     document.getElementById('lottery-pot').onclick = null;
     document.getElementById('skip-lottery-btn').style.display = 'none';
     
-    // ★★★ 修正箇所 ★★★
-    // スタート画面のトグルの状態をここで読み込む
     const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
-    // ★★★ 修正ここまで ★★★
 
     const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
     const drawnTeamContainer = document.getElementById('drawn-team-container');
@@ -17284,10 +17700,12 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const potEl = document.getElementById('lottery-pot');
     const potNameEl = document.getElementById('pot-name');
     
-    const teamPositions = Array(64).fill(null);
-    const seedPositionsTemplate = [0, 32, 16, 48, 8, 40, 24, 56]; // [A頭, B頭, C頭, D頭, ...]
+    // ★★★ 修正点 ★★★
+    const teamPositions = Array(128).fill(null); // 64 -> 128
+    const seedPositionsTemplate = [0, 64, 32, 96, 16, 80, 48, 112]; // 128チーム用の配置
+    // ★★★ 修正ここまで ★★★
     
-    // ... (シード配置スロットの準備ロジック ... 変更なし) ...
+    // (シード配置スロットの準備ロジック ... 変更なし)
     const rank1_4_teams_sorted = seeds.filter(s => s.rank <= 4).sort((a, b) => a.rank - b.rank);
     const rank1_4_teams = [
         rank1_4_teams_sorted[0], // 第1シード
@@ -17296,12 +17714,14 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         rank1_4_teams_sorted[2]  // 第3シード
     ].filter(Boolean);
     const rank5_8_teams = shuffleArray(seeds.filter(s => s.rank > 4));
-    const rank1_4_positions = seedPositionsTemplate.slice(0, 4); // [0, 32, 16, 48]
-    const rank5_8_positions = shuffleArray(seedPositionsTemplate.slice(4)); // [8, 40, 24, 56] をシャッフル
-    let availableNonSeedSlots = Array.from({length: 64}, (_, i) => i).filter(p => !seedPositionsTemplate.includes(p));
+    const rank1_4_positions = seedPositionsTemplate.slice(0, 4); // [0, 64, 32, 96]
+    const rank5_8_positions = shuffleArray(seedPositionsTemplate.slice(4)); // [16, 80, 48, 112] をシャッフル
+    
+    // ★★★ 修正点 ★★★
+    let availableNonSeedSlots = Array.from({length: 128}, (_, i) => i).filter(p => !seedPositionsTemplate.includes(p)); // 64 -> 128
     const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
-    // ... (内部ヘルパー関数: playSound, isStrongRank, checkDeathBlock ... 変更なし) ...
+    // (内部ヘルパー関数: playSound, isStrongRank ... 変更なし)
     const playSound = (id) => {
         const soundElement = document.getElementById(id);
         if (soundElement) {
@@ -17309,14 +17729,21 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
             soundElement.play().catch(e => console.warn(`Audio play failed for ${id}:`, e));
         }
     };
-    const isStrongRank = (team) => ['A'].includes(calculateRank(team, {})); // Aランクのみ
+    const isStrongRank = (team) => ['A'].includes(calculateRank(team, {}));
+
+    // (内部ヘルパー関数: checkDeathBlock ... ★修正★)
     const checkDeathBlock = (position) => {
-        const blockName = position < 16 ? 'A' : position < 32 ? 'B' : position < 48 ? 'C' : 'D';
-        const startIdx = position < 16 ? 0 : position < 32 ? 16 : position < 48 ? 32 : 48;
+        // 128チーム / 4ブロック = 1ブロック32チーム
+        const blockName = position < 32 ? 'A' : position < 64 ? 'B' : position < 96 ? 'C' : 'D';
+        const startIdx = position < 32 ? 0 : position < 64 ? 32 : position < 96 ? 64 : 96;
+        constblockSize = 32; // ★ 16 -> 32
+        
         if (blockDeathAnnounced[blockName]) return false;
-        const teamsInBlock = teamPositions.slice(startIdx, startIdx + 16);
+        
+        const teamsInBlock = teamPositions.slice(startIdx, startIdx + blockSize);
+        // ★ 3チーム -> 4チーム に変更
         const strongTeamsCount = teamsInBlock.filter(team => team && ['A', 'B'].includes(calculateRank(team, {}))).length; 
-        if (strongTeamsCount >= 3) {
+        if (strongTeamsCount >= 4) { // ★ 3 -> 4
             commentaryEl.textContent = `これは...！ ${blockName}ブロックは有力校が集中する「死のブロック」になりました！`;
             blockDeathAnnounced[blockName] = true;
             playSound('sound-gasp');
@@ -17324,19 +17751,20 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         }
         return false;
     };
+    // ★★★ 修正ここまで ★★★
 
 
     // --- 2. 抽選会フェーズ1：シード校の配置 ---
     potNameEl.textContent = "シード校";
     
-    // ... (第1〜第4シードの配置 (固定位置・山分け) ... 変更なし) ...
+    // (第1〜第4シードの配置 (固定位置・山分け) ... 変更なし)
     for (let i = 0; i < rank1_4_teams.length; i++) {
         const teamName = rank1_4_teams[i].team;
         const teamRank = rank1_4_teams[i].rank;
         const position = rank1_4_positions[i]; 
 
         let dreadBg = null;
-        if (isStrongRank(teamName) && initialAiEnabled) { // ★AIがオンの場合のみ演出
+        if (isStrongRank(teamName) && initialAiEnabled) {
             dreadBg = document.createElement('div');
             dreadBg.className = 'dread-mode-bg';
             document.body.appendChild(dreadBg);
@@ -17367,7 +17795,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         targetSlot.classList.remove('highlight');
     }
 
-    // ... (第5〜第8シードの配置 (ランダム位置) ... 変更なし) ...
+    // (第5〜第8シードの配置 (ランダム位置) ... 変更なし)
     for (let i = 0; i < rank5_8_teams.length; i++) {
         const teamName = rank5_8_teams[i].team;
         const teamRank = rank5_8_teams[i].rank;
@@ -17395,7 +17823,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const nonSeeds = lotteryOrder.filter(t => !seeds.map(s => s.team).includes(t));
     for (const teamName of nonSeeds) {
         let dreadBg = null;
-        if (isStrongRank(teamName) && initialAiEnabled) { // ★AIがオンの場合のみ演出
+        if (isStrongRank(teamName) && initialAiEnabled) {
             dreadBg = document.createElement('div');
             dreadBg.className = 'dread-mode-bg';
             document.body.appendChild(dreadBg);
@@ -17425,7 +17853,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
         commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
         
         let didComment = false;
-        if (initialAiEnabled) { // ★AIがオンの場合のみチェック
+        if (initialAiEnabled) {
              didComment = checkDeathBlock(position);
         }
 
@@ -17436,7 +17864,7 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
                 const opponentIsSeed = seeds.some(s => s.team === opponentName);
                 const isRival = (isStrongRank(teamName) && opponentIsSeed) || 
                               (['A','B'].includes(calculateRank(teamName, {})) && ['A','B'].includes(calculateRank(opponentName, {})));
-                if (isRival && initialAiEnabled) { // ★AIがオンの場合のみ演出
+                if (isRival && initialAiEnabled) {
                     commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
                     playSound('sound-gasp');
                     document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
@@ -17455,23 +17883,21 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     commentaryEl.textContent = '全ての組み合わせが決定しました！';
     await sleep(2000);
     
-    // ★★★ 修正箇所 ★★★
-    // AIがオンの場合のみ、インタビューを生成する
     if (initialAiEnabled) {
         await generateCaptainInterviews(teamPositions);
-        // (インタビューモーダル内の「大会を始める」ボタンが createNewTournament を呼ぶ)
     } else {
-        // AIがオフの場合、インタビューをスキップして即座に大会作成に進む
         document.getElementById('lottery-modal').classList.add('hidden');
         SoundManager.stopBgm();
         createNewTournament(false, 'summer', teamPositions);
     }
-    // ★★★ 修正ここまで ★★★
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
+// ▲▲▲ 置き換えここまで ▲▲▲
 /**
- * 抽選会後の主将インタビューを生成・表示する（ランク差対応・最終版）
- * @param {Array<string>} teamPositions - 抽選会で決定した最終的なチームの組み合わせ
+ * 抽選会後の主将インタビューを生成・表示する
+ * (★128チーム制・7ラウンド制に対応)
+ * @param {Array<string>} teamPositions - 抽選会で決定した最終的なチームの組み合わせ (128チーム)
  */
 async function generateCaptainInterviews(teamPositions) {
     const interviewModal = document.getElementById('interview-modal');
@@ -17480,14 +17906,15 @@ async function generateCaptainInterviews(teamPositions) {
     interviewModal.classList.remove('hidden');
 
     const matchups = [];
-    for(let i=0; i<64; i+=2){
+    // ★★★ 修正点: 64 -> 128 ★★★
+    for(let i=0; i<128; i+=2){
         matchups.push({team1: teamPositions[i], team2: teamPositions[i+1]});
     }
 
-    // 注目カードを3つに増やす
-    const notableMatchups = shuffleArray(matchups).slice(0, 3);
+    // 注目カードを5つに増やす
+    const notableMatchups = shuffleArray(matchups).slice(0, 5); // ★ 3 -> 5
+    // ★★★ 修正ここまで ★★★
 
-    // ▼▼▼ ここからが新しい処理 ▼▼▼
     const matchupsWithRanks = notableMatchups.map(m => ({
         team1: m.team1,
         rank1: calculateRank(m.team1, tournamentState),
@@ -17497,7 +17924,6 @@ async function generateCaptainInterviews(teamPositions) {
     const promptDataText = matchupsWithRanks.map(m => 
         `- ${m.team1} (ランク: ${m.rank1}) vs ${m.team2} (ランク: ${m.rank2})`
     ).join('\n');
-    // ▲▲▲
 
     const prompt = `あなたは高校野球専門のAI記者です。夏の大会の組み合わせ抽選会が終了しました。
 以下の注目カードについて、両チームの主将になりきって、抽選結果に対するリアルな反応を語ってください。
@@ -17506,13 +17932,15 @@ async function generateCaptainInterviews(teamPositions) {
 ${promptDataText}
 
 ### あなたがなりきる「高校生の主将」の思考パターン
+- **(BYE) 不戦勝と当たった場合:**
+  - 「初戦が不戦勝なのはラッキーだ」「まずは2回戦に向けてしっかり準備したい」と、安堵と油断のなさを表明する。
 - **格下の相手と当たった場合 (例: Aランク vs Dランク):**
   - 少し安堵した様子を見せる。「正直、ホッとした」「自分たちの野球をすれば負けない」
   - しかし油断は禁物だと付け加える。「どのチームも強いので、一戦必勝で戦いたい」
 - **格上の相手と当たった場合 (例: Eランク vs Aランク):**
   - 明らかに絶望したり、驚いたりする。「まさか初戦で当たるとは…」「正直、厳しい相手」
   - しかし、挑戦者として「胸を借りるつもりで全力でぶつかりたい」「一矢報いたい」と闘志も見せる。
-- **実力が拮抗している相手と当たった場合 (例: Cランク vs Cランク):**
+- **実力が拮Kkしている相手と当たった場合 (例: Cランク vs Cランク):**
   - 「ここが最初の山場になる」「厳しい戦いになることは覚悟している」と、相手への敬意を示す。
   - 「最高の試合をしたい」と、ライバルとの対戦を心待ちにしている様子を見せる。
 
@@ -17533,7 +17961,7 @@ ${promptDataText}
 
         if (interviews && Array.isArray(interviews)) {
             interviewContent.innerHTML = interviews.map(iv => `
-                <div class.p-4 bg-gray-50 rounded-lg">
+                <div class="p-4 bg-gray-50 rounded-lg mb-2">
                     <h4 class="font-bold text-lg text-gray-800">${iv.team} 主将</h4>
                     <p class="mt-1 text-gray-700">「${iv.captain_comment}」</p>
                 </div>
@@ -17542,7 +17970,7 @@ ${promptDataText}
             throw new Error("Parsed JSON is not an array or is null.");
         }
     } catch (e) {
-        interviewContent.innerHTML = `<p class="text-center text-red-600">インタビューの生成に失敗しました。</p>`;
+        interviewContent.innerHTML = `<p class="text-center text-red-500">インタビューの生成に失敗しました。</p>`;
         console.error(e);
     }
     
@@ -17553,6 +17981,7 @@ ${promptDataText}
         createNewTournament(false, 'summer', teamPositions);
     };
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
      
 /**
  * [NEW] スクロール連動アニメーション用のIntersection Observer
@@ -17792,7 +18221,8 @@ startMainTournamentBtn.addEventListener('click', async () => {
         if (confirmed) setupAutumnMainTournament();
     }
 });
-
+// --- スキップボタン・ダイジェストボタンのグローバル変数宣言 ---
+    
     skipR1Btn.addEventListener('click', async () => {
         const confirmed = await showConfirm("1回戦を自動で進行しますか？");
         if (confirmed) skipRound(1);
@@ -17807,23 +18237,69 @@ startMainTournamentBtn.addEventListener('click', async () => {
     });
 
 skipR4Btn.addEventListener('click', async () => {
-    const confirmed = await showConfirm("準々決勝を自動で進行しますか？");
+    const confirmed = await showConfirm("4回戦を自動で進行しますか？");
     if (confirmed) skipRound(4);
 });
 
 skipR5Btn.addEventListener('click', async () => {
-    const confirmed = await showConfirm("準決勝を自動で進行しますか？");
+    const confirmed = await showConfirm("準々決勝を自動で進行しますか？");
     if (confirmed) skipRound(5);
+});
+
+skipR6Btn.addEventListener('click', async () => {
+    const confirmed = await showConfirm("準決勝を自動で進行しますか？");
+    if (confirmed) skipRound(6);
 });
 
 skipFinalBtn.addEventListener('click', async () => {
     const confirmed = await showConfirm("決勝戦を自動で進行しますか？");
     if (confirmed) skipFinal();
 });
+
+// ▼▼▼ 18172行目あたりの「skipAutumnBlocksBtn.addEventListener」ブロックを、以下で「置き換え」 ▼▼▼
 skipAutumnBlocksBtn.addEventListener('click', async () => {
     const confirmed = await showConfirm("秋季地区ブロック予選をすべて自動で進行しますか？");
-    if (confirmed) skipAutumnRegionalBlocks();
+    if (confirmed) {
+        skipAutumnBlocksBtn.disabled = true;
+        skipAutumnBlocksBtn.textContent = '進行中...';
+
+        // (全ブロックの試合を処理 ...)
+        for (const region of ['東部', '中部', '西部', '伊豆']) { // 伊豆も追加
+            const regionData = tournamentState.autumnData.regions[region];
+            const blocks = regionData.izuBracket ? [regionData.izuBracket] : regionData.blocks;
+
+            for (const block of blocks) {
+                const matchIds = Object.keys(block.matches);
+                for (const matchId of matchIds) {
+                    const match = block.matches[matchId];
+                    if (match.team1 && match.team2 && !match.winner) {
+                        const { team1, team2 } = match;
+                        const rank1 = calculateRank(team1, tournamentState);
+                        const rank2 = calculateRank(team2, tournamentState);
+                        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+                        
+                        const winnerName = (rankValues[rank1] >= rankValues[rank2]) ? team1 : team2;
+                        
+                        const [winnerScore, loserScore] = generateAutoScore(rank1, rank2);
+                        match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
+                        match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
+                        
+                        await processMatchWin(matchId, winnerName);
+                    }
+                }
+            }
+        }
+        
+        // ★★★ 修正箇所 ★★★
+        // 敗者復活(Ranking)をスキップし、県大会本戦(Main)へ
+        await setupAutumnMainTournament(); 
+        // ★★★ 修正ここまで ★★★
+        
+        skipAutumnBlocksBtn.disabled = false;
+        skipAutumnBlocksBtn.textContent = '地区ブロック予選をスキップ';
+    }
 });
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 skipAutumnRankingBtn.addEventListener('click', async () => {
     const confirmed = await showConfirm("秋季地区の第5代表決定戦をすべて自動で進行しますか？");
@@ -17832,8 +18308,24 @@ skipAutumnRankingBtn.addEventListener('click', async () => {
 
 skipAutumnMainBtn.addEventListener('click', async () => {
     const confirmed = await showConfirm("秋季県大会本戦をすべて自動で進行しますか？");
-    if (confirmed) skipAutumnMainTournament();
+    if (confirmed) {
+        skipAutumnMainBtn.disabled = true;
+        skipAutumnMainBtn.textContent = '進行中...';
+
+        // ★★★ 修正箇所 ★★★
+        // 秋季県大会は32チームトーナメント（5ラウンド）
+        await skipRound(1); // 1回戦 (ベスト16決定)
+        await skipRound(2); // 2回戦 (ベスト8決定)
+        await skipRound(3); // 準々決勝 (ベスト4決定)
+        await skipRound(4); // 準決勝 (決勝進出決定)
+        await skipFinal();  // 決勝
+        // ★★★ 修正ここまで ★★★
+
+        skipAutumnMainBtn.disabled = false;
+        skipAutumnMainBtn.textContent = '県大会本戦をスキップ';
+    }
 });
+// ▲▲▲ 置き換えここまで ▲▲▲
     
 skipSpringQualifiersBtn.addEventListener('click', async () => {
     const confirmed = await showConfirm("春季地区予選をすべて自動で進行しますか？");
