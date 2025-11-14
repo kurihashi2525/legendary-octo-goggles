@@ -2519,10 +2519,20 @@ graph TD
             </div>
             
             <div>
-                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">今大会 チーム成績</h4>
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-2">今大会 チームチャート</h4>
+                <div id="team-chart-container" class="relative" style="height: 300px;">
+                    <canvas id="team-radar-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">今大会 チーム成績 (数字)</h4>
                 <p id="status-modal-team-stats" class="text-lg text-blue-700 font-bold"></p>
-<div>
-                           </div>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">チーム通算成績 (全大会)</h4>
+                <p id="status-modal-career-stats" class="text-lg text-gray-800 font-bold"></p>
+            </div>
             
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">監督</h4>
@@ -5755,36 +5765,40 @@ function renderTeamStatsModal(teamName) {
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 
+// ▼▼▼ 既存の「showTeamStatusModal」関数 (12891行目あたり) を、以下で「置き換え」 ▼▼▼
+
 /**
  * チームステータスモーダルを表示する
- * (★「H2H戦力比較チャート」を自動生成するハイスペック版)
+ * (★「チームレーダーチャート」と「テキスト成績」を両方表示するハイスペック版)
  * @param {string} teamName - クリックされたチーム名
- * @param {string} matchId - クリックされた試合のID
  */
-function showTeamStatusModal(teamName, matchId) {
+function showTeamStatusModal(teamName) {
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return;
 
     // --- 1. モーダル要素の取得 ---
     const modal = document.getElementById('team-status-modal');
-    const modalBody = modal.querySelector('.space-y-4'); // ★ HTML構造に合わせて取得
     const bestEl = document.getElementById('status-modal-best');
     const historyEl = document.getElementById('status-modal-history');
     const traitsEl = document.getElementById('status-modal-traits');
     const coachEl = document.getElementById('status-modal-coach'); 
-    const statsEl = document.getElementById('status-modal-team-stats');
-    const careerStatsEl = document.getElementById('status-modal-career-stats'); 
     const homepageLinkContainer = document.getElementById('status-modal-homepage-link-container');
     const homepageLink = document.getElementById('status-modal-homepage-link');
+    const chartContainer = document.getElementById('team-chart-container');
+    
+    // ★★★ [NEW] テキスト成績用のPタグを取得 ★★★
+    const statsEl = document.getElementById('status-modal-team-stats');
+    const careerStatsEl = document.getElementById('status-modal-career-stats'); 
 
-    // ★ 既存のH2Hチャートがあれば削除（再描画のため）
-    const existingH2H = document.getElementById('h2h-chart-container');
-    if (existingH2H) existingH2H.remove();
+    // ★ 既存のチャートがあれば削除（再描画のため）
+    const existingChart = Chart.getChart('team-radar-chart');
+    if (existingChart) {
+        existingChart.destroy();
+    }
 
     // --- 2. チーム基本情報の表示 (変更なし) ---
     document.getElementById('status-modal-team-name').textContent = teamName;
     
-    // (最高戦績、直近の成績、称号、今大会成績、通算成績、監督、HPリンク... の表示ロジックは変更なし)
     if (homepageLink) {
         homepageLink.removeAttribute('href');
         homepageLink.removeAttribute('target');
@@ -5815,28 +5829,6 @@ function showTeamStatusModal(teamName, matchId) {
     } else {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
-    const stats = teamRecord.tournamentStats;
-    if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
-        const avg = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
-        const sbCount = stats.sb || 0;
-        statsEl.textContent = `打率 ${avg} (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁`;
-    } else if (stats) {
-        statsEl.textContent = `(今大会 ${stats.ab}打数 ${stats.h}安打) 0盗塁`;
-    } else {
-        statsEl.textContent = '（今大会の集計データなし）';
-    }
-    const careerBattingStats = teamRecord.playerStats?.batting;
-    let totalCareerSb = 0, totalCareerHr = 0;
-    if (careerBattingStats) {
-        for (const playerName in careerBattingStats) {
-            const stats = careerBattingStats[playerName];
-            totalCareerSb += stats.sb || 0;
-            totalCareerHr += stats.hr || 0;
-        }
-    }
-    if (careerStatsEl) {
-         careerStatsEl.textContent = `通算 ${totalCareerHr} 本塁打 / ${totalCareerSb} 盗塁`;
-    }
     const teamMasterData = TEAM_DATA[teamName];
     if (teamMasterData && teamMasterData.coach) {
         coachEl.textContent = `${teamMasterData.coach.name} (${teamMasterData.coach.experience} / ${teamMasterData.coach.style})`;
@@ -5852,68 +5844,108 @@ function showTeamStatusModal(teamName, matchId) {
         }
     }
 
-    // --- 3. ★★★ H2H（戦力比較）チャートの生成 ★★★ ---
-    const match = findMatchById(matchId);
-    if (match && (match.team1 && match.team2) && !match.winner) { // 相手がいて、まだ試合が終わっていない場合
-        const opponentName = (match.team1 === teamName) ? match.team2 : match.team1;
-        const opponentRecord = tournamentState.teamRecords[opponentName];
-        if (opponentRecord) {
-            
-            // (A) データの計算
-            const statsA = teamRecord.tournamentStats || { h: 0, ab: 0, hr: 0, rbi: 0, sb: 0 };
-            const statsB = opponentRecord.tournamentStats || { h: 0, ab: 0, hr: 0, rbi: 0, sb: 0 };
+    // --- 3. ★★★ チームレーダーチャートの生成 ★★★ ---
+    const stats = teamRecord.tournamentStats || { h: 0, ab: 0, hr: 0, rbi: 0, sb: 0, so: 0 };
+    const pitchingStats = calculateTeamPitchingStats(teamName); // { era, whip }
+    
+    const avg = (stats.ab > 0) ? (stats.h / stats.ab) : 0;
+    const power = (stats.hr || 0) * 10;
+    const speed = (stats.sb || 0) * 10;
+    const eraNum = parseFloat(pitchingStats.era);
+    const defense = (eraNum && eraNum < 6) ? (6 - eraNum) / 5 * 100 : (eraNum >= 6 ? 0 : 50);
+    const so = (stats.so || 0);
+    const bb = (stats.bb || 0) + (stats.hbp || 0);
+    const eye = (bb > 0) ? (bb / (bb + so)) * 100 : 30;
 
-            const avgA = (statsA.ab > 0) ? (statsA.h / statsA.ab) : 0;
-            const avgB = (statsB.ab > 0) ? (statsB.h / statsB.ab) : 0;
-            const totalAvg = avgA + avgB;
-            const avgAPer = (totalAvg > 0) ? (avgA / totalAvg * 100) : 50;
-            
-            const createBar = (valA, valB, labelA, labelB) => {
-                const total = valA + valB;
-                const perA = (total > 0) ? (valA / total * 100) : 50;
-                const perB = 100 - perA;
-                return `
-                    <div class="h2h-stat-label">
-                        <span class="h2h-stat-label-team1">${labelA} (${valA})</span>
-                        <span class="h2h-stat-label-team2">(${valB}) ${labelB}</span>
-                    </div>
-                    <div class="h2h-bar-wrapper">
-                        <div class="h2h-bar h2h-bar-team1" style="width: ${perA}%"></div>
-                        <div class="h2h-bar h2h-bar-team2" style="width: ${perB}%"></div>
-                    </div>
-                `;
-            };
+    const normalize = (value) => Math.max(0, Math.min(100, Math.round(value)));
 
-            // (B) HTMLの構築
-            const h2hHtml = `
-                <div id="h2h-chart-container" class="h2h-chart-container">
-                    <h3 class="h2h-chart-title">【戦力比較】 vs ${opponentName} (今大会)</h3>
-                    <div class="space-y-3">
-                        <div class="h2h-stat-row">
-                            ${createBar(avgA, avgB, teamName, opponentName)}
-                            <span class="text-xs text-center block text-gray-500 mt-1">チーム打率</span>
-                        </div>
-                        <div class="h2h-stat-row">
-                            ${createBar(statsA.hr, statsB.hr, teamName, opponentName)}
-                            <span class="text-xs text-center block text-gray-500 mt-1">本塁打</span>
-                        </div>
-                        <div class="h2h-stat-row">
-                            ${createBar(statsA.sb, statsB.sb, teamName, opponentName)}
-                            <span class="text-xs text-center block text-gray-500 mt-1">盗塁</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // (C) モーダル本体に挿入
-            modalBody.insertAdjacentHTML('beforeend', h2hHtml);
+    const chartData = [
+        normalize(avg * 500 - 100), // .200=0, .400=100
+        normalize(power),
+        normalize(speed),
+        normalize(defense),
+        normalize(eye)
+    ];
+    
+    const ctx = document.getElementById('team-radar-chart')?.getContext('2d');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['打撃 (AVG)', '長打 (HR)', '機動 (SB)', '守備 (ERA)', '選球眼 (BB/K)'],
+                datasets: [{
+                    label: `${teamName} (今大会)`,
+                    data: chartData,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(59, 130, 246)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: {
+                            font: { size: 12, weight: 'bold' },
+                            color: '#333'
+                        },
+                        ticks: {
+                            backdropColor: 'white',
+                            color: '#777',
+                            stepSize: 25,
+                            font: { size: 10 }
+                        },
+                        min: 0,
+                        max: 100
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // --- 4. ★★★ テキスト成績の表示 (再追加) ★★★ ---
+    if (statsEl) {
+        if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
+            const avgStr = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
+            const sbCount = stats.sb || 0;
+            statsEl.textContent = `打率 ${avgStr} (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁`;
+        } else if (stats) {
+            statsEl.textContent = `(今大会 ${stats.ab}打数 ${stats.h}安打) 0盗塁`;
+        } else {
+            statsEl.textContent = '（今大会の集計データなし）';
         }
     }
-    // ★★★ H2Hチャート生成ここまで ★★★
-
-    // --- 4. モーダルを表示 ---
+    
+    if (careerStatsEl) {
+        const careerBattingStats = teamRecord.playerStats?.batting;
+        let totalCareerSb = 0, totalCareerHr = 0;
+        if (careerBattingStats) {
+            for (const playerName in careerBattingStats) {
+                const stats = careerBattingStats[playerName];
+                totalCareerSb += stats.sb || 0;
+                totalCareerHr += stats.hr || 0;
+            }
+        }
+        careerStatsEl.textContent = `通算 ${totalCareerHr} 本塁打 / ${totalCareerSb} 盗塁`;
+    }
+    
+    // --- 5. モーダルを表示 ---
     modal.classList.remove('hidden');
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲ 
 // ▲▲▲ 置き換えここまで ▲▲▲
 // ▲▲▲ 置き換えここまで ▲▲▲
 
@@ -8552,7 +8584,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
     // ▼▼▼ チームスロットのHTMLを差し替え ▼▼▼
     const content = `
         <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
-            <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}" data-match-id="${matchId}">
+            <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
                 ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
                 ${isSeed1 ? `[${seedInfo1.rank}] ` : ''}${team1 || '---'}
                 ${team1ConditionIcons}
@@ -8566,7 +8598,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
         </div>
         
         <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
-            <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}" data-match-id="${matchId}">
+            <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}">
                 ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
                 ${isSeed2 ? `[${seedInfo2.rank}] ` : ''}${team2 || '---'}
                 ${team2ConditionIcons}
@@ -8584,6 +8616,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
             <textarea class="match-summary-input w-full text-xs p-1 mt-1 border rounded" data-match-id="${matchId}" placeholder="試合の決め手（任意）">${dbMatch.summary || ''}</textarea>
         </div>
     `;
+
     // ▲▲▲ 差し替えここまで ▲▲▲
 
     let calledGameInfo = '';
@@ -19118,15 +19151,12 @@ document.body.addEventListener('click', async (e) => {
             const teamName = clickableTeamName.dataset.teamName;
             
             // ★★★ 修正箇所 ★★★
-            const matchId = clickableTeamName.dataset.matchId; 
-            
-            if(teamName && teamName !== 'null' && teamName !== '' && matchId) {
-                // ★ matchId も渡す
-                showTeamStatusModal(teamName, matchId); 
+                        if(teamName && teamName !== 'null' && teamName !== '') {
+                // ★ matchId を渡さない
+                showTeamStatusModal(teamName); 
             }
             // ★★★ 修正ここまで ★★★
-        }
-    // ★★★★★ 修正ここまで ★★★★★
+        }    // ★★★★★ 修正ここまで ★★★★★
 
     // --- 記事表示ボタン（通常記事の「本文」） ---
     const newsArticleBtn = e.target.closest('.news-article-btn');
