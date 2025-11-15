@@ -14265,8 +14265,31 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 - **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。`;
     }
 
+    const finalPrompt = prompt + `
+    
+### 出力形式【最重要】
+解説や前置き（「はい、コメントです」や「匿名掲示板の...」など）は一切不要です。
+**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
+\`\`\`json
+[
+  {"personality": "匿名ファンA", "comment": "（コメント本文1）"},
+  {"personality": "野球通B", "comment": "（コメント本文2）"},
+  {"personality": "シード校ファン", "comment": "（コメント本文3）"},
+  {"personality": "敗北チームファン", "comment": "（コメント本文4）"},
+  {"personality": "冷静な分析家", "comment": "（コメント本文5）"},
+  {"personality": "野次馬", "comment": "（コメント本文6）"},
+  {"personality": "データ厨", "comment": "（コメント本文7）"},
+  {"personality": "OB", "comment": "（コメント本文8）"},
+  {"personality": "アンチ", "comment": "（コメント本文9）"},
+  {"personality": "次の対戦相手ファン", "comment": "（コメント本文10）"}
+]
+\`\`\`
+`;
+    // ★★★ 修正ここまで ★★★
+
     try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        // ★ 修正した finalPrompt を使用
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: finalPrompt }] }] }); 
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
             const rawText = result.candidates[0].content.parts[0].text;
@@ -14281,6 +14304,7 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
                 }));
             }
         }
+        // ★ ユーザーが報告したエラーメッセージをここで投げる
         throw new Error("AIからの応答が、正しい配列形式ではありません。");
     } catch (error) {
         console.error("AI掲示板コメントの生成に失敗しました:", error);
@@ -14292,8 +14316,6 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
         }];
     }
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
-
 /**
      * AIに代矢東応援掲示板のコメントを生成させる
      */
