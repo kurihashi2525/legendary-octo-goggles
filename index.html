@@ -4458,10 +4458,9 @@ async function generateMatomeSiteHtml() {
 
 /**
  * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
- * (★「advantage」未定義エラーを修正)
+ * (★敗退したC/D/Eランクの「快進撃」にも言及するよう修正)
  */
 async function generateGameMatchBbsComments(matchContext) {
-    // --- 1. contextから必要な情報を取り出す ---
     const { 
         winnerName, loserName, dbMatch, matchId, playerStatsText, 
         winnerJourney, loserJourney, nextOpponent, nextOpponentJourney, 
@@ -4469,7 +4468,6 @@ async function generateGameMatchBbsComments(matchContext) {
         injuryReport
     } = matchContext;
 
-    // --- 2. AIへの指示に必要な情報を準備 ---
     const score = `${dbMatch.score1}-${dbMatch.score2}`;
     const winnerData = TEAM_DATA[winnerName];
     const loserData = TEAM_DATA[loserName];
@@ -4477,6 +4475,7 @@ async function generateGameMatchBbsComments(matchContext) {
     const loserDynamicInfo = generateDynamicTeamInfo(loserName, loserData, tournamentState.teamRecords[loserName]);
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
+    const loserRankDesc = getRankDescription(loserRank);
     const winnerSeedRank = getSeedRankString(winnerName, tournamentState.seeds);
     const loserSeedRank = getSeedRankString(loserName, tournamentState.seeds);
     const tournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
@@ -4528,31 +4527,40 @@ async function generateGameMatchBbsComments(matchContext) {
         if (matchContext.atmosphere_team1) atmosphereText += `- ${dbMatch.team1}: ${matchContext.atmosphere_team1}\n`;
         if (matchContext.atmosphere_team2) atmosphereText += `- ${dbMatch.team2}: ${matchContext.atmosphere_team2}\n`;
     }
-    
-    // ★★★ ここからが修正箇所 ★★★
     let scheduleText = '';
     if (matchContext.schedule) {
         const sched = matchContext.schedule;
         const team1Region = TEAM_DATA[dbMatch.team1]?.region || '不明';
         const team2Region = TEAM_DATA[dbMatch.team2]?.region || '不明';
-        
-        // 「地の利」を計算
         let advantage = 'なし';
         if (sched.region === team1Region && sched.region !== team2Region) advantage = `${dbMatch.team1}の地元`;
         else if (sched.region !== team1Region && sched.region === team2Region) advantage = `${dbMatch.team2}の地元`;
-        
         scheduleText = `\n### データ7：球場情報\n- **球場:** ${sched.stadiumFull} (${sched.region}地区)\n- **地の利:** ${advantage}\n`;
     }
-    // ★★★ 修正ここまで ★★★
-    
     let ballQualityText = '';
     if (matchContext.team1BallQuality && matchContext.team2BallQuality) {
         ballQualityText = `\n### データ3：チーム別 打球品質レポート\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
-
+    
+    // ★★★ ここからが「快進撃」判定 ★★★
+    let cinderellaPraiseInstruction = "";
+    const idParts = matchId.split('-');
+    let roundNum = 0;
+    if (idParts[0] !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
+        roundNum = parseInt(idParts[1].slice(1));
+    }
+    
+    if ( (loserRank === 'E' && roundNum >= 3) ||
+         (loserRank === 'D' && roundNum >= 4) ||
+         (loserRank === 'C' && roundNum >= 5) )
+    {
+        cinderellaPraiseInstruction = `
+- **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)だったが、${roundName}まで勝ち上がった。この「快進撃」を**「${loserName}、ようやっとる」「来年が楽しみなチーム」**のように、必ず称賛すること。`;
+    }
+    // ★★★ 判定ここまで ★★★
     
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
-以下の試合データに基づき、ファンたちのリアルな会話コメントを**30個**生成してください。
+以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜27個**生成してください。
 
 ### 参考情報：静岡県高校野球の「常識」（勢力図）
 ${PREFECTURE_LORE}
@@ -4571,11 +4579,13 @@ ${scheduleText}
 ${lineupChangesText}
 ${calledGameText} 
 ${rivalryText} 
-${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
+${injuryReport || ''}
 
 ### データ2：チームの背景
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
+  - **軌跡**: ${winnerJourney}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
+  - **軌跡**: ${loserJourney}
 
 ### データ3：この試合の個人成績 (最終結果の要約)
 ${playerStatsText || '個人成績データはありません。'}
@@ -4602,6 +4612,7 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
 。
 - **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」「〇〇がいたら結果は違ったかもな」）について必ずコメントすること。
+${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 - **【最重要：次戦情報】**: 「データ5」の**\`次の試合:\`** に書かれている情報を**必ず**コメントに含めてください。「次は〇〇か…」のように具体的に言及し、**「未定」という言葉は絶対に使わないでください。**あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、**勝者の軌跡**、**次の試合情報**を踏まえつつ、以下の点をコメントに含めてください。
 
 - **【★シードランク言及】**: 試合情報に「(第1シード)」などのシードランクが含まれています。**「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
@@ -12857,6 +12868,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
 
     // --- 1. 大会展望記事の生成ロジック ---
     if (matchId === 'preview') {
+        // ... (展望記事ロジックは変更なし) ...
         const { seeds, teams } = tournamentState;
         const blockAnalyses = [];
         const numBlocks = 4; const blockSize = 32;
@@ -12887,7 +12899,6 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
             });
         }
         const seedText = seeds.map(s => `${s.team}(第${s.rank}シード)`).join(', ');
-
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
 ### 大会の文脈 (最重要)
@@ -12909,7 +12920,6 @@ ${notablePlayersText}
 - 記事のタイトルと本文をJSON形式で出力してください。
 ### 出力形式
 {"title": "（ここに記事のタイトル）", "body": "（ここに記事の本文）"}`;
-        
         try {
             const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
             const result = await response.json();
@@ -12928,7 +12938,8 @@ ${notablePlayersText}
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-    const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
+    const loserRank = calculateRank(loserName, tournamentState);
+    const loserRankDesc = getRankDescription(loserRank);
     const winnerSeedRank = getSeedRankString(winnerName, tournamentState.seeds);
     const loserSeedRank = getSeedRankString(loserName, tournamentState.seeds);
     const winnerRecord = tournamentState.teamRecords[winnerName];
@@ -12979,6 +12990,29 @@ ${notablePlayersText}
     if (matchContext.team1BallQuality && matchContext.team2BallQuality) {
         ballQualityText = `\n--- ### **参考情報：チーム別 打球品質**\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
+    
+    // ★★★ ここからが「快進撃」判定 ★★★
+    let cinderellaPraiseInstruction = ""; // AIへの追加指示
+    const idParts = matchId.split('-');
+    let roundNum = 0;
+    if (idParts[0] === 'F') {
+        roundNum = Math.log2(tournamentState.teams.length); // 7
+    } else if (idParts[1] && idParts[1].startsWith('R')) {
+        roundNum = parseInt(idParts[1].slice(1));
+    }
+    
+    if (roundNum > 0) {
+        // 2. 敗者のランクとラウンドをチェック
+        if ( (loserRank === 'E' && roundNum >= 3) || // EランクがR3(3回戦)以降で敗退
+             (loserRank === 'D' && roundNum >= 4) || // DランクがR4(4回戦)以降で敗退
+             (loserRank === 'C' && roundNum >= 5) )  // CランクがR5(準々決勝)以降で敗退
+        {
+            // 3. AIへの指示テキストを作成
+            cinderellaPraiseInstruction = `
+- **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)でしたが、今大会は「${loserJourney}」と見事な快進撃を見せ、${roundName}まで勝ち上がりました。この記事では、${loserName}の健闘を称える一文（例：「${loserRankDesc}ながら${roundName}まで勝ち進んだ彼らに、球場全体から拍手が送られた」）を**必ず**含めてください。`;
+        }
+    }
+    // ★★★ 判定ここまで ★★★
 
     if (dbMatch.details) {
         // (Aルート：詳細入力あり)
@@ -13001,7 +13035,6 @@ ${notablePlayersText}
         
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
-
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
 ${PREFECTURE_LORE}
@@ -13015,7 +13048,7 @@ ${calledGameText}
 ### **試合結果サマリー**
 - ${winnerName} ${winnerSeedRank}が ${loserName} ${loserSeedRank}に ${winnerScore} - ${loserScore} で勝利。
 ${rivalryText} 
-${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
+${injuryReport || ''}
 ### **【最重要】この記事の唯一の事実情報源 (★背番号・盗塁付きボックススコア)**
 ${matchContext.playerStatsText} 
 ---
@@ -13046,6 +13079,7 @@ ${lineupChangesText}
   - **主な選手プロフィール**:\n${loserPlayersPrompt}
 ---
 ### **執筆指示**
+${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 - **【★大会の文脈を反映】**: 記事全体で、${tournamentName}ならではの視点（例：夏の3年生の想い、秋の新チームの試金石、春のシード権争い）を必ず反映させてください。
 - **【★欠場者への言及】**: もし「参考情報：主な欠場者」に選手名がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は、投手陣が踏ん張りきれなかった」）を必ず記事に含めてください。
 - **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
@@ -13111,15 +13145,18 @@ ${scheduleText}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ${calledGameText} 
 ${rivalryText} 
-${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
+${injuryReport || ''}
 ### **参考情報：チームの背景 (★チーム打率・通算盗塁含む)**
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
+  - **今大会の軌跡**: ${winnerJourney}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
+  - **今大会の軌跡**: ${loserJourney}
 ---
 ### 執筆指示
 - **【★大会の文脈を反映】**: 記事全体で、${tournamentName}ならではの視点（例：夏の3年生の想い、秋の新チームの試金石、春のシード権争い）を必ず反映させてください。
 - **【★シードランク言及】**: **「第1シードの〇〇が順当に勝利」**や**「ノーシードの△△が第8シードを破る波乱」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「参考情報：主な欠場者」に選手名がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は〜」）を必ず記事に含めてください。
+- **【★欠場者への言及】**: もし「主な欠場者」に選手名がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は〜」）を必ず記事に含めてください。
+${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ず記事に含め**、チームの好調・不振の文脈として描写してください。
 - 記事の最後に、勝利チームの監督または主将の喜びのコメント（例：『〇〇監督「選手たちがよく頑張ってくれた」』）を一行追加してください。
 - **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。**
@@ -13134,33 +13171,24 @@ ${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
             const article = parseJsonFromText(rawTextFromAi); 
             if (article && !article.body && article.article) { article.body = article.article; }
             if (article && article.title && article.body) { 
-                
-                // ★★★ ここからが修正箇所 ★★★
-                // 「詳細入力」があり、かつ「AI生成がON」であり、
-                // さらに「R4以降」である場合のみ、新聞を生成する
-                
                 const idParts = matchId.split('-');
                 let roundNum = 0;
                 if (idParts[0] === 'F') {
-                    roundNum = Math.log2(tournamentState.teams.length); // 決勝はR7
+                    roundNum = Math.log2(tournamentState.teams.length);
                 } else if (idParts[1] && idParts[1].startsWith('R')) {
                     roundNum = parseInt(idParts[1].slice(1));
                 }
-
                 const isNewspaperWorthy = (
                     dbMatch.details && 
                     tournamentState.settings.enableArticleGeneration &&
-                    roundNum >= 4 // R4, R5, R6, R7(決勝)
+                    roundNum >= 4
                 );
-                // ★★★ 修正ここまで ★★★
-
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
-                
                 return { 
                     ...article, 
-                    isNewspaper: isNewspaperWorthy, // ★ 修正されたフラグ
+                    isNewspaper: isNewspaperWorthy,
                     timestamp: Date.now(), 
-                    newspaperHtml: newspaperHtml, // ★ 修正されたHTML
+                    newspaperHtml: newspaperHtml,
                     context: matchContext
                 };
             } else {
@@ -13344,28 +13372,25 @@ ${playerGamelogs || '今大会の試合履歴はありません。'}
 
 /**
  * AIに試合結果の掲示板の反応を生成させる
- * (★tournamentYear未定義エラーを修正)
+ * (★敗退したC/D/Eランクの「快進撃」にも言及するよう修正)
  */
 async function generateBbsComments(matchContext) {
     const { 
         winnerName, loserName, dbMatch, matchId, 
         winnerData, loserData, winnerDynamicInfo, loserDynamicInfo,
         nextOpponent, winnerSeedRank, loserSeedRank,
+        loserJourney, // ★ 敗者の軌跡
         injuryReport
     } = matchContext;
     
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-    const loserRankDesc = getRankDescription(calculateRank(loserName, tournamentState));
+    const loserRank = calculateRank(loserName, tournamentState); // ★ 敗者のランク(Eなど)
+    const loserRankDesc = getRankDescription(loserRank); // ★ 敗者のランク説明 (例: 挑戦者)
     
-    // (大会の文脈をここで再定義)
     const tournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
-    
-    // ★★★ ここからが修正箇所 ★★★
-    const tournamentYear = tournamentState.tournamentYear; // ★ この1行を追加
-    // ★★★ 修正ここまで ★★★
-    
+    const tournamentYear = tournamentState.tournamentYear;
     let tournamentBbsContext = "";
     if (tournamentState.currentTournament === 'summer') {
         tournamentBbsContext = "3年生にとってはガチで最後の夏や。";
@@ -13418,7 +13443,23 @@ async function generateBbsComments(matchContext) {
         ballQualityText = `\n--- ### **参考情報：チーム別 打球品質**\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
 
-    let prompt = '';
+    // ★★★ ここからが「快進撃」判定 ★★★
+    let cinderellaPraiseInstruction = ""; // AIへの追加指示
+    const idParts = matchId.split('-');
+    let roundNum = 0;
+    if (idParts[0] !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
+        roundNum = parseInt(idParts[1].slice(1));
+    }
+    
+    // ユーザー指定のロジック (E >= R3, D >= R4, C >= R5)
+    if ( (loserRank === 'E' && roundNum >= 3) ||
+         (loserRank === 'D' && roundNum >= 4) ||
+         (loserRank === 'C' && roundNum >= 5) )
+    {
+        cinderellaPraiseInstruction = `
+- **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)だったが、${roundName}まで勝ち上がった。この「快進撃」を**「${loserName}、ようやっとる」「来年が楽しみなチーム」**のように、必ず称賛すること。`;
+    }
+    // ★★★ 判定ここまで ★★★
 
     if (dbMatch.details) {
         // (Aルート：詳細入力あり)
@@ -13426,7 +13467,7 @@ async function generateBbsComments(matchContext) {
         const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
         
         prompt = `あなたは、匿名掲示板に集う、様々な立場の高校野球ファンです。
-以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを7つ生成してください。
+以下の試合結果と詳細なハイライトに基づき、各キャラクターになりきって、辛辣でリアルな短いコメントを10つ生成してください。
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
 ${PREFECTURE_LORE}
@@ -13453,13 +13494,15 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
 ### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
+  - **軌跡**: ${loserJourney}
 
 ### あなたがなりきるべきキャラクターと指示
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」「〇〇がいたら結果は違ったかもな」）について必ずコメントすること。
-- **【★登板履歴への言及】**: 「今大会の主な投手登板履歴」に情報がある場合、**「〇〇、連投じゃん」「前の試合はイマイチだったが...」**のように、登板履歴を踏まえたコメントをすること。
-- **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」）にも言及してください。
+- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」）について必ずコメントすること。
+${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+- **【★登板履歴への言及】**: 「今大会の主な投手登板履歴」に情報がある場合、**「〇〇、連投じゃん」**のように、登板履歴を踏まえたコメントをすること。
+- **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振にも言及してください。
 - **【★盗塁への言及 (重要)】**: 「ハイライト」や「ボックススコア」に**盗塁**が記録されていたら、その選手の足（機動力）を褒めること。
 - **【★注目の打席（最重要）】**: 「試合のハイライト」に「（★注目）」マークが付いている打席があります。これが**試合のターニングポイント**です。その打席が決定的な瞬間であったとコメントしてください。
 - **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。`;
@@ -13487,16 +13530,17 @@ ${injuryReport || ''}
 ### チームの背景 (★チーム打率・通算盗塁含む)
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
+  - **軌跡**: ${loserJourney}
 
 ### あなたがなりきるべきキャラクターと指示
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」「〇〇がいたら結果は違ったかもな」）について必ずコメントすること。
+- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」）について必ずコメントすること。
+${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」）にも言及してください。
 - **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。`;
     }
 
-    // (AIへのリクエスト部分は変更なし)
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -13525,6 +13569,7 @@ ${injuryReport || ''}
     }
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
 /**
      * AIに代矢東応援掲示板のコメントを生成させる
      */
@@ -14635,6 +14680,7 @@ function getNextOpponentInfoForPrompt(teamName) {
 
 /**
  * [NEW] E/D/Cランクチームの「快進撃」を讃えるドラマチックな記事をAIに生成させる
+ * (★「matchId」未定義エラーを修正)
  * @param {string} loserName - 敗退したチーム名
  * @param {string} loserRank - 敗退したチームのランク (E, D, C)
  * @param {number} roundNum - 敗退したラウンド番号 (3, 4, 5)
@@ -14646,7 +14692,6 @@ async function generateCinderellaArticle(loserName, loserRank, roundNum, matchCo
     const loserScore = (dbMatch.team1 === loserName ? dbMatch.score1 : dbMatch.score2);
     const winnerScore = (dbMatch.team1 === loserName ? dbMatch.score2 : dbMatch.score1);
     
-    // AIに渡すための「快進撃の終焉」を定義
     const rankMap = { 'E': 'Eランク', 'D': 'Dランク', 'C': 'Cランク' };
     const roundMap = { 3: '3回戦', 4: '4回戦', 5: '準々決勝' };
     const storyTitle = `${rankMap[loserRank]}・${loserName}の快進撃、${roundMap[roundNum]}で散る。`;
@@ -14695,13 +14740,18 @@ async function generateCinderellaArticle(loserName, loserRank, roundNum, matchCo
         throw new Error("AI cinderella response format error.");
     } catch (error) {
         console.error(`AI快進撃記事（${loserName}）の生成に失敗しました:`, error);
+        
+        // ★★★ ここからが修正箇所 ★★★
+        // `matchId` ではなく `matchContext.matchId` を参照する
         return { 
             title: "快進撃 記事生成エラー", body: "AI記者との通信に失敗しました。", 
-            timestamp: Date.now(), error: true, errorId: `cinderella-${matchId}`,
+            timestamp: Date.now(), error: true, errorId: `cinderella-${matchContext.matchId}`, // ★修正
             context: matchContext 
         };
+        // ★★★ 修正ここまで ★★★
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▼▼▼ この関数ブロックを「新規追加」(11899行目あたり) ▼▼▼
 /**
