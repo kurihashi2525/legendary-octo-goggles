@@ -12828,7 +12828,7 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
 
 /**
  * AI記者にニュース記事を執筆させるメイン関数
- * (★「故障者リスト(injuryReport)」をAIプロンプトに追加)
+ * (★「isNewspaperWorthy」のバグを修正し、全大会で新聞を生成可能に)
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
     const {
@@ -12837,7 +12837,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
         winnerLineupChanges, loserLineupChanges,
         winnerJourney, loserJourney,
         nextOpponent, pitcherGamelogInfo, batterGamelogInfo,
-        injuryReport // ★ 故障者リストを取得
+        injuryReport
     } = matchContext || {};
     
     let prompt = '';
@@ -13000,7 +13000,8 @@ ${notablePlayersText}
         const lineupChangesText = `- ${winnerName}: ${winnerLineupChanges}\n- ${loserName}: ${loserLineupChanges}`;
         
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
-あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
+あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです
+
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
 ${PREFECTURE_LORE}
@@ -13133,15 +13134,21 @@ ${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
             const article = parseJsonFromText(rawTextFromAi); 
             if (article && !article.body && article.article) { article.body = article.article; }
             if (article && article.title && article.body) { 
-                const isNewspaperWorthy = (dbMatch.details && (tournamentState.currentTournament !== 'autumn'));
+                
+                // ★★★ ここからが修正箇所 ★★★
+                // 「詳細入力」があり、かつ「記事生成がON」の場合のみ新聞を生成
+                const isNewspaperWorthy = (dbMatch.details && tournamentState.settings.enableArticleGeneration);
+                // ★★★ 修正ここまで ★★★
+
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
+                
                 return { 
                     ...article, isNewspaper: isNewspaperWorthy, 
                     timestamp: Date.now(), newspaperHtml,
                     context: matchContext
                 };
             } else {
-                 console.error("parseJsonFromText failed for raw text:", rawTextFromAi);
+                 console.error("parseJsonFromText failed or keys (title/body/article) missing for raw text:", rawTextFromAi);
                  throw new Error("AI response format error after parsing."); 
             }
         } else {
@@ -13158,6 +13165,7 @@ ${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
     }
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
 /**
      * AIにスキップしたラウンドのダイジェスト記事を生成させる
      */
