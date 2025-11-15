@@ -12828,7 +12828,7 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
 
 /**
  * AI記者にニュース記事を執筆させるメイン関数
- * (★「isNewspaperWorthy」のバグを修正し、全大会で新聞を生成可能に)
+ * (★「isNewspaperWorthy」のバグを修正し、R4以降のみ新聞ボタンを表示)
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
     const {
@@ -13000,7 +13000,7 @@ ${notablePlayersText}
         const lineupChangesText = `- ${winnerName}: ${winnerLineupChanges}\n- ${loserName}: ${loserLineupChanges}`;
         
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
-あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです
+あなたの唯一の仕事は、提供されたデータに基づいて最高の記事を生成することです。
 
 ---
 ### **参考情報：静岡県高校野球の「常識」（勢力図）**
@@ -13136,15 +13136,31 @@ ${injuryReport || ''} {/* ★ 故障者リストを挿入 */}
             if (article && article.title && article.body) { 
                 
                 // ★★★ ここからが修正箇所 ★★★
-                // 「詳細入力」があり、かつ「記事生成がON」の場合のみ新聞を生成
-                const isNewspaperWorthy = (dbMatch.details && tournamentState.settings.enableArticleGeneration);
+                // 「詳細入力」があり、かつ「AI生成がON」であり、
+                // さらに「R4以降」である場合のみ、新聞を生成する
+                
+                const idParts = matchId.split('-');
+                let roundNum = 0;
+                if (idParts[0] === 'F') {
+                    roundNum = Math.log2(tournamentState.teams.length); // 決勝はR7
+                } else if (idParts[1] && idParts[1].startsWith('R')) {
+                    roundNum = parseInt(idParts[1].slice(1));
+                }
+
+                const isNewspaperWorthy = (
+                    dbMatch.details && 
+                    tournamentState.settings.enableArticleGeneration &&
+                    roundNum >= 4 // R4, R5, R6, R7(決勝)
+                );
                 // ★★★ 修正ここまで ★★★
 
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
                 
                 return { 
-                    ...article, isNewspaper: isNewspaperWorthy, 
-                    timestamp: Date.now(), newspaperHtml,
+                    ...article, 
+                    isNewspaper: isNewspaperWorthy, // ★ 修正されたフラグ
+                    timestamp: Date.now(), 
+                    newspaperHtml: newspaperHtml, // ★ 修正されたHTML
                     context: matchContext
                 };
             } else {
