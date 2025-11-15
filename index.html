@@ -602,6 +602,134 @@
     font-family: 'Yuji Syuku', serif; 
     font-size: 1rem; /* 少しフォントを大きく */
 }
+/* ▼▼▼ スポーツ報知風 Web記事デザイン ▼▼▼ */
+        .newspaper-container { 
+            font-family: 'Noto Sans JP', sans-serif; 
+            padding: 1.5rem; 
+            background-color: #ffffff; 
+            border: 1px solid #ddd;
+        }
+        .newspaper-early { /* 昔の試合は白黒に */
+            filter: grayscale(80%);
+        }
+        .newspaper-late { /* 最近の試合はカラー */
+            border-top: 4px solid #a10e25;
+        }
+        .newspaper-header { 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 0.75rem; 
+            margin-bottom: 1rem; 
+        }
+        .newspaper-title { /* スポーツ報知 */
+            font-size: 1.5rem; 
+            font-weight: 700;
+            color: #d00;
+            font-family: 'sans-serif'; /* ロゴ風 */
+        }
+        .newspaper-date { 
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* 縦書き・flexレイアウトを廃止 */
+        .newspaper-content { 
+            /* display: flex; を削除 */
+        }
+        
+        /* メイン見出し (縦書き -> 横書き) */
+        .newspaper-main-headline { 
+            /* writing-mode を削除 */
+            font-size: 2.25rem; /* 36px */
+            font-weight: 900; 
+            color: #222;
+            line-height: 1.3;
+            letter-spacing: 0.05em;
+            /* border-right を削除 */
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #333;
+        }
+        .newspaper-late .newspaper-main-headline { 
+            color: #a10e25;
+            border-bottom-color: #a10e25;
+        }
+
+        /* サブ見出し (記事タイトル -> リード文) */
+        .newspaper-sub-headline { 
+            font-size: 1.1rem; /* 18px */
+            font-weight: 700; 
+            color: #333;
+            margin-bottom: 1.5rem; 
+            border: none;
+            padding-bottom: 0;
+            line-height: 1.7;
+            background-color: #f9f9f9;
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 4px solid #a10e25;
+        }
+        
+        /* 写真 (本文の前に移動) */
+        .newspaper-image-placeholder { 
+            width: 100%; 
+            max-width: 600px;
+            margin: 0 auto 0.5rem auto; /* キャプションとのマージンを調整 */
+            height: auto;
+            aspect-ratio: 16 / 10;
+            background-color: #e0e0e0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-family: 'Noto Sans JP', sans-serif; 
+            color: #888; 
+            border: 1px dashed #aaa; 
+            border-radius: 4px;
+        }
+        /* 写真キャプション (sinbun.txtのfigcaption参考) */
+        .newspaper-image-caption {
+            font-size: 0.85rem;
+            color: #555;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* 本文 (多段組を廃止) */
+        .newspaper-text { 
+            font-family: 'Noto Sans JP', sans-serif; 
+            /* column-count を削除 */
+            text-align: left; /* justify をやめる */
+            font-size: 1rem; /* 16px */
+            line-height: 1.9; /* 行間を広くとる */
+            color: #333;
+        }
+
+        /* スコアボックス (デザイン変更) */
+        .newspaper-score-box { 
+            border: 1px solid #ccc; 
+            padding: 1rem; 
+            text-align: center; 
+            margin-top: 2rem; 
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .newspaper-score-box h3 { 
+            font-weight: 700; 
+            margin-bottom: 0.75rem; 
+            font-size: 1rem; 
+            color: #333;
+        }
+        .newspaper-score-box .score { 
+            font-size: 1.75rem; 
+            font-weight: 700;
+            color: #000;
+        }
+        .newspaper-late .newspaper-score-box { 
+            background-color: #fff8f8; 
+            border-color: #a10e25; 
+        }
+        /* ▲▲▲ スポーツ報知風 Web記事デザイン ここまで ▲▲▲ */
 .lineup-history-list li {
     padding-left: 0.5rem;
     white-space: nowrap;
@@ -14119,44 +14247,74 @@ ${matchups}
             return null;
         }
     }
+
 /**
  * AIが生成した新聞データからHTMLを生成する
- * (★128チーム制(7ラウンド)に対応。R5(準々決勝)以降を「終盤」とする)
+ * (★sinbun.txtを参考に、Webニュース記事風のレイアウトに変更)
  */
 function createNewspaperHtml(articleData, matchData) {
     const { winnerName, loserName, dbMatch, matchId } = matchData;
     const idParts = matchId.split('-');
-    // ★ 決勝(F)は7、準決勝(R6)は6、準々決勝(R5)は5...
+    // 128チーム制(7ラウンド)に対応
     const roundNum = idParts[0] === 'F' ? Math.log2(tournamentState.teams.length) : parseInt(idParts[1].slice(1));
-
-    // ★ 準々決勝(R5)以降を「終盤(isLateRound)」とする
-    const isLateRound = roundNum >= 5; 
+    const isLateRound = roundNum >= 5; // R5(準々決勝)以降
     const containerClass = isLateRound ? 'newspaper-late' : 'newspaper-early';
     const winnerScore = dbMatch.team1 === winnerName ? dbMatch.score1 : dbMatch.score2;
     const loserScore = dbMatch.team1 === winnerName ? dbMatch.score2 : dbMatch.score1;
 
+    // AIが生成した本文(article.body)を、最初の段落（リード文）と残りの本文に分割する
+    let bodyText = articleData.body.replace(/\\n/g, '\n');
+    let leadSentence = articleData.title; // デフォルトではサブ見出し(h2)は記事タイトル
+    let mainBody = bodyText;
+
+    const firstParagraphBreak = bodyText.indexOf('\n\n'); // 最初の空行（段落区切り）を探す
+    if (firstParagraphBreak !== -1) {
+        // 最初の空行までをリード文とする
+        leadSentence = bodyText.substring(0, firstParagraphBreak).trim();
+        // それ以降を本文とする
+        mainBody = bodyText.substring(firstParagraphBreak).trim();
+    } else {
+        // 段落区切りがない場合、AIが生成した記事タイトル(article.title)をリード文として使用
+        mainBody = bodyText;
+        leadSentence = articleData.title;
+    }
+    
+    // sinbun.txt [cite: 63, 65] を参考に、写真キャプションを生成
+    // AIが生成した newspaperData からキャプションを取得
+    const photoCaption = articleData.newspaperData?.photoCaption || `[${getRoundNameFromMatchId(matchId)}の様子]`;
+
+    // sinbun.txt  を参考に、AIが生成した大見出し (newspaperData.mainHeadline) を取得
+    const mainHeadline = articleData.newspaperData?.mainHeadline || `${winnerName}、${loserName}を下し${getRoundNameFromMatchId(matchId)}突破`;
+
     return `
         <div class="newspaper-container ${containerClass}">
             <div class="newspaper-header">
-                <h2 class="newspaper-title">熱闘高校野球</h2>
+                <h2 class="newspaper-title">熱闘スポーツ</h2>
                 <p class="newspaper-date">${new Date(articleData.timestamp).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
+            
             <div class="newspaper-content">
-                <h1 class="newspaper-main-headline">${winnerName.slice(0, 4)}</h1>
-                <div class="newspaper-body-content">
-                    <h2 class="newspaper-sub-headline">${articleData.title}</h2>
-                    ${isLateRound ? '<div class="newspaper-image-placeholder">[試合の様子の写真]</div>' : ''}
-                    <p class="newspaper-text">${articleData.body.replace(/\\n/g, '\n')}</p>
-                    <div class="newspaper-score-box">
-                        <h3>最終スコア</h3>
-                        <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
-                    </div>
+                <h1 class="newspaper-main-headline">${mainHeadline}</h1>
+                
+                <h2 class="newspaper-sub-headline">${leadSentence}</h2>
+                
+                ${isLateRound ? `
+                    <figure class="newspaper-image-wrapper">
+                        <div class="newspaper-image-placeholder">${photoCaption}</div>
+                        <figcaption class="newspaper-image-caption">${photoCaption}（カメラ・AI記者）</figcaption>
+                    </figure>
+                ` : ''}
+                
+                <p class="newspaper-text">${mainBody.replace(/\n/g, '<br><br>')}</p>
+                
+                <div class="newspaper-score-box">
+                    <h3>${getRoundNameFromMatchId(matchId)} 最終スコア</h3>
+                    <p class="score">${winnerName} ${winnerScore} - ${loserScore} ${loserName}</p>
                 </div>
             </div>
         </div>
     `;
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
 
 async function generateSportsNewspaper(roundNumber) {
     // ★★★ ここからが修正箇所 ★★★
