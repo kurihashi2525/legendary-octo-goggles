@@ -4344,19 +4344,15 @@ function getCurrentTournamentPerformance(teamName, currentMatchId) {
 }
 // ▼▼▼ このブロックをまるごと追加 ▼▼▼
 
-// ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
- * 本格的なまとめサイトのHTMLを、現実と架空のニュースを融合させて生成する（エラー修正・ダミーデータ強化版）
- * @returns {Promise<string>} 生成されたHTML文字列
- */
-/**
- * 本格的なまとめサイトのHTMLを、サーバーと通信して生成する（複数カテゴリ対応・最終版）
+ * 本格的なまとめサイトのHTMLを、現実と架空のニュースを融合させて生成する
+ * (★「ラウンド総括スレッド」も一覧に表示するよう修正)
  * @returns {Promise<string>} 生成されたHTML文字列
  */
 async function generateMatomeSiteHtml() {
     let articles = [];
     
-    // --- 1. 強化されたサーバー機能に、現実のニュースをまとめてリクエスト ---
+    // --- 1. 現実のニュースをまとめてリクエスト ---
     try {
         const response = await fetch('/.netlify/functions/get-news');
         if (!response.ok) {
@@ -4372,6 +4368,8 @@ async function generateMatomeSiteHtml() {
 
     // --- 2. ゲーム内のニュースを取得 ---
     const gameNewsList = tournamentState.news || [];
+    
+    // (A) 試合結果の記事 (dbMatch を持つ)
     gameNewsList.filter(n => n.context && n.context.dbMatch).slice(-5).forEach(gameNews => {
         const { winnerName, loserName, dbMatch } = gameNews.context;
         const winnerRank = calculateRank(winnerName, tournamentState);
@@ -4393,15 +4391,25 @@ async function generateMatomeSiteHtml() {
             category: '高校野球'
         });
     });
+    
+    // ★★★ ここからが修正箇所 ★★★
+    // (B) ラウンド総括の記事 (isMatomeLink を持つ)
+    gameNewsList.filter(n => n.isMatomeLink === true).forEach(summaryNews => {
+        articles.push({
+            headline: summaryNews.title, // 記事のタイトル (例: 【1回戦 総括】...)
+            type: 'game', // まとめスレッドなので 'game' タイプとして扱う
+            matchId: summaryNews.matomeThreadId, // リンク先のスレッドID
+            timestamp: summaryNews.timestamp,
+            category: '大会総括' // 専用カテゴリ
+        });
+    });
+    // ★★★ 修正ここまで ★★★
 
-// ▼▼▼ このブロックをまるごと挿入 ▼▼▼
     // --- 3. ユーザー作成スレッドを取得 ---
     const userThreads = tournamentState.userThreads || [];
     userThreads.forEach(userThread => {
-        // userThread オブジェクトは { id, headline, type, matchId, timestamp, category }
         articles.push(userThread);
     });
-    // ▲▲▲ 挿入ここまで ▲▲▲
 
     // --- 4. 全記事をタイムスタンプでソートしてHTMLを生成 ---
     articles.sort((a, b) => b.timestamp - a.timestamp);
@@ -4412,6 +4420,8 @@ async function generateMatomeSiteHtml() {
 
     const categoryColors = {
         "高校野球": "bg-green-100 text-green-800",
+        "大会総括": "bg-yellow-100 text-yellow-800", // ★総括スレッド用の色
+        "自スレ": "bg-blue-100 text-blue-800", // ★自スレ用の色
         "スポーツ": "bg-blue-100 text-blue-800",
         "エンタメ": "bg-pink-100 text-pink-800",
         "国内": "bg-indigo-100 text-indigo-800",
@@ -4420,6 +4430,7 @@ async function generateMatomeSiteHtml() {
         "IT": "bg-purple-100 text-purple-800",
         "科学": "bg-gray-200 text-gray-800",
         "主要": "bg-red-100 text-red-800",
+        "システム": "bg-red-100 text-red-800"
     };
 
     return articles.map(article => {
@@ -4427,9 +4438,6 @@ async function generateMatomeSiteHtml() {
         const commentCount = Math.floor(Math.random() * 800) + 50;
         const color = categoryColors[article.category] || "bg-gray-100 text-gray-800";
 
-        // ▼▼▼ aタグのhref属性などを修正 ▼▼▼
-        // ▼▼▼ このブロックが修正の核心です ▼▼▼
-         // ▼▼▼ このブロックが修正の核心です ▼▼▼
         const linkHref = article.type === 'real' ? `href="${article.url}" target="_blank" rel="noopener noreferrer"` : 'href="javascript:void(0)"';
         const dataAttributes = `data-headline="${article.headline}" data-type="${article.type}" data-category="${article.category}" data-match-id="${article.matchId || ''}"`;
 
@@ -4443,9 +4451,9 @@ async function generateMatomeSiteHtml() {
                 <div class="text-right text-xs text-gray-500 mt-1">コメント: ${commentCount} 💬</div>
             </a>
         `;
-        // ▲▲▲
     }).join('');
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 
 /**
