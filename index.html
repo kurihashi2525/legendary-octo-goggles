@@ -14680,7 +14680,7 @@ function getNextOpponentInfoForPrompt(teamName) {
 
 /**
  * [NEW] E/D/Cランクチームの「快進撃」を讃えるドラマチックな記事をAIに生成させる
- * (★「matchId」未定義エラーを修正)
+ * (★再生成用に context への情報保存を強化)
  * @param {string} loserName - 敗退したチーム名
  * @param {string} loserRank - 敗退したチームのランク (E, D, C)
  * @param {number} roundNum - 敗退したラウンド番号 (3, 4, 5)
@@ -14733,22 +14733,34 @@ async function generateCinderellaArticle(loserName, loserRank, roundNum, matchCo
                 return { 
                     ...article, 
                     timestamp: Date.now(),
-                    context: { ...matchContext, isCinderellaStory: true } // 特殊記事フラグ
+                    // ★★★ ここからが修正箇所 ★★★
+                    context: { 
+                        ...matchContext, 
+                        isCinderellaStory: true, 
+                        loserName: loserName, // loserName を明示的に保存
+                        loserRank: loserRank, // loserRank を明示的に保存
+                        roundNum: roundNum    // roundNum を明示的に保存
+                    }
+                    // ★★★ 修正ここまで ★★★
                 };
             }
         }
         throw new Error("AI cinderella response format error.");
     } catch (error) {
         console.error(`AI快進撃記事（${loserName}）の生成に失敗しました:`, error);
-        
-        // ★★★ ここからが修正箇所 ★★★
-        // `matchId` ではなく `matchContext.matchId` を参照する
         return { 
             title: "快進撃 記事生成エラー", body: "AI記者との通信に失敗しました。", 
-            timestamp: Date.now(), error: true, errorId: `cinderella-${matchContext.matchId}`, // ★修正
-            context: matchContext 
+            timestamp: Date.now(), error: true, errorId: `cinderella-${matchContext.matchId}`,
+            // ★★★ ここからが修正箇所 ★★★
+            context: { 
+                ...matchContext, 
+                isCinderellaStory: true, 
+                loserName: loserName, // loserName を明示的に保存
+                loserRank: loserRank, // loserRank を明示的に保存
+                roundNum: roundNum    // roundNum を明示的に保存
+            }
+            // ★★★ 修正ここまで ★★★
         };
-        // ★★★ 修正ここまで ★★★
     }
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
@@ -16792,9 +16804,11 @@ function clearPreviousAiContent(matchId) {
 
 // ▼▼▼ 既存の「processMatchWin」関数 (16428行目あたり) を、以下で「置き換え」 ▼▼▼
 
+// ▼▼▼ 既存の「processMatchWin」関数 (16428行目あたり) を、以下で「置き換え」 ▼▼▼
+
 /**
  * 試合の勝者を処理する中心的関数（全機能統合）
- * (★「死球(HBP)による故障」判定ロジックを追加)
+ * (★快進撃記事と通常記事が「両方」生成されるよう修正)
  */
 async function processMatchWin(matchId, winnerName) {
     let dbMatch = findMatchById(matchId);
@@ -17008,24 +17022,34 @@ async function processMatchWin(matchId, winnerName) {
     let matomeThreadPromise = Promise.resolve(null);
     let homepageNewsPromise = Promise.resolve(null);
     let cinderellaArticlePromise = Promise.resolve(null);
-    let accidentArticlePromise = Promise.resolve(null); // ★ アクシデント記事用
+    let accidentArticlePromise = Promise.resolve(null);
 
     if (tournamentState.settings.enableArticleGeneration) {
         newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
         const documentary = tournamentState.documentary;
         const loserRank = calculateRank(loserName, tournamentState);
+        
+        // ★★★ ここからが修正箇所 ★★★
+        
+        // 1. 快進撃(Cinderella)の判定
         let cinderellaType = null;
+        let roundNumForCinderella = 0;
         if (idParts[0] !== 'F' && tournamentState.currentTournament === 'summer') { 
             const roundNum = parseInt(idParts[1].slice(1));
+            roundNumForCinderella = roundNum;
             if (loserRank === 'E' && roundNum === 3) cinderellaType = 'E_Rank_Top_32';
             else if (loserRank === 'D' && roundNum === 4) cinderellaType = 'D_Rank_Top_16';
             else if (loserRank === 'C' && roundNum === 5) cinderellaType = 'C_Rank_Top_8';
         }
         
+        // 2. 快進撃記事の生成 (該当する場合)
         if (cinderellaType) {
-            cinderellaArticlePromise = generateCinderellaArticle(loserName, loserRank, parseInt(idParts[1].slice(1)), matchContext);
+            cinderellaArticlePromise = generateCinderellaArticle(loserName, loserRank, roundNumForCinderella, matchContext);
         }
-        else if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+        
+        // 3. 通常記事またはドキュメンタリー記事の生成 (「else if」を削除)
+        if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
+            // ドキュメンタリー
             const isWin = documentary.target === winnerName;
             const opponentName = isWin ? loserName : winnerName;
             const opponentData = TEAM_DATA[opponentName];
@@ -17040,8 +17064,10 @@ async function processMatchWin(matchId, winnerName) {
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
             if (!isWin) tournamentState.documentary = { target: null, type: null };
         } else {
+            // 通常記事 (快進撃記事とは「別に」生成される)
             articlePromise = generateNewsArticle(matchContext);
         }
+        // ★★★ 修正ここまで ★★★
     }
     const isNotableGame = (winnerRank === 'A' || winnerRank === 'B' || loserRank === 'A' || loserRank === 'B');
     if (tournamentState.settings.enableArticleGeneration && isNotableGame && Math.random() < 0.25) {
@@ -17097,10 +17123,12 @@ async function processMatchWin(matchId, winnerName) {
             tournamentState.bbsComments.push({ title: "掲示板コメント形式エラー", body:"予期しないデータ形式です。", timestamp: Date.now(), error: true, context: matchContext });
         }
     }
+    
+    // ★★★ 修正箇所 (両方の記事をプッシュ) ★★★
     if (generatedCinderellaArticle) {
         tournamentState.news.push(generatedCinderellaArticle);
     }
-    else if (generatedArticle) {
+    if (generatedArticle) {
         if (!generatedArticle.error) {
              generatedArticle.context = matchContext;
              showArticleReviewModal(generatedArticle);
@@ -17116,6 +17144,8 @@ async function processMatchWin(matchId, winnerName) {
             tournamentState.news.push(errorArticle);
         }
     }
+    // ★★★ 修正ここまで ★★★
+
     if (generatedHadaReport) {
         tournamentState.news.push(generatedHadaReport);
     }
@@ -17151,29 +17181,22 @@ async function processMatchWin(matchId, winnerName) {
             const teamRecord = tournamentState.teamRecords[teamName];
             if (!teamRecord) continue;
             
-            // (A) 打撃フラグの付与
             const battingStats = dbMatch.details.playerGameStats[teamKey] || {};
             for (const playerName in battingStats) {
                 const stats = battingStats[playerName];
                 const careerStats = teamRecord.playerStats.batting[playerName];
                 if (!stats || !careerStats) continue;
                 
-                // ★★★ ここからが「HBP故障」の新ロジック ★★★
-                // 1. HBP(死球)による故障判定 (70%の確率)
                 if (stats.hbp > 0 && Math.random() < 0.70) {
-                    careerStats.narrative_flag = "injured"; // 故障
+                    careerStats.narrative_flag = "injured";
                     accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_hbp", { 
                         log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦で死球を受ける` 
                     });
                 }
-                // ★★★ HBPロジックここまで ★★★
-                
-                // 2. ランダムアクシデント (2%の確率で体調不良)
                 else if (stats.pa > 0 && Math.random() < 0.02) {
-                    careerStats.narrative_flag = "sick"; // 体調不良
+                    careerStats.narrative_flag = "sick";
                     accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_sickness");
                 }
-                // 3. (通常の調子判定)
                 else if (stats.pa > 0) {
                     if (stats.h >= 4 || stats.hr >= 2 || stats.rbi >= 5) careerStats.narrative_flag = "peak";
                     else if (stats.h >= 3 || stats.hr >= 1 || stats.rbi >= 3) careerStats.narrative_flag = "hot";
@@ -17186,7 +17209,6 @@ async function processMatchWin(matchId, winnerName) {
                 }
             }
             
-            // (B) 投手フラグの付与 (★酷使判定を追加)
             const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
             pitchingData.forEach(pitcher => {
                 const playerName = pitcher.name;
@@ -17209,7 +17231,6 @@ async function processMatchWin(matchId, winnerName) {
                 const hits = parseInt(pitcher.hits || 0);
                 const pitches = parseInt(pitcher.pitches || 0);
 
-                // ★★★ ここからが「酷使」判定 ★★★
                 let overuseLog = "";
                 if (careerStats.gamelogs && careerStats.gamelogs.length >= 1) {
                     const today = parseDate(dbMatch.schedule?.date);
@@ -17223,19 +17244,18 @@ async function processMatchWin(matchId, winnerName) {
                         const lastDate = parseDate(lastGame.date);
                         const daysRest = lastDate ? Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24)) - 1 : 99;
                         
-                        if (daysRest === 0) { // 連投
-                            careerStats.narrative_flag = "injured"; // 故障
+                        if (daysRest === 0) {
+                            careerStats.narrative_flag = "injured";
                             overuseLog = "連投";
-                        } else if (daysRest === 1 && pitches >= 80) { // 中1日で80球以上
-                            careerStats.narrative_flag = "injured"; // 故障
+                        } else if (daysRest === 1 && pitches >= 80) {
+                            careerStats.narrative_flag = "injured";
                             overuseLog = "中1日での80球以上の登板";
                         }
                     }
                 }
-                if (overuseLog && teamName === "283学園") { // 283学園のみ記事化
+                if (overuseLog && teamName === "283学園") {
                     accidentArticlePromise = generateAccidentArticle(teamName, playerName, "injury_overuse", { log: overuseLog, round: getRoundNameFromMatchId(matchId) });
                 }
-                // ★★★ 酷使判定ここまで ★★★
                 
                 else if (innings >= 5) {
                     if ((innings >= 7 && earnedRuns === 0) || strikeouts >= 10) careerStats.narrative_flag = "peak";
@@ -17260,24 +17280,6 @@ async function processMatchWin(matchId, winnerName) {
         const roundNum = parseInt(idParts[1].slice(1));
         checkAndTriggerRoundSummary(roundNum);
     }
-
-// --- 9. [NEW] 新聞発行のチェック (R4以降) ---
-    // (side !== 'F' は決勝戦以外、idParts[0] === 'F' は決勝戦)
-    if ((side !== 'F' && idParts[1] && idParts[1].startsWith('R')) || idParts[0] === 'F') {
-        let roundNum;
-        if (idParts[0] === 'F') {
-            roundNum = Math.log2(tournamentState.teams.length); // 決勝はR7
-        } else {
-            roundNum = parseInt(idParts[1].slice(1));
-        }
-        
-        // R4 (4回戦) 以降のラウンド終了をチェック
-        if (roundNum >= 4) {
-            // (非同期だが、完了を待たずに saveState() に進む)
-            checkAndTriggerNewspaper(roundNum);
-        }
-    }
-    // ▲▲▲ 新規追加ここまで ▲▲▲
 
     // --- 9. アクシデント記事の処理 (★新設) ---
     if (accidentArticlePromise) {
@@ -17314,6 +17316,7 @@ async function processMatchWin(matchId, winnerName) {
     // --- 11. 最終描画 ---
     renderTournament(tournamentState);
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
@@ -19667,34 +19670,44 @@ document.body.addEventListener('click', async (e) => {
         newsContainer.innerHTML = `<div class="loader">AI記者があなたの指示を基に記事を再執筆中です...</div>`;
         (async () => {
             let articlePromise;
+            // エラー記事用のフォールバックコンテキスト
+            const createErrorArticle = () => ({
+                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
+                timestamp: Date.now(), error: true,
+                errorId: context.matchId || context.errorId || `regen-error-${Date.now()}`,
+                context: context // 元のコンテキストを保持
+            });
+
             if (context.isDocumentary) {
                 const { type, teamName, matchData } = context;
                 articlePromise = generateDocumentaryArticle('intro', type, teamName, matchData, userFeedback);
             } else if (context.isBracketAnalysis) {
                 articlePromise = generateBracketAnalysisNewsArticle(tournamentState); 
+            
+            // ★★★ ここからが修正箇所 ★★★
+            } else if (context.isCinderellaStory) {
+                // 快進撃記事の再生成
+                const { loserName, loserRank, roundNum, ...restOfContext } = context;
+                articlePromise = generateCinderellaArticle(loserName, loserRank, roundNum, restOfContext);
+            // ★★★ 修正ここまで ★★★
+
             } else if (context.isHadaReport) {
-                articlePromise = generateHadaReport(context);
+                articlePromise = generateHadaReport(context, userFeedback);
             } else if (context.isTopicArticle || context.theme) {
                 const rank = calculateRank(context.teamName, tournamentState); 
                 articlePromise = createTopicArticle(context.teamName, rank, context.theme); 
             } else {
+                // 通常記事の再生成
                 articlePromise = generateNewsArticle(context, userFeedback);
             }
-            const createErrorArticle = () => ({
-                title: "記事生成エラー", body: "記事の再生成に失敗しました。",
-                timestamp: Date.now(), error: true,
-                errorId: context.matchId || context.errorId || `regen-error-${Date.now()}`,
-                isDocumentary: context.isDocumentary,
-                isBracketAnalysis: context.isBracketAnalysis,
-                isHadaReport: context.isHadaReport,
-                isTopicArticle: (context.isTopicArticle || context.theme),
-                context: context
-            });
+            
             const newArticle = await articlePromise;
+            
             if (newArticle && !newArticle.error) {
-                newArticle.context = context;
+                newArticle.context = context; // 元のコンテキストを保持
                 tournamentState.news.splice(index, 0, newArticle);
-                if (!context.isBracketAnalysis && !context.isHadaReport && ( !context.isTopicArticle && !context.theme )) {
+                // ★ 快進撃記事もレビューモーダルを通さない
+                if (!context.isBracketAnalysis && !context.isHadaReport && !context.isTopicArticle && !context.theme && !context.isCinderellaStory) {
                     showArticleReviewModal(newArticle);
                 }
             } else {
@@ -19706,6 +19719,7 @@ document.body.addEventListener('click', async (e) => {
             feedbackSubmitBtn.disabled = false;
         })();
     }
+// ▲▲▲ 置き換えここまで ▲▲▲
 
     // --- 試合前 応援コメントボタン（モーダルを開くだけ） ---
     if (e.target.matches('.pre-game-cheer-btn')) {
