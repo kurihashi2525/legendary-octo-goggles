@@ -17581,14 +17581,11 @@ function clearPreviousAiContent(matchId) {
 
 
 
-// ▼▼▼ 既存の「processMatchWin」関数 (16428行目あたり) を、以下で「置き換え」 ▼▼▼
-
-// ▼▼▼ 既存の「processMatchWin」関数 (16428行目あたり) を、以下で「置き換え」 ▼▼▼
-
 /**
  * 試合の勝者を処理する中心的関数（全機能統合）
  * (★快進撃記事と通常記事が「両方」生成されるよう修正)
- * (★★アクシデント記事が283学園にのみ発生するよう修正★★)
+ * (★★アクシデント記事が283学園にのみ発生するよう修正)
+ * (★★★アクシデント抽選を283学園のベンチ入り全選手(20名)に行うよう修正★★★)
  */
 async function processMatchWin(matchId, winnerName) {
     let dbMatch = findMatchById(matchId);
@@ -17802,7 +17799,7 @@ async function processMatchWin(matchId, winnerName) {
     let matomeThreadPromise = Promise.resolve(null);
     let homepageNewsPromise = Promise.resolve(null);
     let cinderellaArticlePromise = Promise.resolve(null);
-    let accidentArticlePromise = Promise.resolve(null);
+    let accidentArticlePromise = Promise.resolve(null); // ★アクシデント記事用のPromise
 
     if (tournamentState.settings.enableArticleGeneration) {
         newsContainer.innerHTML = `<div class="loader">AI記者が記事を執筆中...</div>`;
@@ -17948,141 +17945,176 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
 
-    // --- 7. 選手の「一時的な状態異常」フラグを付与 ---
-   if (dbMatch.details && dbMatch.details.playerGameStats) {
-        for (const teamKey of ['team1', 'team2']) {
-            const teamName = dbMatch[teamKey];
-            const opponentName = teamKey === 'team1' ? dbMatch.team2 : dbMatch.team1;
-            const teamRecord = tournamentState.teamRecords[teamName];
-            if (!teamRecord) continue;
-            
-            // (A) 打撃フラグの付与
-            const battingStats = dbMatch.details.playerGameStats[teamKey] || {};
-            for (const playerName in battingStats) {
-                const stats = battingStats[playerName];
-                const careerStats = teamRecord.playerStats.batting[playerName];
-                if (!stats || !careerStats) continue;
-                
-                // ★★★ ここからが修正箇所 ★★★
-                // 1. HBP(死球)による故障判定 (70%の確率)
-                if (stats.hbp > 0 && Math.random() < 0.70) {
-                    careerStats.narrative_flag = "injured"; // 故障
-                    // ★ 283学園の場合のみ記事を生成
-                    if (teamName === "283学園") {
-                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_hbp", { 
-                            log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦で死球を受ける` 
-                        });
-                    }
-                }
-                // 2. ランダムアクシデント (9%の確率で体調不良)
-                else if (stats.pa > 0 && Math.random() < 0.03) {
-                    careerStats.narrative_flag = "sick"; // 体調不良
-                    // ★ 283学園の場合のみ記事を生成
-                    if (teamName === "283学園") {
-                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_sickness");
-                    }
-                }
-                // 3. NEW: 軽傷 (15%の確率)
-                else if (stats.pa > 0 && Math.random() < 0.05) {
-                    careerStats.narrative_flag = "minor_injury"; // 軽傷
-                    // ★ 283学園の場合のみ記事を生成
-                    if (teamName === "283学園") {
-                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_minor_injury", { 
-                            log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦でのプレー` 
-                        });
-                    }
-                }
-                // ★★★ 修正ここまで ★★★
-                
-                // 4. (通常の調子判定)
-                else if (stats.pa > 0) {
-                    if (stats.h >= 4 || stats.hr >= 2 || stats.rbi >= 5) careerStats.narrative_flag = "peak";
-                    else if (stats.h >= 3 || stats.hr >= 1 || stats.rbi >= 3) careerStats.narrative_flag = "hot";
-                    else if (stats.ab >= 3 && stats.h === 0) {
-                        if (stats.strongOuts >= 2) careerStats.narrative_flag = "cold";
-                        else careerStats.narrative_flag = "slump";
-                    } else careerStats.narrative_flag = "normal";
-                } else {
-                    careerStats.narrative_flag = "normal";
-                }
-            }
-            
-            // (B) 投手フラグの付与 (★酷使判定を確率化)
-            const pitchingData = dbMatch.details.pitching?.[teamKey] || [];
-            pitchingData.forEach(pitcher => {
-                const playerName = pitcher.name;
-                const careerStats = teamRecord.playerStats.pitching[playerName];
-                if (!careerStats) return;
-                
-                const opponentTeamKey = teamKey === 'team1' ? 'team2' : 'team1';
-                const opponentBattingStats = dbMatch.details.playerGameStats[opponentTeamKey] || {};
-                let totalStrongOuts = 0, totalWeakOuts = 0, totalStrongHits = 0;
-                for (const oppPlayerName in opponentBattingStats) {
-                    const oppStats = opponentBattingStats[oppPlayerName];
-                    totalStrongOuts += oppStats.strongOuts || 0;
-                    totalWeakOuts += oppStats.weakOuts || 0;
-                    totalStrongHits += oppStats.strongHits || 0;
-                }
-                const innings = parseFloat(pitcher.innings || 0);
-                const earnedRuns = parseInt(pitcher.earnedRuns || 0);
-                const strikeouts = parseInt(pitcher.strikeouts || 0);
-                const walks = parseInt(pitcher.walks || 0);
-                const hits = parseInt(pitcher.hits || 0);
-                const pitches = parseInt(pitcher.pitches || 0);
+    // ★★★ ここからが修正箇所 (アクシデント抽選) ★★★
+    // --- 7. [NEW] アクシデント抽選 (283学園ベンチ入り全員) ---
+    const involvedTeams = [dbMatch.team1, dbMatch.team2];
+    const opponentName = involvedTeams.find(t => t !== "283学園"); // 対戦相手
 
-                let overuseLog = "";
-                let setInjury = false; // 故障がセットされたか
+    if (involvedTeams.includes("283学園")) {
+        const teamName = "283学園";
+        const teamRecord = tournamentState.teamRecords[teamName];
+        const roster = TEAM_ROSTER_MASTER[teamName]; // ベンチ入り20名
+
+        if (teamRecord && roster) {
+            
+            roster.forEach(player => {
+                const playerName = player.name;
+                if (!playerName) return;
+
+                // 1. 選手の通算成績オブジェクトを取得 (なければ初期化)
+                if (!teamRecord.playerStats.batting[playerName]) {
+                    teamRecord.playerStats.batting[playerName] = { games: 0, pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0, gamelogs: [] };
+                }
+                if (!teamRecord.playerStats.pitching[playerName]) {
+                     teamRecord.playerStats.pitching[playerName] = { 
+                        career: { games: 0, w: 0, l: 0, ip: 0, so: 0, er: 0, h: 0, bb: 0 },
+                        gamelogs: []
+                    };
+                }
                 
-                if (careerStats.gamelogs && careerStats.gamelogs.length >= 1) {
-                    const today = parseDate(dbMatch.schedule?.date);
-                    const recentLogs = careerStats.gamelogs
-                        .filter(log => log.matchId !== matchId)
-                        .sort((a, b) => (parseDate(b.date) || 0) - (parseDate(a.date) || 0))
-                        .slice(0, 2);
-                    
-                    if (today && recentLogs.length > 0) {
-                        const lastGame = recentLogs[0];
-                        const lastDate = parseDate(lastGame.date);
-                        const daysRest = lastDate ? Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24)) - 1 : 99;
+                const careerBattingStats = teamRecord.playerStats.batting[playerName];
+                const careerPitchingStats = teamRecord.playerStats.pitching[playerName];
+
+                // 2. 既に故障中/体調不良/軽傷でないかチェック
+                const currentBattingFlag = careerBattingStats.narrative_flag;
+                const currentPitchingFlag = careerPitchingStats.narrative_flag;
+                
+                if (currentBattingFlag === 'injured' || currentBattingFlag === 'sick' || currentBattingFlag === 'minor_injury' ||
+                    currentPitchingFlag === 'injured' || currentPitchingFlag === 'sick' || currentPitchingFlag === 'minor_injury') {
+                    // 既に離脱中の選手は、再度抽選しない
+                    return; 
+                }
+
+                // 3. アクシデント抽選
+                let accidentOccurred = false;
+                
+                // 3-1. ランダムアクシデント (体調不良: 2%)
+                if (Math.random() < 0.02) {
+                    careerBattingStats.narrative_flag = "sick";
+                    careerPitchingStats.narrative_flag = "sick";
+                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_sickness");
+                    accidentOccurred = true;
+                }
+                // 3-2. 軽傷 (3%)
+                else if (Math.random() < 0.03) {
+                    careerBattingStats.narrative_flag = "minor_injury";
+                    careerPitchingStats.narrative_flag = "minor_injury";
+                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_minor_injury", { 
+                        log: `練習中（または${getRoundNameFromMatchId(matchId)}の${opponentName}戦でのプレー）`
+                    });
+                    accidentOccurred = true;
+                }
+                
+                // 3-3. 酷使・HBP (試合出場選手のみ)
+                if (!accidentOccurred && dbMatch.details) {
+                    // この選手が打者として出場したか
+                    const battingStats = dbMatch.details.playerGameStats?.[involvedTeams.indexOf(teamName) === 0 ? 'team1' : 'team2']?.[playerName];
+                    if (battingStats) {
+                        // HBP(死球)による故障判定 (70%の確率)
+                        if (battingStats.hbp > 0 && Math.random() < 0.70) {
+                            careerBattingStats.narrative_flag = "injured"; // 故障
+                            careerPitchingStats.narrative_flag = "injured";
+                            accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_hbp", { 
+                                log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦で死球を受ける` 
+                            });
+                            accidentOccurred = true;
+                        }
+                    }
+
+                    // この選手が投手として出場したか
+                    const pitchingData = dbMatch.details.pitching?.[involvedTeams.indexOf(teamName) === 0 ? 'team1' : 'team2'];
+                    const pitcherData = pitchingData?.find(p => p.name === playerName);
+                    if (pitcherData) {
+                        // 酷使判定
+                        const pitches = parseInt(pitcherData.pitches || 0);
+                        let overuseLog = "";
+                        let setInjury = false;
                         
-                        // 酷使判定 (確率化)
-                        if (daysRest === 0 && Math.random() < 0.20) { // 連投
-                            careerStats.narrative_flag = "injured";
-                            overuseLog = "連投";
-                            setInjury = true;
-                        } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.40) { // 中1日で80球以上
-                            careerStats.narrative_flag = "injured";
-                            overuseLog = "中1日での80球以上の登板";
-                            setInjury = true;
+                        if (careerPitchingStats.gamelogs && careerPitchingStats.gamelogs.length >= 1) {
+                            const today = parseDate(dbMatch.schedule?.date);
+                            const recentLogs = careerPitchingStats.gamelogs
+                                .filter(log => log.matchId !== matchId)
+                                .sort((a, b) => (parseDate(b.date) || 0) - (parseDate(a.date) || 0))
+                                .slice(0, 2);
+                            
+                            if (today && recentLogs.length > 0) {
+                                const lastGame = recentLogs[0];
+                                const lastDate = parseDate(lastGame.date);
+                                const daysRest = lastDate ? Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24)) - 1 : 99;
+                                
+                                if (daysRest === 0 && Math.random() < 0.20) { // 連投
+                                    setInjury = true; overuseLog = "連投";
+                                } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.40) { // 中1日で80球以上
+                                    setInjury = true; overuseLog = "中1日での80球以上の登板";
+                                }
+                            }
+                        }
+                        
+                        if (setInjury) {
+                            careerBattingStats.narrative_flag = "injured";
+                            careerPitchingStats.narrative_flag = "injured";
+                            accidentArticlePromise = generateAccidentArticle(teamName, playerName, "injury_overuse", { log: overuseLog, round: getRoundNameFromMatchId(matchId) });
+                            accidentOccurred = true;
                         }
                     }
                 }
-                
-                // ★★★ 修正箇所: このif文は元から283学園のみが対象だったので変更なし ★★★
-                if (setInjury && teamName === "283学園") {
-                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "injury_overuse", { log: overuseLog, round: getRoundNameFromMatchId(matchId) });
-                }
-                
-                // (通常の調子判定 ... 酷使で故障「しなかった」場合のみ実行)
-                if (!setInjury) {
-                    if (innings >= 5) {
-                        if ((innings >= 7 && earnedRuns === 0) || strikeouts >= 10) careerStats.narrative_flag = "peak";
-                        else if (innings >= 6 && earnedRuns <= 2 && pitcher.result !== 'L') careerStats.narrative_flag = "hot";
-                        else if (totalWeakOuts >= 5 && earnedRuns <= 3) careerStats.narrative_flag = "hot";
-                        else if (earnedRuns >= 5) careerStats.narrative_flag = "slump";
-                        else if (walks >= 5 || (hits >= 8 && innings <= 6)) careerStats.narrative_flag = "cold";
-                        else careerStats.narrative_flag = "normal";
-                        if (pitcher.result === 'L' && totalStrongHits >= 5) careerStats.narrative_flag = "unlucky";
-                        if (pitcher.result === 'L' && innings >= 7 && earnedRuns <= 2) careerStats.narrative_flag = "tough_loss";
-                    } else if (pitches >= 100) {
-                        careerStats.narrative_flag = "fatigued";
-                    } else {
-                        careerStats.narrative_flag = "normal";
+
+                // 4. (通常の調子判定) - 試合出場選手のみ
+                if (!accidentOccurred && dbMatch.details) {
+                    const battingStats = dbMatch.details.playerGameStats?.[involvedTeams.indexOf(teamName) === 0 ? 'team1' : 'team2']?.[playerName];
+                    if (battingStats) {
+                         if (battingStats.pa > 0) {
+                            if (battingStats.h >= 4 || battingStats.hr >= 2 || battingStats.rbi >= 5) careerBattingStats.narrative_flag = "peak";
+                            else if (battingStats.h >= 3 || battingStats.hr >= 1 || battingStats.rbi >= 3) careerBattingStats.narrative_flag = "hot";
+                            else if (battingStats.ab >= 3 && battingStats.h === 0) {
+                                if (battingStats.strongOuts >= 2) careerBattingStats.narrative_flag = "cold";
+                                else careerBattingStats.narrative_flag = "slump";
+                            } else careerBattingStats.narrative_flag = "normal";
+                        } else {
+                            // 打席に立たなかった交代選手 (守備固めなど)
+                            careerBattingStats.narrative_flag = "normal";
+                        }
+                    }
+                    
+                    const pitchingData = dbMatch.details.pitching?.[involvedTeams.indexOf(teamName) === 0 ? 'team1' : 'team2'];
+                    const pitcherData = pitchingData?.find(p => p.name === playerName);
+                    if (pitcherData) {
+                        const opponentTeamKey = teamName === dbMatch.team1 ? 'team2' : 'team1';
+                        const opponentBattingStats = dbMatch.details.playerGameStats[opponentTeamKey] || {};
+                        let totalStrongOuts = 0, totalWeakOuts = 0, totalStrongHits = 0;
+                        for (const oppPlayerName in opponentBattingStats) {
+                            const oppStats = opponentBattingStats[oppPlayerName];
+                            totalStrongOuts += oppStats.strongOuts || 0;
+                            totalWeakOuts += oppStats.weakOuts || 0;
+                            totalStrongHits += oppStats.strongHits || 0;
+                        }
+                        const innings = parseFloat(pitcherData.innings || 0);
+                        const earnedRuns = parseInt(pitcherData.earnedRuns || 0);
+                        const strikeouts = parseInt(pitcherData.strikeouts || 0);
+                        const walks = parseInt(pitcherData.walks || 0);
+                        const hits = parseInt(pitcherData.hits || 0);
+                        const pitches = parseInt(pitcherData.pitches || 0);
+                        
+                        if (innings >= 5) {
+                            if ((innings >= 7 && earnedRuns === 0) || strikeouts >= 10) careerPitchingStats.narrative_flag = "peak";
+                            else if (innings >= 6 && earnedRuns <= 2 && pitcherData.result !== 'L') careerPitchingStats.narrative_flag = "hot";
+                            else if (totalWeakOuts >= 5 && earnedRuns <= 3) careerPitchingStats.narrative_flag = "hot";
+                            else if (earnedRuns >= 5) careerPitchingStats.narrative_flag = "slump";
+                            else if (walks >= 5 || (hits >= 8 && innings <= 6)) careerPitchingStats.narrative_flag = "cold";
+                            else careerPitchingStats.narrative_flag = "normal";
+                            if (pitcherData.result === 'L' && totalStrongHits >= 5) careerPitchingStats.narrative_flag = "unlucky";
+                            if (pitcherData.result === 'L' && innings >= 7 && earnedRuns <= 2) careerPitchingStats.narrative_flag = "tough_loss";
+                        } else if (pitches >= 100) {
+                            careerPitchingStats.narrative_flag = "fatigued";
+                        } else {
+                            careerPitchingStats.narrative_flag = "normal";
+                        }
                     }
                 }
-            });
+            }); // roster.forEach
         }
     }
+    // ★★★ アクシデント抽選ここまで ★★★
     
     // --- 8. ラウンド終了チェックと総括スレッド生成 ---
     if (side !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
@@ -18125,7 +18157,6 @@ async function processMatchWin(matchId, winnerName) {
     // --- 11. 最終描画 ---
     renderTournament(tournamentState);
 }
-
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
