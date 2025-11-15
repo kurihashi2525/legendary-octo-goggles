@@ -19613,12 +19613,27 @@ document.body.addEventListener('click', async (e) => {
 
     // ▼▼▼ このブロックを「新規追加」(17805行目あたり) ▼▼▼
     // --- 記事表示ボタン（新聞の「新聞を読む」） ---
-    else if (e.target.closest('.newspaper-view-btn')) {
+   else if (e.target.closest('.newspaper-view-btn')) {
         const newspaperViewBtn = e.target.closest('.newspaper-view-btn');
         const article = tournamentState.news[parseInt(newspaperViewBtn.dataset.index, 10)];
-        if (article.isNewspaper && article.newspaperData) {
-            renderNewspaperModal(article.newspaperData);
-            newspaperModal.classList.remove('hidden');
+        
+        if (article.isNewspaper) {
+            if (article.newspaperData) {
+                // --- 1. ラウンド終了時の「特集号」を開くロジック ---
+                renderNewspaperModal(article.newspaperData);
+                newspaperModal.classList.remove('hidden');
+                
+            // ★★★ ▼▼▼ 以下の else if ブロックを「新規追加」 ▼▼▼ ★★★
+            } else if (article.newspaperHtml) {
+                // --- 2. 「個別の試合」の新聞を開くロジック ---
+                // （個別の新聞は、記事生成時にHTMLも一緒に保存されています）
+                newspaperModalBody.innerHTML = article.newspaperHtml;
+                newspaperModal.classList.remove('hidden');
+            // ★★★ ▲▲▲ 追加ここまで ▲▲▲ ★★★
+                
+            } else {
+                alert('新聞データの形式が正しくありません。(newspaperData も newspaperHtml も見つかりません)');
+            }
         }
     }
     // ▲▲▲ 新規追加ここまで ▲▲▲
