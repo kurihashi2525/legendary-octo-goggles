@@ -13171,24 +13171,23 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
             const article = parseJsonFromText(rawTextFromAi); 
             if (article && !article.body && article.article) { article.body = article.article; }
             if (article && article.title && article.body) { 
-                const idParts = matchId.split('-');
-                let roundNum = 0;
-                if (idParts[0] === 'F') {
-                    roundNum = Math.log2(tournamentState.teams.length);
-                } else if (idParts[1] && idParts[1].startsWith('R')) {
-                    roundNum = parseInt(idParts[1].slice(1));
-                }
+                
+                // ★★★ ここからが修正箇所 ★★★
+                // 「詳細入力」があり、かつ「AI生成がON」の場合のみ新聞を生成
                 const isNewspaperWorthy = (
                     dbMatch.details && 
-                    tournamentState.settings.enableArticleGeneration &&
-                    roundNum >= 4
+                    tournamentState.settings.enableArticleGeneration
+                    // ★ラウンド数(roundNum >= 4)の制限を削除★
                 );
+                // ★★★ 修正ここまで ★★★
+
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
+                
                 return { 
                     ...article, 
-                    isNewspaper: isNewspaperWorthy,
+                    isNewspaper: isNewspaperWorthy, // ★ 修正されたフラグ
                     timestamp: Date.now(), 
-                    newspaperHtml: newspaperHtml,
+                    newspaperHtml: newspaperHtml, // ★ 修正されたHTML
                     context: matchContext
                 };
             } else {
