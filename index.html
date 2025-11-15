@@ -17975,7 +17975,7 @@ async function processMatchWin(matchId, winnerName) {
                     }
                 }
                 // 2. ランダムアクシデント (9%の確率で体調不良)
-                else if (stats.pa > 0 && Math.random() < 0.09) {
+                else if (stats.pa > 0 && Math.random() < 0.03) {
                     careerStats.narrative_flag = "sick"; // 体調不良
                     // ★ 283学園の場合のみ記事を生成
                     if (teamName === "283学園") {
@@ -17983,7 +17983,7 @@ async function processMatchWin(matchId, winnerName) {
                     }
                 }
                 // 3. NEW: 軽傷 (15%の確率)
-                else if (stats.pa > 0 && Math.random() < 0.15) {
+                else if (stats.pa > 0 && Math.random() < 0.05) {
                     careerStats.narrative_flag = "minor_injury"; // 軽傷
                     // ★ 283学園の場合のみ記事を生成
                     if (teamName === "283学園") {
