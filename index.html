@@ -1338,7 +1338,143 @@
             transform: scale(1.05);
             filter: brightness(1.1);
         }
+.newspaper-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1rem;
+}
 
+.skip-newspaper-container {
+    background-color: #fdfaf4; /* 少し黄ばんだ紙の色 */
+    border: 1px solid #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 900px;
+    max-height: 95vh;
+    font-family: 'Noto Serif JP', 'Yuji Syuku', serif;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+}
+
+.skip-newspaper-header {
+    text-align: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 3px double #333;
+}
+
+.skip-newspaper-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    font-family: 'Yuji Syuku', serif;
+}
+
+.skip-newspaper-date {
+    font-size: 0.9rem;
+    color: #555;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    padding: 0.25rem 0;
+    margin-top: 0.5rem;
+}
+
+.skip-newspaper-body {
+    padding: 1rem;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 100px 1fr 1fr; /* 縦見出し | 記事1 | 記事2 */
+    gap: 1.5rem;
+}
+
+.skip-newspaper-main-headline {
+    writing-mode: vertical-rl; /* 縦書き */
+    text-orientation: upright;
+    font-size: 1.75rem;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    border-right: 2px solid #333;
+    padding-right: 1rem;
+    margin-left: auto; /* 右寄せ */
+    color: #222;
+    height: 100%;
+    text-align: center;
+}
+
+.skip-newspaper-column-container {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.skip-newspaper-column {
+    /* 多段組（カラム） */
+    column-count: 2;
+    column-gap: 1rem;
+    column-rule: 1px solid #eee;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    text-align: justify; /* 両端揃え */
+}
+.skip-newspaper-column h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    border-bottom: 2px solid #555;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
+    /* カラムをまたがないようにする */
+    column-span: all;
+    break-before: column;
+}
+.skip-newspaper-column p {
+    margin-bottom: 1rem;
+}
+
+.skip-newspaper-results-box {
+    grid-column: span 3; /* 全幅 */
+    border-top: 2px solid #333;
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+.skip-newspaper-results-box h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ccc;
+}
+.skip-newspaper-match-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.75rem;
+}
+.skip-newspaper-match {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    background: #fff;
+}
+.skip-newspaper-match .winner {
+    font-weight: 700;
+}
+.skip-newspaper-match .loser {
+    color: #666;
+}
+
+.skip-newspaper-footer {
+    padding: 0.5rem 1rem;
+    text-align: center;
+    border-top: 1px solid #ccc;
+    background-color: #f9f9f9;
+}
+/* ▲▲▲ ラウンドスキップ新聞モーダル用のCSS (ここまで追加) ▲▲▲ */
         /* ▼▼▼ トーナメント表用のCSS ▼▼▼ */
         .bracket-wrapper {
             max-width: 100%;
@@ -1570,7 +1706,30 @@
         /* ▲▲▲ 一球速報CSSここまで ▲▲▲ */
 
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+.skip-newspaper-container {
+    /* 既存の紙の色(#fdfaf4)をベースに、テクスチャと折り目を追加 */
+    background-color: #fdfaf4;
+    background-image: 
+        /* 1. 中央の折り目 */
+        linear-gradient(to right, 
+            rgba(0, 0, 0, 0) 49.8%,  /* 中央の少し手前まで透明 */
+            rgba(0, 0, 0, 0.1) 50%,   /* 中央に暗い影 */
+            rgba(0, 0, 0, 0) 50.2%   /* 中央の少し後から透明 */
+        ),
+        /* 2. 紙の黄ばみ・質感 (中心が明るく、端が少し暗い) */
+        radial-gradient(ellipse at center, #fdfaf4 70%, #f0e8d8 100%);
 
+    border: 1px solid #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 900px;
+    max-height: 95vh;
+    font-family: 'Noto Serif JP', 'Yuji Syuku', serif;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+}
+/* ▲▲▲ 置き換えはここまで ▲▲▲ */
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
 .match-schedule {
@@ -8245,6 +8404,162 @@ function updateTournamentFinishRecords() {
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
+// ▼▼▼ ラウンドスキップ新聞生成用の関数群 (ここから追加) ▼▼▼
+
+/**
+ * スキップしたラウンドの結果を基に、新聞モーダルを生成・表示する
+ * @param {number} roundNumber - スキップしたラウンド (例: 1, 2, ... 7)
+ * @param {Array<object>} results - そのラウンドの全試合結果の配列
+ */
+async function generateSkipRoundNewspaper(roundNumber, results) {
+    const modal = document.getElementById('skip-newspaper-modal');
+    const bodyEl = document.getElementById('skip-newspaper-body');
+    const dateEl = document.getElementById('skip-newspaper-date');
+    if (!modal || !bodyEl || !dateEl) {
+        console.error("新聞モーダルの要素が見つかりません。");
+        return;
+    }
+
+    // 1. ラウンド名と日付を取得
+    const numTeams = tournamentState.teams.length; // 128
+    const finalRound = Math.log2(numTeams); // 7
+    const roundNameMap = { 
+        [finalRound]: '決勝', [finalRound-1]: '準決勝', [finalRound-2]: '準々決勝', 
+        [finalRound-3]: '4回戦', [finalRound-4]: '3回戦', [finalRound-5]: '2回戦', [finalRound-6]: '1回戦' 
+    };
+    const roundName = roundNameMap[roundNumber] || `${roundNumber}回戦`;
+    
+    // 日付は、最後に処理された試合のスケジュールから取得
+    const lastMatchId = results[results.length - 1].matchId;
+    const lastMatch = findMatchById(lastMatchId);
+    dateEl.textContent = lastMatch?.schedule?.date 
+        ? `${tournamentState.tournamentYear}年 ${lastMatch.schedule.date}` 
+        : `${tournamentState.tournamentYear}年 ${tournamentNameMap[tournamentState.currentTournament]}`;
+
+    // 2. AIに記事を生成させる
+    const articleData = await generateSkipRoundArticleContent(roundName, results);
+
+    // 3. 試合結果ボックスのHTMLを生成
+    let resultsBoxHtml = '';
+    results.forEach(match => {
+        resultsBoxHtml += `
+            <div class="skip-newspaper-match">
+                <div><span class="winner">${match.winnerName}</span> ${match.winnerScore}</div>
+                <div><span class="loser">${match.loserName}</span> ${match.loserScore}</div>
+            </div>
+        `;
+    });
+
+    // 4. モーダルにHTMLを挿入
+    bodyEl.innerHTML = `
+        <div class="skip-newspaper-main-headline">
+            ${articleData.mainHeadline}
+        </div>
+        <div class="skip-newspaper-column-container">
+            <div class="skip-newspaper-column">
+                <h3>${articleData.subHeadline}</h3>
+                <p>${articleData.body.replace(/\n/g, '<br><br>')}</p>
+            </div>
+        </div>
+        <div class="skip-newspaper-results-box">
+            <h2>${roundName} 全試合結果</h2>
+            <div class="skip-newspaper-match-grid">
+                ${resultsBoxHtml}
+            </div>
+        </div>
+    `;
+
+    // 5. モーダルを表示
+    modal.classList.remove('hidden');
+}
+
+/**
+ * ラウンドスキップ新聞を閉じる
+ */
+function closeSkipNewspaper() {
+    document.getElementById('skip-newspaper-modal').classList.add('hidden');
+}
+
+/**
+ * AIにスキップしたラウンドの記事内容を生成させる（新聞用）
+ * @param {string} roundName - "2回戦", "決勝" など
+ * @param {Array<object>} results - 試合結果の配列
+ * @returns {Promise<object>} - { mainHeadline, subHeadline, body }
+ */
+async function generateSkipRoundArticleContent(roundName, results) {
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    
+    // 1. 最大の番狂わせを特定
+    const biggestUpset = [...results].sort((a, b) => a.rankDiff - b.rankDiff)[0]; // rankDiffが最もマイナス
+    let upsetText = null;
+    if (biggestUpset && biggestUpset.rankDiff <= -2) {
+        upsetText = `最大の波乱は、${biggestUpset.winnerRank}ランクの「${biggestUpset.winnerName}」が、${biggestUpset.loserRank}ランクの強豪「${biggestUpset.loserName}」を ${biggestUpset.winnerScore}-${biggestUpset.loserScore} で破った一戦だ。`;
+    }
+
+    // 2. シード校の動向を分析
+    const seeds = tournamentState.seeds.map(s => s.team);
+    const seedResults = results.filter(r => seeds.includes(r.winnerName) || seeds.includes(r.loserName));
+    let seedSurvived = 0;
+    let seedEliminated = [];
+    seedResults.forEach(r => {
+        if (seeds.includes(r.winnerName)) seedSurvived++;
+        if (seeds.includes(r.loserName)) seedEliminated.push(r.loserName);
+    });
+
+    // 3. AIへのプロンプト作成
+    const prompt = `あなたは「静岡 熱闘速報」の編集長です。
+高校野球 ${tournamentNameMap[tournamentState.currentTournament]}の「${roundName}」が全試合終了しました。
+以下の分析データに基づき、新聞の一面を飾る「縦書きの大見出し」「小見出し」「記事本文」を生成してください。
+
+### ${roundName} 分析データ
+- **主な試合結果:** ${results.length}試合が行われた。
+- **最大の波乱:** ${upsetText || '大きな波乱はなし。'}
+- **シード校の動向:** ${seedEliminated.length > 0 ? `シード校のうち「${seedEliminated.join('、')}」が敗退した。` : 'シード校は順当に勝ち進んだ。'}
+
+### 指示
+1.  **mainHeadline (縦書きの大見出し):**
+    - 5～8文字程度で、最も衝撃的な事実を伝える。
+    - （例：波乱があった場合）「シード散る」「大波乱の${roundName}」
+    - （例：決勝の場合）「${results[0].winnerName}、頂点へ」「歓喜の初優勝」
+    - （例：順当な場合）「強豪、順当勝ち」「ベスト4出揃う」
+2.  **subHeadline (小見出し):**
+    - 20～30文字程度で、大見出しを補足する。
+    - （例：波乱があった場合）「${biggestUpset.winnerName}が金星！ ${seedEliminated.join('、')}が姿を消す」
+    - （例：決勝の場合）「${results[0].loserName}との死闘を制す！${results[0].winnerScore}-${results[0].loserScore}」
+3.  **body (記事本文):**
+    - 150～200文字程度で、${roundName}全体を総括する。
+    - 必ず「最大の波乱」(${upsetText})と「シード校の動向」に触れること。
+    - 決勝の場合は、決勝戦の展開をドラマチックに描写すること。
+    - 読者の期待を煽るような、熱意のある文体で書くこと。
+
+### 出力形式 (JSON)
+{"mainHeadline": "...", "subHeadline": "...", "body": "..."}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (article && article.mainHeadline && article.subHeadline && article.body) {
+                return article;
+            }
+        }
+        throw new Error("AI article response format error.");
+    } catch (error) {
+        console.error("AI skip round article generation failed:", error);
+        return { 
+            mainHeadline: "記事生成失敗", 
+            subHeadline: "AI記者との通信エラー", 
+            body: "記事の生成に失敗しました。ネットワーク接続を確認してください。"
+        };
+    }
+}
+
+// ▲▲▲ ラウンドスキップ新聞生成用の関数群 (ここまで追加) ▲▲▲
+
+
+// ... (既存の initializeApp(); の呼び出し) ...
+
  /**
      * 現在のトーナメント状態に基づいてUI全体を再描画する
      * (★夏・秋・春 すべて128チーム制のメインブラケットを描画するよう統一)
@@ -9092,42 +9407,56 @@ function renderRegionMap(data) {
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
- * 決勝戦を自動でスキップする
- */
-async function skipFinal() {
-    const finalMatch = tournamentState.matches['F-R1-M1'];
-    if (!finalMatch || !finalMatch.team1 || !finalMatch.team2 || finalMatch.winner) return;
+     * 【修正版】決勝戦を自動でスキップする
+     * (★新聞生成フックを追加)
+     */
+    async function skipFinal() {
+        const finalMatch = tournamentState.matches['F-R1-M1'];
+        if (!finalMatch || !finalMatch.team1 || !finalMatch.team2 || finalMatch.winner) return;
 
-    const btn = document.getElementById('skip-final-btn');
-    if(btn) btn.disabled = true;
-    
-    const { team1, team2 } = finalMatch;
-    const rank1 = calculateRank(team1, tournamentState);
-    const rank2 = calculateRank(team2, tournamentState);
-    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    
-    let winnerName, loserName;
-    // ランク差が2以上ある場合、95%の確率でランク上位が勝利
-    const upsetChance = Math.abs(rankValues[rank1] - rankValues[rank2]) >= 2 ? 0.05 : 0.45;
+        const btn = document.getElementById('skip-final-btn');
+        if(btn) btn.disabled = true;
+        
+        const { team1, team2 } = finalMatch;
+        const rank1 = calculateRank(team1, tournamentState);
+        const rank2 = calculateRank(team2, tournamentState);
+        const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+        
+        let winnerName, loserName;
+        // ランク差が2以上ある場合、95%の確率でランク上位が勝利
+        const upsetChance = Math.abs(rankValues[rank1] - rankValues[rank2]) >= 2 ? 0.05 : 0.45;
 
-    if (Math.random() < upsetChance) { // 番狂わせ
-        winnerName = rankValues[rank1] < rankValues[rank2] ? team1 : team2;
-    } else { // 順当
-        winnerName = rankValues[rank1] >= rankValues[rank2] ? team1 : team2;
+        if (Math.random() < upsetChance) { // 番狂わせ
+            winnerName = rankValues[rank1] < rankValues[rank2] ? team1 : team2;
+        } else { // 順当
+            winnerName = rankValues[rank1] >= rankValues[rank2] ? team1 : team2;
+        }
+        loserName = winnerName === team1 ? team2 : team1;
+
+        const winnerRank = calculateRank(winnerName, tournamentState);
+        const loserRank = calculateRank(loserName, tournamentState);
+        const [winnerScore, loserScore] = generateAutoScore(winnerRank, loserRank);
+
+        finalMatch.score1 = (finalMatch.team1 === winnerName) ? winnerScore : loserScore;
+        finalMatch.score2 = (finalMatch.team2 === winnerName) ? winnerScore : loserScore;
+
+        // ★ 結果を収集 (決勝は1試合のみ)
+        const roundResults = [{
+            matchId: 'F-R1-M1', winnerName, loserName, winnerScore, loserScore,
+            winnerRank, loserRank, rankDiff: rankValues[winnerRank] - rankValues[loserRank]
+        }];
+
+        await processMatchWin('F-R1-M1', winnerName);
+
+        // ★★★ ステップ2：新聞を生成・表示 ★★★
+        if (tournamentState.settings.enableArticleGeneration) {
+            const finalRoundNum = Math.log2(tournamentState.teams.length); // 128チームなら 7
+            await generateSkipRoundNewspaper(finalRoundNum, roundResults);
+        }
+        // ★★★ 新聞生成フックここまで ★★★
+
+        if(btn) btn.classList.add('hidden');
     }
-    loserName = winnerName === team1 ? team2 : team1;
-
-    const winnerRank = calculateRank(winnerName, tournamentState);
-    const loserRank = calculateRank(loserName, tournamentState);
-    const [winnerScore, loserScore] = generateAutoScore(winnerRank, loserRank);
-
-    finalMatch.score1 = (finalMatch.team1 === winnerName) ? winnerScore : loserScore;
-    finalMatch.score2 = (finalMatch.team2 === winnerName) ? winnerScore : loserScore;
-
-    await processMatchWin('F-R1-M1', winnerName);
-
-    if(btn) btn.classList.add('hidden');
-}
 
     function checkBest8Decided(){} // checkTournamentProgressに統合
 // --- 試合詳細モーダル関連の関数（高機能版） ---
@@ -10915,13 +11244,10 @@ function getRoundSortKey(matchId) {
     }
 
     /**
-     * 【重要修正】ラウンドを自動でスキップする
-     * (★128チーム制、BYE対応版)
+     * 【修正版】ラウンドを自動でスキップする
+     * (★新聞生成フック、結果収集機能を追加)
      */
     async function skipRound(roundNumber) {
-
-
-
         const btnId = `skip-r${roundNumber}-btn`;
         const btn = document.getElementById(btnId);
         if (btn) {
@@ -10940,6 +11266,9 @@ function getRoundSortKey(matchId) {
                 matchIds.push(`${side}-R${roundNumber}-M${i}`);
             }
         });
+
+        // ★★★ スキップした試合の結果を収集する配列 ★★★
+        const roundResults = [];
 
         // --- ステップ1：ラウンドの全試合の勝敗を決定 ---
         for (const matchId of matchIds) {
@@ -10983,11 +11312,24 @@ function getRoundSortKey(matchId) {
             match.score1 = (match.team1 === winnerName) ? winnerScore : loserScore;
             match.score2 = (match.team2 === winnerName) ? winnerScore : loserScore;
             
+            // ★ 結果を収集
+            roundResults.push({
+                matchId, winnerName, loserName, winnerScore, loserScore,
+                winnerRank, loserRank, rankDiff: rankValues[winnerRank] - rankValues[loserRank]
+            });
+
             await processMatchWin(matchId, winnerName);
         }
         
         renderTournament(tournamentState);
         renderNews(tournamentState.news); 
+        
+        // ★★★ ステップ2：新聞を生成・表示 ★★★
+        if (tournamentState.settings.enableArticleGeneration && roundResults.length > 0) {
+            await generateSkipRoundNewspaper(roundNumber, roundResults);
+        }
+        // ★★★ 新聞生成フックここまで ★★★
+
         saveState();
         
         if (btn) {
@@ -20382,6 +20724,7 @@ document.body.addEventListener('change', (e) => {
     document.getElementById('details-close').addEventListener('click', () => detailsModal.classList.add('hidden'));
     saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
     newspaperCloseBtn.addEventListener('click', () => newspaperModal.classList.add('hidden'));
+document.getElementById('skip-newspaper-close-btn').addEventListener('click', closeSkipNewspaper);
 // ▼▼▼ この2行を 10953行目 の直後に追加 ▼▼▼
     const preGameModalClose = document.getElementById('pre-game-modal-close');
     if (preGameModalClose) preGameModalClose.addEventListener('click', () => document.getElementById('pre-game-modal').classList.add('hidden'));
@@ -21637,6 +21980,38 @@ function saveScorecardAndClose() {
     </div>
 </div>
 
+
+<div id="skip-newspaper-modal" class="newspaper-modal-backdrop hidden">
+    <div class="skip-newspaper-container">
+        <div class="skip-newspaper-header">
+            <h1 class="skip-newspaper-title">静岡 熱闘速報</h1>
+            <p id="skip-newspaper-date" class="skip-newspaper-date">2025年7月15日</p>
+        </div>
+        
+        <div id="skip-newspaper-body" class="skip-newspaper-body">
+            <div class="skip-newspaper-main-headline">
+                波乱続出
+            </div>
+            <div class="skip-newspaper-column-container">
+                <div class="skip-newspaper-column">
+                    <h3>シード校、苦戦</h3>
+                    <p>本日行われた2回戦では、シード校が苦戦を強いられる場面が目立った。第1シードの283学園は盤石の戦いを見せたものの、第4シード静岡は...</p>
+                </div>
+            </div>
+            <div class="skip-newspaper-results-box">
+                <h2>主な試合結果</h2>
+                <div class="skip-newspaper-match-grid">
+                    </div>
+            </div>
+        </div>
+        
+        <div class="skip-newspaper-footer">
+            <button id="skip-newspaper-close-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">
+                閉じる
+            </button>
+        </div>
+    </div>
+</div>
 
     </body>
 </html>
