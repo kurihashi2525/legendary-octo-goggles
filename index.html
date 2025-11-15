@@ -3916,7 +3916,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '池谷 幸雄', style: '堅実', experience: 'ベテラン' }
     },
     "清水桜が丘": {
-        name_yomi: "しみずさくらがおか", region: "中部", type: "公立", deviation: 57,
+        name_yomi: "しみずさくらがおか", region: "中部", type: "公立", deviation: 77,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "清水商業と庵原高校の統合校。サッカー部が有名だが、野球部も「清商（キヨショウ）」時代の勝負強さを受け継ぐ。",
         coach: { name: '大榎 克己', style: '堅実', experience: '中堅' }
@@ -17588,6 +17588,7 @@ function clearPreviousAiContent(matchId) {
 /**
  * 試合の勝者を処理する中心的関数（全機能統合）
  * (★快進撃記事と通常記事が「両方」生成されるよう修正)
+ * (★★アクシデント記事が283学園にのみ発生するよう修正★★)
  */
 async function processMatchWin(matchId, winnerName) {
     let dbMatch = findMatchById(matchId);
@@ -17808,8 +17809,6 @@ async function processMatchWin(matchId, winnerName) {
         const documentary = tournamentState.documentary;
         const loserRank = calculateRank(loserName, tournamentState);
         
-        // ★★★ ここからが修正箇所 ★★★
-        
         // 1. 快進撃(Cinderella)の判定
         let cinderellaType = null;
         let roundNumForCinderella = 0;
@@ -17826,7 +17825,7 @@ async function processMatchWin(matchId, winnerName) {
             cinderellaArticlePromise = generateCinderellaArticle(loserName, loserRank, roundNumForCinderella, matchContext);
         }
         
-        // 3. 通常記事またはドキュメンタリー記事の生成 (「else if」を削除)
+        // 3. 通常記事またはドキュメンタリー記事の生成
         if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
             // ドキュメンタリー
             const isWin = documentary.target === winnerName;
@@ -17843,10 +17842,9 @@ async function processMatchWin(matchId, winnerName) {
             articlePromise = generateDocumentaryArticle(isWin ? 'win' : 'lose', documentary.type, documentary.target, matchInfoForArticle);
             if (!isWin) tournamentState.documentary = { target: null, type: null };
         } else {
-            // 通常記事 (快進撃記事とは「別に」生成される)
+            // 通常記事
             articlePromise = generateNewsArticle(matchContext);
         }
-        // ★★★ 修正ここまで ★★★
     }
     const isNotableGame = (winnerRank === 'A' || winnerRank === 'B' || loserRank === 'A' || loserRank === 'B');
     if (tournamentState.settings.enableArticleGeneration && isNotableGame && Math.random() < 0.25) {
@@ -17903,7 +17901,6 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
     
-    // ★★★ 修正箇所 (両方の記事をプッシュ) ★★★
     if (generatedCinderellaArticle) {
         tournamentState.news.push(generatedCinderellaArticle);
     }
@@ -17923,7 +17920,6 @@ async function processMatchWin(matchId, winnerName) {
             tournamentState.news.push(errorArticle);
         }
     }
-    // ★★★ 修正ここまで ★★★
 
     if (generatedHadaReport) {
         tournamentState.news.push(generatedHadaReport);
@@ -17967,25 +17963,37 @@ async function processMatchWin(matchId, winnerName) {
                 const careerStats = teamRecord.playerStats.batting[playerName];
                 if (!stats || !careerStats) continue;
                 
+                // ★★★ ここからが修正箇所 ★★★
                 // 1. HBP(死球)による故障判定 (70%の確率)
                 if (stats.hbp > 0 && Math.random() < 0.70) {
                     careerStats.narrative_flag = "injured"; // 故障
-                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_hbp", { 
-                        log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦で死球を受ける` 
-                    });
+                    // ★ 283学園の場合のみ記事を生成
+                    if (teamName === "283学園") {
+                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_hbp", { 
+                            log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦で死球を受ける` 
+                        });
+                    }
                 }
-                // 2. ランダムアクシデント (2%の確率で体調不良)
+                // 2. ランダムアクシデント (9%の確率で体調不良)
                 else if (stats.pa > 0 && Math.random() < 0.09) {
                     careerStats.narrative_flag = "sick"; // 体調不良
-                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_sickness");
+                    // ★ 283学園の場合のみ記事を生成
+                    if (teamName === "283学園") {
+                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_sickness");
+                    }
                 }
-                // 3. NEW: 軽傷 (3%の確率)
+                // 3. NEW: 軽傷 (15%の確率)
                 else if (stats.pa > 0 && Math.random() < 0.15) {
                     careerStats.narrative_flag = "minor_injury"; // 軽傷
-                    accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_minor_injury", { 
-                        log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦でのプレー` 
-                    });
+                    // ★ 283学園の場合のみ記事を生成
+                    if (teamName === "283学園") {
+                        accidentArticlePromise = generateAccidentArticle(teamName, playerName, "accident_minor_injury", { 
+                            log: `${getRoundNameFromMatchId(matchId)}の${opponentName}戦でのプレー` 
+                        });
+                    }
                 }
+                // ★★★ 修正ここまで ★★★
+                
                 // 4. (通常の調子判定)
                 else if (stats.pa > 0) {
                     if (stats.h >= 4 || stats.hr >= 2 || stats.rbi >= 5) careerStats.narrative_flag = "peak";
@@ -18038,17 +18046,19 @@ async function processMatchWin(matchId, winnerName) {
                         const daysRest = lastDate ? Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24)) - 1 : 99;
                         
                         // 酷使判定 (確率化)
-                        if (daysRest === 0 && Math.random() < 0.20) { // 連投 (50%で故障)
+                        if (daysRest === 0 && Math.random() < 0.20) { // 連投
                             careerStats.narrative_flag = "injured";
                             overuseLog = "連投";
                             setInjury = true;
-                        } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.40) { // 中1日で80球以上 (40%で故障)
+                        } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.40) { // 中1日で80球以上
                             careerStats.narrative_flag = "injured";
                             overuseLog = "中1日での80球以上の登板";
                             setInjury = true;
                         }
                     }
                 }
+                
+                // ★★★ 修正箇所: このif文は元から283学園のみが対象だったので変更なし ★★★
                 if (setInjury && teamName === "283学園") {
                     accidentArticlePromise = generateAccidentArticle(teamName, playerName, "injury_overuse", { log: overuseLog, round: getRoundNameFromMatchId(matchId) });
                 }
@@ -18073,7 +18083,7 @@ async function processMatchWin(matchId, winnerName) {
             });
         }
     }
-    // ★★★ 修正ここまで ★★★    
+    
     // --- 8. ラウンド終了チェックと総括スレッド生成 ---
     if (side !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
         const roundNum = parseInt(idParts[1].slice(1));
@@ -18115,7 +18125,7 @@ async function processMatchWin(matchId, winnerName) {
     // --- 11. 最終描画 ---
     renderTournament(tournamentState);
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
+
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
