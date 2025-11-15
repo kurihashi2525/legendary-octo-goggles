@@ -14742,7 +14742,7 @@ async function checkAndTriggerNewspaper(roundNum) {
 
 /**
  * [NEW] 終了したラウンドを総括する「なんJまとめスレッド」をAIに生成させる
- * (★大会の文脈(夏/秋/春)をAIプロンプトに追加)
+ * (★currentTournament未定義エラーを修正)
  */
 async function generateRoundSummaryBbsThread(roundNum) {
     const state = tournamentState;
@@ -14805,16 +14805,17 @@ async function generateRoundSummaryBbsThread(roundNum) {
     analysisText += `\n### 次のラウンド (${getRoundNameFromMatchId(`L-R${nextRoundNum}-M1`)}) の注目カード\n`;
     analysisText += notableNextMatchups.length > 0 ? notableNextMatchups.map(s => `- ${s}`).join('\n') : "特になし\n";
 
-    // ★★★ 大会の文脈（AI用）を追加 ★★★
+    // ★★★ ここからが修正箇所 ★★★
     let tournamentContextPrompt = "";
-    if (currentTournament === 'summer') {
+    // `currentTournament` ではなく `state.currentTournament` を使用
+    if (state.currentTournament === 'summer') {
         tournamentContextPrompt = "3年生にとってはガチで最後の夏や。";
-    } else if (currentTournament === 'autumn') {
+    } else if (state.currentTournament === 'autumn') {
         tournamentContextPrompt = "新チームの初陣やな。ここでの結果がセンバツ選考に響くで。";
-    } else if (currentTournament === 'spring') {
+    } else if (state.currentTournament === 'spring') {
         tournamentContextPrompt = "夏のシード権がかかった前哨戦や。";
     }
-    // ★★★ 追加ここまで ★★★
+    // ★★★ 修正ここまで ★★★
 
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
 ${state.tournamentYear}年度 ${tournamentName}の「${roundName}」が全試合終了しました。
@@ -14835,10 +14836,11 @@ ${analysisText}
 - **分析結果への反応:**
     - 「主な番狂わせ」に激しく反応してください。（例：「静高がまさかの小笠に負けてて草」）
     - 「強豪校の苦戦」に反応してください。（例：「283学園が静岡北に4-3とか危なすぎワロタ」）
-    - 「次のラウンドの注目カード」に期待するコメントをしてください。（例：「次の静商と翔洋の試合はガチで楽しみ」）
+    - 「次のラウンドの注目カード」に期待するコメントをしてください。（例：「次の静商と翔洋の試合はガチで楽しみ」「〇〇 vs △△、事実上の決勝だろ」）
 - **なんJらしさ:**
     - 短い煽りレス。「は？」「雑魚w」「ファーwww」
     - 他のコメントへの安価 (>>) 付きの返信やツッコミ。
+    - 自分の応援していたチームの敗退を嘆くコメント（架空でOK）。
 
 ### 出力形式 (JSON)
 {
@@ -14858,7 +14860,7 @@ ${analysisText}
             const bbsJson = parseJsonFromText(rawText);
             
             if (bbsJson && bbsJson.threadTitle && Array.isArray(bbsJson.comments)) {
-                const threadId = `summary-thread-R${roundNum}-${currentTournament}`; // ★大会キーを追加
+                const threadId = `summary-thread-R${roundNum}-${state.currentTournament}`;
                 return {
                     id: threadId,
                     title: bbsJson.threadTitle,
