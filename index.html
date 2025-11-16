@@ -4835,8 +4835,8 @@ async function generateMatomeSiteHtml() {
 
 
 /**
- * ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
- * (★敗退したC/D/Eランクの「快進撃」にも言及するよう修正)
+ * [修正版] ゲーム内の試合結果に対する、なんJまとめサイト風のスレッドをAIに生成させる
+ * (★「軽傷」選手への言及指示を強化)
  */
 async function generateGameMatchBbsComments(matchContext) {
     const { 
@@ -4920,14 +4920,12 @@ async function generateGameMatchBbsComments(matchContext) {
         ballQualityText = `\n### データ3：チーム別 打球品質レポート\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
     
-    // ★★★ ここからが「快進撃」判定 ★★★
     let cinderellaPraiseInstruction = "";
     const idParts = matchId.split('-');
     let roundNum = 0;
     if (idParts[0] !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
         roundNum = parseInt(idParts[1].slice(1));
     }
-    
     if ( (loserRank === 'E' && roundNum >= 3) ||
          (loserRank === 'D' && roundNum >= 4) ||
          (loserRank === 'C' && roundNum >= 5) )
@@ -4935,7 +4933,6 @@ async function generateGameMatchBbsComments(matchContext) {
         cinderellaPraiseInstruction = `
 - **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)だったが、${roundName}まで勝ち上がった。この「快進撃」を**「${loserName}、ようやっとる」「来年が楽しみなチーム」**のように、必ず称賛すること。`;
     }
-    // ★★★ 判定ここまで ★★★
     
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
 以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜27個**生成してください。
@@ -4988,9 +4985,8 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
 あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、**勝者の軌跡**、**次の試合情報**を踏まえつつ、以下の点をコメントに含めてください。
 
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
-。
-- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」「〇〇がいたら結果は違ったかもな」）について必ずコメントすること。
-${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+- **【★★欠場者への言及 (最重要)】**: もし「主な欠場者」に選手名（例：〇〇 [🏥], △△ [🩹]）がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]抜きでよく勝ったわ」「〇〇が[🩹]でいないのが響いたな」）を**必ず記事に含めてください。**
+${cinderellaPraiseInstruction}
 - **【最重要：次戦情報】**: 「データ5」の**\`次の試合:\`** に書かれている情報を**必ず**コメントに含めてください。「次は〇〇か…」のように具体的に言及し、**「未定」という言葉は絶対に使わないでください。**あなたは今、上記の全データを眺めながら、他のファンと会話しています。**現在の試合が「${roundName}」であること**、**勝者の軌跡**、**次の試合情報**を踏まえつつ、以下の点をコメントに含めてください。
 
 - **【★シードランク言及】**: 試合情報に「(第1シード)」などのシードランクが含まれています。**「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
@@ -5013,14 +5009,10 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
     - 「データ2」に**『今大会のチーム打率は.XXX』**という情報が含まれています。
     - この情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」「打率3割超えの打線相手によく抑えたわ」）にも言及すること。
 - **【投手の詳細属性】**: 「データ3（ボックススコア）」に「（右/オーバー/本格派/150km帯）」といった**投手の詳細属性**が記載されている場合、それにも言及すること。
-
-// ▼▼▼ 既存の「盗塁」の指示ブロックを、以下で「置き換え」 ▼▼▼
 - **【★盗塁への言及 (重要)】**:
     - 「データ3（個人成績）」に**盗塁(SB)**が記録されている選手がいたら、「〇〇、足はえーなw」「良い盗塁やった」と言及すること。
     - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「姫川、今大会4盗塁目かよw」「こいつ打ちすぎだし走りすぎだろ」**といった具体的な数字に言及すること。
     - **盗塁が0でも批判は不要です。**
-// ▲▲▲ 置き換えここまで ▲▲▲
-
 - **【★通算成績への言及 (裁量)】**:
     - 「データ2」に**『(参考: チーム通算打率 .XXX, 通算 Y 盗塁)』**という情報が含まれている場合、必要に応じて（例：チームの伝統的な機動力を語る際など）、その「通算盗塁」にも言及すること。
     - **盗塁が0でも批判は不要です。**
@@ -5037,33 +5029,26 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
     - 「データ2（常識）」と「データ3（ボックススコア）」にある**投打の左右**にも注目すること。
     - **特に、相手が「左腕（サウスポー）」だった場合**や、監督が**「ワンポイントリリーフ」**を使った場合に、その相性について言及すること。
 - **【★スタメン復帰】**: 「データ1：スタメン変更」に「〇〇がスタメン復帰」とあった場合、**「おお、〇〇戻ってきたか！」「ここで使うのは博打だろw」**のように、その選手への期待や不安をコメントに含めること。
-- **【★登板履歴への言及】**: 「データ5：今大会の主な投手登板履歴」に情報がある場合、**「〇〇、1回戦でも投げてたよな」「連投大丈夫か？」**のように、その投手の登板間隔や過去の投球内容にも言及すること。
-// ▼▼▼ 既存の「登板履歴への言及」指示を、以下の詳細な指示ブロックに「置き換え」 ▼▼▼
 - **【★登板履歴への言及 (最重要)】**: 「データ5：今大会の主な投手登板履歴」の情報を必ず確認し、以下の点をコメントに含めること。
     - **連投/登板間隔**: 「〇〇、昨日も投げてなかったか？」「連投お疲れ様」「中1日でこれはキツイわ」
     - **酷使**: 「エース投げすぎだろ」「監督は鈴木を壊す気か」
     - **好不調の波**: 「前回炎上したのによう立ち直ったな」「こないだは良かったのに今日はアカンか」
     - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「強豪相手でも抑えるとか本物やん」
-// ▲▲▲ 置き換えここまで ▲▲▲
-// ▼▼▼ 挿入 ▼▼▼
 - **【★打者履歴への言及 (最重要)】**: 「データ6：打者成績履歴」も必ず確認し、以下の点をコメントに含めること。
     - **好不調の波**: 「〇〇、今日で3試合連続ヒットやん！」「△△、10打数ノーヒットとかもう終わりだろ…」
     - **役割**: 「こいつ代打成功率100%じゃね？」「1番に上げたら打ち出したな」
     - **相手の質**: 「今まで雑魚狩りだったのがバレたなw」「Aランク投手から打つとか本物やん」
-// ▲▲▲
 ### 出力形式【最重要】
 解説や前置きは一切不要です。**必ず以下の JSON 配列形式 (\`[...]\`) のみ**で出力してください。
 \`\`\`json
 [
   {"personality": "1: 風吹けば名無し", "comment": "（生成したコメント1）"},
   {"personality": "2: 風吹けば名無し", "comment": "（生成したコメント2）"},
-  // ... (合計25〜30個のコメント) ...
+  // ... (合計25〜27個のコメント) ...
 ]
 \`\`\`
 `; 
-    // ▲▲▲ プロンプト修正ここまで ▲▲▲
-
-    // --- AIへのリクエスト部分は変更なし ---
+    
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
@@ -5104,7 +5089,6 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
         };
     }
 }
-
 // ▼▼▼ このブロックをまるごと「新規追加」 ▼▼▼
 
 // ▼▼▼ 既存の generateUserThreadBbsComments 関数 (12015行目あたり) を、以下で「置き換え」 ▼▼▼
@@ -12559,6 +12543,7 @@ async function setupSpringMainTournament_Round2() {
 /**
  * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔
  * (★「故障者リスト(injuryReport)」の情報を追加)
+ * (★★ 故障者リストに「軽傷(🩹)」も含めるよう修正 ★★)
  */
 function createMatchContext(matchId, winnerName, team1QualityText, team2QualityText) {
     const dbMatch = findMatchById(matchId);
@@ -12674,7 +12659,7 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         batterGamelogInfo = "\n### 参考情報：今大会の主な打者成績履歴\n- この試合に出場した打者は、全員今大会これが初出場です。\n";
     }
 
-    // ★★★ ここからが新ロジック (故障者リストの生成) ★★★
+    // ★★★ ここからが修正箇所 (軽傷[🩹]もリストに含める) ★★★
     let injuryReportText = "\n### 参考情報：主な欠場者\n";
     let injuriesFound = false;
     for (const teamName of [winnerName, loserName]) {
@@ -12687,7 +12672,8 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         if (teamRecord.playerStats.batting) {
             for (const playerName in teamRecord.playerStats.batting) {
                 const flag = teamRecord.playerStats.batting[playerName].narrative_flag;
-                if (flag === 'injured' || flag === 'sick') {
+                // ★ 'minor_injury' を追加
+                if (flag === 'injured' || flag === 'sick' || flag === 'minor_injury') {
                     injuredPlayers.push(playerName);
                 }
             }
@@ -12696,22 +12682,33 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         if (teamRecord.playerStats.pitching) {
             for (const playerName in teamRecord.playerStats.pitching) {
                 const flag = teamRecord.playerStats.pitching[playerName].narrative_flag;
-                if (flag === 'injured' || flag === 'sick') {
+                // ★ 'minor_injury' を追加
+                if (flag === 'injured' || flag === 'sick' || flag === 'minor_injury') {
                     injuredPlayers.push(playerName);
                 }
             }
         }
         
-        // 重複を削除し、テキストに追加
+        // 3. テキストを生成
         if (injuredPlayers.length > 0) {
-            injuryReportText += `- **${teamName}**: ${[...new Set(injuredPlayers)].join(', ')} (故障/体調不良 🏥)\n`;
+            // ★ どの選手がどの状態か分かるようにする
+            const playerStates = [...new Set(injuredPlayers)].map(playerName => {
+                const bFlag = teamRecord.playerStats.batting[playerName]?.narrative_flag;
+                const pFlag = teamRecord.playerStats.pitching[playerName]?.narrative_flag;
+                const flag = bFlag || pFlag;
+                if (flag === 'injured' || flag === 'sick') return `${playerName} [🏥]`;
+                if (flag === 'minor_injury') return `${playerName} [🩹]`;
+                return playerName; // フォールバック
+            });
+            // ★ テキストを修正
+            injuryReportText += `- **${teamName}**: ${playerStates.join(', ')} (故障[🏥]・軽傷[🩹]・体調不良のため欠場)\n`;
             injuriesFound = true;
         }
     }
     if (!injuriesFound) {
         injuryReportText += "両チームともに、特筆すべき故障者や体調不良者はいません。\n";
     }
-    // ★★★ 新ロジックここまで ★★★
+    // ★★★ 修正ここまで ★★★
 
     const context = {
         winnerName,
@@ -12741,12 +12738,10 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         team2BallQuality: team2QualityText || "（打球品質データなし）",
         pitcherGamelogInfo: pitcherGamelogInfo,
         batterGamelogInfo: batterGamelogInfo,
-        injuryReport: injuryReportText // ★ 新しいプロパティとして追加
+        injuryReport: injuryReportText // ★ 修正されたテキスト
     };
     return context;
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
-
 
 /**
  * [新ロジック] 前試合とのスタメンを比較し、「復帰」「初スタメン」「スタメン落ち」を分析する
@@ -13378,14 +13373,14 @@ function extractKeyPerformances(dbMatch) {
 /**
  * 密着取材型記者「羽田 雄平」のコラム記事を生成する
  * (★シードランク認識 最終版)
- * @param {object} matchContext - 試合の全コンテキストデータ
- * @returns {Promise<object|null>} 生成された記事オブジェクト
+ * (★★ 故障者リスト(injuryReport)への言及をAIに指示するよう修正 ★★)
  */
 async function generateHadaReport(matchContext) {
     // --- 1. contextから必要な情報を取り出す ---
     const { 
         winnerName, loserName, dbMatch, matchId, 
-        playerStatsText, highlights, nextOpponent
+        playerStatsText, highlights, nextOpponent,
+        injuryReport // ★ 故障者リスト
     } = matchContext;
 
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
@@ -13395,15 +13390,11 @@ async function generateHadaReport(matchContext) {
     const winnerRank = calculateRank(winnerName, tournamentState);
     const loserRank = calculateRank(loserName, tournamentState);
 
-    // ▼▼▼ シードランク取得を追加 ▼▼▼
     const winnerSeedRank = getSeedRankString(winnerName, tournamentState.seeds);
     const loserSeedRank = getSeedRankString(loserName, tournamentState.seeds);
-    // ▲▲▲
-
-    // --- 2. ラウンド名と次の相手を特定 ---
+    
     let roundName = getRoundNameFromMatchId(matchId);
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
     let nextOpponentText = '次戦の相手はまだ決まっていません。';
     if (nextOpponent) {
         if (nextOpponent.opponentName === '優勝') {
@@ -13421,11 +13412,9 @@ async function generateHadaReport(matchContext) {
             nextOpponentText = `次戦は${nextOpponent.roundName}、${dm.team1}と${dm.team2}の勝者と対戦します。`;
         }
     }
-    // ▲▲▲ 修正ここまで ▲▲▲
-    // --- 3. ハイライトをテキスト化 ---
+    
     const highlightsText = highlights.map(fact => `- ${fact.inning || ''}回 ${fact.team || ''} ${fact.player || ''}: ${fact.description}`).join('\n');
 
-    // ... (scheduleText, ballQualityText の準備は変更なし) ...
     let scheduleText = '';
     let scheduleInstruction = '';
     if (matchContext.schedule) {
@@ -13445,7 +13434,7 @@ async function generateHadaReport(matchContext) {
     }
     let ballQualityText = '';
     if (matchContext.team1BallQuality && matchContext.team2BallQuality) {
-        ballQualityText = `\n### データ3：チーム別 打球品質レポート\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
+        ballQualityText = `\n### データ5：チーム別 打球品質レポート\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
 
     // ▼▼▼ 4. AIへのプロンプト（指示書）を修正 ▼▼▼
@@ -13465,23 +13454,20 @@ ${scheduleText}
 - **${loserName}の背景:** ${loserData.info}
 - **試合の決め手(ユーザー入力):** ${dbMatch.summary || '特になし'}
 - **次の試合:** ${nextOpponentText}
+${injuryReport || ''}
 
 ### データ1：試合の主な出来事 (ハイライト)
 ${highlightsText}
 
 ### データ2：主な選手の個人成績 (ボックススコア)
-${playerStatsText}
+${playerStatsText} 
 
-
-// ▼▼▼ このブロックを挿入 ▼▼▼
 ### データ3：今大会の主な投手登板履歴 (この試合より前)
 ${matchContext.pitcherGamelogInfo || '今大会、これが初登板です。'}
-// ▲▲▲ 挿入ここまで ▲▲▲
 
 ### データ4：今大会の主な打者成績履歴 (この試合より前)
 ${matchContext.batterGamelogInfo || '打者の試合履歴データはありません。'}
-// ▲▲▲
-${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'データ5')}
+${ballQualityText}
 
 ### 執筆指示
 1.  **一人称で書く:** 必ず「私」を主語にし、個人的な感想（～驚きました、～でしょうね）を交えてください。
@@ -13489,47 +13475,38 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
     ${scheduleInstruction}
 3.  **両チームの紹介:** 両チームの背景（「王者」「進学校」など）を紹介し、試合の位置づけを明確にしてください。
 4.  **【★シードランク言及】**: **「第1シードの〇〇」**や**「シード校の△△が苦戦」**のように、シードランクにも具体的に言及し、試合の文脈を明確にしてください。
-5.  **【囲み取材】**: 記事の本文中に、あなたが試合後に直接取材した選手（例：ヒーローとなった〇〇くんや、敗れた△△くん）の**「生々しいコメント」**を必ず含めてください。
-6.  **ターニングポイントの特定:** 試合が動いたイニング（例：3回）やプレーを特定し、そこを詳細に描写してください。
-7.  **選手への言及**: 「データ2」の選手名を引用し、「〇〇くん」と呼称してください。**もしその選手の背番号（[#X]）が戦術や物語の上で重要だとあなたが判断した場合**、その背番号にも触れてください。#は背番号と言い換えてください。(例S1→背番号1)
-8.  **【投手の詳細分析】**: 「データ2（ボックススコア）」に記載されている**投手の詳細属性（例：右/オーバー/本格派/150km帯）**にも注目し、その投手のタイプが試合にどう影響したかを分析してください。
-9.  **試合後の情報:** 試合後の選手のコメント（例：「コントロールを重視した」）を（架空で）挿入してください。
-10. **次戦への言及:** 記事の最後に、次の対戦相手（${nextOpponentText}）に触れて締めくってください。
-11. **【選手の背景創作】**: もし詳細な選手プロフィールがない無名の選手について書く場合、あなたが長年の取材でその選手を知っているという記者視点で、**それらしい架空の経歴や特徴を自由に付け加えてください。**
-12. **【常識の反映】**: あなたが熟知している「常識」（例：ナムコグループの台頭、公立の砦・静岡の苦戦）を、目の前の試合結果と関連付けて分析してください。
-13. **【打球の質の分析】**: 「データ1（ハイライト）」や「データ2（ボックススコア）」、「データ3（打球品質レポート）」にある**打球の質**（「鋭い当たり」「詰まった当たり」など）を重視し、結果と内容が一致しない（例：4タコだが全部鋭い当たり）選手の評価にも言及してください。
-14. **【打順の役割】**: **打順の役割**も重視してください。4番が4番の仕事をしたのか、あるいは9番が意外な活躍でラッキーボーイとなったのか、といった戦術的な分析をコラムに含めてください。
-15. **【投手の左右】**: ボックススコアに「（右腕）」「（左腕）」の表記がある場合、それを記事に反映させること。
-16. **【★注目の打席（最重要）】**:
+5.  **【★★ 欠場者への言及 (最重要) ★★】**: 取材メモの「主な欠場者」(${injuryReport})に選手名（例：〇〇 [🏥], △△ [🩹]）が記載されている場合、その主力が欠場したことが試合にどう影響したか、あなたの鋭い視点で分析し、**必ず記事に含めてください。**（例：「やはりエース姫川[🏥]の不在が響いた」「〇〇[🩹]が万全の状態なら、この結果は...」）
+6.  **【囲み取材】**: 記事の本文中に、あなたが試合後に直接取材した選手（例：ヒーローとなった〇〇くんや、敗れた△△くん）の**「生々しいコメント」**を必ず含めてください。
+7.  **ターニングポイントの特定:** 試合が動いたイニング（例：3回）やプレーを特定し、そこを詳細に描写してください。
+8.  **選手への言及**: 「データ2」の選手名を引用し、「〇〇くん」と呼称してください。**もしその選手の背番号（[#X]）が戦術や物語の上で重要だとあなたが判断した場合**、その背番号にも触れてください。#は背番号と言い換えてください。(例S1→背番号1)
+9.  **【投手の詳細分析】**: 「データ2（ボックススコア）」に記載されている**投手の詳細属性（例：右/オーバー/本格派/150km帯）**にも注目し、その投手のタイプが試合にどう影響したかを分析してください。
+10. **試合後の情報:** 試合後の選手のコメント（例：「コントロールを重視した」）を（架空で）挿入してください。
+11. **次戦への言及:** 記事の最後に、次の対戦相手（${nextOpponentText}）に触れて締めくってください。
+12. **【選手の背景創作】**: もし詳細な選手プロフィールがない無名の選手について書く場合、あなたが長年の取材でその選手を知っているという記者視点で、**それらしい架空の経歴や特徴を自由に付け加えてください。**
+13. **【常識の反映】**: あなたが熟知している「常識」（例：ナムコグループの台頭、公立の砦・静岡の苦戦）を、目の前の試合結果と関連付けて分析してください。
+14. **【打球の質の分析】**: 「データ1（ハイライト）」や「データ2（ボックススコア）」、「データ5（打球品質レポート）」にある**打球の質**（「鋭い当たり」「詰まった当たり」など）を重視し、結果と内容が一致しない（例：4タコだが全部鋭い当たり）選手の評価にも言及してください。
+15. **【打順の役割】**: **打順の役割**も重視してください。4番が4番の仕事をしたのか、あるいは9番が意外な活躍でラッキーボーイとなったのか、といった戦術的な分析をコラムに含めてください。
+16. **【投手の左右】**: ボックススコアに「（右腕）」「（左腕）」の表記がある場合、それを記事に反映させること。
+17. **【★注目の打席（最重要）】**:
         - 「データ1（ハイライト）」に「（★注目）」というマークが付いている打席があります。これは**ユーザー（監督）が『試合の分水嶺』だと判断した**、最も重要な打席です。
         - あなたのコラムでは、**この記事の中心的なハイライト**として、この「★注目」の打席の前後を、最もドラマチックに描写してください。
-17. **【★盗塁への言及 (重要)】**:
+18. **【★盗塁への言及 (重要)】**:
     - 「データ2（ボックススコア）」に**盗塁(SB)**が記録されている選手がいた場合、その選手の機動力（例：「〇〇が足でチャンスを広げ」）に言及してください。
     - さらに、その選手の**「今大会の通算盗塁数」**（例：(今大会: ... 4盗)）も必ず参照し、**「〇〇はこれで今大会4個目の盗塁。彼の足は本物だ」**といった具体的な数字を記事に含めてください。
-    - **盗塁が0だった場合、それについて批判的な言及（例：「なぜ走らない」）は不要です。**18.  **【★スタメン復帰】**: 「スタメン変更」情報（取材メモ外の別データとして提供）に「〇〇がスタメン復帰」とあった場合、**「監督の賭けが当たった」**という視点で、その選手の活躍（あるいは不振）をあなたの主観で分析してください。
-19.  **【★登板履歴への言及】**: 「データ3：今大会の主な投手登板履歴」が提供されている場合、その情報（例：連投の疲れ、前回の雪辱）もあなたの分析に加えてください。
-// ▼▼▼ この 2 つの指示ブロックを追加 (番号は 10, 11 になります) ▼▼▼
+    - **盗塁が0だった場合、それについて批判的な言及（例：「なぜ走らない」）は不要です。**
+19.  **【★スタメン復帰】**: 「スタメン変更」情報（取材メモ外の別データとして提供）に「〇〇がスタメン復帰」とあった場合、**「監督の賭けが当たった」**という視点で、その選手の活躍（あるいは不振）をあなたの主観で分析してください。
 20. **【連投・酷使の分析】**: 「データ3：登板履歴」を見て、もし投手が「連投」や「中1日」であったり、今大会で「投げすぎ（酷使）」の状態であったりした場合、それが今日の投球にどう影響したか、あなたの鋭い視点で分析してください。（例：「昨日120球を投げた腕で、今日も140km/hを計測するとは…彼の肩は一体どうなっているんだ」）
 21. **【雪辱と真価】**: もし投手が「登板履歴」で「前回炎上」していた場合、今日の投球が「雪辱」のマウンドであったことに触れてください。逆に、これまで「格下相手」にしか投げていなかった場合、今日の試合が「真価を問うマウンド」であったと分析してください。
-// ▲▲▲ 追加ここまで ▲▲▲
-// ▼▼▼ 挿入 ▼▼▼
 22. **【★打者の好不調の波】**: 「データ4：打者成績履歴」を熟読し、選手の**連続ヒット**や**連続無安打**の「波」に言及してください。（例：「1回戦で4タコだった〇〇くんが、今日はまるで別人のようだった」「△△くんはこれで3試合連続ヒット。完全に掴んだようだね」）
-23. **【★打者の役割分析】**: もし選手が**「代打」**で結果を出し続けていたり、**「打順変更」**で調子を上げていたりする場合、その采配と選手の適応力をあなたの視点で分析してください。
-// ▲▲▲
-24. **【★今大会の成績 (最重要)】**:
-    - 「データ5：チーム別 打球品質」の**『今大会のチーム打率は.XXX』**（※これはチーム背景情報の間違い）...
-    - （※プロンプトの記述ミスはAIが自己修正するので、ここではgenerateDynamicTeamInfoの情報を指していると解釈します）
-    - （※この指示はgenerateNewsArticleのものとほぼ同じなので、AIはplayerStatsTextにある今大会:のサマリーも参照します）
+2M3. **【★打者の役割分析】**: もし選手が**「代打」**で結果を出し続けていたり、**「打順変更」**で調子を上げていたりする場合、その采配と選手の適応力をあなたの視点で分析してください。
 ### 出力形式【厳守】
 - **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
 - **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
 {"title": "（例：王者283学園、圧巻のコールド発進！ 羽田雄平が見た『格の違い』）", "body": "（ここに羽田 雄平スタイルの記事本文）"}
 `;
-    // ▲▲▲ プロンプト修正ここまで ▲▲▲
 
     // --- 5. AIへのリクエスト ---
     try {
-        // ... (try-catchブロックは変更なし) ...
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
@@ -13565,6 +13542,8 @@ ${ballQualityText.replace('データ3', 'データ5').replace('データ4', 'デ
 /**
  * AI記者にニュース記事を執筆させるメイン関数
  * (★「isNewspaperWorthy」のバグを修正し、R4以降のみ新聞ボタンを表示)
+ * (★★ 故障者リスト(injuryReport)への言及をAIに指示するよう修正)
+ * (★★★ 軽傷(🩹)選手への言及を指示するよう修正 ★★★)
  */
 async function generateNewsArticle(matchContext, userFeedback = null) {
     const {
@@ -13573,7 +13552,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
         winnerLineupChanges, loserLineupChanges,
         winnerJourney, loserJourney,
         nextOpponent, pitcherGamelogInfo, batterGamelogInfo,
-        injuryReport
+        injuryReport // ★ 故障者リスト
     } = matchContext || {};
     
     let prompt = '';
@@ -13593,7 +13572,7 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
 
     // --- 1. 大会展望記事の生成ロジック ---
     if (matchId === 'preview') {
-        // ... (展望記事ロジックは変更なし) ...
+        // (展望記事ロジックは変更なし)
         const { seeds, teams } = tournamentState;
         const blockAnalyses = [];
         const numBlocks = 4; const blockSize = 32;
@@ -13716,8 +13695,7 @@ ${notablePlayersText}
         ballQualityText = `\n--- ### **参考情報：チーム別 打球品質**\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
     
-    // ★★★ ここからが「快進撃」判定 ★★★
-    let cinderellaPraiseInstruction = ""; // AIへの追加指示
+    let cinderellaPraiseInstruction = ""; 
     const idParts = matchId.split('-');
     let roundNum = 0;
     if (idParts[0] === 'F') {
@@ -13725,19 +13703,15 @@ ${notablePlayersText}
     } else if (idParts[1] && idParts[1].startsWith('R')) {
         roundNum = parseInt(idParts[1].slice(1));
     }
-    
     if (roundNum > 0) {
-        // 2. 敗者のランクとラウンドをチェック
-        if ( (loserRank === 'E' && roundNum >= 3) || // EランクがR3(3回戦)以降で敗退
-             (loserRank === 'D' && roundNum >= 4) || // DランクがR4(4回戦)以降で敗退
-             (loserRank === 'C' && roundNum >= 5) )  // CランクがR5(準々決勝)以降で敗退
+        if ( (loserRank === 'E' && roundNum >= 3) ||
+             (loserRank === 'D' && roundNum >= 4) ||
+             (loserRank === 'C' && roundNum >= 5) )
         {
-            // 3. AIへの指示テキストを作成
             cinderellaPraiseInstruction = `
 - **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)でしたが、今大会は「${loserJourney}」と見事な快進撃を見せ、${roundName}まで勝ち上がりました。この記事では、${loserName}の健闘を称える一文（例：「${loserRankDesc}ながら${roundName}まで勝ち進んだ彼らに、球場全体から拍手が送られた」）を**必ず**含めてください。`;
         }
     }
-    // ★★★ 判定ここまで ★★★
 
     if (dbMatch.details) {
         // (Aルート：詳細入力あり)
@@ -13804,9 +13778,9 @@ ${lineupChangesText}
   - **主な選手プロフィール**:\n${loserPlayersPrompt}
 ---
 ### **執筆指示**
-${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+${cinderellaPraiseInstruction}
 - **【★大会の文脈を反映】**: 記事全体で、${tournamentName}ならではの視点（例：夏の3年生の想い、秋の新チームの試金石、春のシード権争い）を必ず反映させてください。
-- **【★欠場者への言及】**: もし「参考情報：主な欠場者」に選手名がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は、投手陣が踏ん張りきれなかった」）を必ず記事に含めてください。
+- **【★★ 欠場者への言及 (最重要) ★★】**: もし「試合結果サマリー」の直下に「主な欠場者」（例：〇〇 [🏥] や △△ [🩹]）に関する情報(${injuryReport})がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は、投手陣が踏ん張りきれなかった」「〇〇[🩹]が万全なら結果は違ったかもしれない」）を**必ず記事に含めてください。**
 - **【次戦への展望】**: 記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れ、今後の戦いへの展望を記述して締めくくること。
 - 「事実リスト」を厳密に基に、試合の物語を再構築してください。
 - **【★シードランク言及】**: **「第1シードの〇〇」**や**「シード校の△△が苦戦」**のように、シードランクにも具体的に言及し、試合の文脈を明確にしてください。
@@ -13880,8 +13854,8 @@ ${injuryReport || ''}
 ### 執筆指示
 - **【★大会の文脈を反映】**: 記事全体で、${tournamentName}ならではの視点（例：夏の3年生の想い、秋の新チームの試金石、春のシード権争い）を必ず反映させてください。
 - **【★シードランク言及】**: **「第1シードの〇〇が順当に勝利」**や**「ノーシードの△△が第8シードを破る波乱」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「主な欠場者」に選手名がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は〜」）を必ず記事に含めてください。
-${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+- **【★★ 欠場者への言及 (最重要) ★★】**: もし「試合情報」の直下に「主な欠場者」（例：〇〇 [🏥] や △△ [🩹]）に関する情報(${injuryReport})がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]を欠いた283学園は〜」）を**必ず記事に含めてください。**
+${cinderellaPraiseInstruction}
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ず記事に含め**、チームの好調・不振の文脈として描写してください。
 - 記事の最後に、勝利チームの監督または主将の喜びのコメント（例：『〇〇監督「選手たちがよく頑張ってくれた」』）を一行追加してください。
 - **記事の最後に、次の対戦相手（${nextOpponentText}）に簡潔に触れて締めくくってください。**
@@ -13897,22 +13871,17 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
             if (article && !article.body && article.article) { article.body = article.article; }
             if (article && article.title && article.body) { 
                 
-                // ★★★ ここからが修正箇所 ★★★
-                // 「詳細入力」があり、かつ「AI生成がON」の場合のみ新聞を生成
                 const isNewspaperWorthy = (
                     dbMatch.details && 
                     tournamentState.settings.enableArticleGeneration
-                    // ★ラウンド数(roundNum >= 4)の制限を削除★
                 );
-                // ★★★ 修正ここまで ★★★
-
                 const newspaperHtml = isNewspaperWorthy ? createNewspaperHtml(article, { winnerName, loserName, dbMatch, matchId }) : null;
                 
                 return { 
                     ...article, 
-                    isNewspaper: isNewspaperWorthy, // ★ 修正されたフラグ
+                    isNewspaper: isNewspaperWorthy,
                     timestamp: Date.now(), 
-                    newspaperHtml: newspaperHtml, // ★ 修正されたHTML
+                    newspaperHtml: newspaperHtml,
                     context: matchContext
                 };
             } else {
@@ -13932,7 +13901,6 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
         };
     }
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
      * AIにスキップしたラウンドのダイジェスト記事を生成させる
@@ -14095,8 +14063,8 @@ ${playerGamelogs || '今大会の試合履歴はありません。'}
 
 
 /**
- * AIに試合結果の掲示板の反応を生成させる
- * (★敗退したC/D/Eランクの「快進撃」にも言及するよう修正)
+ * [修正版] AIに試合結果の掲示板の反応を生成させる
+ * (★「軽傷」選手への言及指示を強化)
  */
 async function generateBbsComments(matchContext) {
     const { 
@@ -14110,8 +14078,8 @@ async function generateBbsComments(matchContext) {
     const winnerScore = Math.max(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const loserScore = Math.min(parseInt(dbMatch.score1) || 0, parseInt(dbMatch.score2) || 0);
     const winnerRankDesc = getRankDescription(calculateRank(winnerName, tournamentState));
-    const loserRank = calculateRank(loserName, tournamentState); // ★ 敗者のランク(Eなど)
-    const loserRankDesc = getRankDescription(loserRank); // ★ 敗者のランク説明 (例: 挑戦者)
+    const loserRank = calculateRank(loserName, tournamentState);
+    const loserRankDesc = getRankDescription(loserRank);
     
     const tournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
     const tournamentYear = tournamentState.tournamentYear;
@@ -14167,15 +14135,12 @@ async function generateBbsComments(matchContext) {
         ballQualityText = `\n--- ### **参考情報：チーム別 打球品質**\n- ${matchContext.team1BallQuality}\n- ${matchContext.team2BallQuality}\n`;
     }
 
-    // ★★★ ここからが「快進撃」判定 ★★★
-    let cinderellaPraiseInstruction = ""; // AIへの追加指示
+    let cinderellaPraiseInstruction = "";
     const idParts = matchId.split('-');
     let roundNum = 0;
     if (idParts[0] !== 'F' && idParts[1] && idParts[1].startsWith('R')) {
         roundNum = parseInt(idParts[1].slice(1));
     }
-    
-    // ユーザー指定のロジック (E >= R3, D >= R4, C >= R5)
     if ( (loserRank === 'E' && roundNum >= 3) ||
          (loserRank === 'D' && roundNum >= 4) ||
          (loserRank === 'C' && roundNum >= 5) )
@@ -14183,7 +14148,8 @@ async function generateBbsComments(matchContext) {
         cinderellaPraiseInstruction = `
 - **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)だったが、${roundName}まで勝ち上がった。この「快進撃」を**「${loserName}、ようやっとる」「来年が楽しみなチーム」**のように、必ず称賛すること。`;
     }
-    // ★★★ 判定ここまで ★★★
+
+    let prompt; 
 
     if (dbMatch.details) {
         // (Aルート：詳細入力あり)
@@ -14223,8 +14189,8 @@ ${matchContext.batterGamelogInfo || '打者の試合履歴データはありま�
 ### あなたがなりきるべきキャラクターと指示
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」）について必ずコメントすること。
-${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+- **【★★欠場者への言及 (最重要)】**: もし「主な欠場者」に選手名（例：〇〇 [🏥], △△ [🩹]）がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]抜きでよく勝ったわ」「〇〇が[🩹]でいないのが響いたな」）を**必ず記事に含めてください。**
+${cinderellaPraiseInstruction}
 - **【★登板履歴への言及】**: 「今大会の主な投手登板履歴」に情報がある場合、**「〇〇、連投じゃん」**のように、登板履歴を踏まえたコメントをすること。
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振にも言及してください。
 - **【★盗塁への言及 (重要)】**: 「ハイライト」や「ボックススコア」に**盗塁**が記録されていたら、その選手の足（機動力）を褒めること。
@@ -14259,8 +14225,8 @@ ${injuryReport || ''}
 ### あなたがなりきるべきキャラクターと指示
 - **【★大会の文脈を反映】**: ${tournamentName}ならではの視点（例：「夏は3年生最後やな」「秋の新チームの仕上がり見えてきたな」）をコメントに含めること。
 - **【★シードランク言及】**: **「第1シードさすがやな」「第5シードが負けたンゴwww」**のように、シードランクにも具体的に言及してください。
-- **【★欠場者への言及】**: もし「主な欠場者」に名前がある場合、その選手がいないこと（例：「エースの姫川[🏥]抜きでよく勝ったわ」）について必ずコメントすること。
-${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
+- **【★★欠場者への言及 (最重要)】**: もし「主な欠場者」に選手名（例：〇〇 [🏥], △△ [🩹]）がある場合、その主力が欠場したことが試合にどう影響したか（例：「エース姫川[🏥]抜きでよく勝ったわ」「〇〇が[🩹]でいないのが響いたな」）を**必ず記事に含めてください。**
+${cinderellaPraiseInstruction}
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」）にも言及してください。
 - **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。`;
     }
@@ -14285,10 +14251,8 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
 ]
 \`\`\`
 `;
-    // ★★★ 修正ここまで ★★★
 
     try {
-        // ★ 修正した finalPrompt を使用
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: finalPrompt }] }] }); 
         const result = await response.json();
         if (result.candidates?.[0]?.content?.parts?.[0]) {
@@ -14304,7 +14268,6 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
                 }));
             }
         }
-        // ★ ユーザーが報告したエラーメッセージをここで投げる
         throw new Error("AIからの応答が、正しい配列形式ではありません。");
     } catch (error) {
         console.error("AI掲示板コメントの生成に失敗しました:", error);
@@ -14316,6 +14279,7 @@ ${cinderellaPraiseInstruction} {/* ★ 快進撃の指示を挿入 */}
         }];
     }
 }
+
 /**
      * AIに代矢東応援掲示板のコメントを生成させる
      */
