@@ -7821,7 +7821,7 @@ async function generateTopicSchoolArticles(state) {
 /**
  * generateTopicSchoolArticles のヘルパー関数。
  * 1校を選び、ランクに応じたテーマで記事を生成する。
- * (★ A/Bランクでも、ノーシード校の場合はAIの指示を変更する最終版 ★)
+ * (★BYEの場合は「2回戦から登場」と紹介する修正版)
  * @param {string} teamName - 選ばれたチーム名
  * @param {string} rank - チームランク (A, B, C, D, E)
  * @param {'E' | 'D' | 'C' | 'B' | 'A'} theme - 記事のテーマ
@@ -7833,18 +7833,14 @@ async function createTopicArticle(teamName, rank, theme) {
     const detailedData = DETAILED_TEAM_DATA[teamName];
     const lore = PREFECTURE_LORE; 
 
-    // ▼▼▼ ここからが今回の修正箇所 ▼▼▼
-    
-    // 1. ランク記号を日本語の説明に変換 (例: 'A' -> '名門校')
+    // 1. ランク記号を日本語の説明に変換
     const rankDescription = getRankDescription(rank); 
     
-    // 2. ★このチームが「今大会の」シード校か判定★
+    // 2. シード校か判定
     const isSeed = tournamentState.seeds.some(s => s.team === teamName);
-    
-    // 3. ★シード校の場合のみ、シード情報を取得★
     const seedRankString = isSeed ? getSeedRankString(teamName, tournamentState.seeds) : '';
 
-    // 4. AIに渡すための詳細情報を作成 (シードランクは isSeed が true の場合のみ表示)
+    // 3. 基本情報を作成
     let contextInfo = `
 - **チーム名:** ${teamName} ${seedRankString} (${rankDescription})
 - **チーム背景(info):** ${teamData.info || '情報なし'}
@@ -7855,32 +7851,43 @@ async function createTopicArticle(teamName, rank, theme) {
         contextInfo += `- **注目選手:** ${detailedData.players.map(p => `${p.name}(${p.year}年, ${p.pos}) - ${p.desc}`).join('、 ')}\n`;
     }
 
-    // チームの初戦情報を検索 (変更なし)
+    // 4. ★★★ 初戦情報の判定（修正箇所） ★★★
     const firstMatch = Object.values(tournamentState.matches).find(m => 
         m.id.includes('-R1-') && (m.team1 === teamName || m.team2 === teamName)
     );
     
     let firstMatchInfo = '';
+    let isByeStart = false; // 2回戦から登場フラグ
+
     if (firstMatch) {
         const opponentName = firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1;
-        const opponentRankDesc = getRankDescription(calculateRank(opponentName, tournamentState)); 
-        const opponentSeedRank = getSeedRankString(opponentName, tournamentState.seeds);
         
-        let scheduleInfo = '日程・球場未定';
-        if (firstMatch.schedule) {
-            const gameNumIcon = ['①', '②', '③', '④'][firstMatch.schedule.game - 1] || `(第${firstMatch.schedule.game}試合)`;
-            scheduleInfo = `${firstMatch.schedule.date} ${firstMatch.schedule.stadiumFull} ${gameNumIcon}`;
-        }
-        
-        firstMatchInfo = `
+        // ▼▼▼ BYE（不戦勝）の判定 ▼▼▼
+        if (opponentName === '(BYE)') {
+            isByeStart = true;
+            firstMatchInfo = `
+- **初戦情報:**
+  - **対戦相手:** (BYE) 不戦勝
+  - **状況:** 規定により1回戦は免除され、**「2回戦からの登場」**となります。他チームより日程に余裕があり、調整面で有利です。
+`;
+        } else {
+            // 通常の対戦相手
+            const opponentRankDesc = getRankDescription(calculateRank(opponentName, tournamentState)); 
+            const opponentSeedRank = getSeedRankString(opponentName, tournamentState.seeds);
+            let scheduleInfo = '日程・球場未定';
+            if (firstMatch.schedule) {
+                const gameNumIcon = ['①', '②', '③', '④'][firstMatch.schedule.game - 1] || `(第${firstMatch.schedule.game}試合)`;
+                scheduleInfo = `${firstMatch.schedule.date} ${firstMatch.schedule.stadiumFull} ${gameNumIcon}`;
+            }
+            firstMatchInfo = `
 - **初戦情報:**
   - **対戦相手:** ${opponentName} ${opponentSeedRank} (${opponentRankDesc})
   - **日程:** ${scheduleInfo}
 `;
+        }
+        // ▲▲▲ 修正ここまで ▲▲▲
     }
     contextInfo += firstMatchInfo;
-    
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     // テーマに応じたプロンプトを作成
     let prompt = `あなたは「スポーツ報知」の高校野球担当記者です。
@@ -7896,7 +7903,7 @@ ${lore}
 
 `;
 
-    // ▼▼▼ 各テーマの指示文を (ランク説明) + (シード/ノーシード分岐) に修正 ▼▼▼
+    // 各テーマの指示文
     if (theme === 'E') {
         prompt += `
 ### 執筆テーマ：「悲願の初戦突破へ」
@@ -7916,59 +7923,45 @@ ${lore}
 - このチーム（${rankDescription}）の目標は、静岡県の「戦国時代」を勝ち抜き、甲子園に出場することです。
 - チームの中心となる**エースや主軸選手**に焦点を当て、その選手の**苦悩、成長、そして決意**を深く掘り下げてください。
 `;
-    } 
-    
-    // ★★★ ここからが分岐の核心 ★★★
-    
-    else if (theme === 'B') {
-        // ★ Bランク用の指示を、シード校とノーシード校で分岐 ★
+    } else if (theme === 'B') {
         if (isSeed) {
             prompt += `
 ### 執筆テーマ：「悲願の甲子園出場へ！そして聖地１勝を」
 - このチーム（${rankDescription}, ${seedRankString}）は、優勝候補に次ぐ「強豪シード校」です。最大の目標は、Aランク校を倒し、まずは「甲子園出場」の切符を掴むことです。`;
         } else {
-            // ノーシードBランクの場合
             prompt += `
 ### 執筆テーマ：「ノーシードの強豪、下剋上なるか」
 - このチーム（${rankDescription}）は、Bランクの力を持つにも関わらず、「ノーシード」で今大会に臨みます。
 - 序盤からシード校と激突する可能性があり、大会の「ダークホース」または「波乱要因」として注目されています。`;
         }
-        // (共通の指示)
         prompt += `
 - チームの強み（例：強力打線）に焦点を当て、それが甲子園出場にどう繋がるかを分析してください。
 - チームのキーマン（例：4番、エース）を取り上げ、彼/彼女の決意を語らせてください。`;
     
     } else if (theme === 'A') {
-        // ★ Aランク用の指示を、シード校とノーシード校で分岐 ★
         if (isSeed) {
             prompt += `
 ### 執筆テーマ：「全国制覇へ、王者のプレッシャー」
 - このチーム（${rankDescription}, ${seedRankString}）は、今大会の「優勝候補筆頭」です。最終目標は「全国制覇」ですが、そのためにはまず「甲子園出場」という最大の関門を突破しなければなりません。`;
         } else {
-            // ノーシードAランクの場合 (例: 765総合)
             prompt += `
 ### 執筆テーマ：「最強のノーシード、死のブロックの主役」
 - このチーム（${rankDescription}）は、Aランクの力を持つにも関わらず、「ノーシード」で今大会に臨みます。
 - 彼らが入ったブロックは、自動的に「死のブロック」となります。彼らがどのシード校を倒して勝ち上がってくるのか、その「下剋上」の軌跡に焦点を当ててください。`;
         }
-        // (共通の指示)
         prompt += `
-- **「勝って当然」というプレッシャー**（シード校の場合）または**「シード校を食う」という挑戦**（ノーシードの場合）とどう戦っているか、主将や監督のコメントを通じて描写してください。
+- **「勝って当たり前」というプレッシャー**とどう戦っているか、主将や監督のコメントを通じて描写してください。
 - チームの圧倒的な戦力（例：プロ注目選手）を紹介してください。`;
     }
-    // ★★★ 分岐ここまで ★★★
 
     prompt += `
 ### 追加指示：初戦の情報【最重要】
-- 記事の最後（締めくくり）に、**【取材データ】にある「初戦情報」**（対戦相手、日程、球場）に必ず言及し、大会への期待感を高めてください。
-- （例：「${seedRankString || ''}${teamName}の初戦は〇〇日、△△球場での${firstMatchInfo ? (firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1) : '□□高校'}戦。彼らの夏が、いよいよ幕を開ける。」）
-
+- 記事の最後（締めくくり）に、**【取材データ】にある「初戦情報」**について必ず言及してください。
+${isByeStart ? '- **特に「1回戦は不戦勝であり、2回戦からの登場となる」こと、そしてそれが「調整面で有利（または試合勘で不利）」であること**に触れ、次戦への準備万端な様子を描写してください。' : '- 対戦相手、日程、球場に触れ、大会への期待感を高めてください。'}
 
 ### 出力形式【厳守】
-- **必ず** JSON形式のみを出力してください。
-- **Markdownのコードブロック（\`\`\`json ... \`\`\`）は使用しないでください。**
-- 「はい、生成します」などの挨拶や前置きは一切不要です。。
-{"title": "（例：【高校野球】${seedRankString || ''}${teamName}、初戦は${firstMatchInfo ? (firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1) : 'XX'}と激突）", "body": "（ここにスポーツ報知風の記事本文）"}
+- **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
+{"title": "（例：【高校野球】${teamName}、${isByeStart ? '2回戦から登場！万全の調整で夏に挑む' : '初戦はXXと激突'}）", "body": "（ここにスポーツ報知風の記事本文）"}
 `;
 
     // --- AIへのリクエスト ---
@@ -7980,12 +7973,11 @@ ${lore}
             const article = parseJsonFromText(rawTextFromAi);
             
             if (article && article.title && article.body) {
-                // 成功：記事に署名を追加して返す
-                article.body += "\n\n　（スポーツ報知 記者）"; // 署名
+                article.body += "\n\n　（スポーツ報知 記者）"; 
                 return { 
                     ...article, 
                     timestamp: Date.now(),
-                    isTopicArticle: true, // 話題校紹介フラグ
+                    isTopicArticle: true, 
                     context: { teamName: teamName, theme: theme, isTopicArticle: true } 
                 };
             } else {
@@ -7998,7 +7990,7 @@ ${lore}
         }
     } catch (error) {
         console.error(`話題校紹介記事（${teamName}）の生成に失敗しました:`, error);
-        return null; // 失敗した場合は null を返す
+        return null; 
     }
 }
 
@@ -15311,53 +15303,66 @@ function generate2024FinalBoxScore() {
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
 /**
-     * AIにナムコグループからのお知らせを生成させる
-     */
-    async function generateNamcoNews(state, type, matchData = null) {
-        const namcoSchools = ["初星学園", "765総合高校", "283学園", "美城学園", "283学園B"];
-        let prompt = '';
+ * AIにナムコグループからのお知らせを生成させる
+ * (★BYEの場合は「2回戦から登場」とアピールする修正版)
+ */
+async function generateNamcoNews(state, type, matchData = null) {
+    const namcoSchools = ["初星学園", "765総合高校", "283学園", "美城学園", "283学園B"];
+    let prompt = '';
 
-        if (type === 'bracket') {
-            const participatingSchools = state.teams.filter(t => namcoSchools.includes(t));
-            if(participatingSchools.length === 0) return null;
+    if (type === 'bracket') {
+        const participatingSchools = state.teams.filter(t => namcoSchools.includes(t));
+        if(participatingSchools.length === 0) return null;
 
-            const matchups = participatingSchools.map(school => {
-                const schoolIndex = state.teams.indexOf(school);
-                if (schoolIndex === -1) return null;
-                const opponentIndex = schoolIndex % 2 === 0 ? schoolIndex + 1 : schoolIndex - 1;
-                const opponentName = state.teams[opponentIndex];
-                return `- ${school} の初戦は ${opponentName} と対戦します。`;
-            }).filter(item => item !== null).join('\n');
+        const matchups = participatingSchools.map(school => {
+            const schoolIndex = state.teams.indexOf(school);
+            if (schoolIndex === -1) return null;
+            
+            // 対戦相手（隣のインデックス）を特定
+            const opponentIndex = schoolIndex % 2 === 0 ? schoolIndex + 1 : schoolIndex - 1;
+            const opponentName = state.teams[opponentIndex];
+            
+            // ★★★ 修正箇所：BYE判定 ★★★
+            if (opponentName === '(BYE)') {
+                return `- ${school}: 1回戦は対戦相手なし（不戦勝）。2回戦からの登場となります。`;
+            } else {
+                return `- ${school}: 初戦は ${opponentName} と対戦します。`;
+            }
+            // ★★★ 修正ここまで ★★★
+            
+        }).filter(item => item !== null).join('\n');
 
-            prompt = `あなたはナムコグループの広報担当者です。
+        prompt = `あなたはナムコグループの広報担当者です。
 夏の高校野球選手権大会の組み合わせが決定しました。
 以下の情報に基づき、グループの公式サイトに掲載する、プロフェッショナルで丁寧な「お知らせ」記事を生成してください。
 
-### 各校の初戦の組み合わせ
+### 各校の初戦の組み合わせ状況
 ${matchups}
 
 ### 記事のポイント
 - タイトルは「野球部（夏の選手権大会）組み合わせ決定のお知らせ」とする。
 - 本文では、抽選会が行われたことと、上記の組み合わせが決定したことを報告してください。
+- **【重要】不戦勝（BYE）のチームについて:**
+  - 「規定により1回戦は免除され、2回戦からの登場となる」ことを明記してください。
+  - 「日程的な余裕を活かし、万全の状態で初戦（2回戦）に臨みます」といったポジティブな表現を含めてください。
 - 最後に、系列校野球部への応援をお願いする言葉で締めくくる。
 - 全体的に、企業の公式発表としてふさわしい、丁寧でフォーマルな文体にすること。
 
 ### 出力形式
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}`;
-        } else if (type === 'matchResult') {
-            const { winnerName, loserName, dbMatch } = matchData;
-            const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-            if (isCivilWar) {
-                // ... (省略)
-            } else {
-                const namcoTeam = namcoSchools.includes(winnerName) ? winnerName : loserName;
-                const opponent = namcoSchools.includes(winnerName) ? loserName : winnerName;
-                const result = namcoSchools.includes(winnerName) ? '勝利' : '敗北';
-                const score = namcoSchools.includes(winnerName) ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+    } else if (type === 'matchResult') {
+        // (試合結果のお知らせロジックは変更なし)
+        const { winnerName, loserName, dbMatch } = matchData;
+        const isCivilWar = (winnerName === '283学園' && loserName === '283学園B') || (winnerName === '283学園B' && loserName === '283学園');
 
-                prompt = `あなたはナムコグループの広報担当者です。
+        const namcoTeam = namcoSchools.includes(winnerName) ? winnerName : loserName;
+        const opponent = namcoSchools.includes(winnerName) ? loserName : winnerName;
+        const result = namcoSchools.includes(winnerName) ? '勝利' : '敗北';
+        const score = namcoSchools.includes(winnerName) ? `${dbMatch.score1}-${dbMatch.score2}` : `${dbMatch.score2}-${dbMatch.score1}`;
+
+        prompt = `あなたはナムコグループの広報担当者です。
 本日行われた、夏の高校野球選手権大会の試合結果について、公式サイトに掲載する「お知らせ」記事を生成してください。
 
 ### 試合情報
@@ -15379,27 +15384,26 @@ ${matchups}
 ### 出力形式
 以下のJSON形式で、タイトルと本文を生成してください。
 {"title": "記事のタイトル", "body": "記事の本文（改行は\\nを使用）"}`;
-            }
-        }
-
-        if (!prompt) return null;
-
-        try {
-            const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-            const result = await response.json();
-            if (result.candidates?.[0]?.content?.parts?.[0]) {
-                const rawText = result.candidates[0].content.parts[0].text;
-                const newsJson = parseJsonFromText(rawText);
-                if (newsJson) {
-                    return { ...newsJson, timestamp: Date.now() };
-                }
-            }
-            throw new Error("AIからの応答が予期した形式ではありません。");
-        } catch (error) {
-            console.error("ナムコニュースの生成に失敗しました:", error);
-            return null;
-        }
     }
+
+    if (!prompt) return null;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const newsJson = parseJsonFromText(rawText);
+            if (newsJson) {
+                return { ...newsJson, timestamp: Date.now() };
+            }
+        }
+        throw new Error("AIからの応答が予期した形式ではありません。");
+    } catch (error) {
+        console.error("ナムコニュースの生成に失敗しました:", error);
+        return null;
+    }
+}
 
 /**
  * AIが生成した新聞データからHTMLを生成する
