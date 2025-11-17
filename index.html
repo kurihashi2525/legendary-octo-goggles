@@ -7963,9 +7963,11 @@ ${lore}
 - 記事の最後（締めくくり）に、**【取材データ】にある「初戦情報」**（対戦相手、日程、球場）に必ず言及し、大会への期待感を高めてください。
 - （例：「${seedRankString || ''}${teamName}の初戦は〇〇日、△△球場での${firstMatchInfo ? (firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1) : '□□高校'}戦。彼らの夏が、いよいよ幕を開ける。」）
 
+
 ### 出力形式【厳守】
-- **【最重要】** あなたの応答は、必ず単一のJSONオブジェクト"のみ"でなければなりません。
-- **絶対に**、JSONの前後に「はい、記事です」や「\`\`\`json」などのテキストを付け加えてはいけません。
+- **必ず** JSON形式のみを出力してください。
+- **Markdownのコードブロック（\`\`\`json ... \`\`\`）は使用しないでください。**
+- 「はい、生成します」などの挨拶や前置きは一切不要です。。
 {"title": "（例：【高校野球】${seedRankString || ''}${teamName}、初戦は${firstMatchInfo ? (firstMatch.team1 === teamName ? firstMatch.team2 : firstMatch.team1) : 'XX'}と激突）", "body": "（ここにスポーツ報知風の記事本文）"}
 `;
 
