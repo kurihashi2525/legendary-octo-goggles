@@ -3,7 +3,7 @@
 const ALLOWED_ORIGIN = "https://peppy-bombolone-94f3a7.netlify.app";
 const MAX_RETRIES = 3;
 const INITIAL_DELAY_MS = 1000;
-const NETLIFY_TIMEOUT_MS = 9500; // 9.5秒 (Netlifyの10秒制限ギリギリで止める)
+
 const MAX_PROMPT_LENGTH = 30000; // 入力文字数制限 (コスト爆発防止)
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
