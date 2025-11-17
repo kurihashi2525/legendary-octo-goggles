@@ -1,11 +1,29 @@
 // netlify/functions/generateApiContent.js
 
 exports.handler = async function(event, context) {
-  // フロントエンドから送られてきたデータ（プロンプトなど）を取得
-  const requestBody = JSON.parse(event.body);
+  // 【修正1】リクエストBodyが空の場合はエラーを返す（サーバーを落とさないための必須処理）
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Request body is empty" }),
+    };
+  }
+
+  let requestBody;
+  try {
+    // 【修正2】JSONパース失敗時もキャッチして安全にエラーを返す
+    requestBody = JSON.parse(event.body);
+  } catch (error) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Invalid JSON format" }),
+    };
+  }
 
   // 環境変数から安全にAPIキーを読み込む
   const apiKey = process.env.GOOGLE_API_KEY;
+  
+  // ★モデル名は元のコードのまま変更しません
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
   try {
