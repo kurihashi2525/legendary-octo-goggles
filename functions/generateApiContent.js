@@ -1,7 +1,7 @@
 // netlify/functions/generateApiContent.js
 
 exports.handler = async function(event, context) {
-  // 【修正1】リクエストBodyが空の場合はエラーを返す（サーバーを落とさないための必須処理）
+  // 1. リクエストBodyが空の場合はエラーを返す
   if (!event.body) {
     return {
       statusCode: 400,
@@ -11,7 +11,7 @@ exports.handler = async function(event, context) {
 
   let requestBody;
   try {
-    // 【修正2】JSONパース失敗時もキャッチして安全にエラーを返す
+    // 2. JSONパース
     requestBody = JSON.parse(event.body);
   } catch (error) {
     return {
@@ -20,24 +20,41 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // 環境変数から安全にAPIキーを読み込む
   const apiKey = process.env.GOOGLE_API_KEY;
-  
-  // ★モデル名は元のコードのまま変更しません
+  // モデルは最新の 2.5-flash を使用 (または 1.5-flash)
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
+  // 安全フィルターを無効化
+  const safetySettings = [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+  ];
+
+  // ★★★ 生成設定を追加 (ここが修正ポイント) ★★★
+  const generationConfig = {
+      maxOutputTokens: 8192,       // 文字数制限を大幅に増やす (デフォルトだと短くて切れることがある)
+      responseMimeType: "application/json" // AIに「必ずJSONとして出力しろ」と強制する (1.5/2.5系で有効)
+  };
+
+  // リクエストボディに設定をマージする
+  const finalRequestBody = {
+      ...requestBody,
+      safetySettings: safetySettings,
+      generationConfig: generationConfig // ★追加
+  };
+
   try {
-    // GoogleのAPIサーバーにリクエストを転送
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody), // フロントエンドからのリクエスト内容をそのまま送る
+      body: JSON.stringify(finalRequestBody),
     });
 
     if (!response.ok) {
-      // エラーハンドリング
       const errorBody = await response.text();
       return {
         statusCode: response.status,
@@ -47,7 +64,6 @@ exports.handler = async function(event, context) {
 
     const data = await response.json();
 
-    // 成功した結果をフロントエンドに返す
     return {
       statusCode: 200,
       body: JSON.stringify(data),
