@@ -8728,12 +8728,13 @@ function ensureCpuRoster(teamName) {
 
 /**
  * チームの過去試合を埋める際、確定済みのロスター（オーダー）を使って成績を割り振る
+ * (★手動入力済みの試合を二重計上しないようガード処理を追加した修正版)
  */
 function backfillCpuStats(teamName) {
     const record = tournamentState.teamRecords[teamName];
     if (!record) return;
 
-    // ★ 1. ここで既存のロスターを取得（なければ生成して固定）
+    // 1. ここで既存のロスターを取得（なければ生成して固定）
     const roster = ensureCpuRoster(teamName);
     
     // エースを特定 (背番号1)
@@ -8749,7 +8750,47 @@ function backfillCpuStats(teamName) {
     Object.keys(allMatches).forEach(matchId => {
         const match = allMatches[matchId];
         
+        // このチームが関わっていて、かつ勝敗が決まっている試合のみ対象
         if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+
+            // ▼▼▼ 【修正】二重計上防止ガード ▼▼▼
+            
+            // Check A: 手動入力データ（details）が存在するか？
+            // 詳細入力がある場合、既に成績は正確に記録されているはずなので、自動生成はスキップする
+            if (match.details && (match.details.batting?.team1?.length > 0 || match.details.batting?.team2?.length > 0)) {
+                return; 
+            }
+
+            // Check B: 既にこの試合の成績ログが（誰か一人でも）存在するか？
+            // (エース以外の投手が投げた場合や、部分的な記録がある場合の重複防止)
+            let alreadyHasStats = false;
+            
+            // 投手ログをチェック
+            if (record.playerStats?.pitching) {
+                for (const pName in record.playerStats.pitching) {
+                    if (record.playerStats.pitching[pName].gamelogs?.some(l => l.matchId === matchId)) {
+                        alreadyHasStats = true;
+                        break;
+                    }
+                }
+            }
+            // 打者ログをチェック
+            if (!alreadyHasStats && record.playerStats?.batting) {
+                for (const pName in record.playerStats.batting) {
+                    if (record.playerStats.batting[pName].gamelogs?.some(l => l.matchId === matchId)) {
+                        alreadyHasStats = true;
+                        break;
+                    }
+                }
+            }
+
+            if (alreadyHasStats) {
+                return; // 既に成績があるので何もしない
+            }
+            // ▲▲▲ 修正ここまで ▲▲▲
+
+            
+            // --- 以下、自動生成ロジック (変更なし) ---
             
             if (!record.playerStats) record.playerStats = { batting: {}, pitching: {} };
             if (!record.tournamentStats) {
@@ -8761,9 +8802,6 @@ function backfillCpuStats(teamName) {
                     gamelogs: [], narrative_flag: 'normal' 
                 };
             }
-
-            const existingLog = record.playerStats.pitching[acePitcher.name].gamelogs.find(l => l.matchId === matchId);
-            if (existingLog) return; 
 
             const isCurrentTournamentMatch = !!tournamentState.matches[matchId];
             const isWin = match.winner === teamName;
@@ -8795,16 +8833,14 @@ function backfillCpuStats(teamName) {
             pCareer.h = (pCareer.h || 0) + hits;
             pCareer.bb = (pCareer.bb || 0) + bb;
 
-            // B. 打撃成績 (★確定済みのロスター順に成績を割り振る)
+            // B. 打撃成績
             roster.forEach(batter => {
-                // 投手が打席に立つかどうか（簡易化のため投手は打撃成績なしにしておく）
                 if (batter.pos === '投') return;
                 
                 if (!record.playerStats.batting[batter.name]) {
                     record.playerStats.batting[batter.name] = { games:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, gamelogs: [] };
                 }
                 
-                // 打順(order)を見て、クリーンナップ(3,4,5番)なら成績を良くする
                 const orderNum = parseInt(batter.order);
                 const isCleanup = orderNum >= 3 && orderNum <= 5;
                 const baseHitProb = isWin ? 0.35 : 0.20;
@@ -8851,7 +8887,6 @@ function backfillCpuStats(teamName) {
         }
     });
 }
-
 /**
  * [UPDATED] 大会終了時に、全チームの最終順位を記録する
  * (★甲子園の場合はマイナスの値を記録して区別する)
