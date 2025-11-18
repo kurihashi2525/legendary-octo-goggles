@@ -1583,6 +1583,99 @@
 }
 /* ▲▲▲ ラウンドスキップ新聞モーダル用のCSS (ここまで修正) ▲▲▲ */
 
+/* ▼▼▼ 学校アーカイブモーダル用CSS ▼▼▼ */
+.archive-header {
+    border-left: 5px solid #e60012; /* 朝日新聞風の赤 */
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+.archive-school-name {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+.archive-pref {
+    font-size: 16px;
+    font-weight: normal;
+    color: #666;
+    margin-left: 10px;
+}
+.archive-section-title {
+    border-bottom: 2px solid #333;
+    font-size: 18px;
+    font-weight: bold;
+    padding-bottom: 5px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+.archive-sub-title {
+    background-color: #f0f0f0;
+    border-left: 4px solid #666;
+    padding: 8px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+/* 成績概要 */
+.result-summary-box {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.result-summary-row {
+    display: flex;
+    border-bottom: 1px dashed #ccc;
+    padding: 8px 0;
+}
+.result-summary-row:last-child { border-bottom: none; }
+.result-summary-dt { font-weight: bold; width: 100px; color: #e60012; }
+.result-summary-dd { flex: 1; }
+
+/* 戦績テーブル */
+.record-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+.record-table th {
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+.record-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+.record-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.record-table .result-win { color: #e60012; font-weight: bold; }
+.record-table .result-lose { color: #3366cc; font-weight: bold; }
+.record-table .score-cell { font-weight: bold; font-size: 1.1em; }
+.record-table .opponent-cell { text-align: left; padding-left: 15px; }
+
+/* 直近成績リスト */
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.history-year { font-weight: bold; color: #555; width: 120px; }
+.history-rank { font-weight: bold; }
+
         /* ▼▼▼ トーナメント表用のCSS ▼▼▼ */
         .bracket-wrapper {
             max-width: 100%;
@@ -2142,6 +2235,26 @@
             <h3 class="text-xl font-bold">設定</h3>
             <button id="settings-modal-close-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
         </div>
+<div class="flex justify-center items-center space-x-2 mb-6">
+    <div class="relative w-full max-w-md">
+        <input type="text" id="school-search-input" 
+            class="w-full p-3 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" 
+            placeholder="学校名を入力 (例: 静岡、283)..." required>
+        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+    </div>
+    <button id="school-search-btn" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3">検索</button>
+</div>
+
+<div id="school-archive-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[300] font-sans">
+    <div class="bg-white w-full max-w-5xl h-[95vh] overflow-y-auto rounded-lg shadow-2xl relative">
+        <button id="school-archive-close-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+        
+        <div id="school-archive-content" class="p-8">
+            </div>
+    </div>
+</div>
         <div class="space-y-4">
             <div class="flex items-center justify-between">
                 <span class="font-semibold">試合記事の自動生成</span>
@@ -6560,14 +6673,79 @@ function renderTeamStatsModal(teamName) {
 
 
 /**
+ * [NEW] チームの直近N試合の履歴を取得する
+ * @param {string} teamName - チーム名
+ * @param {number} limit - 取得数 (デフォルト5)
+ * @returns {Array} - フォーマット済みの試合データ配列
+ */
+function getRecentMatchesForTeam(teamName, limit = 5) {
+    const history = [];
+    const state = tournamentState;
+    const currentYear = state.tournamentYear;
+
+    // 1. データソースの定義 (優先度順: 現在 > 春 > 秋)
+    // ※実際の時系列は 秋(前年) -> 春 -> 夏 ですが、表示上は新しい順に並べたいのでこの順序で走査します
+    const sources = [
+        { label: tournamentNameMap[state.currentTournament], year: currentYear, matches: state.matches, weight: 300 },
+        { label: '春季大会', year: currentYear, matches: state.springData?.allMatches, weight: 200 },
+        { label: '秋季大会', year: currentYear - 1, matches: state.autumnData?.allMatches, weight: 100 }
+    ];
+
+    sources.forEach(source => {
+        if (!source.matches) return;
+        
+        Object.values(source.matches).forEach(match => {
+            // 勝敗が決まっており、かつ対象チームが関わっている試合
+            if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+                
+                // BYE(不戦勝)は除外する
+                if (match.team1 === '(BYE)' || match.team2 === '(BYE)') return;
+
+                const isTeam1 = match.team1 === teamName;
+                const opponent = isTeam1 ? match.team2 : match.team1;
+                const myScore = isTeam1 ? match.score1 : match.score2;
+                const oppScore = isTeam1 ? match.score2 : match.score1;
+                const isWin = match.winner === teamName;
+                
+                // ラウンド名の数値化 (ソート用)
+                let roundVal = 0;
+                if (match.id.startsWith('F-')) roundVal = 100; // 決勝
+                else if (match.id.includes('-R')) {
+                    roundVal = parseInt(match.id.split('-R')[1].split('-')[0]);
+                }
+
+                // 試合オブジェクトを作成
+                history.push({
+                    matchId: match.id,
+                    tournamentName: source.label,
+                    year: source.year,
+                    roundName: getRoundNameFromMatchId(match.id),
+                    opponent: opponent,
+                    scoreResult: `${myScore}-${oppScore}`,
+                    result: isWin ? '○' : '●',
+                    isWin: isWin,
+                    // ソート用スコア: (大会の重み * 1000) + ラウンド番号
+                    sortKey: (source.weight * 1000) + roundVal
+                });
+            }
+        });
+    });
+
+    // 2. ソート (新しい順 = sortKeyの降順)
+    history.sort((a, b) => b.sortKey - a.sortKey);
+
+    // 3. 最新N件を返す
+    return history.slice(0, limit);
+}
+
+/**
  * チームステータスモーダルを表示する
- * (★「今大会成績」欄にチーム防御率を追加した修正版)
+ * (★直近5試合の勝敗履歴表示を追加)
  * @param {string} teamName - クリックされたチーム名
  */
 function showTeamStatusModal(teamName) {
-    // ▼▼▼ 表示前に過去成績をバックフィル (CPUチーム用) ▼▼▼
+    // 表示前に過去成績をバックフィル
     backfillCpuStats(teamName);
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return;
@@ -6585,7 +6763,7 @@ function showTeamStatusModal(teamName) {
     const statsEl = document.getElementById('status-modal-team-stats');
     const careerStatsEl = document.getElementById('status-modal-career-stats'); 
 
-    // ★ 既存のチャートがあれば削除（再描画のため）
+    // ★ 既存のチャートがあれば削除
     const existingChart = Chart.getChart('team-radar-chart');
     if (existingChart) {
         existingChart.destroy();
@@ -6599,7 +6777,11 @@ function showTeamStatusModal(teamName) {
         homepageLink.removeAttribute('target');
         homepageLink.style.cursor = 'pointer';
     }
+    
+    // 最高戦績
     bestEl.textContent = teamRecord.best ? formatRecordToString(teamRecord.best) : 'まだありません';
+    
+    // 大会履歴 (従来の表示)
     historyEl.innerHTML = '';
     if (teamRecord.history && teamRecord.history.length > 0) {
         teamRecord.history.slice(0, 2).forEach(rec => {
@@ -6610,6 +6792,8 @@ function showTeamStatusModal(teamName) {
     } else {
         historyEl.innerHTML = '<p>まだありません</p>';
     }
+    
+    // 称号
     traitsEl.innerHTML = '';
     if (teamRecord.teamTraits && teamRecord.teamTraits.length > 0) {
         teamRecord.teamTraits.forEach(traitId => {
@@ -6624,12 +6808,16 @@ function showTeamStatusModal(teamName) {
     } else {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
+
+    // 監督
     const teamMasterData = TEAM_DATA[teamName];
     if (teamMasterData && teamMasterData.coach) {
         coachEl.textContent = `${teamMasterData.coach.name} (${teamMasterData.coach.experience} / ${teamMasterData.coach.style})`;
     } else {
         coachEl.textContent = '情報なし';
     }
+
+    // ホームページリンク
     if (homepageLinkContainer && homepageLink) {
         if (teamName === "283学園") {
             homepageLink.setAttribute('data-target', 'homepage-modal'); 
@@ -6639,20 +6827,18 @@ function showTeamStatusModal(teamName) {
         }
     }
 
-    // --- ★★★ 今大会の「チーム防御率」を計算 ★★★ ---
+    // --- 3. 今大会のチーム防御率計算 ---
     let tourneyIP = 0;
     let tourneyER = 0;
     const currentTournamentKey = tournamentState.currentTournament;
-
     if (teamRecord.playerStats && teamRecord.playerStats.pitching) {
         Object.values(teamRecord.playerStats.pitching).forEach(p => {
             if (p.gamelogs) {
                 p.gamelogs.forEach(log => {
-                    // ログが「現在の大会」のものか判定
                     const logRound = log.round || '';
                     let isCurrent = false;
                     if (currentTournamentKey === 'summer') isCurrent = logRound.includes('回戦') || logRound.includes('決勝');
-                    else if (currentTournamentKey === 'summer_koshien') isCurrent = true; // 甲子園モード
+                    else if (currentTournamentKey === 'summer_koshien') isCurrent = true;
                     else if (currentTournamentKey === 'autumn') isCurrent = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                     else if (currentTournamentKey === 'spring') isCurrent = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                     
@@ -6664,33 +6850,20 @@ function showTeamStatusModal(teamName) {
             }
         });
     }
-    // 防御率計算 (イニング0の場合はハイフン)
     const tourneyERA = (tourneyIP > 0) ? ((tourneyER * 9) / tourneyIP).toFixed(2) : "----";
-    // --- ★★★ 計算ここまで ★★★ ---
 
-
-    // --- 3. チームレーダーチャートの生成 ---
+    // --- 4. チームレーダーチャート ---
     const stats = teamRecord.tournamentStats || { h: 0, ab: 0, hr: 0, rbi: 0, sb: 0, so: 0 };
-    // チャート用には、先ほど計算した今大会のERAを使用
     const eraNum = (tourneyERA === "----") ? 9.00 : parseFloat(tourneyERA);
-
     const avg = (stats.ab > 0) ? (stats.h / stats.ab) : 0;
     const power = (stats.hr || 0) * 10;
     const speed = (stats.sb || 0) * 10;
-    const defense = (eraNum < 6) ? (6 - eraNum) / 5 * 100 : (eraNum >= 6 ? 0 : 50); // 防御率が良いほど高得点
+    const defense = (eraNum < 6) ? (6 - eraNum) / 5 * 100 : (eraNum >= 6 ? 0 : 50);
     const so = (stats.so || 0);
     const bb = (stats.bb || 0) + (stats.hbp || 0);
     const eye = (bb > 0) ? (bb / (bb + so)) * 100 : 30;
-
     const normalize = (value) => Math.max(0, Math.min(100, Math.round(value)));
-
-    const chartData = [
-        normalize(avg * 500 - 100), // .200=0, .400=100
-        normalize(power),
-        normalize(speed),
-        normalize(defense),
-        normalize(eye)
-    ];
+    const chartData = [normalize(avg * 500 - 100), normalize(power), normalize(speed), normalize(defense), normalize(eye)];
     
     const ctx = document.getElementById('team-radar-chart')?.getContext('2d');
     if (ctx) {
@@ -6717,35 +6890,21 @@ function showTeamStatusModal(teamName) {
                     r: {
                         angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
                         grid: { color: 'rgba(0, 0, 0, 0.1)' },
-                        pointLabels: {
-                            font: { size: 12, weight: 'bold' },
-                            color: '#333'
-                        },
-                        ticks: {
-                            backdropColor: 'white',
-                            color: '#777',
-                            stepSize: 25,
-                            font: { size: 10 }
-                        },
-                        min: 0,
-                        max: 100
+                        pointLabels: { font: { size: 12, weight: 'bold' }, color: '#333' },
+                        ticks: { backdropColor: 'white', color: '#777', stepSize: 25, font: { size: 10 } },
+                        min: 0, max: 100
                     }
                 },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
 
-    // --- 4. テキスト成績の表示 (★ここに防御率を追加) ---
+    // --- 5. テキスト成績の表示 ---
     if (statsEl) {
         if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
             const avgStr = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
             const sbCount = stats.sb || 0;
-            // ★★★ 修正箇所：打撃成績の後ろに防御率を表示 ★★★
             statsEl.innerHTML = `打率 <span class="font-bold text-xl">${avgStr}</span> (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
         } else if (stats) {
             statsEl.innerHTML = `(今大会 ${stats.ab}打数 ${stats.h}安打)<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
@@ -6754,7 +6913,6 @@ function showTeamStatusModal(teamName) {
         }
     }
     
-    // --- 5. 通算成績 (Career) の表示 ---
     if (careerStatsEl) {
         const careerBattingStats = teamRecord.playerStats?.batting;
         let totalCareerSb = 0, totalCareerHr = 0;
@@ -6765,19 +6923,56 @@ function showTeamStatusModal(teamName) {
                 totalCareerHr += stats.hr || 0;
             }
         }
-        // 通算防御率は「全期間」なので、calculateTeamPitchingStats (全期間集計) を使うことも可能だが、
-        // ここでは打撃指標のみに戻しておく（ご要望通り、今大会成績の欄に防御率を出したので）
         careerStatsEl.textContent = `通算 ${totalCareerHr} 本塁打 / ${totalCareerSb} 盗塁`;
     }
+
+    // --- ★★★ 直近試合結果の表示 (新規追加部分) ★★★ ---
+    const recentMatchesContainer = document.getElementById('status-modal-recent-matches');
     
+    // コンテナがまだなければ作成して追加する
+    let recentMatchesListEl = document.getElementById('status-modal-recent-matches-list');
+    if (!recentMatchesListEl) {
+        const containerDiv = document.createElement('div');
+        containerDiv.id = 'status-modal-recent-matches';
+        containerDiv.className = 'mt-4 border-t pt-3';
+        containerDiv.innerHTML = `
+            <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-2">直近の試合結果 (5試合)</h4>
+            <ul id="status-modal-recent-matches-list" class="space-y-2 text-sm"></ul>
+        `;
+        // 監督情報の下あたりに挿入
+        if(coachEl && coachEl.parentNode) {
+            coachEl.parentNode.parentNode.insertBefore(containerDiv, homepageLinkContainer);
+        }
+        recentMatchesListEl = containerDiv.querySelector('ul');
+    }
+
+    // リストの中身を生成
+    const recentMatches = getRecentMatchesForTeam(teamName, 5);
+    
+    if (recentMatches.length > 0) {
+        recentMatchesListEl.innerHTML = recentMatches.map(m => {
+            const resultClass = m.isWin ? 'text-blue-600 font-bold' : 'text-red-600 font-bold';
+            const scoreClass = m.isWin ? 'font-bold' : '';
+            return `
+                <li class="flex justify-between items-center border-b border-gray-100 pb-1">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-gray-500">${m.year}${m.tournamentName} ${m.roundName}</span>
+                        <span>vs ${m.opponent}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="${scoreClass} mr-2">${m.scoreResult}</span>
+                        <span class="${resultClass}">${m.result}</span>
+                    </div>
+                </li>
+            `;
+        }).join('');
+    } else {
+        recentMatchesListEl.innerHTML = '<li class="text-gray-400 text-center text-xs">試合記録がありません</li>';
+    }
+
     // --- 6. モーダルを表示 ---
     modal.classList.remove('hidden');
 }
-
-// ▲▲▲ 置き換えここまで ▲▲▲
-// ▲▲▲ 置き換えここまで ▲▲▲ 
-// ▲▲▲ 置き換えここまで ▲▲▲
-// ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▲▲▲ 置き換えここまで ▲▲▲
   // --- Custom Alert/Confirm ---
@@ -13053,6 +13248,161 @@ async function setupSpringMainTournament_Round2() {
 
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
+// ▼▼▼ 学校検索・アーカイブ表示機能 ▼▼▼
+
+// 1. 検索ボタンのイベントリスナー
+document.getElementById('school-search-btn').addEventListener('click', () => {
+    const input = document.getElementById('school-search-input');
+    const query = input.value.trim();
+    if (!query) return;
+
+    // 部分一致でチームを検索
+    const allTeams = tournamentState.teams || INITIAL_TEAM_POOL;
+    const matchedTeam = allTeams.find(t => t.includes(query));
+
+    if (matchedTeam) {
+        renderSchoolArchiveModal(matchedTeam);
+    } else {
+        alert(`「${query}」に一致する学校が見つかりませんでした。`);
+    }
+});
+
+// 2. モーダルを閉じるボタン
+document.getElementById('school-archive-close-btn').addEventListener('click', () => {
+    document.getElementById('school-archive-modal').classList.add('hidden');
+    document.getElementById('school-archive-modal').classList.remove('flex');
+});
+
+/**
+ * 学校アーカイブモーダルを描画するメイン関数
+ */
+function renderSchoolArchiveModal(teamName) {
+    const contentEl = document.getElementById('school-archive-content');
+    const teamData = TEAM_DATA[teamName];
+    const teamRecord = tournamentState.teamRecords[teamName];
+    
+    if (!teamData || !teamRecord) return;
+
+    // --- データ集計 ---
+    // 1. 通算成績 (Win/Loss)
+    const totalWins = teamRecord.wins || 0;
+    const totalLosses = teamRecord.losses || 0;
+    
+    // 2. 最高成績
+    const bestRankStr = teamRecord.best ? formatRecordToString(teamRecord.best) : "なし";
+    
+    // 3. 直近3大会の成績
+    const recentHistory = (teamRecord.history || []).slice(0, 3);
+
+    // 4. 全試合履歴の取得 (getRecentMatchesForTeamを利用し、limitを無限にする)
+    const allMatches = getRecentMatchesForTeam(teamName, 1000); // 1000試合分
+
+    // --- HTML生成 ---
+    let html = `
+        <div class="archive-header">
+            <span class="archive-school-name">${teamName}</span>
+            <span class="archive-pref">(${teamData.region}地区)</span>
+        </div>
+
+        <div class="archive-section-title">概要</div>
+        <div class="result-summary-box">
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">最高成績</dt>
+                <dd class="result-summary-dd">${bestRankStr}</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">通算勝敗</dt>
+                <dd class="result-summary-dd">${totalWins}勝 ${totalLosses}敗</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">チーム特徴</dt>
+                <dd class="result-summary-dd">${teamData.info || '情報なし'}</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">監督</dt>
+                <dd class="result-summary-dd">${teamData.coach?.name || '不明'} (${teamData.coach?.style || ''})</dd>
+            </div>
+        </div>
+
+        <div class="archive-section-title">直近3大会の成績</div>
+        <ul class="history-list">
+            ${recentHistory.length > 0 ? recentHistory.map(h => `
+                <li class="history-item">
+                    <span class="history-year">${h.year}年 ${tournamentNameMap[h.tournament] || h.tournament}</span>
+                    <span class="history-rank">${getRankString(h.rank)}</span>
+                </li>
+            `).join('') : '<li class="p-2 text-gray-500">記録なし</li>'}
+        </ul>
+
+        <div class="archive-section-title">全試合結果一覧</div>
+        <div class="archive-sub-title">
+            <h3>最新の試合結果</h3>
+            <ul class="flex space-x-4 text-sm font-normal ml-4 mt-1">
+                <li><span class="text-red-600 font-bold">●</span> 勝ち</li>
+                <li><span class="text-blue-600 font-bold">●</span> 負け</li>
+            </ul>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="record-table">
+                <thead>
+                    <tr>
+                        <th>年</th>
+                        <th>大会</th>
+                        <th>回戦</th>
+                        <th>対戦校</th>
+                        <th>スコア</th>
+                        <th>勝敗</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (allMatches.length > 0) {
+        allMatches.forEach(match => {
+            const resultClass = match.isWin ? 'result-win' : 'result-lose';
+            const resultText = match.isWin ? '勝ち' : '負け';
+            const resultIcon = match.isWin ? '🔴' : '🔵'; // アイコン画像がないので絵文字で代用
+
+            html += `
+                <tr>
+                    <td>${match.year}</td>
+                    <td>${match.tournamentName}</td>
+                    <td>${match.roundName}</td>
+                    <td class="opponent-cell clickable-team-name cursor-pointer text-blue-600 hover:underline" data-team-name="${match.opponent}">
+                        ${match.opponent}
+                    </td>
+                    <td class="score-cell">${match.scoreResult}</td>
+                    <td class="${resultClass}">${resultIcon} ${resultText}</td>
+                </tr>
+            `;
+        });
+    } else {
+        html += `<tr><td colspan="6" class="text-gray-500">試合データがありません</td></tr>`;
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    contentEl.innerHTML = html;
+    
+    // モーダル表示
+    const modal = document.getElementById('school-archive-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+// 4. アーカイブ内の対戦校リンクをクリックした時の処理（再帰的にモーダルを更新）
+document.getElementById('school-archive-content').addEventListener('click', (e) => {
+    if (e.target.classList.contains('clickable-team-name')) {
+        const teamName = e.target.dataset.teamName;
+        renderSchoolArchiveModal(teamName);
+    }
+});
+
 /**
  * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔
  * (★「故障者リスト(injuryReport)」の情報を追加)
@@ -15509,78 +15859,72 @@ function createNewspaperHtml(articleData, matchData) {
 }
 
 /**
- * [UPDATED] AIスポーツ新聞記事の生成
- * (★チーム数に応じてラウンド名を動的に判定)
+ * [変更版] AIスポーツ新聞の「画像」を生成する
+ * テキスト記事ではなく、画像生成AI用のプロンプトを作成し、画像をリクエストします。
  */
 async function generateSportsNewspaper(roundNumber) {
-    // ★★★ 修正箇所: チーム数からラウンド名マップを作成 ★★★
-    const numTeams = tournamentState.teams.length; 
-    const finalRound = Math.log2(numTeams); // 128->7, 64->6
-
+    const numTeams = tournamentState.teams.length;
+    const finalRound = Math.log2(numTeams);
     const roundNameMap = {
         [finalRound]: '決勝',
         [finalRound-1]: '準決勝',
         [finalRound-2]: '準々決勝',
-        [finalRound-3]: '4回戦' // 甲子園の場合は3回戦になるが、実質ベスト16決定戦
+        [finalRound-3]: '4回戦'
     };
-    // ★★★ 修正ここまで ★★★
-
     const roundName = roundNameMap[roundNumber] || `${roundNumber}回戦`;
-    // R1, R2などマップにないラウンドはスキップ(nullを返す)
-    // ただし甲子園(64チーム)の場合、[finalRound-3]は「3回戦」になるため、発行対象とする
-    if (!roundNameMap[roundNumber]) return null; 
+    
+    if (!roundNameMap[roundNumber]) return null;
 
+    // ラウンドの主要な試合結果を取得（優勝チームなどを特定）
     const matchIdsInRound = Object.keys(tournamentState.matches).filter(id => 
         (id.includes(`-R${roundNumber}-`)) || (roundNumber === finalRound && id.includes('F-R1-'))
     );
-    const results = matchIdsInRound.map(id => tournamentState.matches[id]);
+    const results = matchIdsInRound.map(id => tournamentState.matches[id]).filter(m => m.winner);
+    
+    if (results.length === 0) return null;
 
-    const resultsText = results.map(match => {
-        if (!match.winner) return null;
-        const winnerRank = getRankDescription(calculateRank(match.winner, tournamentState));
-        const loser = match.team1 === match.winner ? match.team2 : match.team1;
-        if (!loser) return null;
-        const loserRank = getRankDescription(calculateRank(loser, tournamentState));
-        const winnerScore = match.team1 === match.winner ? match.score1 : match.score2;
-        const loserScore = match.team1 === match.winner ? match.score2 : match.score1;
-        return `${winnerRank}・${match.winner}が${loserRank}・${loser}に ${winnerScore}-${loserScore} で勝利。`;
-    }).filter(Boolean).join('\n');
+    // 最も注目すべき試合（決勝、または最大得点差/接戦）を選ぶ
+    const featuredMatch = results[0];
+    const winner = featuredMatch.winner;
+    const loser = featuredMatch.team1 === winner ? featuredMatch.team2 : featuredMatch.team1;
+    const score = `${featuredMatch.score1}-${featuredMatch.score2}`;
 
-    if (!resultsText) return null;
+    // 画像生成用のプロンプト（英語）を作成
+    // 日本語の文字は画像生成AIが苦手なため、雰囲気重視のプロンプトにします
+    const imagePrompt = `A front page of a Japanese sports newspaper. 
+    The main photo shows a Japanese high school baseball team (${winner}) in white uniforms celebrating a victory on the Koshien dirt field. 
+    Players are crying with joy, hugging each other, or tossing the captain in the air. 
+    The headline is large vertical Japanese Kanji text, bold and black. 
+    The paper texture is rough newsprint. 
+    There is a score box showing "${score}". 
+    High quality, realistic photo, energetic atmosphere, retro style.`;
 
-    const prompt = `あなたは、読者の購買意欲を掻き立てるのが得意な、日本のスポーツ新聞の編集長です。
-現在、高校野球の${tournamentState.tournamentYear}年度${tournamentNameMap[tournamentState.currentTournament]}が進行中です。${roundName}の全試合が終了しました。
-以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストを生成してください。
-
-### ${roundName} 全試合結果
-${resultsText}
-
-### あなたが作成するテキスト
-以下の4つの要素を、JSON形式で出力してください。
-1.  **mainHeadline**: 最も重要な結果を伝える、短く、衝撃的で、扇情的な大見出し。（例：「怪物散る！」「王者、盤石の決勝へ」）
-2.  **subHeadline**: mainHeadlineを補足する、少し詳しい小見出し。
-3.  **photoCaption**: その日のハイライトシーンを切り取った架空の写真に対する、情景が目に浮かぶようなキャプション。（例：「あと一歩及ばず、マウンドに崩れ落ちる〇〇高校のエース△△」）
-4.  **otherResults**: その他の注目すべき結果を2つ、簡潔にまとめたもの。
-
-### 出力形式
-{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."]}`;
-
+    // AI（画像生成API）にリクエスト
     try {
-        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        // ★重要: バックエンドに画像生成モードであることを伝えます
+        const response = await fetchWithRetry({ 
+            mode: 'image', 
+            prompt: imagePrompt
+        });
+        
         const result = await response.json();
-        if (result.candidates?.[0]?.content?.parts?.[0]) {
-            const rawText = result.candidates[0].content.parts[0].text;
-            const newspaperData = parseJsonFromText(rawText);
-            if (newspaperData) return newspaperData;
+        
+        // バックエンドから画像データ(Base64)が返ってくると仮定
+        if (result.image) {
+            return {
+                imageUrl: `data:image/jpeg;base64,${result.image}`, // Base64画像として表示
+                mainHeadline: `${winner}、歓喜の勝利！`, // 代替テキスト用
+                subHeadline: `${roundName} ${winner} vs ${loser}`,
+                photoCaption: "優勝を決め、マウンドに駆け寄る選手たち"
+            };
         }
-        throw new Error("AI newspaper response format error.");
+        throw new Error("画像の取得に失敗しました。");
+        
     } catch (error) {
-        console.error("AI newspaper generation failed:", error);
+        console.error("AI新聞画像の生成に失敗しました:", error);
         return null;
     }
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
-
    /**
      * ラウンド終了時に新聞発行などのイベントを処理する
      * (★128チーム制＝7ラウンド制に対応)
@@ -15633,36 +15977,26 @@ ${resultsText}
     }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
-    /**
-     * 新聞モーダルを描画する
-     */
-    function renderNewspaperModal(newspaperData) {
-        const { mainHeadline, subHeadline, photoCaption, otherResults, imageUrl } = newspaperData;
-        
-        const imageHtml = imageUrl 
-            ? `<img src="${imageUrl}" alt="${photoCaption}" class="w-full h-auto my-4 border">` 
-            : `<div class="newspaper-image-placeholder my-4"><p class="text-sm p-4">${photoCaption}</p></div>`;
-
-        newspaperModalBody.innerHTML = `
-            <div class="newspaper-container newspaper-late">
-                <div class="newspaper-header">
-                    <h2 class="newspaper-title">熱闘スポーツ</h2>
-                    <p class="newspaper-date">${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                </div>
-                <div class="newspaper-content">
-                    <h1 class="newspaper-main-headline">${mainHeadline}</h1>
-                    <div class="newspaper-body-content">
-                        <h2 class="newspaper-sub-headline">${subHeadline}</h2>
-                        ${imageHtml}
-                        <div class="newspaper-score-box">
-                            <h3>その他の主な結果</h3>
-                            ${otherResults.map(r => `<p>${r}</p>`).join('')}
-                        </div>
-                    </div>
-                </div>
+ /**
+ * [変更版] 新聞モーダルを描画する
+ * 画像を表示するシンプルなレイアウトに変更します。
+ */
+function renderNewspaperModal(newspaperData) {
+    const { imageUrl, mainHeadline, subHeadline } = newspaperData;
+    
+    newspaperModalBody.innerHTML = `
+        <div class="flex flex-col items-center justify-center bg-gray-100 p-2 rounded">
+            <div class="w-full max-w-3xl bg-white shadow-2xl border border-gray-300 p-1">
+                <img src="${imageUrl}" alt="${mainHeadline}" class="w-full h-auto block">
             </div>
-        `;
-    }
+            <div class="mt-4 text-center">
+                <h2 class="text-xl font-bold text-gray-800">${mainHeadline}</h2>
+                <p class="text-gray-600">${subHeadline}</p>
+                <p class="text-xs text-gray-400 mt-2">※AIによって生成されたイメージ画像です。文字は正確でない場合があります。</p>
+            </div>
+        </div>
+    `;
+}
 
   /**
  * AIに掲示板の返信を生成させる（最新の環境に適合した最終版）
@@ -24280,6 +24614,9 @@ function saveScorecardAndClose() {
         </div>
     </div>
 </div>
+
+
+
 
     </body>
 </html>
