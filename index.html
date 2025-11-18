@@ -1093,7 +1093,7 @@
         .feud-match .team-slot { border: 2px solid #8b5cf6 !important; background-color: #f5f3ff; }
         .rivalry-match .team-slot.winner { background-color: #fecaca; }
         .feud-match .team-slot.winner { background-color: #ddd6fe; }
-    
+    
 /* 詳細入力テーブル用のスタイル */
 /* 詳細入力テーブル用のスタイル（最終版） */
 /* ▼▼▼ このブロックを <style> タグ内に「新規追加」 ▼▼▼ */
@@ -2184,9 +2184,9 @@
 .batting-table .col-sub-type { min-width: 80px; }
 .batting-table .col-inning { min-width: 400px; }  /* ←お好みの幅に調整してください */
 /* ▲▲▲ ▲▲▲ */
-        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
 
-        .add-row-btn:hover { background-color: #d1d5db; }　
+        .add-row-btn:hover { background-color: #d1d5db; }　
 
 
 
@@ -4562,7 +4562,8 @@ AIは以下の「球速帯」が持つ意味を、**投手の左右**と**学校
                 { name: "一ノ瀬", year: 3, position: "サード", desc: "チーム一の打球の速さを誇る2番打者。" },
                 { name: "土門", year: 3, position: "ショート", desc: "ミスの少ない堅実な守備で試合のリズムを作る内野の要。" },
                 { name: "染岡", year: 3, position: "レフト", desc: "監督も絶大な信頼を寄せる大砲。気持ちの強さも魅力。" },
-                { name: "風丸", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段にアップ。" },
+                { name: "風丸", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段
+にアップ。" },
                 { name: "栗松", year: 2, position: "ライト", desc: "力強いスイングから放たれる長打が魅力の2年生。" },
                 { name: "鬼道", year: 3, position: "ピッチャー", desc: "キレのある縦スライダーと内角への直球が魅力の右腕。" },
                 { name: "松野", year: 2, position: "ピッチャー", desc: "MAX144kmのストレートとカットボールが武器の2年生。奪三振能力が高い。" }
@@ -9320,7 +9321,8 @@ async function generateSkipRoundArticleContent(roundName, results) {
         mainHeadlineCandidate = `まさか！ ${biggestUpset.loserName}散る`;
         mainImageCaptionCandidate = `${biggestUpset.winnerName}の歓喜`;
     } else if (biggestUpset && biggestUpset.rankDiff < 0) { // 小さな番狂わせ
-        upsetText = `一筋縄ではいかない試合も。${biggestUpset.winnerRank}ランクの「${biggestUpset.winnerName}」が、${biggestUpset.loserRank}ランクの「${biggestUpset.loserName}」を ${biggestUpset.winnerScore}-${biggestUpset.loserScore} で破る番狂わせがあった。`;
+        upsetText = `一筋縄ではいかない試合も。${biggestUpset.winnerRank}ランクの「${biggestUpset.winnerN
+ame}」が、${biggestUpset.loserRank}ランクの「${biggestUpset.loserName}」を ${biggestUpset.winnerScore}-${biggestUpset.loserScore} で破る番狂わせがあった。`;
     }
 
     // 2. シード校の動向を分析
@@ -15859,72 +15861,78 @@ function createNewspaperHtml(articleData, matchData) {
 }
 
 /**
- * [変更版] AIスポーツ新聞の「画像」を生成する
- * テキスト記事ではなく、画像生成AI用のプロンプトを作成し、画像をリクエストします。
+ * [UPDATED] AIスポーツ新聞記事の生成
+ * (★チーム数に応じてラウンド名を動的に判定)
  */
 async function generateSportsNewspaper(roundNumber) {
-    const numTeams = tournamentState.teams.length;
-    const finalRound = Math.log2(numTeams);
+    // ★★★ 修正箇所: チーム数からラウンド名マップを作成 ★★★
+    const numTeams = tournamentState.teams.length; 
+    const finalRound = Math.log2(numTeams); // 128->7, 64->6
+
     const roundNameMap = {
         [finalRound]: '決勝',
         [finalRound-1]: '準決勝',
         [finalRound-2]: '準々決勝',
-        [finalRound-3]: '4回戦'
+        [finalRound-3]: '4回戦' // 甲子園の場合は3回戦になるが、実質ベスト16決定戦
     };
-    const roundName = roundNameMap[roundNumber] || `${roundNumber}回戦`;
-    
-    if (!roundNameMap[roundNumber]) return null;
+    // ★★★ 修正ここまで ★★★
 
-    // ラウンドの主要な試合結果を取得（優勝チームなどを特定）
+    const roundName = roundNameMap[roundNumber] || `${roundNumber}回戦`;
+    // R1, R2などマップにないラウンドはスキップ(nullを返す)
+    // ただし甲子園(64チーム)の場合、[finalRound-3]は「3回戦」になるため、発行対象とする
+    if (!roundNameMap[roundNumber]) return null; 
+
     const matchIdsInRound = Object.keys(tournamentState.matches).filter(id => 
         (id.includes(`-R${roundNumber}-`)) || (roundNumber === finalRound && id.includes('F-R1-'))
     );
-    const results = matchIdsInRound.map(id => tournamentState.matches[id]).filter(m => m.winner);
-    
-    if (results.length === 0) return null;
+    const results = matchIdsInRound.map(id => tournamentState.matches[id]);
 
-    // 最も注目すべき試合（決勝、または最大得点差/接戦）を選ぶ
-    const featuredMatch = results[0];
-    const winner = featuredMatch.winner;
-    const loser = featuredMatch.team1 === winner ? featuredMatch.team2 : featuredMatch.team1;
-    const score = `${featuredMatch.score1}-${featuredMatch.score2}`;
+    const resultsText = results.map(match => {
+        if (!match.winner) return null;
+        const winnerRank = getRankDescription(calculateRank(match.winner, tournamentState));
+        const loser = match.team1 === match.winner ? match.team2 : match.team1;
+        if (!loser) return null;
+        const loserRank = getRankDescription(calculateRank(loser, tournamentState));
+        const winnerScore = match.team1 === match.winner ? match.score1 : match.score2;
+        const loserScore = match.team1 === match.winner ? match.score2 : match.score1;
+        return `${winnerRank}・${match.winner}が${loserRank}・${loser}に ${winnerScore}-${loserScore} で勝利。`;
+    }).filter(Boolean).join('\n');
 
-    // 画像生成用のプロンプト（英語）を作成
-    // 日本語の文字は画像生成AIが苦手なため、雰囲気重視のプロンプトにします
-    const imagePrompt = `A front page of a Japanese sports newspaper. 
-    The main photo shows a Japanese high school baseball team (${winner}) in white uniforms celebrating a victory on the Koshien dirt field. 
-    Players are crying with joy, hugging each other, or tossing the captain in the air. 
-    The headline is large vertical Japanese Kanji text, bold and black. 
-    The paper texture is rough newsprint. 
-    There is a score box showing "${score}". 
-    High quality, realistic photo, energetic atmosphere, retro style.`;
+    if (!resultsText) return null;
 
-    // AI（画像生成API）にリクエスト
+    const prompt = `あなたは、読者の購買意欲を掻き立てるのが得意な、日本のスポーツ新聞の編集長です。
+現在、高校野球の${tournamentState.tournamentYear}年度${tournamentNameMap[tournamentState.currentTournament]}が進行中です。${roundName}の全試合が終了しました。
+以下の試合結果を基に、最も衝撃的でドラマチックな出来事を一つ選び出し、それに対応する新聞の一面を飾るテキストを生成してください。
+
+### ${roundName} 全試合結果
+${resultsText}
+
+### あなたが作成するテキスト
+以下の4つの要素を、JSON形式で出力してください。
+1.  **mainHeadline**: 最も重要な結果を伝える、短く、衝撃的で、扇情的な大見出し。（例：「怪物散る！」「王者、盤石の決勝へ」）
+2.  **subHeadline**: mainHeadlineを補足する、少し詳しい小見出し。
+3.  **photoCaption**: その日のハイライトシーンを切り取った架空の写真に対する、情景が目に浮かぶようなキャプション。（例：「あと一歩及ばず、マウンドに崩れ落ちる〇〇高校のエース△△」）
+4.  **otherResults**: その他の注目すべき結果を2つ、簡潔にまとめたもの。
+
+### 出力形式
+{"mainHeadline": "...", "subHeadline": "...", "photoCaption": "...", "otherResults": ["...", "..."]}`;
+
     try {
-        // ★重要: バックエンドに画像生成モードであることを伝えます
-        const response = await fetchWithRetry({ 
-            mode: 'image', 
-            prompt: imagePrompt
-        });
-        
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
-        
-        // バックエンドから画像データ(Base64)が返ってくると仮定
-        if (result.image) {
-            return {
-                imageUrl: `data:image/jpeg;base64,${result.image}`, // Base64画像として表示
-                mainHeadline: `${winner}、歓喜の勝利！`, // 代替テキスト用
-                subHeadline: `${roundName} ${winner} vs ${loser}`,
-                photoCaption: "優勝を決め、マウンドに駆け寄る選手たち"
-            };
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const rawText = result.candidates[0].content.parts[0].text;
+            const newspaperData = parseJsonFromText(rawText);
+            if (newspaperData) return newspaperData;
         }
-        throw new Error("画像の取得に失敗しました。");
-        
+        throw new Error("AI newspaper response format error.");
     } catch (error) {
-        console.error("AI新聞画像の生成に失敗しました:", error);
+        console.error("AI newspaper generation failed:", error);
         return null;
     }
 }
+// ▲▲▲ 置き換えここまで ▲▲▲
+
    /**
      * ラウンド終了時に新聞発行などのイベントを処理する
      * (★128チーム制＝7ラウンド制に対応)
@@ -15977,26 +15985,36 @@ async function generateSportsNewspaper(roundNumber) {
     }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
- /**
- * [変更版] 新聞モーダルを描画する
- * 画像を表示するシンプルなレイアウトに変更します。
- */
-function renderNewspaperModal(newspaperData) {
-    const { imageUrl, mainHeadline, subHeadline } = newspaperData;
-    
-    newspaperModalBody.innerHTML = `
-        <div class="flex flex-col items-center justify-center bg-gray-100 p-2 rounded">
-            <div class="w-full max-w-3xl bg-white shadow-2xl border border-gray-300 p-1">
-                <img src="${imageUrl}" alt="${mainHeadline}" class="w-full h-auto block">
+    /**
+     * 新聞モーダルを描画する
+     */
+    function renderNewspaperModal(newspaperData) {
+        const { mainHeadline, subHeadline, photoCaption, otherResults, imageUrl } = newspaperData;
+        
+        const imageHtml = imageUrl 
+            ? `<img src="${imageUrl}" alt="${photoCaption}" class="w-full h-auto my-4 border">` 
+            : `<div class="newspaper-image-placeholder my-4"><p class="text-sm p-4">${photoCaption}</p></div>`;
+
+        newspaperModalBody.innerHTML = `
+            <div class="newspaper-container newspaper-late">
+                <div class="newspaper-header">
+                    <h2 class="newspaper-title">熱闘スポーツ</h2>
+                    <p class="newspaper-date">${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+                <div class="newspaper-content">
+                    <h1 class="newspaper-main-headline">${mainHeadline}</h1>
+                    <div class="newspaper-body-content">
+                        <h2 class="newspaper-sub-headline">${subHeadline}</h2>
+                        ${imageHtml}
+                        <div class="newspaper-score-box">
+                            <h3>その他の主な結果</h3>
+                            ${otherResults.map(r => `<p>${r}</p>`).join('')}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mt-4 text-center">
-                <h2 class="text-xl font-bold text-gray-800">${mainHeadline}</h2>
-                <p class="text-gray-600">${subHeadline}</p>
-                <p class="text-xs text-gray-400 mt-2">※AIによって生成されたイメージ画像です。文字は正確でない場合があります。</p>
-            </div>
-        </div>
-    `;
-}
+        `;
+    }
 
   /**
  * AIに掲示板の返信を生成させる（最新の環境に適合した最終版）
@@ -18700,7 +18718,8 @@ async function processMatchWin(matchId, winnerName) {
             // (一旦ここで県大会の区切りをつける)
             
             // 2. ユーザーに通知
-            alert(`【祝】${winnerName}が夏の静岡大会を制覇！\n\n続いて「全国高等学校野球選手権大会（甲子園）」へ進出します！\n初戦の相手は、岩手の怪物産出校「花巻東」です！`);
+            alert(`【祝】${winnerName}が夏の静岡大会を制覇！\n\n続いて「全国高等学校野球選手権大
+会（甲子園）」へ進出します！\n初戦の相手は、岩手の怪物産出校「花巻東」です！`);
 
             // 3. 甲子園モードのセットアップを実行
             await setupKoshienTournament(winnerName);
@@ -23810,7 +23829,8 @@ function saveScorecardAndClose() {
                             <div class="space-y-5 text-gray-700 leading-relaxed text-base">
                                 <p>昨年度、創部まもなくして夏の県大会初優勝を果たし、第1シード校として今大会に臨みます。しかし、初出場となった昨夏の甲子園では初戦（対 浦和学院 7-9）で敗退。全国の舞台での「一勝」の重みを痛感しました。</p>
                                 <p>名将・天井努監督の下、昨年の経験を糧に「県大会連覇」と、その先の「甲子園での一勝」を揺るぎない目標として掲げています。王者としてのプレッシャーをはねのけ、チームスローガンである<strong class="font-bold text-blue-700">『強』</strong>を体現します。</p>
-                            </div>
+                            </d
+iv>
                             <div class="mt-10 bg-gray-50 p-6 rounded-lg border border-gray-200">
                                 <h4 class="text-xl font-bold text-gray-800 mb-3">監督・部長あいさつ</h4>
                                 <div class="flex items-start space-x-4">
