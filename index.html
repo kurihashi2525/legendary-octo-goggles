@@ -10042,7 +10042,7 @@ async function runArchiveAnalysis(teamName) {
 
 /**
  * [FIXED] AIが現在のチームのトーナメント状況を分析し、次戦の勝敗予想を含めたレポートを生成する
- * (★自チームと敵チームの全データ（ARC/G, OPS, チームカラー）を比較し、勝率を予測させる完全版)
+ * (★自チームと敵チームの「5大指標（打率・HR・打点・盗塁・OPS）」を網羅して比較する完全版)
  */
 async function generateArchiveAnalysis(teamName) {
     const record = tournamentState.teamRecords[teamName];
@@ -10054,7 +10054,7 @@ async function generateArchiveAnalysis(teamName) {
         if (!tr || !tr.tournamentStats) return null;
         const td = TEAM_DATA[targetName];
 
-        // (A) 攻撃力 (OPS, ARC/G)
+        // (A) チーム攻撃力 (5大指標)
         const ts = tr.tournamentStats;
         const tab = ts.ab || 0;
         const tavg = tab > 0 ? (ts.h / tab).toFixed(3) : '.000';
@@ -10065,6 +10065,11 @@ async function generateArchiveAnalysis(teamName) {
         const tobp = tpa > 0 ? (t_h + t_bb) / tpa : 0;
         const tslg = tab > 0 ? t_tb / tab : 0;
         const tops = (tobp + tslg).toFixed(3);
+        
+        // ★ 追加指標
+        const t_hr = ts.hr || 0;
+        const t_rbi = ts.rbi || 0;
+        const t_sb = ts.sb || 0;
 
         // ARC/G (相手ランク補正付き得点力)
         let totalRC = 0;
@@ -10079,14 +10084,23 @@ async function generateArchiveAnalysis(teamName) {
                     p_rc = isNaN(p_rc) ? 0 : p_rc;
                     totalRC += p_rc;
                     
-                    // 選手リスト作成
-                    players.push({ name, ops: parseFloat(calculateOps(s)), rc: p_rc, hr: s.hr, avg: (p_h/(p_ab||1)).toFixed(3) });
+                    // ★ 個人成績リスト作成 (5大指標を含む)
+                    players.push({ 
+                        name, 
+                        ops: parseFloat(calculateOps(s)), 
+                        rc: p_rc, 
+                        hr: s.hr || 0, 
+                        rbi: s.rbi || 0, 
+                        sb: s.sb || 0, 
+                        avg: (p_h/(p_ab||1)).toFixed(3) 
+                    });
                 }
             });
         }
+        
         const totalGames = players.reduce((max, p) => Math.max(max, p.games || 0), 0) || 1;
-        const rawRCG = totalRC / totalGames;
-        const arcg = calculateAdjustedRCG(targetName, rawRCG).toFixed(2); // 補正済みRC/G
+        const rawRCG = totalGames > 0 ? totalRC / totalGames : 0;
+        const arcg = calculateAdjustedRCG(targetName, rawRCG).toFixed(2);
 
         // (B) 投手力
         const tp = calculateTeamPitchingStats(targetName);
@@ -10094,9 +10108,13 @@ async function generateArchiveAnalysis(teamName) {
         // (C) チームカラー
         const tc = analyzeTeamColor(targetName);
         
-        // (D) 構造・主力選手
+        // (D) 構造・主力選手 (OPS上位3名を詳細表示)
         players.sort((a, b) => b.ops - a.ops);
-        const top3 = players.slice(0, 3).map(p => `${p.name}(OPS${p.ops.toFixed(3)}, ${p.hr}本)`).join(', ');
+        
+        // ★ 主力選手の情報を詳細化
+        const top3 = players.slice(0, 3).map(p => 
+            `\n  - ${p.name}: 打率${p.avg}, ${p.hr}本, ${p.rbi}打点, ${p.sb}盗塁, OPS${p.ops.toFixed(3)}`
+        ).join('');
         
         const topBatter = players.find(p => p.rc === Math.max(...players.map(p => p.rc)));
         const share = (topBatter && totalRC > 0) ? (topBatter.rc / totalRC) * 100 : 0;
@@ -10122,11 +10140,12 @@ async function generateArchiveAnalysis(teamName) {
             name: targetName,
             rank: calculateRank(targetName, tournamentState),
             style: td?.coach?.style || '不明',
-            avg: tavg, ops: tops, arcg: arcg, hr: ts.hr, // ARC/Gを追加
+            avg: tavg, ops: tops, arcg: arcg, 
+            hr: t_hr, rbi: t_rbi, sb: t_sb, // ★ チーム合計値
             era: tp.era,
-            color: `${tc.classification.primary}`, // 主要チームカラー
+            color: `${tc.classification.primary}`,
             structure: structure,
-            topPlayers: top3,
+            topPlayers: top3, // ★ 詳細リスト
             pitchers: pDetails,
             journey: journey
         };
@@ -10140,7 +10159,6 @@ async function generateArchiveAnalysis(teamName) {
     let nextOpponentName = null;
     
     const allMatches = { ...tournamentState.matches, ...(tournamentState.autumnData?.allMatches || {}), ...(tournamentState.springData?.allMatches || {}) };
-    // 未消化の試合を探す
     const nextMatch = Object.values(allMatches).find(m => !m.winner && (m.team1 === teamName || m.team2 === teamName));
 
     if (nextMatch) {
@@ -10152,35 +10170,35 @@ async function generateArchiveAnalysis(teamName) {
     let isMatchDecided = false;
     let opponentName = nextOpponentName;
 
-    // 相手が決まっていて、かつダミー（BYEや未定）でない場合
+    // 相手が決まっていて、かつダミーでない場合
     if (opponentName && opponentName !== '（未定）' && opponentName !== '(BYE)' && opponentName !== '優勝' && opponentName !== '大会終了') {
+        // 相手チームのデータがない場合は自動生成して埋める
+        backfillCpuStats(opponentName);
         opponentData = getDetailedTeamInfo(opponentName);
         isMatchDecided = true;
     }
 
     // --- 4. プロンプトの作成 ---
     let prompt = `あなたは高校野球のデータアナリストです。
-チーム「${teamName}」の現状分析${isMatchDecided ? `と、次戦の相手「${opponentName}」との勝敗予想` : ''}を行ってください。
+チーム「${teamName}」の現状分析${isMatchDecided ? `と、次戦の相手「${opponentName}」との徹底的な戦力比較` : ''}を行ってください。
 
 ### 【自チーム】${myData.name} (${myData.rank}ランク)
-- **攻撃力**: 打率${myData.avg}, OPS${myData.ops}, ARC/G(補正得点力)${myData.arcg}, 本塁打${myData.hr}
+- **攻撃力**: 打率${myData.avg}, 本塁打${myData.hr}, 打点${myData.rbi}, 盗塁${myData.sb}, OPS${myData.ops}, ARC/G${myData.arcg}
 - **守備力**: 防御率${myData.era}
-- **チームカラー**: ${myData.color}
-- **構造**: ${myData.structure}
-- **主力**: ${myData.topPlayers}
+- **主力打者**: ${myData.topPlayers}
 - **投手陣**: ${myData.pitchers}
+- **チームカラー**: ${myData.color} (${myData.structure})
 - **軌跡**: ${myData.journey}
 `;
 
     if (isMatchDecided && opponentData) {
         prompt += `
 ### 【次戦の相手】${opponentData.name} (${opponentData.rank}ランク)
-- **攻撃力**: 打率${opponentData.avg}, OPS${opponentData.ops}, ARC/G(補正得点力)${opponentData.arcg}, 本塁打${opponentData.hr}
+- **攻撃力**: 打率${opponentData.avg}, 本塁打${opponentData.hr}, 打点${opponentData.rbi}, 盗塁${opponentData.sb}, OPS${opponentData.ops}, ARC/G${opponentData.arcg}
 - **守備力**: 防御率${opponentData.era}
-- **チームカラー**: ${opponentData.color}
-- **構造**: ${opponentData.structure}
-- **主力**: ${opponentData.topPlayers}
+- **主力打者**: ${opponentData.topPlayers}
 - **投手陣**: ${opponentData.pitchers}
+- **チームカラー**: ${opponentData.color} (${opponentData.structure})
 - **軌跡**: ${opponentData.journey}
 `;
     } else {
@@ -10189,20 +10207,28 @@ async function generateArchiveAnalysis(teamName) {
 
     prompt += `
 ### 指示
-1.  **現状分析**: 自チームの投打のバランス、好調な選手(OPS)、構造的な強み/弱み（ワンマンか分散か）を簡潔に評価してください。
+1.  **現状分析**: 自チームの「5大指標（打率・本塁打・打点・盗塁・OPS）」に基づき、攻撃の特色（長打力重視か、機動力重視かなど）を評価してください。
 `;
 
     if (isMatchDecided) {
-        prompt += `2.  **【最重要】次戦シミュレーション**:
-    - **攻撃力比較**: 両チームのOPSとARC/G（対戦相手補正済みの得点力）を比較し、どちらの打線が強力か断言してください。
-    - **盾と矛**: 「${myData.name}の攻撃 vs ${opponentData.name}の守備」のような構図で展開を予想してください。
-    - **攻略法**: 相手のデータ（防御率や構造）に基づき、どうすれば勝てるか（例：エースを攻略、打ち合いに持ち込む）を提案してください。
+        prompt += `2.  **【最重要】戦力比較シミュレーション**:
+    - **火力勝負**: 両チームのOPSと本塁打数を比較し、打ち合いになった場合の優劣を判定してください。
+    - **機動力**: 盗塁数を比較し、足を使った攻撃の脅威度を評価してください。
+    - **エース攻略**: 相手の主力打者（OPSトップ）と自チームの投手陣の相性、あるいはその逆を分析してください。
+    - **展開予想**: データに基づき、「投手戦」になるか「乱打戦」になるか予測してください。
 3.  **【勝敗予想】**:
     - ズバリ、**${teamName}の勝率（％）**を予想し、その根拠を述べてください。
-    - 「有利（60%以上）」「五分（45-55%）」「劣勢（40%以下）」のいずれかの言葉を使い、形勢を明言してください。
+    - 「有利（60%以上）」「五分（45-55%）」「劣勢（40%以下）」のいずれかを明言してください。
 `;
     } else {
-        prompt += `2.  **目標達成度**: ランク(${myData.rank})に基づき、現在のチーム状況でどこまで勝ち進めそうか評価してください。\n`;
+        const currentRank = calculateRank(teamName, tournamentState);
+        let goalQuestion = "上位進出";
+        if(currentRank === 'A') goalQuestion = "全国制覇";
+        else if(currentRank === 'B') goalQuestion = "県制覇";
+        else if(currentRank === 'C') goalQuestion = "ベスト8";
+        else goalQuestion = "トーナメント勝ち上がり";
+        
+        prompt += `2.  **目標達成度**: ランク(${currentRank})に基づき、現在のチーム状況で「${goalQuestion}」が可能か評価してください。\n`;
     }
 
     prompt += `### 出力形式: JSON {"body": "（分析コラム本文）"}`;
@@ -10218,6 +10244,7 @@ async function generateArchiveAnalysis(teamName) {
         return '分析エラーが発生しました。';
     }
 }
+
 
 /**
  * チームの直近N試合の履歴を取得する
