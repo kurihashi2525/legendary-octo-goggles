@@ -6790,16 +6790,16 @@ function renderTeamStatsModal(teamName) {
                         <tbody>
         `;
         battingArray.forEach(stats => {
-            // ★ 規定打席未満の選手は率をグレー表示
             const isQualified = stats.pa >= MINIMUM_PA_FOR_RANKING;
             const rateClass = isQualified ? 'stat-highlight' : 'text-gray-400';
 
+            // ★★★ 修正: ${stats.hbp} -> ${stats.hbp || 0} に変更 ★★★
             battingHtml += `
                 <tr>
                     <td class="player-name">${stats.name}</td>
                     <td>${stats.games}</td><td class="${rateClass}">${stats.avg.toFixed(3)}</td><td class="${rateClass}">${stats.ops.toFixed(3)}</td>
                     <td>${stats.pa}</td><td>${stats.ab}</td><td>${stats.h}</td><td>${stats.hr}</td>
-                    <td>${stats.rbi}</td><td>${stats.sb}</td><td>${stats.bb}</td><td>${stats.hbp}</td>
+                    <td>${stats.rbi}</td><td>${stats.sb}</td><td>${stats.bb}</td><td>${stats.hbp || 0}</td>
                     <td class="${rateClass}">${stats.obp.toFixed(3)}</td><td class="${rateClass}">${stats.slg.toFixed(3)}</td>
                 </tr>
             `;
@@ -9853,7 +9853,7 @@ function analyzeTeamColor(teamName) {
 }
 
 /**
- * [UPDATED] 学校アーカイブモーダルを描画するメイン関数 (チームカラー分析の組み込み)
+ * [UPDUPDATED] 学校アーカイブモーダルを描画するメイン関数 (AI分析実行ボタンを追加)
  */
 async function renderSchoolArchiveModal(teamName) {
     const contentEl = document.getElementById('school-archive-content');
@@ -9862,10 +9862,7 @@ async function renderSchoolArchiveModal(teamName) {
     
     if (!teamData || !teamRecord) return;
 
-    // --- チームカラー分析を実行 ---
-    const teamColorAnalysis = analyzeTeamColor(teamName);
-
-    // --- HTML初期構築 (チームカラー枠を追加) ---
+    // --- HTML初期構築 ---
     let html = `
         <div class="archive-header">
             <span class="archive-school-name">${teamName}</span>
@@ -9892,23 +9889,17 @@ async function renderSchoolArchiveModal(teamName) {
             </div>
         </div>
 
-        <div class="archive-section-title">チームカラー分析</div>
-        <div class="result-summary-box bg-blue-50 border-blue-200">
-            <div class="result-summary-row border-b-2 border-blue-300">
-                <dt class="result-summary-dt text-blue-700">主戦術 (Primary)</dt>
-                <dd class="result-summary-dd font-bold">${teamColorAnalysis.classification.primary}</dd>
-            </div>
-            <div class="result-summary-row">
-                <dt class="result-summary-dt text-blue-700">勝ちパターン (Flow)</dt>
-                <dd class="result-summary-dd font-bold">${teamColorAnalysis.classification.secondary}</dd>
-            </div>
-            <p class="text-xs text-gray-700 pt-2">${teamColorAnalysis.narrative.comment}</p>
-        </div>
         <div class="archive-section-title">今大会のチーム分析</div>
-        <div id="archive-ai-analysis" class="p-3 border rounded-lg bg-yellow-50 text-gray-700 leading-relaxed">
-            <div class="loader">AIが今大会の状況を分析中...</div>
+        <div id="archive-ai-analysis-container" class="p-3 border rounded-lg bg-gray-50 text-gray-700 leading-relaxed">
+            <div id="archive-ai-analysis" class="text-sm">
+                <p class="text-center text-gray-500">ボタンを押して、最新の戦況をAIに分析させます。</p>
+            </div>
+            <button id="run-archive-analysis-btn" 
+                    data-team-name="${teamName}"
+                    class="mt-2 w-full bg-blue-600 text-white font-bold py-1 px-3 rounded text-sm hover:bg-blue-700">
+                AI分析を実行
+            </button>
         </div>
-        
         <div class="archive-section-title">直近3大会の成績</div>
         <ul class="history-list">
             ${(teamRecord.history || []).slice(0, 3).map(h => `
@@ -9920,7 +9911,58 @@ async function renderSchoolArchiveModal(teamName) {
         </ul>
 
         <div class="archive-section-title">全試合結果一覧</div>
-        <p class="text-sm text-gray-500">（試合履歴はデータ量の都合上省略）</p>
+        <div class="archive-sub-title">
+            <h3>最新の試合結果</h3>
+            <ul class="flex space-x-4 text-sm font-normal ml-4 mt-1">
+                <li><span class="text-red-600 font-bold">🔴</span> 勝ち</li>
+                <li><span class="text-blue-600 font-bold">🔵</span> 負け</li>
+            </ul>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="record-table">
+                <thead>
+                    <tr>
+                        <th>年</th>
+                        <th>大会</th>
+                        <th>回戦</th>
+                        <th>対戦校</th>
+                        <th>スコア</th>
+                        <th>勝敗</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    // 試合履歴のテーブル行の生成
+    const allMatches = getRecentMatchesForTeam(teamName, 1000); 
+    if (allMatches.length > 0) {
+        allMatches.forEach(match => {
+            const resultClass = match.isWin ? 'result-win' : 'result-lose';
+            const resultText = match.isWin ? '勝ち' : '負け';
+            const resultIcon = match.isWin ? '🔴' : '🔵'; 
+
+            html += `
+                <tr>
+                    <td>${match.year}</td>
+                    <td>${match.tournamentName}</td>
+                    <td>${match.roundName}</td>
+                    <td class="opponent-cell clickable-team-name cursor-pointer text-blue-600 hover:underline" data-team-name="${match.opponent}">
+                        ${match.opponent}
+                    </td>
+                    <td class="score-cell">${match.scoreResult}</td>
+                    <td class="${resultClass}">${resultIcon} ${resultText}</td>
+                </tr>
+            `;
+        });
+    } else {
+        html += `<tr><td colspan="6" class="text-gray-500">試合データがありません</td></tr>`;
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
     `;
 
     contentEl.innerHTML = html;
@@ -9929,61 +9971,134 @@ async function renderSchoolArchiveModal(teamName) {
     const modal = document.getElementById('school-archive-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-
-    // --- AI分析の非同期実行 ---
+}
+    // ★★★ 【重要修正】リスナー登録は、DOMに要素が追加された後、setTimeoutの外で行う ★★★
+    
+    
+    
+/**
+ * [NEW] AI分析を実際に実行し、結果をモーダルに挿入する関数
+ */
+async function runArchiveAnalysis(teamName) {
+    const container = document.getElementById('archive-ai-analysis-container');
     const analysisEl = document.getElementById('archive-ai-analysis');
-    if (analysisEl) {
+    const runBtn = document.getElementById('run-archive-analysis-btn');
+
+    if (!analysisEl || !runBtn || !container) return;
+    
+    analysisEl.innerHTML = '<div class="loader">AIが今大会の状況を分析中...</div>';
+    container.classList.remove('bg-gray-50', 'bg-red-100');
+    container.classList.add('bg-white'); 
+    runBtn.disabled = true;
+
+    try {
         const analysisResult = await generateArchiveAnalysis(teamName);
-        analysisEl.innerHTML = analysisResult.replace(/\n/g, '<br>');
+
+        if (analysisResult.includes('AIによる分析に失敗') || analysisResult.includes('コンテキスト情報が不足')) {
+             analysisEl.innerHTML = `
+                <p class="text-red-700 font-bold">分析失敗: データ不足</p>
+                <p class="text-sm text-gray-700 mt-2">理由：**注目選手が不足**しています。分析には**最低10打席以上**の打者が必要です。</p>
+                <p class="text-xs text-gray-600 mt-2">💡 数試合スキップした後、手動で**「詳細入力（🎲）」**を使い、選手の打席数を増やしてから再実行してください。</p>
+                `;
+             container.classList.remove('bg-white');
+             container.classList.add('bg-red-100');
+        } else {
+            analysisEl.innerHTML = analysisResult.replace(/\n/g, '<br>'); // 改行を反映
+             container.classList.remove('bg-white');
+             container.classList.add('bg-green-50');
+        }
+    } catch (error) {
+        console.error("Archive Analysis Runtime Error:", error);
+        analysisEl.innerHTML = `<p class="text-red-700">分析中に致命的なエラーが発生しました。</p>`;
+        container.classList.remove('bg-white');
+        container.classList.add('bg-red-100');
+    } finally {
+        runBtn.disabled = false;
     }
 }
 
 /**
- * [UPDATED] AIが現在のチームのトーナメント状況を分析し、レポートを生成する
- * (★ランクに合わせた現実的な目標達成度を評価するよう修正)
+ * [FIXED] AIが現在のチームのトーナメント状況を分析し、レポートを生成する
+ * (★teamDataの定義漏れを修正した最終版)
  */
 async function generateArchiveAnalysis(teamName) {
     const record = tournamentState.teamRecords[teamName];
-    if (!record || !record.tournamentStats) return 'チームの成績データが不足しています。';
+    // データチェック
+    if (!record || !record.tournamentStats || (record.tournamentStats.pa || 0) < 1) {
+        return 'チームの成績データが不足しています。（試合数が少ないか、詳細入力が行われていません）';
+    }
 
-    const matchId = 'analysis_context';
-    const context = createMatchContext(matchId, teamName, "（打球品質データなし）", "（打球品質データなし）");
-    if (!context) return 'AI分析に必要なコンテキスト情報が不足しています。';
-    
-    // 1. 基本データの計算
-    const stats = record.tournamentStats;
+    // ★★★ 【修正】ここで teamData を定義します ★★★
     const teamData = TEAM_DATA[teamName];
+    if (!teamData) return 'チームデータが見つかりません。';
 
-    // 攻撃指標の計算
+    // --- 1. コンテキスト情報の直接収集 ---
+    const journey = getCurrentTournamentPerformance(teamName, 'analysis') || '今大会初戦';
+
+    let nextOpponentText = "未定";
+    let nextRoundName = "次戦";
+    
+    const allMatches = { ...tournamentState.matches, ...(tournamentState.autumnData?.allMatches || {}), ...(tournamentState.springData?.allMatches || {}) };
+    const nextMatch = Object.values(allMatches).find(m => 
+        !m.winner && (m.team1 === teamName || m.team2 === teamName)
+    );
+
+    if (nextMatch) {
+        const opp = nextMatch.team1 === teamName ? nextMatch.team2 : nextMatch.team1;
+        nextOpponentText = opp || "未定";
+        nextRoundName = getRoundNameFromMatchId(nextMatch.id);
+    } else if (record.lastFinish === -1 || record.lastFinish === 1) {
+        nextOpponentText = "優勝";
+        nextRoundName = "大会終了";
+    }
+
+    // --- 2. データ計算と分析準備 ---
+    const stats = record.tournamentStats;
     const teamTotalH = stats.h || 0;
+    const teamTotalAB = stats.ab || 0;
+    const teamAvg = teamTotalAB > 0 ? (teamTotalH / teamTotalAB).toFixed(3) : '.000';
+    
     const teamTotalBBHBP = (stats.bb || 0) + (stats.hbp || 0);
     const teamTotalSF = stats.sf || 0;
-    const teamTotalAB = stats.ab || 0;
-
     const teamTotalPA = teamTotalAB + teamTotalBBHBP + teamTotalSF;
     const teamOBP = teamTotalPA > 0 ? (teamTotalH + teamTotalBBHBP) / teamTotalPA : 0;
     const teamSLG = teamTotalAB > 0 ? (stats.tb || 0) / teamTotalAB : 0;
     const teamOPS = teamOBP + teamSLG;
-    const teamAvg = teamTotalAB > 0 ? (teamTotalH / teamTotalAB).toFixed(3) : '.000';
+
     const pitchingStats = calculateTeamPitchingStats(teamName);
     const teamERA = pitchingStats.era;
 
-    // --- 2. チームカラー分析の実行 ---
+    // チームカラー分析
     const teamColorAnalysis = analyzeTeamColor(teamName);
     const teamPrimaryColor = teamColorAnalysis.classification.primary;
     const teamSecondaryColor = teamColorAnalysis.classification.secondary;
     
-    // 3. トップパフォーマーとRCシェアの抽出
+    // 選手データの収集
     let players = [];
     let teamTotalRC = 0;
     if (record.playerStats?.batting) {
         Object.entries(record.playerStats.batting).forEach(([name, s]) => {
+            // 10打席以上でフィルタ（なければ1打席以上で再取得するロジックも可）
             if ((s.pa || 0) >= 10) { 
                 const ops = parseFloat(calculateOps(s));
-                const rc = isNaN(ops) ? 0 : (s.ab + s.bb) > 0 ? ((s.h + s.bb) * s.tb) / (s.ab + s.bb) : 0;
+                const h = s.h || 0; const bb = (s.bb || 0) + (s.hbp || 0);
+                const ab = s.ab || 0; const tb = (s.tb || h) + ((s.hr || 0) * 3);
+                const times = ab + bb; 
+                let rc = times > 0 ? ((h + bb) * tb) / times : 0;
                 rc = isNaN(rc) ? 0 : parseFloat(rc.toFixed(2));
-                players.push({ name, rc, ops, hr: s.hr, avg: (s.h/s.ab).toFixed(3), rbi: s.rbi });
+                players.push({ name, rc, ops, hr: s.hr, avg: (h/ab).toFixed(3), rbi: s.rbi });
                 teamTotalRC += rc;
+            }
+        });
+    }
+
+    // 規定打席到達者がいなければ緩和
+    if (players.length === 0 && record.playerStats?.batting) {
+        Object.entries(record.playerStats.batting).forEach(([name, s]) => {
+            if ((s.pa || 0) >= 1) { 
+                const ops = parseFloat(calculateOps(s));
+                let rc = 0; 
+                players.push({ name, rc, ops, hr: s.hr, avg: (s.h/(s.ab||1)).toFixed(3), rbi: s.rbi });
             }
         });
     }
@@ -9991,86 +10106,65 @@ async function generateArchiveAnalysis(teamName) {
     players.sort((a, b) => b.ops - a.ops);
     const topThreeBatters = players.slice(0, 3);
     
-    // RCシェアの構造分析
+    // 構造分析
     const topBatter = players.find(p => p.rc === Math.max(...players.map(p => p.rc)));
-    const topShare = topBatter ? (topBatter.rc / teamTotalRC) * 100 : 0;
-    let structureType;
-    if (topShare >= 50) structureType = `独裁型（トップ貢献度 ${topShare.toFixed(1)}%）`;
-    else if (topShare >= 35) structureType = `ワンマン型（トップ貢献度 ${topShare.toFixed(1)}%）`;
-    else if (topShare >= 25) structureType = `主軸集中型（トップ貢献度 ${topShare.toFixed(1)}%）`;
-    else if (topShare >= 15) structureType = `分散型（トップ貢献度 ${topShare.toFixed(1)}%）`;
-    else structureType = `超均等型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+    const topShare = (topBatter && teamTotalRC > 0) ? (topBatter.rc / teamTotalRC) * 100 : 0;
+    let structureType = topShare >= 35 ? "ワンマン型" : "分散型";
 
-    // 注目選手リストの整形
     const topBattersText = topThreeBatters.map(p => 
         `- ${p.name}: OPS ${p.ops.toFixed(3)}, ${p.hr}本塁打, 打率${p.avg}`
     ).join('\n');
     
-    // 4. 投手陣の詳細な状況をプロンプト用に生成
+    // 投手陣情報
     let pitcherStatusText = "\n### 投手陣の詳細な状況\n";
     if (record.playerStats?.pitching) {
         Object.entries(record.playerStats.pitching).forEach(([name, pStats]) => {
             const logs = pStats.gamelogs || [];
             if (logs.length > 0) {
-                const isAce = TEAM_ROSTER_MASTER[teamName]?.some(p => p.name === name && p.number === 1);
-                const tourneyStats = logs.reduce((acc, log) => { acc.ip += parseFloat(log.ip || 0); acc.er += parseInt(log.er || 0); acc.so += parseInt(log.so || 0); return acc; }, { ip: 0, er: 0, so: 0 });
+                const tourneyStats = logs.reduce((acc, log) => { 
+                    acc.ip += parseFloat(log.ip || 0); 
+                    acc.er += parseInt(log.er || 0); 
+                    acc.so += parseInt(log.so || 0); 
+                    return acc; 
+                }, { ip: 0, er: 0, so: 0 });
                 const era = tourneyStats.ip > 0 ? ((tourneyStats.er * 9) / tourneyStats.ip).toFixed(2) : "0.00";
-                pitcherStatusText += `- **${isAce ? 'エース' : 'リリーフ'} ${name}**: ${tourneyStats.ip}回, 防御率 ${era}, ${tourneyStats.so}奪三振\n`;
+                pitcherStatusText += `- **${name}**: ${tourneyStats.ip}回, 防御率 ${era}, ${tourneyStats.so}奪三振\n`;
             }
         });
     }
-    
-    // --- 5. 【修正箇所】ランク別最終評価質問文の生成 ---
+
+    // ランク別質問
     let finalGoalQuestion;
     const currentRank = calculateRank(teamName, tournamentState);
-
     switch (currentRank) {
-        case 'A':
-            finalGoalQuestion = "このチームは、夏の甲子園出場、および全国での勝利を目標として、現状の戦力は万全と言えるか？";
-            break;
-        case 'B':
-            finalGoalQuestion = "このチームは、現状のデータで県大会優勝争いに加われる実力があるか？";
-            break;
-        case 'C':
-        case 'D':
-        case 'E':
-            // ★★★ 修正後のニュアンス: 上位校に食らいつき、トーナメントを勝ち上がれるか ★★★
-            finalGoalQuestion = "このチームは、現状の戦力で上位校に食らいつき、トーナメントを勝ち上がれるだけの力があるか？";
-            break;
-        default:
-            finalGoalQuestion = "このチームは現状の目標を達成する実力があるか、総合的に総括してください。";
+        case 'A': finalGoalQuestion = "全国での勝利を目標として、現状の戦力は万全と言えるか？"; break;
+        case 'B': finalGoalQuestion = "県大会優勝争いに加われる実力があるか？"; break;
+        default: finalGoalQuestion = "上位校に食らいつき、トーナメントを勝ち上がれるだけの力があるか？";
     }
 
-    // 6. プロンプトの組み立て
+    // 3. プロンプト作成
     const prompt = `あなたは高校野球のデータアナリストです。以下のデータに基づき、このチームの「今大会の戦況」を分析する300字程度のコラムを生成してください。
 
-### 分析対象チームの現状
-- **チーム名**: ${teamName}
-- **ランク**: ${currentRank}
-- **目指す戦術 (監督スタイル)**: ${teamData.coach?.style || '堅実'}
-- **AI判定チームカラー**: 主戦術: ${teamPrimaryColor}, 勝ちパターン: ${teamSecondaryColor}
-- **現状のチーム打率**: ${teamAvg}
-- **チームOPS (破壊力)**: ${teamOPS.toFixed(3)}
+### 分析対象チーム: ${teamName} (${currentRank}ランク)
+- **戦術タイプ**: ${teamData.coach?.style || '堅実'} / ${teamPrimaryColor}
+- **チーム打率**: ${teamAvg} (OPS: ${teamOPS.toFixed(3)})
 - **チーム防御率**: ${teamERA}
-- **RCシェア分析**: ${structureType}
-- **勝ち上がり**: ${context.winnerJourney || '今大会初戦'} (例: 1回戦 vs XX(D)に10-0勝利、2回戦 vs YY(C)に5-4勝利)
+- **攻撃構造**: ${structureType}
+- **勝ち上がり**: ${journey}
 
-### 注目選手（打撃）
-${topBattersText || '（規定打席到達者なし）'}
-
+### 注目選手
+${topBattersText || '（特になし）'}
 ${pitcherStatusText}
 
-### トーナメント文脈
-- **次の試合**: ${context.nextOpponent.opponentName} (${context.nextOpponent.roundName})
-- **チームの目標**: ${teamData.info || '優勝'}
+### 文脈
+- **次戦**: ${nextOpponentText} (${nextRoundName})
+- **目標**: ${teamData.info || '上位進出'}
 
 ### 指示
-1.  **【最重要】戦略の適合性検証**: 
-    * **AI判定の主戦術**（例：守備勝利型、打撃制圧型）と**チームOPS**および**チームERA**が論理的に一致しているか検証してください。**もし矛盾している場合**（例：「守備勝利型なのにERAが悪い」）は、その矛盾を鋭く指摘してください。
-2.  **【構造とリスクの評価】**: 「RCシェア分析の結果」（独裁型/分散型など）を参照し、構造的なリスクを指摘してください。
+1.  **【最重要】具体的な数字の引用**: 注目選手リストの**具体的な成績**を引用し、打線の好調/不調を判断してください。
+2.  **【構造分析】**: 「RCシェア分析の結果（${structureType}など）」や投手依存度を参照し、構造的なリスクを指摘してください。
 3.  **【客観的な勝ち上がり評価】**: 勝ち上がり軌跡を熟読し、**対戦相手のランクや、試合のスコア差**を文脈として客観的に評価してください。
-4.  **次の対戦相手**や、今後のトーナメントの難易度に触れ、見どころを述べてください。
-5.  **【総合評価】**: 最後に、以下の質問に答える形で総合評価を締めくくってください：**「${finalGoalQuestion}」**
+4.  **【総合評価】**: 最後に、以下の質問に答える形で総合評価を締めくくってください：**「${finalGoalQuestion}」**
 
 ### 出力形式: JSON {"body": "（分析コラム本文）"}`;
 
@@ -10078,7 +10172,6 @@ ${pitcherStatusText}
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         const aiData = parseJsonFromText(result.candidates[0].content.parts[0].text);
-        
         return aiData?.body || 'AIによる分析に失敗しました。';
     } catch (error) {
         console.error("AI archive analysis failed:", error);
@@ -24749,6 +24842,15 @@ document.body.addEventListener('click', async (e) => {
         document.getElementById('feedback-modal').classList.remove('hidden');
     }
     
+// --- 【新規】AI分析を再実行するボタン ---
+    else if (e.target.matches('#run-archive-analysis-btn')) {
+        e.preventDefault();
+        const targetTeam = e.target.dataset.teamName;
+        
+        // ★ 処理を直接 runArchiveAnalysis 関数に委譲
+        runArchiveAnalysis(targetTeam);
+    }
+
     // --- フィードバックモーダルからの再生成実行ボタン ---
    else if (e.target.closest('#feedback-submit-btn')) {
         e.preventDefault();
