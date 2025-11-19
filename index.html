@@ -10018,12 +10018,36 @@ async function runArchiveAnalysis(teamName) {
 }
 
 /**
- * [UPDATED] AIが現在のチームのトーナメント状況を分析し、次戦の勝敗予想を含めたレポートを生成する
- * (★自チームと敵チームを同等の深さで分析し、勝率を予測させる)
+ * [FIXED] AIが現在のチームのトーナメント状況を分析し、次戦の勝敗予想を含めたレポートを生成する
+ * (★次の試合IDを正しく検索し、対戦相手とのシミュレーションを確実に実行する版)
  */
 async function generateArchiveAnalysis(teamName) {
     const record = tournamentState.teamRecords[teamName];
     if (!record || !record.tournamentStats) return 'チームの成績データが不足しています。';
+
+    // --- 0. 「次の試合」を正しく特定する ---
+    let targetMatchId = null;
+    let nextOpponentName = null;
+    
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}), 
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+
+    // チームが含まれていて、まだ勝者が決まっていない試合を探す
+    const nextMatch = Object.values(allMatches).find(m => 
+        !m.winner && (m.team1 === teamName || m.team2 === teamName)
+    );
+
+    if (nextMatch) {
+        targetMatchId = nextMatch.id;
+        // 対戦相手の名前を特定
+        nextOpponentName = (nextMatch.team1 === teamName) ? nextMatch.team2 : nextMatch.team1;
+    } else {
+        // 試合が見つからない場合（敗退後や優勝後、または相手未定）
+        targetMatchId = 'analysis_context'; // ダミー
+    }
 
     // --- 1. 共通ヘルパー：チームの詳細データを収集する関数 ---
     const getDetailedTeamInfo = (targetName) => {
@@ -10052,9 +10076,15 @@ async function generateArchiveAnalysis(teamName) {
         let totalRC = 0;
         if (tr.playerStats?.batting) {
             Object.entries(tr.playerStats.batting).forEach(([name, s]) => {
+                // 1打席でもあれば計算に含める
                 if ((s.pa || 0) >= 1) {
                     const p_ops = parseFloat(calculateOps(s));
-                    const p_rc = isNaN(p_ops) ? 0 : (s.ab+s.bb)>0 ? ((s.h+s.bb)*((s.tb||s.h)+s.hr*3))/(s.ab+s.bb) : 0;
+                    const h = s.h || 0; const bb = (s.bb || 0) + (s.hbp || 0);
+                    const ab = s.ab || 0; const tb = (s.tb || h) + ((s.hr || 0) * 3);
+                    const times = ab + bb; 
+                    let p_rc = times > 0 ? ((h + bb) * tb) / times : 0;
+                    p_rc = isNaN(p_rc) ? 0 : p_rc;
+                    
                     players.push({ name, ops: p_ops, rc: p_rc, hr: s.hr, avg: (s.h/(s.ab||1)).toFixed(3) });
                     totalRC += p_rc;
                 }
@@ -10081,7 +10111,7 @@ async function generateArchiveAnalysis(teamName) {
         }
 
         // (F) 軌跡
-        const journey = getCurrentTournamentPerformance(targetName, 'analysis') || '初戦';
+        const journey = getCurrentTournamentPerformance(targetName, targetMatchId) || '初戦';
 
         return {
             name: targetName,
@@ -10101,15 +10131,26 @@ async function generateArchiveAnalysis(teamName) {
     const myData = getDetailedTeamInfo(teamName);
 
     // --- 3. 対戦相手の特定とデータ取得 ---
-    const matchId = 'analysis_context';
-    const nextOpponentInfo = findNextOpponent(teamName, matchId);
-    let opponentName = nextOpponentInfo?.opponentName;
+    // 既に冒頭で特定した nextOpponentName を使用
     let opponentData = null;
     let isMatchDecided = false;
+    let opponentName = nextOpponentName;
 
-    if (opponentName && opponentName !== '（未定）' && opponentName !== '優勝' && opponentName !== '大会終了') {
+    // 相手が決まっていて、かつダミー（BYEや未定）でない場合
+    if (opponentName && opponentName !== '（未定）' && opponentName !== '(BYE)' && opponentName !== '優勝' && opponentName !== '大会終了') {
         opponentData = getDetailedTeamInfo(opponentName);
         isMatchDecided = true;
+    } else {
+        // findNextOpponent で「未定」状態の相手（勝者待ち）などの情報を補完
+        const nextOpponentInfo = findNextOpponent(teamName, targetMatchId);
+        if (nextOpponentInfo) {
+             if (!opponentName) opponentName = nextOpponentInfo.opponentName;
+             // ここで相手が決まっていれば opponentData を取得
+             if (opponentName && opponentName !== '（未定）' && !opponentData) {
+                 opponentData = getDetailedTeamInfo(opponentName);
+                 isMatchDecided = true;
+             }
+        }
     }
 
     // --- 4. プロンプトの作成 ---
@@ -10156,7 +10197,14 @@ async function generateArchiveAnalysis(teamName) {
     - 「有利」「五分」「劣勢」のいずれかを明言してください。
 `;
     } else {
-        prompt += `2.  **目標達成度**: ランク(${myData.rank})に基づき、現在のチーム状況でどこまで勝ち進めそうか評価してください。\n`;
+        // 相手が決まっていない場合のフォールバック指示
+        const currentRank = calculateRank(teamName, tournamentState);
+        let goalQuestion = "上位進出";
+        if(currentRank === 'A') goalQuestion = "全国制覇";
+        else if(currentRank === 'B') goalQuestion = "県制覇";
+        else if(currentRank === 'C') goalQuestion = "ベスト8";
+        
+        prompt += `2.  **目標達成度**: ランク(${currentRank})に基づき、現在のチーム状況で「${goalQuestion}」が可能か評価してください。\n`;
     }
 
     prompt += `### 出力形式: JSON {"body": "（分析コラム本文）"}`;
@@ -10172,6 +10220,8 @@ async function generateArchiveAnalysis(teamName) {
         return '分析エラーが発生しました。';
     }
 }
+
+
 /**
  * チームの直近N試合の履歴を取得する
  * @param {string} teamName - チーム名
