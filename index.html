@@ -7097,16 +7097,30 @@ function showTeamStatusModal(teamName) {
     if (statsEl) {
         if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
             const avgStr = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
+            
+            // ★ チームOPSの計算
+            const t_ab = stats.ab || 0; const t_h = stats.h || 0;
+            const t_bb = (stats.bb || 0) + (stats.hbp || 0); const t_sf = stats.sf || 0;
+            const t_tb = stats.tb || (t_h + (stats.hr || 0) * 3); // TBがない場合のフォールバック
+            const t_obp = (t_ab + t_bb + t_sf) > 0 ? (t_h + t_bb) / (t_ab + t_bb + t_sf) : 0;
+            const t_slg = t_ab > 0 ? t_tb / t_ab : 0;
+            const t_ops = (t_obp + t_slg).toFixed(3);
+            
             const sbCount = stats.sb || 0;
-            // ★★★ 修正箇所：打撃成績の後ろに防御率を表示 ★★★
-            statsEl.innerHTML = `打率 <span class="font-bold text-xl">${avgStr}</span> (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
+            
+            // ★ 表示にOPSを追加
+            statsEl.innerHTML = `
+                打率 <span class="font-bold text-xl">${avgStr}</span> 
+                (OPS <span class="font-bold text-blue-700">${t_ops}</span>)<br>
+                ${stats.ab}打数 ${stats.h}安打 ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁<br>
+                <span class="text-blue-700">防御率 ${tourneyERA}</span>
+            `;
         } else if (stats) {
             statsEl.innerHTML = `(今大会 ${stats.ab}打数 ${stats.h}安打)<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
         } else {
             statsEl.textContent = '（今大会の集計データなし）';
         }
-    }
-    
+    }    
     // --- 5. 通算成績 (Career) の表示 ---
     if (careerStatsEl) {
         const careerBattingStats = teamRecord.playerStats?.batting;
@@ -9726,8 +9740,8 @@ function showSearchResultsList(teams, query) {
 // ▲▲▲ 学校検索機能ここまで ▲▲▲
 
 /**
- * [NEW] チームの過去の試合結果から「勝ちパターン」と「チームカラー」を分析する
- * (★Game Flow, Reliance, Dominance を複合的に評価)
+ * [FIXED] チームの過去の試合結果から「勝ちパターン」と「チームカラー」を分析する
+ * (★打率とOPSの両方を評価指標として計算する修正版)
  */
 function analyzeTeamColor(teamName) {
     const record = tournamentState.teamRecords[teamName];
@@ -9743,21 +9757,32 @@ function analyzeTeamColor(teamName) {
         aceIP: 0,
         topRCShare: 0,
         offenseScore: 0,
-        pitchingScore: 0
+        pitchingScore: 0,
+        teamOPS: 0,
+        teamAvg: 0 // ★追加
     };
     
-    // --- 依存度分析のための初期データ取得 ---
+    // --- 1. 依存度分析 (RCシェア) の計算 ---
     const aceName = record.roster?.find(p => p.number === 1)?.name || 'エース';
+    let teamTotalRC = 0;
+    
     const players = Object.keys(record.playerStats?.batting || {}).map(name => {
-        const stats = record.playerStats.batting[name];
-        const ops = (stats.ab + stats.bb) > 0 ? ((stats.h + stats.bb) / (stats.ab + stats.bb)) + (stats.ab > 0 ? (stats.tb || stats.h) / stats.ab : 0) : 0;
-        return { name, rc: isNaN(ops) ? 0 : ops };
-    }).sort((a, b) => b.rc - a.rc); // OPSが高い順にソート（貢献度として使用）
+        const s = record.playerStats.batting[name];
+        const h = s.h || 0; const bb = (s.bb || 0) + (s.hbp || 0);
+        const ab = s.ab || 0; const hr = s.hr || 0;
+        const tb = (s.tb || h) + (hr * 3);
+        const times = ab + bb;
+        let rc = times > 0 ? ((h + bb) * tb) / times : 0;
+        rc = isNaN(rc) ? 0 : rc;
+        teamTotalRC += rc;
+        return { name, rc };
+    }).sort((a, b) => b.rc - a.rc);
 
-    if (players.length > 0) {
-        analysis.topRCShare = (players[0].rc / players.reduce((sum, p) => sum + p.rc, 0)) * 100;
+    if (players.length > 0 && teamTotalRC > 0) {
+        analysis.topRCShare = (players[0].rc / teamTotalRC) * 100;
     }
     
+    // 投手データの集計
     const pitchingStats = record.playerStats?.pitching || {};
     for (const name in pitchingStats) {
         const pStats = pitchingStats[name].career;
@@ -9769,85 +9794,83 @@ function analyzeTeamColor(teamName) {
         }
     }
     
-    // --- 試合フロー分析 (Game Flow) ---
+    // --- 2. 試合フロー分析 (変更なし) ---
     const allMatches = { ...tournamentState.matches, ...(tournamentState.autumnData?.allMatches || {}), ...(tournamentState.springData?.allMatches || {}) };
-    
     Object.values(allMatches).forEach(match => {
         if (match.winner === teamName && match.details?.inningScore) {
             const inningScores = match.details.inningScore;
             const teamKey = match.team1 === teamName ? 'team1' : 'team2';
             const oppKey = teamKey === 'team1' ? 'team2' : 'team1';
-            
-            let scoreSelf = 0;
-            let scoreOpp = 0;
-            const inningsToCheck = Math.min(5, inningScores[teamKey].length); // 5回終了時点
-
+            let scoreSelf = 0; let scoreOpp = 0;
+            const inningsToCheck = Math.min(5, inningScores[teamKey].length);
             for (let i = 0; i < inningsToCheck; i++) {
                 scoreSelf += parseInt(inningScores[teamKey][i] || 0);
                 scoreOpp += parseInt(inningScores[oppKey][i] || 0);
             }
-            
-            if (scoreSelf < scoreOpp) { // 5回終了時に負けていた
-                analysis.comebackWins++;
-            } else if (scoreSelf > scoreOpp || inningsToCheck === 0) {
-                 analysis.wireToWireWins++;
-            }
+            if (scoreSelf < scoreOpp) analysis.comebackWins++;
+            else if (scoreSelf > scoreOpp || inningsToCheck === 0) analysis.wireToWireWins++;
         }
     });
 
-    // --- ドミナンス分析 (Dominance Score) ---
-    const teamStats = record.tournamentStats || {};
-    const teamAvg = (teamStats.ab > 0) ? (teamStats.h / teamStats.ab) : 0;
+    // --- 3. ドミナンス分析 (打率とOPSの計算) ---
+    const ts = record.tournamentStats || {};
+    const tab = ts.ab || 0;
+    const th = ts.h || 0; 
+    const tbb = (ts.bb || 0) + (ts.hbp || 0); 
+    const tsf = ts.sf || 0;
+    
+    // 打率
+    analysis.teamAvg = tab > 0 ? th / tab : 0;
+
+    // OPS
+    const tpa = tab + tbb + tsf;
+    const tobp = tpa > 0 ? (th + tbb) / tpa : 0;
+    const safeTB = ts.tb || (th + (ts.hr || 0) * 3);
+    const safeSLG = tab > 0 ? safeTB / tab : 0;
+    analysis.teamOPS = tobp + safeSLG;
+
     const teamERA = calculateTeamPitchingStats(teamName).era === "----" ? 9.99 : parseFloat(calculateTeamPitchingStats(teamName).era);
     
-    analysis.offenseScore = (teamAvg * 1000) + (teamStats.hr * 20); // AVGとHR
-    analysis.pitchingScore = (10 - teamERA) * 100; // ERAが低いほど高得点
+    // 攻撃スコア (OPSと打率の両方を加味)
+    analysis.offenseScore = (analysis.teamOPS * 70) + (analysis.teamAvg * 30); 
+    analysis.pitchingScore = (10 - teamERA) * 10; 
 
-    // 2. 分類とコメント生成
+    // 4. 分類とコメント生成
     let color = { primary: '', secondary: '' };
     let narrative = { primary: '', secondary: '' };
     
-    // (A) PRIMARY COLOR: RELIANCE / DOMINANCE
-    if (analysis.pitchingScore > analysis.offenseScore * 1.5 && teamERA <= 3.0) {
+    if (analysis.pitchingScore > 70 && analysis.teamOPS < 0.700) {
         color.primary = '守備勝利型';
-        narrative.primary = `防御率${teamERA.toFixed(2)}が証明する通り、投手力を軸に最少失点で勝利を積み重ねる、堅実なスタイルです。`;
-    } else if (analysis.offenseScore > analysis.pitchingScore * 1.5 && teamStats.hr >= 3) {
-        color.primary = '打撃制圧型';
-        narrative.primary = `打線が投手力を上回る破壊力を持ち、打線で相手をねじ伏せる超攻撃的なスタイルです。`;
+        narrative.primary = `防御率${teamERA.toFixed(2)}を誇る投手力を軸に、少ない得点を守り切るスタイルです。`;
+    } else if (analysis.teamOPS >= 0.850) {
+        color.primary = '破壊的打撃型';
+        narrative.primary = `チームOPS ${analysis.teamOPS.toFixed(3)} という圧倒的な破壊力を持ち、長打で相手を粉砕します。`;
+    } else if (analysis.teamAvg >= 0.350) { // ★高打率チームの判定を追加
+        color.primary = '安打製造機型';
+        narrative.primary = `チーム打率 ${analysis.teamAvg.toFixed(3)} という高確率なコンタクト能力で、連打を重ねて得点します。`;
     } else if (analysis.aceIP / analysis.totalTeamIP >= 0.70 && analysis.totalTeamIP > 5) {
         color.primary = 'エース依存型';
-        narrative.primary = `エースの投球回がチーム全体の7割以上を占める絶対的エース依存。疲労管理が最大の課題です。`;
-    } else if (analysis.topRCShare >= 40) {
-        color.primary = '主砲依存型';
-        narrative.primary = `${players[0].name}選手がチーム生産力の${analysis.topRCShare.toFixed(1)}%を担う主砲依存。打線のつながりが鍵です。`;
+        narrative.primary = `エースの投球回が全体の7割以上を占めています。`;
     } else {
         color.primary = '総合力型';
-        narrative.primary = `投打に大きな偏りがなく、選手の層の厚さを活かした総合力で戦うバランス型です。`;
+        narrative.primary = `投打に大きな偏りがなく、バランスの取れたチームです。`;
     }
     
-    // (B) SECONDARY COLOR: GAME FLOW
+    // (Secondary Colorのロジックはそのまま)
     const comebackPct = analysis.comebackWins / analysis.totalWins;
-    if (analysis.totalWins === 0) {
-        color.secondary = '不明';
-        narrative.secondary = 'まだ勝利経験がありません。';
-    } else if (comebackPct >= 0.30) { // 30%以上が逆転勝ち
-        color.secondary = '終盤追い上げ型';
-        narrative.secondary = `勝利の約${Math.round(comebackPct * 100)}%が5回終了時ビハインドからの逆転劇。粘り強さが強みです。`;
-    } else if (analysis.wireToWireWins / analysis.totalWins >= 0.70) {
-        color.secondary = '先行逃げ切り型';
-        narrative.secondary = `勝利の7割が序盤リードの逃げ切り。安定した守備と序盤の得点が勝利の絶対条件です。`;
-    } else {
-        color.secondary = '試合展開不定';
-        narrative.secondary = `勝ちパターンは一定せず、対戦相手によって試合展開を変える柔軟性があります。`;
-    }
+    if (analysis.totalWins === 0) { color.secondary = '不明'; narrative.secondary = 'まだ勝利経験がありません。'; }
+    else if (comebackPct >= 0.30) { color.secondary = '終盤追い上げ型'; narrative.secondary = `勝利の約${Math.round(comebackPct * 100)}%が逆転劇。粘り強さが強みです。`; }
+    else if (analysis.wireToWireWins / analysis.totalWins >= 0.70) { color.secondary = '先行逃げ切り型'; narrative.secondary = `勝利の7割が先行逃げ切り。序盤のリードを守り切る展開が得意です。`; }
+    else { color.secondary = '試合展開不定'; narrative.secondary = `対戦相手によって柔軟に試合展開を変えることができます。`; }
     
     return {
         id: teamName,
         classification: color,
+        stats: { ops: analysis.teamOPS, avg: analysis.teamAvg, era: teamERA }, // ★両方返す
         narrative: {
             primary: narrative.primary,
             secondary: narrative.secondary,
-            comment: `【総合チームカラー】: このチームは主に「${color.primary}」であり、「${color.secondary}」の勝ちパターンを持ちます。`
+            comment: `【チームカラー】: 主に「${color.primary}」であり、「${color.secondary}」の勝ちパターンを持ちます。`
         }
     };
 }
@@ -10018,202 +10041,124 @@ async function runArchiveAnalysis(teamName) {
 }
 
 /**
- * [FIXED] AIが現在のチームのトーナメント状況を分析し、次戦の勝敗予想を含めたレポートを生成する
- * (★次の試合IDを正しく検索し、対戦相手とのシミュレーションを確実に実行する版)
+ * [UPDATED] AIが現在のチームのトーナメント状況を分析し、レポートを生成する
+ * (★チームOPSと打率の両方をプロンプトに含める版)
  */
 async function generateArchiveAnalysis(teamName) {
+    // ... (前略：データチェックやコンテキスト取得は変更なし) ...
     const record = tournamentState.teamRecords[teamName];
     if (!record || !record.tournamentStats) return 'チームの成績データが不足しています。';
 
-    // --- 0. 「次の試合」を正しく特定する ---
-    let targetMatchId = null;
-    let nextOpponentName = null;
-    
-    const allMatches = { 
-        ...tournamentState.matches, 
-        ...(tournamentState.autumnData?.allMatches || {}), 
-        ...(tournamentState.springData?.allMatches || {}) 
-    };
-
-    // チームが含まれていて、まだ勝者が決まっていない試合を探す
-    const nextMatch = Object.values(allMatches).find(m => 
-        !m.winner && (m.team1 === teamName || m.team2 === teamName)
-    );
-
+    // 1. コンテキスト情報の直接収集
+    const journey = getCurrentTournamentPerformance(teamName, 'analysis') || '今大会初戦';
+    let nextOpponentText = "未定"; let nextRoundName = "次戦";
+    const allMatches = { ...tournamentState.matches, ...(tournamentState.autumnData?.allMatches || {}), ...(tournamentState.springData?.allMatches || {}) };
+    const nextMatch = Object.values(allMatches).find(m => !m.winner && (m.team1 === teamName || m.team2 === teamName));
     if (nextMatch) {
-        targetMatchId = nextMatch.id;
-        // 対戦相手の名前を特定
-        nextOpponentName = (nextMatch.team1 === teamName) ? nextMatch.team2 : nextMatch.team1;
-    } else {
-        // 試合が見つからない場合（敗退後や優勝後、または相手未定）
-        targetMatchId = 'analysis_context'; // ダミー
+        const opp = nextMatch.team1 === teamName ? nextMatch.team2 : nextMatch.team1;
+        nextOpponentText = opp || "未定"; nextRoundName = getRoundNameFromMatchId(nextMatch.id);
+    } else if (record.lastFinish === -1 || record.lastFinish === 1) { nextOpponentText = "優勝"; nextRoundName = "大会終了"; }
+
+    // 2. チームカラー分析の実行 (ここで正確なOPS/AVGが計算される)
+    const teamColorAnalysis = analyzeTeamColor(teamName);
+    const teamPrimaryColor = teamColorAnalysis.classification.primary;
+    const teamSecondaryColor = teamColorAnalysis.classification.secondary;
+    
+    // ★ 修正: statsオブジェクトから取得
+    const teamOPS = teamColorAnalysis.stats.ops;
+    const teamAvg = teamColorAnalysis.stats.avg;
+    const teamERA = teamColorAnalysis.stats.era;
+
+    // 3. 選手データの収集 (RC計算)
+    // ... (選手データ収集ロジックは変更なし) ...
+    let players = [];
+    let teamTotalRC = 0;
+    if (record.playerStats?.batting) {
+        Object.entries(record.playerStats.batting).forEach(([name, s]) => {
+            if ((s.pa || 0) >= 1) { 
+                const ops = parseFloat(calculateOps(s));
+                const h = s.h || 0; const bb = (s.bb || 0) + (s.hbp || 0);
+                const ab = s.ab || 0; const tb = (s.tb || h) + ((s.hr || 0) * 3);
+                const times = ab + bb; 
+                let rc = times > 0 ? ((h + bb) * tb) / times : 0;
+                rc = isNaN(rc) ? 0 : parseFloat(rc.toFixed(2));
+                players.push({ name, rc, ops, hr: s.hr, avg: (s.h/(s.ab||1)).toFixed(3), rbi: s.rbi });
+                teamTotalRC += rc;
+            }
+        });
+    }
+    players.sort((a, b) => b.ops - a.ops);
+    const topThreeBatters = players.slice(0, 3);
+    
+    // 構造分析
+    const topBatter = players.find(p => p.rc === Math.max(...players.map(p => p.rc)));
+    const topShare = (topBatter && teamTotalRC > 0) ? (topBatter.rc / teamTotalRC) * 100 : 0;
+    let structureType;
+    if (topShare >= 50) structureType = `独裁型（トップ依存度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 35) structureType = `ワンマン型（トップ依存度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 25) structureType = `主軸集中型（トップ依存度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 15) structureType = `分散型（トップ依存度 ${topShare.toFixed(1)}%）`;
+    else structureType = `超均等型（トップ依存度 ${topShare.toFixed(1)}%）`;
+
+    const topBattersText = topThreeBatters.map(p => 
+        `- ${p.name}: OPS ${p.ops.toFixed(3)}, 打率 ${p.avg}, ${p.hr}本塁打, RC ${p.rc}`
+    ).join('\n');
+    
+    // 投手陣情報
+    let pitcherStatusText = "\n### 投手陣の詳細な状況\n";
+    if (record.playerStats?.pitching) {
+        Object.entries(record.playerStats.pitching).forEach(([name, pStats]) => {
+            const logs = pStats.gamelogs || [];
+            if (logs.length > 0) {
+                const tourneyStats = logs.reduce((acc, log) => { acc.ip += parseFloat(log.ip || 0); acc.er += parseInt(log.er || 0); acc.so += parseInt(log.so || 0); return acc; }, { ip: 0, er: 0, so: 0 });
+                const era = tourneyStats.ip > 0 ? ((tourneyStats.er * 9) / tourneyStats.ip).toFixed(2) : "0.00";
+                pitcherStatusText += `- **${name}**: ${tourneyStats.ip}回, 防御率 ${era}, ${tourneyStats.so}奪三振\n`;
+            }
+        });
     }
 
-    // --- 1. 共通ヘルパー：チームの詳細データを収集する関数 ---
-    const getDetailedTeamInfo = (targetName) => {
-        const tr = tournamentState.teamRecords[targetName];
-        if (!tr || !tr.tournamentStats) return null;
-        const td = TEAM_DATA[targetName];
-
-        // (A) 攻撃力
-        const ts = tr.tournamentStats;
-        const tab = ts.ab || 0;
-        const tavg = tab > 0 ? (ts.h / tab).toFixed(3) : '.000';
-        const th = ts.h || 0; const tbb = (ts.bb || 0) + (ts.hbp || 0); const tsf = ts.sf || 0;
-        const tpa = tab + tbb + tsf;
-        const tobp = tpa > 0 ? (th + tbb) / tpa : 0;
-        const tslg = tab > 0 ? ((ts.tb || 0) / tab) : 0;
-        const tops = (tobp + tslg).toFixed(3);
-
-        // (B) 投手力
-        const tp = calculateTeamPitchingStats(targetName);
-
-        // (C) チームカラー
-        const tc = analyzeTeamColor(targetName);
-        
-        // (D) 構造・主力選手
-        let players = [];
-        let totalRC = 0;
-        if (tr.playerStats?.batting) {
-            Object.entries(tr.playerStats.batting).forEach(([name, s]) => {
-                // 1打席でもあれば計算に含める
-                if ((s.pa || 0) >= 1) {
-                    const p_ops = parseFloat(calculateOps(s));
-                    const h = s.h || 0; const bb = (s.bb || 0) + (s.hbp || 0);
-                    const ab = s.ab || 0; const tb = (s.tb || h) + ((s.hr || 0) * 3);
-                    const times = ab + bb; 
-                    let p_rc = times > 0 ? ((h + bb) * tb) / times : 0;
-                    p_rc = isNaN(p_rc) ? 0 : p_rc;
-                    
-                    players.push({ name, ops: p_ops, rc: p_rc, hr: s.hr, avg: (s.h/(s.ab||1)).toFixed(3) });
-                    totalRC += p_rc;
-                }
-            });
-        }
-        players.sort((a, b) => b.ops - a.ops);
-        const top3 = players.slice(0, 3).map(p => `${p.name}(OPS${p.ops.toFixed(3)})`).join(', ');
-        
-        const topBatter = players.find(p => p.rc === Math.max(...players.map(p => p.rc)));
-        const share = (topBatter && totalRC > 0) ? (topBatter.rc / totalRC) * 100 : 0;
-        let structure = share >= 35 ? `ワンマン型(依存度${share.toFixed(0)}%)` : `分散型(依存度${share.toFixed(0)}%)`;
-
-        // (E) 投手陣詳細
-        let pDetails = "";
-        if (tr.playerStats?.pitching) {
-            Object.entries(tr.playerStats.pitching).forEach(([name, ps]) => {
-                const logs = ps.gamelogs || [];
-                if(logs.length > 0) {
-                    const stats = logs.reduce((a, l) => { a.ip+=parseFloat(l.ip||0); a.er+=parseInt(l.er||0); return a; }, {ip:0, er:0});
-                    const era = stats.ip>0 ? ((stats.er*9)/stats.ip).toFixed(2) : "0.00";
-                    if(stats.ip >= 5) pDetails += `${name}(${era}), `;
-                }
-            });
-        }
-
-        // (F) 軌跡
-        const journey = getCurrentTournamentPerformance(targetName, targetMatchId) || '初戦';
-
-        return {
-            name: targetName,
-            rank: calculateRank(targetName, tournamentState),
-            style: td?.coach?.style || '不明',
-            avg: tavg, ops: tops, hr: ts.hr,
-            era: tp.era,
-            color: `${tc.classification.primary} / ${tc.classification.secondary}`,
-            structure: structure,
-            topPlayers: top3,
-            pitchers: pDetails,
-            journey: journey
-        };
-    };
-
-    // --- 2. 自チームのデータ取得 ---
-    const myData = getDetailedTeamInfo(teamName);
-
-    // --- 3. 対戦相手の特定とデータ取得 ---
-    // 既に冒頭で特定した nextOpponentName を使用
-    let opponentData = null;
-    let isMatchDecided = false;
-    let opponentName = nextOpponentName;
-
-    // 相手が決まっていて、かつダミー（BYEや未定）でない場合
-    if (opponentName && opponentName !== '（未定）' && opponentName !== '(BYE)' && opponentName !== '優勝' && opponentName !== '大会終了') {
-        opponentData = getDetailedTeamInfo(opponentName);
-        isMatchDecided = true;
-    } else {
-        // findNextOpponent で「未定」状態の相手（勝者待ち）などの情報を補完
-        const nextOpponentInfo = findNextOpponent(teamName, targetMatchId);
-        if (nextOpponentInfo) {
-             if (!opponentName) opponentName = nextOpponentInfo.opponentName;
-             // ここで相手が決まっていれば opponentData を取得
-             if (opponentName && opponentName !== '（未定）' && !opponentData) {
-                 opponentData = getDetailedTeamInfo(opponentName);
-                 isMatchDecided = true;
-             }
-        }
+    // ランク別質問
+    let finalGoalQuestion;
+    const currentRank = calculateRank(teamName, tournamentState);
+    switch (currentRank) {
+        case 'A': finalGoalQuestion = "全国での勝利を目標として、現状の戦力は万全と言えるか？"; break;
+        case 'B': finalGoalQuestion = "県大会優勝争いに加われる実力があるか？"; break;
+        case 'C': case 'D': case 'E': finalGoalQuestion = "上位校に食らいつき、トーナメントを勝ち上がれるだけの力があるか？"; break;
+        default: finalGoalQuestion = "このチームは現状の目標を達成する実力があるか、総合的に総括してください。";
     }
 
-    // --- 4. プロンプトの作成 ---
-    let prompt = `あなたは高校野球のデータアナリストです。
-チーム「${teamName}」の現状分析${isMatchDecided ? `と、次戦の相手「${opponentName}」との勝敗予想` : ''}を行ってください。
+    // ★ プロンプト更新
+    const prompt = `あなたは高校野球のデータアナリストです。以下のデータに基づき、このチームの「今大会の戦況」を分析する300字程度のコラムを生成してください。
 
-### 【自チーム】${myData.name} (${myData.rank}ランク)
-- **攻撃力**: 打率${myData.avg}, OPS${myData.ops}, 本塁打${myData.hr}
-- **守備力**: 防御率${myData.era}
-- **チームカラー**: ${myData.color}
-- **構造**: ${myData.structure}
-- **主力**: ${myData.topPlayers}
-- **投手陣**: ${myData.pitchers}
-- **軌跡**: ${myData.journey}
-`;
+### 分析対象チーム: ${teamName} (${currentRank}ランク)
+- **戦術タイプ**: ${TEAM_DATA[teamName].coach?.style || '堅実'}
+- **AI判定チームカラー**: 主戦術: ${teamPrimaryColor}, 勝ちパターン: ${teamSecondaryColor}
+- **チーム攻撃力**: 打率 ${teamAvg.toFixed(3)}, OPS ${teamOPS.toFixed(3)}
+- **チーム守備力**: 防御率 ${teamERA.toFixed(2)}
+- **攻撃構造**: ${structureType}
+- **勝ち上がり**: ${journey}
 
-    if (isMatchDecided && opponentData) {
-        prompt += `
-### 【次戦の相手】${opponentData.name} (${opponentData.rank}ランク)
-- **攻撃力**: 打率${opponentData.avg}, OPS${opponentData.ops}, 本塁打${opponentData.hr}
-- **守備力**: 防御率${opponentData.era}
-- **チームカラー**: ${opponentData.color}
-- **構造**: ${opponentData.structure}
-- **主力**: ${opponentData.topPlayers}
-- **投手陣**: ${opponentData.pitchers}
-- **軌跡**: ${opponentData.journey}
-`;
-    } else {
-        prompt += `\n### 次戦の相手\nまだ決定していません（${opponentName || '未定'}）。\n`;
-    }
+### 注目選手（打撃）
+${topBattersText || '（特になし）'}
+${pitcherStatusText}
 
-    prompt += `
+### 文脈
+- **次戦**: ${nextOpponentText} (${nextRoundName})
+- **目標**: ${TEAM_DATA[teamName].info || '上位進出'}
+
 ### 指示
-1.  **現状分析**: 自チームの投打のバランス、好調な選手、構造的な強み/弱みを簡潔に評価してください。
-`;
+1.  **【最重要】具体的な数字の引用**: 注目選手リストの**具体的な成績（OPS, 打率）**や、チームOPS/打率を引用し、打線の破壊力を正確に評価してください。
+    * 打率が高くOPSが低い場合は「つながりのある打線」、両方高い場合は「破壊力抜群」などと表現し分けてください。
+2.  **【構造分析】**: 「RCシェア分析の結果（${structureType}）」や「AI判定チームカラー」を参照し、チームが**特定の選手に依存しているか**、**全員で点を取っているか**を指摘してください。
+3.  **【客観的な勝ち上がり評価】**: 勝ち上がり軌跡を熟読し、対戦相手のランクや試合のスコア差を文脈として客観的に評価してください。
+4.  **【総合評価】**: 最後に、以下の質問に答える形で総合評価を締めくくってください：**「${finalGoalQuestion}」**
 
-    if (isMatchDecided) {
-        prompt += `2.  **【最重要】次戦シミュレーション**:
-    - 両チームの「攻撃力(OPS) vs 守備力(ERA)」を比較し、どちらが有利か論じてください。
-    - 「チームカラー（相性）」の観点から、試合展開（乱打戦、投手戦など）を予想してください。
-    - 相手の弱点（例：防御率が悪い、ワンマン型など）を指摘し、攻略の糸口を提案してください。
-3.  **【勝敗予想】**:
-    - ズバリ、**${teamName}の勝率（％）**を予想し、その根拠を述べてください。
-    - 「有利」「五分」「劣勢」のいずれかを明言してください。
-`;
-    } else {
-        // 相手が決まっていない場合のフォールバック指示
-        const currentRank = calculateRank(teamName, tournamentState);
-        let goalQuestion = "上位進出";
-        if(currentRank === 'A') goalQuestion = "全国制覇";
-        else if(currentRank === 'B') goalQuestion = "県制覇";
-        else if(currentRank === 'C') goalQuestion = "ベスト8";
-        
-        prompt += `2.  **目標達成度**: ランク(${currentRank})に基づき、現在のチーム状況で「${goalQuestion}」が可能か評価してください。\n`;
-    }
-
-    prompt += `### 出力形式: JSON {"body": "（分析コラム本文）"}`;
+### 出力形式: JSON {"body": "（分析コラム本文）"}`;
 
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json();
         const aiData = parseJsonFromText(result.candidates[0].content.parts[0].text);
-        
         return aiData?.body || 'AIによる分析に失敗しました。';
     } catch (error) {
         console.error("AI archive analysis failed:", error);
