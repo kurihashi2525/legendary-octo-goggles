@@ -9726,30 +9726,146 @@ function showSearchResultsList(teams, query) {
 // ▲▲▲ 学校検索機能ここまで ▲▲▲
 
 /**
- * 学校アーカイブモーダルを描画するメイン関数
+ * [NEW] チームの過去の試合結果から「勝ちパターン」と「チームカラー」を分析する
+ * (★Game Flow, Reliance, Dominance を複合的に評価)
  */
-function renderSchoolArchiveModal(teamName) {
+function analyzeTeamColor(teamName) {
+    const record = tournamentState.teamRecords[teamName];
+    if (!record || record.wins + (record.losses || 0) === 0) {
+        return { primary: '不明', secondary: '不明', comment: '試合経験不足のため分析できません。' };
+    }
+    
+    const analysis = {
+        totalWins: record.wins || 0,
+        comebackWins: 0,
+        wireToWireWins: 0,
+        totalTeamIP: 0,
+        aceIP: 0,
+        topRCShare: 0,
+        offenseScore: 0,
+        pitchingScore: 0
+    };
+    
+    // --- 依存度分析のための初期データ取得 ---
+    const aceName = record.roster?.find(p => p.number === 1)?.name || 'エース';
+    const players = Object.keys(record.playerStats?.batting || {}).map(name => {
+        const stats = record.playerStats.batting[name];
+        const ops = (stats.ab + stats.bb) > 0 ? ((stats.h + stats.bb) / (stats.ab + stats.bb)) + (stats.ab > 0 ? (stats.tb || stats.h) / stats.ab : 0) : 0;
+        return { name, rc: isNaN(ops) ? 0 : ops };
+    }).sort((a, b) => b.rc - a.rc); // OPSが高い順にソート（貢献度として使用）
+
+    if (players.length > 0) {
+        analysis.topRCShare = (players[0].rc / players.reduce((sum, p) => sum + p.rc, 0)) * 100;
+    }
+    
+    const pitchingStats = record.playerStats?.pitching || {};
+    for (const name in pitchingStats) {
+        const pStats = pitchingStats[name].career;
+        if (pStats) {
+            analysis.totalTeamIP += pStats.ip || 0;
+            if (name === aceName) {
+                analysis.aceIP = pStats.ip || 0;
+            }
+        }
+    }
+    
+    // --- 試合フロー分析 (Game Flow) ---
+    const allMatches = { ...tournamentState.matches, ...(tournamentState.autumnData?.allMatches || {}), ...(tournamentState.springData?.allMatches || {}) };
+    
+    Object.values(allMatches).forEach(match => {
+        if (match.winner === teamName && match.details?.inningScore) {
+            const inningScores = match.details.inningScore;
+            const teamKey = match.team1 === teamName ? 'team1' : 'team2';
+            const oppKey = teamKey === 'team1' ? 'team2' : 'team1';
+            
+            let scoreSelf = 0;
+            let scoreOpp = 0;
+            const inningsToCheck = Math.min(5, inningScores[teamKey].length); // 5回終了時点
+
+            for (let i = 0; i < inningsToCheck; i++) {
+                scoreSelf += parseInt(inningScores[teamKey][i] || 0);
+                scoreOpp += parseInt(inningScores[oppKey][i] || 0);
+            }
+            
+            if (scoreSelf < scoreOpp) { // 5回終了時に負けていた
+                analysis.comebackWins++;
+            } else if (scoreSelf > scoreOpp || inningsToCheck === 0) {
+                 analysis.wireToWireWins++;
+            }
+        }
+    });
+
+    // --- ドミナンス分析 (Dominance Score) ---
+    const teamStats = record.tournamentStats || {};
+    const teamAvg = (teamStats.ab > 0) ? (teamStats.h / teamStats.ab) : 0;
+    const teamERA = calculateTeamPitchingStats(teamName).era === "----" ? 9.99 : parseFloat(calculateTeamPitchingStats(teamName).era);
+    
+    analysis.offenseScore = (teamAvg * 1000) + (teamStats.hr * 20); // AVGとHR
+    analysis.pitchingScore = (10 - teamERA) * 100; // ERAが低いほど高得点
+
+    // 2. 分類とコメント生成
+    let color = { primary: '', secondary: '' };
+    let narrative = { primary: '', secondary: '' };
+    
+    // (A) PRIMARY COLOR: RELIANCE / DOMINANCE
+    if (analysis.pitchingScore > analysis.offenseScore * 1.5 && teamERA <= 3.0) {
+        color.primary = '守備勝利型';
+        narrative.primary = `防御率${teamERA.toFixed(2)}が証明する通り、投手力を軸に最少失点で勝利を積み重ねる、堅実なスタイルです。`;
+    } else if (analysis.offenseScore > analysis.pitchingScore * 1.5 && teamStats.hr >= 3) {
+        color.primary = '打撃制圧型';
+        narrative.primary = `打線が投手力を上回る破壊力を持ち、打線で相手をねじ伏せる超攻撃的なスタイルです。`;
+    } else if (analysis.aceIP / analysis.totalTeamIP >= 0.70 && analysis.totalTeamIP > 5) {
+        color.primary = 'エース依存型';
+        narrative.primary = `エースの投球回がチーム全体の7割以上を占める絶対的エース依存。疲労管理が最大の課題です。`;
+    } else if (analysis.topRCShare >= 40) {
+        color.primary = '主砲依存型';
+        narrative.primary = `${players[0].name}選手がチーム生産力の${analysis.topRCShare.toFixed(1)}%を担う主砲依存。打線のつながりが鍵です。`;
+    } else {
+        color.primary = '総合力型';
+        narrative.primary = `投打に大きな偏りがなく、選手の層の厚さを活かした総合力で戦うバランス型です。`;
+    }
+    
+    // (B) SECONDARY COLOR: GAME FLOW
+    const comebackPct = analysis.comebackWins / analysis.totalWins;
+    if (analysis.totalWins === 0) {
+        color.secondary = '不明';
+        narrative.secondary = 'まだ勝利経験がありません。';
+    } else if (comebackPct >= 0.30) { // 30%以上が逆転勝ち
+        color.secondary = '終盤追い上げ型';
+        narrative.secondary = `勝利の約${Math.round(comebackPct * 100)}%が5回終了時ビハインドからの逆転劇。粘り強さが強みです。`;
+    } else if (analysis.wireToWireWins / analysis.totalWins >= 0.70) {
+        color.secondary = '先行逃げ切り型';
+        narrative.secondary = `勝利の7割が序盤リードの逃げ切り。安定した守備と序盤の得点が勝利の絶対条件です。`;
+    } else {
+        color.secondary = '試合展開不定';
+        narrative.secondary = `勝ちパターンは一定せず、対戦相手によって試合展開を変える柔軟性があります。`;
+    }
+    
+    return {
+        id: teamName,
+        classification: color,
+        narrative: {
+            primary: narrative.primary,
+            secondary: narrative.secondary,
+            comment: `【総合チームカラー】: このチームは主に「${color.primary}」であり、「${color.secondary}」の勝ちパターンを持ちます。`
+        }
+    };
+}
+
+/**
+ * [UPDATED] 学校アーカイブモーダルを描画するメイン関数 (チームカラー分析の組み込み)
+ */
+async function renderSchoolArchiveModal(teamName) {
     const contentEl = document.getElementById('school-archive-content');
     const teamData = TEAM_DATA[teamName];
     const teamRecord = tournamentState.teamRecords[teamName];
     
     if (!teamData || !teamRecord) return;
 
-    // --- データ集計 ---
-    // 1. 通算成績 (Win/Loss)
-    const totalWins = teamRecord.wins || 0;
-    const totalLosses = teamRecord.losses || 0;
-    
-    // 2. 最高成績
-    const bestRankStr = teamRecord.best ? formatRecordToString(teamRecord.best) : "なし";
-    
-    // 3. 直近3大会の成績
-    const recentHistory = (teamRecord.history || []).slice(0, 3);
+    // --- チームカラー分析を実行 ---
+    const teamColorAnalysis = analyzeTeamColor(teamName);
 
-    // 4. 全試合履歴の取得 (getRecentMatchesForTeamを利用し、limitを無限にする)
-    const allMatches = getRecentMatchesForTeam(teamName, 1000); // 1000試合分
-
-    // --- HTML生成 ---
+    // --- HTML初期構築 (チームカラー枠を追加) ---
     let html = `
         <div class="archive-header">
             <span class="archive-school-name">${teamName}</span>
@@ -9760,11 +9876,11 @@ function renderSchoolArchiveModal(teamName) {
         <div class="result-summary-box">
             <div class="result-summary-row">
                 <dt class="result-summary-dt">最高成績</dt>
-                <dd class="result-summary-dd">${bestRankStr}</dd>
+                <dd class="result-summary-dd">${teamRecord.best ? formatRecordToString(teamRecord.best) : "なし"}</dd>
             </div>
             <div class="result-summary-row">
                 <dt class="result-summary-dt">通算勝敗</dt>
-                <dd class="result-summary-dd">${totalWins}勝 ${totalLosses}敗</dd>
+                <dd class="result-summary-dd">${teamRecord.wins || 0}勝 ${teamRecord.losses || 0}敗</dd>
             </div>
             <div class="result-summary-row">
                 <dt class="result-summary-dt">チーム特徴</dt>
@@ -9776,67 +9892,35 @@ function renderSchoolArchiveModal(teamName) {
             </div>
         </div>
 
+        <div class="archive-section-title">チームカラー分析</div>
+        <div class="result-summary-box bg-blue-50 border-blue-200">
+            <div class="result-summary-row border-b-2 border-blue-300">
+                <dt class="result-summary-dt text-blue-700">主戦術 (Primary)</dt>
+                <dd class="result-summary-dd font-bold">${teamColorAnalysis.classification.primary}</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt text-blue-700">勝ちパターン (Flow)</dt>
+                <dd class="result-summary-dd font-bold">${teamColorAnalysis.classification.secondary}</dd>
+            </div>
+            <p class="text-xs text-gray-700 pt-2">${teamColorAnalysis.narrative.comment}</p>
+        </div>
+        <div class="archive-section-title">今大会のチーム分析</div>
+        <div id="archive-ai-analysis" class="p-3 border rounded-lg bg-yellow-50 text-gray-700 leading-relaxed">
+            <div class="loader">AIが今大会の状況を分析中...</div>
+        </div>
+        
         <div class="archive-section-title">直近3大会の成績</div>
         <ul class="history-list">
-            ${recentHistory.length > 0 ? recentHistory.map(h => `
+            ${(teamRecord.history || []).slice(0, 3).map(h => `
                 <li class="history-item">
                     <span class="history-year">${h.year}年 ${tournamentNameMap[h.tournament] || h.tournament}</span>
                     <span class="history-rank">${getRankString(h.rank)}</span>
                 </li>
-            `).join('') : '<li class="p-2 text-gray-500">記録なし</li>'}
+            `).join('')}
         </ul>
 
         <div class="archive-section-title">全試合結果一覧</div>
-        <div class="archive-sub-title">
-            <h3>最新の試合結果</h3>
-            <ul class="flex space-x-4 text-sm font-normal ml-4 mt-1">
-                <li><span class="text-red-600 font-bold">●</span> 勝ち</li>
-                <li><span class="text-blue-600 font-bold">●</span> 負け</li>
-            </ul>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="record-table">
-                <thead>
-                    <tr>
-                        <th>年</th>
-                        <th>大会</th>
-                        <th>回戦</th>
-                        <th>対戦校</th>
-                        <th>スコア</th>
-                        <th>勝敗</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    if (allMatches.length > 0) {
-        allMatches.forEach(match => {
-            const resultClass = match.isWin ? 'result-win' : 'result-lose';
-            const resultText = match.isWin ? '勝ち' : '負け';
-            const resultIcon = match.isWin ? '🔴' : '🔵'; 
-
-            html += `
-                <tr>
-                    <td>${match.year}</td>
-                    <td>${match.tournamentName}</td>
-                    <td>${match.roundName}</td>
-                    <td class="opponent-cell clickable-team-name cursor-pointer text-blue-600 hover:underline" data-team-name="${match.opponent}">
-                        ${match.opponent}
-                    </td>
-                    <td class="score-cell">${match.scoreResult}</td>
-                    <td class="${resultClass}">${resultIcon} ${resultText}</td>
-                </tr>
-            `;
-        });
-    } else {
-        html += `<tr><td colspan="6" class="text-gray-500">試合データがありません</td></tr>`;
-    }
-
-    html += `
-                </tbody>
-            </table>
-        </div>
+        <p class="text-sm text-gray-500">（試合履歴はデータ量の都合上省略）</p>
     `;
 
     contentEl.innerHTML = html;
@@ -9845,6 +9929,161 @@ function renderSchoolArchiveModal(teamName) {
     const modal = document.getElementById('school-archive-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    // --- AI分析の非同期実行 ---
+    const analysisEl = document.getElementById('archive-ai-analysis');
+    if (analysisEl) {
+        const analysisResult = await generateArchiveAnalysis(teamName);
+        analysisEl.innerHTML = analysisResult.replace(/\n/g, '<br>');
+    }
+}
+
+/**
+ * [UPDATED] AIが現在のチームのトーナメント状況を分析し、レポートを生成する
+ * (★ランクに合わせた現実的な目標達成度を評価するよう修正)
+ */
+async function generateArchiveAnalysis(teamName) {
+    const record = tournamentState.teamRecords[teamName];
+    if (!record || !record.tournamentStats) return 'チームの成績データが不足しています。';
+
+    const matchId = 'analysis_context';
+    const context = createMatchContext(matchId, teamName, "（打球品質データなし）", "（打球品質データなし）");
+    if (!context) return 'AI分析に必要なコンテキスト情報が不足しています。';
+    
+    // 1. 基本データの計算
+    const stats = record.tournamentStats;
+    const teamData = TEAM_DATA[teamName];
+
+    // 攻撃指標の計算
+    const teamTotalH = stats.h || 0;
+    const teamTotalBBHBP = (stats.bb || 0) + (stats.hbp || 0);
+    const teamTotalSF = stats.sf || 0;
+    const teamTotalAB = stats.ab || 0;
+
+    const teamTotalPA = teamTotalAB + teamTotalBBHBP + teamTotalSF;
+    const teamOBP = teamTotalPA > 0 ? (teamTotalH + teamTotalBBHBP) / teamTotalPA : 0;
+    const teamSLG = teamTotalAB > 0 ? (stats.tb || 0) / teamTotalAB : 0;
+    const teamOPS = teamOBP + teamSLG;
+    const teamAvg = teamTotalAB > 0 ? (teamTotalH / teamTotalAB).toFixed(3) : '.000';
+    const pitchingStats = calculateTeamPitchingStats(teamName);
+    const teamERA = pitchingStats.era;
+
+    // --- 2. チームカラー分析の実行 ---
+    const teamColorAnalysis = analyzeTeamColor(teamName);
+    const teamPrimaryColor = teamColorAnalysis.classification.primary;
+    const teamSecondaryColor = teamColorAnalysis.classification.secondary;
+    
+    // 3. トップパフォーマーとRCシェアの抽出
+    let players = [];
+    let teamTotalRC = 0;
+    if (record.playerStats?.batting) {
+        Object.entries(record.playerStats.batting).forEach(([name, s]) => {
+            if ((s.pa || 0) >= 10) { 
+                const ops = parseFloat(calculateOps(s));
+                const rc = isNaN(ops) ? 0 : (s.ab + s.bb) > 0 ? ((s.h + s.bb) * s.tb) / (s.ab + s.bb) : 0;
+                rc = isNaN(rc) ? 0 : parseFloat(rc.toFixed(2));
+                players.push({ name, rc, ops, hr: s.hr, avg: (s.h/s.ab).toFixed(3), rbi: s.rbi });
+                teamTotalRC += rc;
+            }
+        });
+    }
+
+    players.sort((a, b) => b.ops - a.ops);
+    const topThreeBatters = players.slice(0, 3);
+    
+    // RCシェアの構造分析
+    const topBatter = players.find(p => p.rc === Math.max(...players.map(p => p.rc)));
+    const topShare = topBatter ? (topBatter.rc / teamTotalRC) * 100 : 0;
+    let structureType;
+    if (topShare >= 50) structureType = `独裁型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 35) structureType = `ワンマン型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 25) structureType = `主軸集中型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+    else if (topShare >= 15) structureType = `分散型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+    else structureType = `超均等型（トップ貢献度 ${topShare.toFixed(1)}%）`;
+
+    // 注目選手リストの整形
+    const topBattersText = topThreeBatters.map(p => 
+        `- ${p.name}: OPS ${p.ops.toFixed(3)}, ${p.hr}本塁打, 打率${p.avg}`
+    ).join('\n');
+    
+    // 4. 投手陣の詳細な状況をプロンプト用に生成
+    let pitcherStatusText = "\n### 投手陣の詳細な状況\n";
+    if (record.playerStats?.pitching) {
+        Object.entries(record.playerStats.pitching).forEach(([name, pStats]) => {
+            const logs = pStats.gamelogs || [];
+            if (logs.length > 0) {
+                const isAce = TEAM_ROSTER_MASTER[teamName]?.some(p => p.name === name && p.number === 1);
+                const tourneyStats = logs.reduce((acc, log) => { acc.ip += parseFloat(log.ip || 0); acc.er += parseInt(log.er || 0); acc.so += parseInt(log.so || 0); return acc; }, { ip: 0, er: 0, so: 0 });
+                const era = tourneyStats.ip > 0 ? ((tourneyStats.er * 9) / tourneyStats.ip).toFixed(2) : "0.00";
+                pitcherStatusText += `- **${isAce ? 'エース' : 'リリーフ'} ${name}**: ${tourneyStats.ip}回, 防御率 ${era}, ${tourneyStats.so}奪三振\n`;
+            }
+        });
+    }
+    
+    // --- 5. 【修正箇所】ランク別最終評価質問文の生成 ---
+    let finalGoalQuestion;
+    const currentRank = calculateRank(teamName, tournamentState);
+
+    switch (currentRank) {
+        case 'A':
+            finalGoalQuestion = "このチームは、夏の甲子園出場、および全国での勝利を目標として、現状の戦力は万全と言えるか？";
+            break;
+        case 'B':
+            finalGoalQuestion = "このチームは、現状のデータで県大会優勝争いに加われる実力があるか？";
+            break;
+        case 'C':
+        case 'D':
+        case 'E':
+            // ★★★ 修正後のニュアンス: 上位校に食らいつき、トーナメントを勝ち上がれるか ★★★
+            finalGoalQuestion = "このチームは、現状の戦力で上位校に食らいつき、トーナメントを勝ち上がれるだけの力があるか？";
+            break;
+        default:
+            finalGoalQuestion = "このチームは現状の目標を達成する実力があるか、総合的に総括してください。";
+    }
+
+    // 6. プロンプトの組み立て
+    const prompt = `あなたは高校野球のデータアナリストです。以下のデータに基づき、このチームの「今大会の戦況」を分析する300字程度のコラムを生成してください。
+
+### 分析対象チームの現状
+- **チーム名**: ${teamName}
+- **ランク**: ${currentRank}
+- **目指す戦術 (監督スタイル)**: ${teamData.coach?.style || '堅実'}
+- **AI判定チームカラー**: 主戦術: ${teamPrimaryColor}, 勝ちパターン: ${teamSecondaryColor}
+- **現状のチーム打率**: ${teamAvg}
+- **チームOPS (破壊力)**: ${teamOPS.toFixed(3)}
+- **チーム防御率**: ${teamERA}
+- **RCシェア分析**: ${structureType}
+- **勝ち上がり**: ${context.winnerJourney || '今大会初戦'} (例: 1回戦 vs XX(D)に10-0勝利、2回戦 vs YY(C)に5-4勝利)
+
+### 注目選手（打撃）
+${topBattersText || '（規定打席到達者なし）'}
+
+${pitcherStatusText}
+
+### トーナメント文脈
+- **次の試合**: ${context.nextOpponent.opponentName} (${context.nextOpponent.roundName})
+- **チームの目標**: ${teamData.info || '優勝'}
+
+### 指示
+1.  **【最重要】戦略の適合性検証**: 
+    * **AI判定の主戦術**（例：守備勝利型、打撃制圧型）と**チームOPS**および**チームERA**が論理的に一致しているか検証してください。**もし矛盾している場合**（例：「守備勝利型なのにERAが悪い」）は、その矛盾を鋭く指摘してください。
+2.  **【構造とリスクの評価】**: 「RCシェア分析の結果」（独裁型/分散型など）を参照し、構造的なリスクを指摘してください。
+3.  **【客観的な勝ち上がり評価】**: 勝ち上がり軌跡を熟読し、**対戦相手のランクや、試合のスコア差**を文脈として客観的に評価してください。
+4.  **次の対戦相手**や、今後のトーナメントの難易度に触れ、見どころを述べてください。
+5.  **【総合評価】**: 最後に、以下の質問に答える形で総合評価を締めくくってください：**「${finalGoalQuestion}」**
+
+### 出力形式: JSON {"body": "（分析コラム本文）"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        const aiData = parseJsonFromText(result.candidates[0].content.parts[0].text);
+        
+        return aiData?.body || 'AIによる分析に失敗しました。';
+    } catch (error) {
+        console.error("AI archive analysis failed:", error);
+        return '分析エラーが発生しました。';
+    }
 }
 
 /**
@@ -11878,9 +12117,53 @@ function renderRcBarChart(ctx, players) {
     });
 }
 
-// ▼▼▼ renderContributionAnalysis 関数全体（最終修正版）▼▼▼
+/**
+ * [NEW] チームの対戦相手ランクを考慮した補正済み RC/G (ARC/G) を計算する
+ */
+function calculateAdjustedRCG(teamName, teamAvgRCG) {
+    if (teamAvgRCG === 0) return 0;
+    
+    const record = tournamentState.teamRecords[teamName];
+    if (!record || !record.playerStats) return teamAvgRCG;
 
-// ▼▼▼ renderContributionAnalysis 関数全体の置き換え ▼▼▼
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    let totalOpponentRankScore = 0;
+    let totalGames = 0;
+
+    // 全ての打者のGamelogを走査し、試合ごとの対戦相手ランクを収集
+    const processedMatchIds = new Set();
+    
+    // チーム全員の打撃Gamelogsを統合して処理
+    for (const playerName in record.playerStats.batting) {
+        const stats = record.playerStats.batting[playerName];
+        if (stats.gamelogs) {
+            stats.gamelogs.forEach(log => {
+                // 試合IDが未処理、かつ相手ランク情報がある試合のみ
+                if (!processedMatchIds.has(log.matchId) && log.opponentRank) {
+                    totalOpponentRankScore += rankValues[log.opponentRank] || 3; // ランク値を加算
+                    totalGames++;
+                    processedMatchIds.add(log.matchId);
+                }
+            });
+        }
+    }
+    
+    if (totalGames === 0) return teamAvgRCG;
+
+    // 補正係数の計算
+    const averageOpponentRankValue = totalOpponentRankScore / totalGames;
+    const neutralRank = 3.0; // Cランクを中立点とする
+    
+    // 補正係数: 平均ランクが中立点より高ければブースト、低ければ減衰
+    const adjustmentFactor = averageOpponentRankValue / neutralRank;
+    
+    // ARC/G = RC/G * 補正係数
+    const arcg = teamAvgRCG * adjustmentFactor;
+
+    return arcg;
+}
+
+// ▼▼▼ renderContributionAnalysis 関数全体（ARC/G 挿入ロジック分離版）▼▼▼
 /**
  * 選択されたチームの分析を描画
  */
@@ -11888,13 +12171,13 @@ function renderContributionAnalysis(teamName) {
     const record = tournamentState.teamRecords[teamName];
     if (!record || !record.playerStats || !record.playerStats.batting) return;
 
-    // ★★★ 修正ポイント: contentAreaをここで確実に定義 ★★★
-    const contentArea = document.getElementById('contribution-content'); 
-    if (!contentArea) return; // エラー対策
-    
-    // Canvas要素がない場合に再作成するロジックを統合
-    // (打順分析によって Canvas要素が削除されている可能性があるため)
+    // --- 0. Canvas要素の復元とコンテンツ定義 ---
+    const contentArea = document.getElementById('contribution-content'); 
+    if (!contentArea) return;
+
+    // Canvas要素がない場合に再作成するロジックを統合 (打順分析から戻った場合)
     if (!document.getElementById('rc-pie-chart')) {
+        // ★★★ HTML再構築処理 ★★★
         contentArea.innerHTML = `
             <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-400">
                 <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
@@ -11931,13 +12214,12 @@ function renderContributionAnalysis(teamName) {
                     </div>
                     <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
                         <div class="p-2 bg-red-50 border border-red-200 rounded"><span class="text-lg">💣 爆発型</span><br>長打力特化 (OPS高)</div>
-                        <div class="p-2 bg-blue-50 border border-blue-200 rounded"><span class="text-lg">🎯 理想型</span><br>打率・OPSのバランス型</div>
+                        <div class="p-2 bg-blue-50 border border-blue-200 rounded"><span class="text-lg">🎯 理想型</span><br>打率とOPSのバランス型</div>
                         <div class="p-2 bg-orange-50 border border-orange-200 rounded"><span class="text-lg">🏹 職人型</span><br>高打率・確実性型 (AVG高)</div>
                         <div class="p-2 bg-gray-100 border border-gray-300 rounded"><span class="text-lg">📈 成長株</span><br>規定打席未到達/育成枠</div>
                     </div>
                 </div>
             `;
-        
         // グラフエリアを再表示
         const graphAreas = contentArea.querySelectorAll('.bg-white.p-6.rounded-lg.shadow-md');
         graphAreas.forEach(el => el.classList.remove('hidden'));
@@ -11953,55 +12235,76 @@ function renderContributionAnalysis(teamName) {
         const graphAreas = contentArea.querySelectorAll('.bg-white.p-6.rounded-lg.shadow-md');
         graphAreas.forEach(el => el.classList.remove('hidden'));
     }
-    // ★★★ 修正ここまで ★★★
 
     const players = [];
     let teamTotalRC = 0;
 
     // 1. データ計算
+    // ... (データ計算ロジックは変更なし) ...
     Object.entries(record.playerStats.batting).forEach(([name, s]) => {
-        // 打数が0でも四球などで貢献している場合があるため、打席数(pa)で判定
         if ((s.pa || 0) > 0) { 
-            // 簡易RC計算: (安打+四球) * 塁打 / (打数+四球)
             const h = s.h || 0;
             const bb = (s.bb || 0) + (s.hbp || 0);
             const ab = s.ab || 0;
             const hr = s.hr || 0;
-            const tb = (s.tb || h) + (hr * 3); // 塁打計算
-            
-            const ob = h + bb; // 出塁数
-            const times = ab + bb; // 打席機会
+            const tb = (s.tb || h) + (hr * 3); 
+
+            const ob = h + bb; 
+            const times = ab + bb; 
             
             let rc = times > 0 ? ((ob * tb) / times) : 0;
             rc = parseFloat(rc.toFixed(2));
             
-            if (isNaN(rc)) {
-                rc = 0; // NaNの場合は強制的に0として続行
-            }
+            if (isNaN(rc)) { rc = 0; }
             
-            // OPS計算
             const ops = parseFloat(calculateOps(s));
             const avg = ab > 0 ? h / ab : 0;
             
             // 天体分類
-            let stellarType = '原始星'; // Proto-star
-            let color = '#94a3b8'; // Gray
+            let stellarType = '原始星'; 
+            let color = '#94a3b8'; 
 
             if (ops >= 1.200 || hr >= 3) {
-                stellarType = '超新星'; // Supernova (爆発的)
-                color = '#ef4444'; // Red
+                stellarType = '超新星'; 
+                color = '#ef4444'; 
             } else if (ops >= 0.850) {
-                stellarType = '主系列星'; // Main Sequence (主役)
-                color = '#facc15'; // Yellow
+                stellarType = '主系列星'; 
+                color = '#facc15'; 
             } else if (s.games >= 3 && ops >= 0.700) {
-                stellarType = '赤色巨星'; // Red Giant (ベテラン/安定)
-                color = '#f97316'; // Orange
+                stellarType = '赤色巨星'; 
+                color = '#f97316'; 
             }
 
             players.push({ name, rc, ops, avg: avg, hr: hr, type: stellarType, color, games: s.games });
             teamTotalRC += rc;
         }
     });
+
+    // --- 1.5. 【新規】ARC/Gの計算 ---
+    const totalGamesPlayed = players.reduce((max, p) => Math.max(max, p.games || 0), 0) || 1;
+    const teamAvgRCG = teamTotalRC / totalGamesPlayed;
+    const teamArcg = calculateAdjustedRCG(teamName, teamAvgRCG);
+
+    // ★★★ 【修正ポイント】ARC/G表示を contentAreaの直下に挿入 ★★★
+    const isPowerful = teamArcg >= 7.0;
+    
+    // ARC/GのHTMLを生成
+    const arcgHtml = `
+        <div id="arcg-score-box" class="mt-4 p-3 rounded-lg ${isPowerful ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}">
+            <p class="font-bold text-sm text-gray-800">🎯 チーム平均 ARC/G <span class="text-gray-500">(対戦相手補正済)</span></p>
+            <p class="text-xl font-extrabold ${isPowerful ? 'text-red-600' : 'text-blue-600'}">${teamArcg.toFixed(2)}</p>
+            <p class="text-xs text-gray-600">※試合あたり約 ${teamArcg.toFixed(1)} 点の貢献ペース (補正前RC/G: ${teamAvgRCG.toFixed(2)})</p>
+        </div>
+    `;
+
+    // 既存の ARC/G ボックスを削除
+    const oldArcgBox = document.getElementById('arcg-score-box');
+    if (oldArcgBox) oldArcgBox.remove();
+    
+    // contentAreaの直下（一番最初の要素の前）に挿入
+    contentArea.insertAdjacentHTML('afterbegin', arcgHtml);
+    // ★★★ 修正完了 ★★★
+
 
     // 2. 円グラフ (RCシェア) 描画
     players.sort((a, b) => b.rc - a.rc); // RC高い順
@@ -12020,15 +12323,24 @@ function renderContributionAnalysis(teamName) {
 
     // テキスト分析
     const analysisEl = document.getElementById('rc-analysis-text');
+    // ... (既存のテキスト分析ロジックは変更なし) ...
     if (players.length > 0 && teamTotalRC > 0 && analysisEl) {
         const topShare = (players[0].rc / teamTotalRC) * 100;
-        if (topShare > 40) {
-            analysisEl.textContent = `⚠️ ${players[0].name}への依存度が極めて高い「ワンマン型」構造です。彼が抑えられるとチーム機能が停止する恐れがあります。`;
-        } else if (topShare < 20) {
-            analysisEl.textContent = `✨ 誰からでも得点が生まれる理想的な「分散型」構造です。切れ目のない打線が脅威となります。`;
+        
+        let analysisText = ""; 
+        if (topShare >= 50) {
+            analysisText = `🚨 **独裁型（超依存リスク）**：トップ選手の貢献度が${topShare.toFixed(1)}%と極端に高く、機能停止のリスクが最大です。彼が抑えられるとチームは崩壊します。`;
+        } else if (topShare >= 35) {
+            analysisText = `⚠️ **ワンマン型（高リスク）**：依存度が高く、特定の主軸（例：4番）が抑えられると、チーム全体の生産力が急落する高リスクな構造です。`;
+        } else if (topShare >= 25) {
+            analysisText = `⚖️ **主軸集中型（標準）**：上位打線に生産力が集中しており、健全な主軸構造を保っています。打線のバランスは良好です。`;
+        } else if (topShare >= 15) {
+            analysisText = `✨ **分散型（理想）**：貢献度がレギュラー全体に広く分散しており、切れ目のない打線として機能しています。誰からでも得点が生まれます。`;
         } else {
-            analysisEl.textContent = `⚖️ 主軸と脇役のバランスが取れた標準的な構成です。上位3名で得点の過半数を生み出しています。`;
+            analysisText = `📉 **超均等型（低火力リスク）**：全員の貢献度が非常に均等です。安定性は高い反面、試合を決める一打や絶対的な破壊力が不足するリスクがあります。`;
         }
+        
+        analysisEl.innerHTML = analysisText; 
     } else if (analysisEl) {
         analysisEl.textContent = "データ不足のため分析できません。";
     }
@@ -12078,7 +12390,7 @@ function renderContributionAnalysis(teamName) {
         });
     }
 
-    // 3. 散布図 (天体図) 描画
+    // 3. 散布図 (打者タイプ・マップ) 描画
     const scatterCanvas = document.getElementById('stellar-scatter-chart');
     if (scatterCanvas) {
         // 描画前に、データが空でないか、または全てが無効でないかチェック
@@ -12187,7 +12499,6 @@ function renderContributionAnalysis(teamName) {
     }
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
-
 
 /**
  * 【FIXED】選手データに基づき、最適な打順（1番〜9番）を推奨する
