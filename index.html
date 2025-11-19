@@ -6,6 +6,7 @@
     <title>【最終実装版】AI記者付きトーナメント表</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
@@ -1093,7 +1094,7 @@
         .feud-match .team-slot { border: 2px solid #8b5cf6 !important; background-color: #f5f3ff; }
         .rivalry-match .team-slot.winner { background-color: #fecaca; }
         .feud-match .team-slot.winner { background-color: #ddd6fe; }
-    
+    
 /* 詳細入力テーブル用のスタイル */
 /* 詳細入力テーブル用のスタイル（最終版） */
 /* ▼▼▼ このブロックを <style> タグ内に「新規追加」 ▼▼▼ */
@@ -1127,6 +1128,50 @@
     background-color: #f9fafb; /* bg-gray-50 */
 }
 
+/* ▼▼▼ スカウトレポート用CSS ▼▼▼ */
+.scout-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-left: 5px solid #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.scout-card.rank-S { border-left-color: #fbbf24; background-color: #fffbeb; } /* Gold */
+.scout-card.rank-A { border-left-color: #f87171; background-color: #fef2f2; } /* Red */
+.scout-card.rank-B { border-left-color: #60a5fa; background-color: #eff6ff; } /* Blue */
+
+.scout-rank-badge {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: white;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+.rank-bg-S { background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+.rank-bg-A { background-color: #ef4444; }
+.rank-bg-B { background-color: #3b82f6; }
+.rank-bg-C { background-color: #10b981; }
+
+.scout-comment-box {
+    background-color: #f3f4f6;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #4b5563;
+    font-style: italic;
+    margin-top: 0.5rem;
+    border-left: 2px solid #6b7280;
+}
 
 /* 1. ヒーローセクションのアニメーション */
         @keyframes fadeInDown {
@@ -1338,6 +1383,31 @@
             transform: scale(1.05);
             filter: brightness(1.1);
         }
+
+/* ▼▼▼ オートコンプリート用CSS ▼▼▼ */
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.1s;
+}
+.suggestion-item:hover {
+    background-color: #eff6ff; /* ホバー時に薄い青色に */
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+.suggestion-match {
+    color: #2563eb;
+    font-weight: bold;
+}
+.suggestion-meta {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
 
 /* ▼▼▼ ラウンドスキップ新聞モーダル用のCSS (ここから修正) ▼▼▼ */
 .newspaper-modal-backdrop {
@@ -1582,99 +1652,6 @@
     font-size: 0.8rem;
 }
 /* ▲▲▲ ラウンドスキップ新聞モーダル用のCSS (ここまで修正) ▲▲▲ */
-
-/* ▼▼▼ 学校アーカイブモーダル用CSS ▼▼▼ */
-.archive-header {
-    border-left: 5px solid #e60012; /* 朝日新聞風の赤 */
-    padding-left: 15px;
-    margin-bottom: 20px;
-}
-.archive-school-name {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
-}
-.archive-pref {
-    font-size: 16px;
-    font-weight: normal;
-    color: #666;
-    margin-left: 10px;
-}
-.archive-section-title {
-    border-bottom: 2px solid #333;
-    font-size: 18px;
-    font-weight: bold;
-    padding-bottom: 5px;
-    margin-top: 30px;
-    margin-bottom: 15px;
-}
-.archive-sub-title {
-    background-color: #f0f0f0;
-    border-left: 4px solid #666;
-    padding: 8px 15px;
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 10px;
-}
-
-/* 成績概要 */
-.result-summary-box {
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-.result-summary-row {
-    display: flex;
-    border-bottom: 1px dashed #ccc;
-    padding: 8px 0;
-}
-.result-summary-row:last-child { border-bottom: none; }
-.result-summary-dt { font-weight: bold; width: 100px; color: #e60012; }
-.result-summary-dd { flex: 1; }
-
-/* 戦績テーブル */
-.record-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    margin-bottom: 20px;
-}
-.record-table th {
-    background-color: #e0e0e0;
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-    white-space: nowrap;
-}
-.record-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-}
-.record-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-.record-table .result-win { color: #e60012; font-weight: bold; }
-.record-table .result-lose { color: #3366cc; font-weight: bold; }
-.record-table .score-cell { font-weight: bold; font-size: 1.1em; }
-.record-table .opponent-cell { text-align: left; padding-left: 15px; }
-
-/* 直近成績リスト */
-.history-list {
-    list-style: none;
-    padding: 0;
-}
-.history-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-}
-.history-year { font-weight: bold; color: #555; width: 120px; }
-.history-rank { font-weight: bold; }
 
         /* ▼▼▼ トーナメント表用のCSS ▼▼▼ */
         .bracket-wrapper {
@@ -1931,7 +1908,135 @@
     flex-direction: column;
 }
 /* ▲▲▲ 置き換えはここまで ▲▲▲ */
+/* ▼▼▼ 検索結果リスト用CSS ▼▼▼ */
+.search-result-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.search-result-item {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.search-result-item:hover {
+    background-color: #f3f4f6;
+}
+.search-result-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #1f2937;
+}
+.search-result-info {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+.search-result-tag {
+    background-color: #dbeafe;
+    color: #1e40af;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    margin-left: 8px;
+}
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
+/* ▼▼▼ 学校アーカイブモーダル用CSS ▼▼▼ */
+.archive-header {
+    border-left: 5px solid #e60012; /* 朝日新聞風の赤 */
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+.archive-school-name {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+.archive-pref {
+    font-size: 16px;
+    font-weight: normal;
+    color: #666;
+    margin-left: 10px;
+}
+.archive-section-title {
+    border-bottom: 2px solid #333;
+    font-size: 18px;
+    font-weight: bold;
+    padding-bottom: 5px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+.archive-sub-title {
+    background-color: #f0f0f0;
+    border-left: 4px solid #666;
+    padding: 8px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+/* 成績概要 */
+.result-summary-box {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.result-summary-row {
+    display: flex;
+    border-bottom: 1px dashed #ccc;
+    padding: 8px 0;
+}
+.result-summary-row:last-child { border-bottom: none; }
+.result-summary-dt { font-weight: bold; width: 100px; color: #e60012; }
+.result-summary-dd { flex: 1; }
+
+/* 戦績テーブル */
+.record-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+.record-table th {
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+.record-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+.record-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.record-table .result-win { color: #e60012; font-weight: bold; }
+.record-table .result-lose { color: #3366cc; font-weight: bold; }
+.record-table .score-cell { font-weight: bold; font-size: 1.1em; }
+.record-table .opponent-cell { text-align: left; padding-left: 15px; }
+
+/* 直近成績リスト */
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+.history-year { font-weight: bold; color: #555; width: 120px; }
+.history-rank { font-weight: bold; }
+
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
 .match-schedule {
             font-family: 'Noto Sans JP', sans-serif;
@@ -2184,9 +2289,9 @@
 .batting-table .col-sub-type { min-width: 80px; }
 .batting-table .col-inning { min-width: 400px; }  /* ←お好みの幅に調整してください */
 /* ▲▲▲ ▲▲▲ */
-        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
 
-        .add-row-btn:hover { background-color: #d1d5db; }　
+        .add-row-btn:hover { background-color: #d1d5db; }　
 
 
 
@@ -2235,25 +2340,28 @@
             <h3 class="text-xl font-bold">設定</h3>
             <button id="settings-modal-close-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
         </div>
-<div class="flex justify-center items-center space-x-2 mb-6">
-    <div class="relative w-full max-w-md">
-        <input type="text" id="school-search-input" 
-            class="w-full p-3 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" 
-            placeholder="学校名を入力 (例: 静岡、283)..." required>
-        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        </div>
-    </div>
-    <button id="school-search-btn" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3">検索</button>
-</div>
-
 <div id="school-archive-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[300] font-sans">
     <div class="bg-white w-full max-w-5xl h-[95vh] overflow-y-auto rounded-lg shadow-2xl relative">
         <button id="school-archive-close-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
         
         <div id="school-archive-content" class="p-8">
-            </div>
+        </div>
     </div>
+</div>
+<div class="flex justify-center items-center space-x-2 mb-6">
+    <div class="relative w-full max-w-md">
+    <input type="text" id="school-search-input" 
+        class="w-full p-3 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500" 
+        placeholder="学校名、監督名、地域 (例: 浜松、西部)..." autocomplete="off">
+    
+    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+        <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    </div>
+
+    <ul id="search-suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto">
+        </ul>
+</div>
+<button id="school-search-btn" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3">検索</button>
 </div>
         <div class="space-y-4">
             <div class="flex items-center justify-between">
@@ -2365,6 +2473,136 @@
 <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
     📰 まとめ
     </button>
+
+<button id="show-contribution-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md ml-2">
+    🌌 貢献度・天体観測
+</button>
+
+<div id="contribution-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden items-center justify-center z-[250] font-sans">
+    <div class="bg-white w-full max-w-6xl h-[90vh] overflow-y-auto rounded-lg shadow-2xl flex flex-col">
+        
+        <div class="flex justify-between items-center p-4 border-b bg-purple-900 text-white sticky top-0 z-10">
+            <h3 class="text-xl font-bold flex items-center">
+                <span class="text-2xl mr-2">🌌</span> チーム貢献度シェア & 天体観測
+            </h3>
+            <button id="contribution-close-btn" class="text-gray-300 hover:text-white text-2xl font-bold">&times;</button>
+        </div>
+        
+        <div class="p-6 bg-gray-50 flex-grow">
+            
+            <div class="mb-6 flex justify-center relative max-w-md mx-auto">
+                <div class="relative w-full">
+                    <input type="text" id="contribution-team-input" class="w-full p-3 pl-10 text-lg font-bold text-gray-700 border-2 border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" placeholder="分析したいチーム名を入力..." autocomplete="off">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <ul id="contribution-suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto text-left"></ul>
+                </div>
+            </div>
+
+            <div id="contribution-content" class="hidden space-y-8">
+                
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-400">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="text-xl mr-2">💡</span> 指標の目安と評価基準
+                    </h4>
+                    <div id="rc-guidelines" class="space-y-3">
+                        </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">📊 得点創出シェア (Runs Created Share)</h4>
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <div class="w-full md:w-1/2 h-64">
+                            <canvas id="rc-pie-chart"></canvas>
+                        </div>
+                        <div class="w-full md:w-1/2">
+                            <p class="text-sm text-gray-600 mb-2">
+                                ※ <strong>RC (Runs Created)</strong>: その選手が「一人で何点生み出したか」を推定する指標。
+                            </p>
+                            <div id="rc-analysis-text" class="text-md font-bold text-purple-800 p-3 bg-purple-50 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">棒グラフ：RC/G（試合あたり貢献度）ランキング (Top 10)</h4>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="rc-bar-chart"></canvas>
+                    </div>
+                </div>
+                
+               <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
+    
+    <h4 class="text-lg font-bold text-gray-800 mb-4">⚾ 打者タイプ・マップ (OPS分析)</h4>
+    
+    <div style="height: 400px; width: 100%;">
+        <canvas id="stellar-scatter-chart"></canvas>
+    </div>
+    
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
+        
+        <div class="p-2 bg-red-50 border border-red-200 rounded"><span class="text-lg">💣 爆発型</span><br>長打力特化 (OPS高)</div>
+        
+        <div class="p-2 bg-blue-50 border border-blue-200 rounded"><span class="text-lg">🎯 理想型</span><br>打率・OPSのバランス型</div>
+        
+        <div class="p-2 bg-orange-50 border border-orange-200 rounded"><span class="text-lg">🏹 職人型</span><br>高打率・確実性型 (AVG高)</div>
+        
+        <div class="p-2 bg-gray-100 border border-gray-300 rounded"><span class="text-lg">📈 成長株</span><br>規定打席未到達/育成枠</div>
+    </div>
+    </div>
+</div>
+</div>
+      </div> 
+</div>
+<button id="show-rivalry-map-btn" class="bg-pink-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-pink-700 shadow-md ml-2">
+    💞 因縁相関図
+</button>
+
+<div id="rivalry-map-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden items-center justify-center z-[250] font-sans">
+    <div class="bg-white w-full max-w-6xl h-[90vh] overflow-y-auto rounded-lg shadow-2xl flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b bg-pink-900 text-white sticky top-0 z-10">
+            <h3 class="text-xl font-bold flex items-center">
+                <span class="text-2xl mr-2">🕸️</span> 県内勢力・因縁相関図
+            </h3>
+            <button id="rivalry-map-close-btn" class="text-gray-300 hover:text-white text-2xl font-bold">&times;</button>
+        </div>
+        <div class="p-6 bg-gray-50 flex-grow flex flex-col items-center">
+            <div id="mermaid-container" class="w-full overflow-x-auto flex justify-center bg-white p-4 rounded border shadow-inner min-h-[300px]">
+                </div>
+
+            <div class="w-full mt-6">
+                <h4 class="text-lg font-bold text-gray-700 mb-2 flex items-center">
+                    <span class="mr-2">📝</span> AI戦況記者による「勢力図」分析
+                </h4>
+                <div id="rivalry-analysis-content" class="bg-white p-5 rounded-lg border border-gray-300 text-gray-800 leading-relaxed shadow-sm">
+                    <p class="text-gray-400 text-center">（相関図の生成後に分析が始まります...）</p>
+                </div>
+            </div>
+            </div>
+    </div>
+</div>
+
+<button id="show-scout-report-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 shadow-md ml-2">
+    🕵️ スカウト評価
+</button>
+
+<div id="scout-report-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[250] font-sans">
+    <div class="bg-white w-full max-w-5xl h-[90vh] overflow-y-auto rounded-lg shadow-2xl flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b bg-indigo-900 text-white sticky top-0 z-10">
+            <h3 class="text-xl font-bold flex items-center">
+                <span class="text-2xl mr-2">🕵️</span> プロスカウト視察レポート
+            </h3>
+            <button id="scout-report-close-btn" class="text-gray-300 hover:text-white text-2xl font-bold">&times;</button>
+        </div>
+        <div id="scout-report-content" class="p-6 bg-gray-100 flex-grow">
+            </div>
+    </div>
+</div>
+
+<button id="show-lineup-analysis-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 shadow-md ml-2">
+    ⚾ 適正打順分析
+</button>
                         
 
    <button id="open-settings-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 shadow-md">⚙️ 設定</button>
@@ -3210,6 +3448,8 @@ const skipSpringMainBtn = document.getElementById('skip-spring-main-btn');
     let articleForRegeneration = null; 
     let soundEffects = {};
 let currentBlock = 'A';
+let activeAnalysisMode = 'CONTRIBUTION';
+
     const UNDERDOG_TEAMS = ["虎府島総合", "浜松特支", "川根", "伊豆総合", "湖西", "小山", "新居", "熱海", "伊豆中央", "島田", "島田工業", "裾野"];
     const POWERHOUSE_TEAMS = ["283学園", "常葉菊川", "静岡", "掛川西", "静岡商業", "聖隷クリストファー", "765総合高校"];
 　　const POWERHOUSE_REVIVAL_TEAMS = ["浜松商業", "静清", "飛龍"];
@@ -3447,7 +3687,7 @@ const TEAM_ROSTER_MASTER = {
         deviation: 105,
         best: "甲子園3回戦",
         last: "県大会ベスト4",
-        info: "創立93年、甲子園出場13回。そしてスポーツに力を入れながらも勉学でも優秀。その輝かしい歴史、実績は地元民のみならず県民の誇り、また憧れでもあり、老若男女問わず地元民に愛される伝統校である。近年は他校の私立やナムコグループとの選手獲得競争に一つ遅れをとっており、甲子園からは遠ざかっているが、歴史は厚く、私立並みの設備とOBからの厚い支援、そして、なによりも代矢東の試合がある際には球場に多くのOBが駆け付け、大応援団を結成し、相手を圧倒する。近年はナムコグループが県内を牛耳りかけているため、公立の希望の星としてメディアに取り上げられることも多い。県内を席巻するナムコグループへの『公立最後の砦』として、その存在は象徴的な意味を持ち始めた。名将・高島は伝統と現代野球の融合に腐心する。これは単なる高校野球ではない。地域の誇りと未来をかけた代理戦争なのだ。",
+        info: "創立93年、甲子園出場13回。そしてスポーツに力を入れながらも勉学でも優秀。その輝かしい歴史、実績は地元民のみならず県民の誇り、また憧れでもあり、老若男女問わず地元民に愛される伝統校である。近年は他校の私立やナムコグループとの選手獲得競争に一つ遅れをとっており、甲子園からは遠ざかっているが、歴史は厚く、私立並みの設備とOBからの厚い支援、そして、なによりも静高の試合がある際には球場に多くのOBが駆け付け、大応援団を結成し、相手を圧倒する。近年はナムコグループが県内を牛耳りかけているため、公立の希望の星としてメディアに取り上げられることも多い。県内を席巻するナムコグループへの『公立最後の砦』として、その存在は象徴的な意味を持ち始めた。名将・高島は伝統と現代野球の融合に腐心する。これは単なる高校野球ではない。地域の誇りと未来をかけた代理戦争なのだ。",
         popularity: true,
         coach: { name: '高島 礼', style: '伝統野球', experience: '名将' }
     },
@@ -4562,8 +4802,7 @@ AIは以下の「球速帯」が持つ意味を、**投手の左右**と**学校
                 { name: "一ノ瀬", year: 3, position: "サード", desc: "チーム一の打球の速さを誇る2番打者。" },
                 { name: "土門", year: 3, position: "ショート", desc: "ミスの少ない堅実な守備で試合のリズムを作る内野の要。" },
                 { name: "染岡", year: 3, position: "レフト", desc: "監督も絶大な信頼を寄せる大砲。気持ちの強さも魅力。" },
-                { name: "風丸", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段
-にアップ。" },
+                { name: "風丸", year: 3, position: "センター", desc: "サイクルヒット達成経験もあるリードオフマン。ミート力が格段にアップ。" },
                 { name: "栗松", year: 2, position: "ライト", desc: "力強いスイングから放たれる長打が魅力の2年生。" },
                 { name: "鬼道", year: 3, position: "ピッチャー", desc: "キレのある縦スライダーと内角への直球が魅力の右腕。" },
                 { name: "松野", year: 2, position: "ピッチャー", desc: "MAX144kmのストレートとカットボールが武器の2年生。奪三振能力が高い。" }
@@ -6674,79 +6913,14 @@ function renderTeamStatsModal(teamName) {
 
 
 /**
- * [NEW] チームの直近N試合の履歴を取得する
- * @param {string} teamName - チーム名
- * @param {number} limit - 取得数 (デフォルト5)
- * @returns {Array} - フォーマット済みの試合データ配列
- */
-function getRecentMatchesForTeam(teamName, limit = 5) {
-    const history = [];
-    const state = tournamentState;
-    const currentYear = state.tournamentYear;
-
-    // 1. データソースの定義 (優先度順: 現在 > 春 > 秋)
-    // ※実際の時系列は 秋(前年) -> 春 -> 夏 ですが、表示上は新しい順に並べたいのでこの順序で走査します
-    const sources = [
-        { label: tournamentNameMap[state.currentTournament], year: currentYear, matches: state.matches, weight: 300 },
-        { label: '春季大会', year: currentYear, matches: state.springData?.allMatches, weight: 200 },
-        { label: '秋季大会', year: currentYear - 1, matches: state.autumnData?.allMatches, weight: 100 }
-    ];
-
-    sources.forEach(source => {
-        if (!source.matches) return;
-        
-        Object.values(source.matches).forEach(match => {
-            // 勝敗が決まっており、かつ対象チームが関わっている試合
-            if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
-                
-                // BYE(不戦勝)は除外する
-                if (match.team1 === '(BYE)' || match.team2 === '(BYE)') return;
-
-                const isTeam1 = match.team1 === teamName;
-                const opponent = isTeam1 ? match.team2 : match.team1;
-                const myScore = isTeam1 ? match.score1 : match.score2;
-                const oppScore = isTeam1 ? match.score2 : match.score1;
-                const isWin = match.winner === teamName;
-                
-                // ラウンド名の数値化 (ソート用)
-                let roundVal = 0;
-                if (match.id.startsWith('F-')) roundVal = 100; // 決勝
-                else if (match.id.includes('-R')) {
-                    roundVal = parseInt(match.id.split('-R')[1].split('-')[0]);
-                }
-
-                // 試合オブジェクトを作成
-                history.push({
-                    matchId: match.id,
-                    tournamentName: source.label,
-                    year: source.year,
-                    roundName: getRoundNameFromMatchId(match.id),
-                    opponent: opponent,
-                    scoreResult: `${myScore}-${oppScore}`,
-                    result: isWin ? '○' : '●',
-                    isWin: isWin,
-                    // ソート用スコア: (大会の重み * 1000) + ラウンド番号
-                    sortKey: (source.weight * 1000) + roundVal
-                });
-            }
-        });
-    });
-
-    // 2. ソート (新しい順 = sortKeyの降順)
-    history.sort((a, b) => b.sortKey - a.sortKey);
-
-    // 3. 最新N件を返す
-    return history.slice(0, limit);
-}
-
-/**
  * チームステータスモーダルを表示する
- * (★直近5試合の勝敗履歴表示を追加)
+ * (★「今大会成績」欄にチーム防御率を追加した修正版)
  * @param {string} teamName - クリックされたチーム名
  */
 function showTeamStatusModal(teamName) {
-    // 表示前に過去成績をバックフィル
+    // ▼▼▼ 表示前に過去成績をバックフィル (CPUチーム用) ▼▼▼
     backfillCpuStats(teamName);
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     const teamRecord = tournamentState.teamRecords[teamName];
     if (!teamRecord) return;
@@ -6764,7 +6938,7 @@ function showTeamStatusModal(teamName) {
     const statsEl = document.getElementById('status-modal-team-stats');
     const careerStatsEl = document.getElementById('status-modal-career-stats'); 
 
-    // ★ 既存のチャートがあれば削除
+    // ★ 既存のチャートがあれば削除（再描画のため）
     const existingChart = Chart.getChart('team-radar-chart');
     if (existingChart) {
         existingChart.destroy();
@@ -6778,11 +6952,7 @@ function showTeamStatusModal(teamName) {
         homepageLink.removeAttribute('target');
         homepageLink.style.cursor = 'pointer';
     }
-    
-    // 最高戦績
     bestEl.textContent = teamRecord.best ? formatRecordToString(teamRecord.best) : 'まだありません';
-    
-    // 大会履歴 (従来の表示)
     historyEl.innerHTML = '';
     if (teamRecord.history && teamRecord.history.length > 0) {
         teamRecord.history.slice(0, 2).forEach(rec => {
@@ -6793,8 +6963,6 @@ function showTeamStatusModal(teamName) {
     } else {
         historyEl.innerHTML = '<p>まだありません</p>';
     }
-    
-    // 称号
     traitsEl.innerHTML = '';
     if (teamRecord.teamTraits && teamRecord.teamTraits.length > 0) {
         teamRecord.teamTraits.forEach(traitId => {
@@ -6809,16 +6977,12 @@ function showTeamStatusModal(teamName) {
     } else {
         traitsEl.innerHTML = '<p class="text-gray-500 text-sm">なし</p>';
     }
-
-    // 監督
     const teamMasterData = TEAM_DATA[teamName];
     if (teamMasterData && teamMasterData.coach) {
         coachEl.textContent = `${teamMasterData.coach.name} (${teamMasterData.coach.experience} / ${teamMasterData.coach.style})`;
     } else {
         coachEl.textContent = '情報なし';
     }
-
-    // ホームページリンク
     if (homepageLinkContainer && homepageLink) {
         if (teamName === "283学園") {
             homepageLink.setAttribute('data-target', 'homepage-modal'); 
@@ -6828,18 +6992,20 @@ function showTeamStatusModal(teamName) {
         }
     }
 
-    // --- 3. 今大会のチーム防御率計算 ---
+    // --- ★★★ 今大会の「チーム防御率」を計算 ★★★ ---
     let tourneyIP = 0;
     let tourneyER = 0;
     const currentTournamentKey = tournamentState.currentTournament;
+
     if (teamRecord.playerStats && teamRecord.playerStats.pitching) {
         Object.values(teamRecord.playerStats.pitching).forEach(p => {
             if (p.gamelogs) {
                 p.gamelogs.forEach(log => {
+                    // ログが「現在の大会」のものか判定
                     const logRound = log.round || '';
                     let isCurrent = false;
                     if (currentTournamentKey === 'summer') isCurrent = logRound.includes('回戦') || logRound.includes('決勝');
-                    else if (currentTournamentKey === 'summer_koshien') isCurrent = true;
+                    else if (currentTournamentKey === 'summer_koshien') isCurrent = true; // 甲子園モード
                     else if (currentTournamentKey === 'autumn') isCurrent = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                     else if (currentTournamentKey === 'spring') isCurrent = logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                     
@@ -6851,20 +7017,33 @@ function showTeamStatusModal(teamName) {
             }
         });
     }
+    // 防御率計算 (イニング0の場合はハイフン)
     const tourneyERA = (tourneyIP > 0) ? ((tourneyER * 9) / tourneyIP).toFixed(2) : "----";
+    // --- ★★★ 計算ここまで ★★★ ---
 
-    // --- 4. チームレーダーチャート ---
+
+    // --- 3. チームレーダーチャートの生成 ---
     const stats = teamRecord.tournamentStats || { h: 0, ab: 0, hr: 0, rbi: 0, sb: 0, so: 0 };
+    // チャート用には、先ほど計算した今大会のERAを使用
     const eraNum = (tourneyERA === "----") ? 9.00 : parseFloat(tourneyERA);
+
     const avg = (stats.ab > 0) ? (stats.h / stats.ab) : 0;
     const power = (stats.hr || 0) * 10;
     const speed = (stats.sb || 0) * 10;
-    const defense = (eraNum < 6) ? (6 - eraNum) / 5 * 100 : (eraNum >= 6 ? 0 : 50);
+    const defense = (eraNum < 6) ? (6 - eraNum) / 5 * 100 : (eraNum >= 6 ? 0 : 50); // 防御率が良いほど高得点
     const so = (stats.so || 0);
     const bb = (stats.bb || 0) + (stats.hbp || 0);
     const eye = (bb > 0) ? (bb / (bb + so)) * 100 : 30;
+
     const normalize = (value) => Math.max(0, Math.min(100, Math.round(value)));
-    const chartData = [normalize(avg * 500 - 100), normalize(power), normalize(speed), normalize(defense), normalize(eye)];
+
+    const chartData = [
+        normalize(avg * 500 - 100), // .200=0, .400=100
+        normalize(power),
+        normalize(speed),
+        normalize(defense),
+        normalize(eye)
+    ];
     
     const ctx = document.getElementById('team-radar-chart')?.getContext('2d');
     if (ctx) {
@@ -6891,21 +7070,35 @@ function showTeamStatusModal(teamName) {
                     r: {
                         angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
                         grid: { color: 'rgba(0, 0, 0, 0.1)' },
-                        pointLabels: { font: { size: 12, weight: 'bold' }, color: '#333' },
-                        ticks: { backdropColor: 'white', color: '#777', stepSize: 25, font: { size: 10 } },
-                        min: 0, max: 100
+                        pointLabels: {
+                            font: { size: 12, weight: 'bold' },
+                            color: '#333'
+                        },
+                        ticks: {
+                            backdropColor: 'white',
+                            color: '#777',
+                            stepSize: 25,
+                            font: { size: 10 }
+                        },
+                        min: 0,
+                        max: 100
                     }
                 },
-                plugins: { legend: { display: false } }
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
             }
         });
     }
 
-    // --- 5. テキスト成績の表示 ---
+    // --- 4. テキスト成績の表示 (★ここに防御率を追加) ---
     if (statsEl) {
         if (stats && (stats.ab > 0 || stats.games > 0 || stats.sb > 0)) {
             const avgStr = (stats.ab > 0) ? (stats.h / stats.ab).toFixed(3) : ".---";
             const sbCount = stats.sb || 0;
+            // ★★★ 修正箇所：打撃成績の後ろに防御率を表示 ★★★
             statsEl.innerHTML = `打率 <span class="font-bold text-xl">${avgStr}</span> (${stats.ab}打数 ${stats.h}安打) ${stats.hr}本塁打 ${stats.rbi}打点 ${sbCount}盗塁<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
         } else if (stats) {
             statsEl.innerHTML = `(今大会 ${stats.ab}打数 ${stats.h}安打)<br><span class="text-blue-700">防御率 ${tourneyERA}</span>`;
@@ -6914,6 +7107,7 @@ function showTeamStatusModal(teamName) {
         }
     }
     
+    // --- 5. 通算成績 (Career) の表示 ---
     if (careerStatsEl) {
         const careerBattingStats = teamRecord.playerStats?.batting;
         let totalCareerSb = 0, totalCareerHr = 0;
@@ -6924,56 +7118,19 @@ function showTeamStatusModal(teamName) {
                 totalCareerHr += stats.hr || 0;
             }
         }
+        // 通算防御率は「全期間」なので、calculateTeamPitchingStats (全期間集計) を使うことも可能だが、
+        // ここでは打撃指標のみに戻しておく（ご要望通り、今大会成績の欄に防御率を出したので）
         careerStatsEl.textContent = `通算 ${totalCareerHr} 本塁打 / ${totalCareerSb} 盗塁`;
     }
-
-    // --- ★★★ 直近試合結果の表示 (新規追加部分) ★★★ ---
-    const recentMatchesContainer = document.getElementById('status-modal-recent-matches');
     
-    // コンテナがまだなければ作成して追加する
-    let recentMatchesListEl = document.getElementById('status-modal-recent-matches-list');
-    if (!recentMatchesListEl) {
-        const containerDiv = document.createElement('div');
-        containerDiv.id = 'status-modal-recent-matches';
-        containerDiv.className = 'mt-4 border-t pt-3';
-        containerDiv.innerHTML = `
-            <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-2">直近の試合結果 (5試合)</h4>
-            <ul id="status-modal-recent-matches-list" class="space-y-2 text-sm"></ul>
-        `;
-        // 監督情報の下あたりに挿入
-        if(coachEl && coachEl.parentNode) {
-            coachEl.parentNode.parentNode.insertBefore(containerDiv, homepageLinkContainer);
-        }
-        recentMatchesListEl = containerDiv.querySelector('ul');
-    }
-
-    // リストの中身を生成
-    const recentMatches = getRecentMatchesForTeam(teamName, 5);
-    
-    if (recentMatches.length > 0) {
-        recentMatchesListEl.innerHTML = recentMatches.map(m => {
-            const resultClass = m.isWin ? 'text-blue-600 font-bold' : 'text-red-600 font-bold';
-            const scoreClass = m.isWin ? 'font-bold' : '';
-            return `
-                <li class="flex justify-between items-center border-b border-gray-100 pb-1">
-                    <div class="flex flex-col">
-                        <span class="text-xs text-gray-500">${m.year}${m.tournamentName} ${m.roundName}</span>
-                        <span>vs ${m.opponent}</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="${scoreClass} mr-2">${m.scoreResult}</span>
-                        <span class="${resultClass}">${m.result}</span>
-                    </div>
-                </li>
-            `;
-        }).join('');
-    } else {
-        recentMatchesListEl.innerHTML = '<li class="text-gray-400 text-center text-xs">試合記録がありません</li>';
-    }
-
     // --- 6. モーダルを表示 ---
     modal.classList.remove('hidden');
 }
+
+// ▲▲▲ 置き換えここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲ 
+// ▲▲▲ 置き換えここまで ▲▲▲
+// ▲▲▲ 置き換えここまで ▲▲▲
 
 // ▲▲▲ 置き換えここまで ▲▲▲
   // --- Custom Alert/Confirm ---
@@ -7087,6 +7244,235 @@ function simulateKoshien(teamRank) {
         return null; // どこにも見つからなかった場合
     }
 // ▲▲▲ 置き換えここまで ▲▲▲
+
+// ▼▼▼ スカウト機能ロジック (厳格化・人数制限版) ▼▼▼
+
+// スカウトボタンのイベント
+document.getElementById('show-scout-report-btn').addEventListener('click', () => {
+    generateScoutReport();
+    document.getElementById('scout-report-modal').classList.remove('hidden');
+    document.getElementById('scout-report-modal').classList.add('flex');
+});
+
+document.getElementById('scout-report-close-btn').addEventListener('click', () => {
+    document.getElementById('scout-report-modal').classList.add('hidden');
+    document.getElementById('scout-report-modal').classList.remove('flex');
+});
+
+/**
+ * 全チームの選手をスキャンし、有力選手を厳選して表示する
+ */
+function generateScoutReport() {
+    const container = document.getElementById('scout-report-content');
+    container.innerHTML = '<div class="loader">スカウトが有望株を厳選中...</div>';
+
+    const batterCandidates = [];
+    const pitcherCandidates = [];
+
+    // 1. 全チームを走査して候補を収集
+    Object.keys(tournamentState.teamRecords).forEach(teamName => {
+        const record = tournamentState.teamRecords[teamName];
+        if (!record.playerStats) return;
+
+        // 打者評価
+        if (record.playerStats.batting) {
+            Object.entries(record.playerStats.batting).forEach(([name, stats]) => {
+                // 【修正】最低ラインを15打数に引き上げ
+                if (stats.ab >= 15) {
+                    const grade = calculateBatterGrade(stats);
+                    // 【修正】Cランク以下は足切り（Bランク以上のみ候補へ）
+                    // ※ただしSランクが少なすぎる場合に備えて、一旦全員計算して後でソート・カットする方式に変更
+                    if (grade.rankValue >= 3) { 
+                        batterCandidates.push({
+                            type: 'batter', name: name, team: teamName,
+                            rank: grade.rank, rankValue: grade.rankValue,
+                            stats: stats, comment: grade.comment,
+                            sortKey: calculateOps(stats) // OPSでソート用
+                        });
+                    }
+                }
+            });
+        }
+
+        // 投手評価
+        if (record.playerStats.pitching) {
+            Object.entries(record.playerStats.pitching).forEach(([name, stats]) => {
+                const career = stats.career;
+                // 【修正】最低ラインを10回に引き上げ
+                if (career && career.ip >= 10) {
+                    const grade = calculatePitcherGrade(career);
+                    if (grade.rankValue >= 3) {
+                        pitcherCandidates.push({
+                            type: 'pitcher', name: name, team: teamName,
+                            rank: grade.rank, rankValue: grade.rankValue,
+                            stats: career, comment: grade.comment,
+                            sortKey: ((career.er * 9) / career.ip) * -1 // 防御率が低いほど偉い（降順ソート用にマイナス化）
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    // 2. ソート（ランクが高い順 > 成績が良い順）
+    batterCandidates.sort((a, b) => {
+        if (b.rankValue !== a.rankValue) return b.rankValue - a.rankValue;
+        return parseFloat(b.sortKey) - parseFloat(a.sortKey);
+    });
+    
+    pitcherCandidates.sort((a, b) => {
+        if (b.rankValue !== a.rankValue) return b.rankValue - a.rankValue;
+        return parseFloat(b.sortKey) - parseFloat(a.sortKey);
+    });
+
+    // 3. 【修正】表示人数を制限（各トップ10名まで）
+    const topBatters = batterCandidates.slice(0, 10);
+    const topPitchers = pitcherCandidates.slice(0, 10);
+
+    // 4. HTML生成
+    let html = '';
+    
+    if (topBatters.length === 0 && topPitchers.length === 0) {
+        html = `
+            <div class="text-center py-10">
+                <p class="text-gray-500 text-xl">「まだ眼鏡に適う選手はおらんようだな...」</p>
+                <p class="text-sm text-gray-400 mt-2">※試合数が進むと候補が現れます</p>
+            </div>`;
+    } else {
+        // ドラフト1位候補 (Sランク) がいれば特別表示
+        const sRankBatters = topBatters.filter(c => c.rank === 'S');
+        const sRankPitchers = topPitchers.filter(c => c.rank === 'S');
+        const sRanks = [...sRankBatters, ...sRankPitchers];
+
+        if (sRanks.length > 0) {
+            html += `<div class="mb-8 border-4 border-yellow-400 bg-yellow-50 p-4 rounded-lg">
+                <h4 class="text-2xl font-bold text-amber-700 mb-4 text-center">👑 今大会の超目玉 (ドラフト1位候補)</h4>
+                ${renderCandidateList(sRanks)}
+            </div>`;
+        }
+
+        // 野手リスト
+        if (topBatters.length > 0) {
+            html += `<h4 class="text-xl font-bold text-blue-800 mb-2 border-b-2 border-blue-800 pb-1">野手 注目選手 (TOP ${topBatters.length})</h4>`;
+            html += renderCandidateList(topBatters);
+        }
+
+        // 投手リスト
+        if (topPitchers.length > 0) {
+            html += `<h4 class="text-xl font-bold text-red-800 mb-2 mt-8 border-b-2 border-red-800 pb-1">投手 注目選手 (TOP ${topPitchers.length})</h4>`;
+            html += renderCandidateList(topPitchers);
+        }
+    }
+
+    container.innerHTML = html;
+}
+
+/**
+ * 候補者リストのHTMLを生成するヘルパー
+ */
+function renderCandidateList(list) {
+    return list.map(c => {
+        let statsStr = '';
+        let highlightClass = '';
+        
+        if (c.type === 'batter') {
+            const avg = (c.stats.h / c.stats.ab).toFixed(3);
+            const ops = calculateOps(c.stats);
+            statsStr = `打率${avg} / ${c.stats.hr}本 / ${c.stats.sb}盗 / ${c.stats.rbi}打点 / OPS ${ops}`;
+            // Sランク級の成績なら文字色を変える
+            if (c.rank === 'S') highlightClass = 'text-amber-700 font-bold';
+        } else {
+            const era = c.stats.er > 0 ? ((c.stats.er * 9) / c.stats.ip).toFixed(2) : "0.00";
+            const k9 = ((c.stats.so * 9) / c.stats.ip).toFixed(2);
+            statsStr = `防御率${era} / ${c.stats.w}勝 / 奪三振${c.stats.so} (K/9: ${k9})`;
+            if (c.rank === 'S') highlightClass = 'text-amber-700 font-bold';
+        }
+
+        return `
+        <div class="scout-card rank-${c.rank} mb-2">
+            <div class="flex items-center w-full">
+                <div class="scout-rank-badge rank-bg-${c.rank}">${c.rank}</div>
+                <div class="flex-grow">
+                    <div class="flex justify-between items-baseline">
+                        <div class="flex items-baseline gap-2">
+                            <h5 class="text-lg font-bold text-gray-900">${c.name}</h5>
+                            <span class="text-xs text-white bg-gray-500 px-2 py-0.5 rounded">${c.team}</span>
+                        </div>
+                    </div>
+                    <div class="text-sm font-mono mt-1 ${highlightClass}">${statsStr}</div>
+                    <div class="scout-comment-box text-xs mt-1">📝 ${c.comment}</div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
+/**
+ * 打者のランク判定ロジック (厳格化)
+ */
+function calculateBatterGrade(stats) {
+    const avg = stats.h / stats.ab;
+    const ops = parseFloat(calculateOps(stats));
+    let rank = 'C';
+    let rankValue = 3;
+    let comment = "一定の力はある。将来性に期待。";
+
+    // Sランク: 圧倒的な成績 (5割超え、または本塁打量産)
+    if (stats.hr >= 5 || (avg >= 0.600 && stats.hr >= 3) || ops >= 1.800) {
+        rank = 'S'; rankValue = 6;
+        comment = "【ドラ1確定】高校生離れしたスイング。プロでも即中軸を打てる逸材。";
+    } 
+    // Aランク: 超高校級 (4割5分超え、OPS 1.4以上)
+    else if (stats.hr >= 3 || avg >= 0.500 || (stats.sb >= 10 && avg >= 0.400) || ops >= 1.400) {
+        rank = 'A'; rankValue = 5;
+        comment = "【上位指名】走攻守揃った好素材。即戦力として期待できる。";
+    } 
+    // Bランク: 強豪校の主力レベル (4割超え)
+    else if (avg >= 0.400 || stats.hr >= 2 || (stats.sb >= 6 && avg >= 0.300)) {
+        rank = 'B'; rankValue = 4;
+        comment = "【注目】キラリと光る武器がある。下位指名リストに入るか。";
+    } 
+    
+    return { rank, rankValue, comment };
+}
+
+/**
+ * 投手のランク判定ロジック (厳格化)
+ */
+function calculatePitcherGrade(stats) {
+    const era = (stats.er * 9) / stats.ip;
+    const k9 = (stats.so * 9) / stats.ip;
+    let rank = 'C';
+    let rankValue = 3;
+    let comment = "制球力に課題を残すが、球威はある。";
+
+    // Sランク: 支配的な投球 (防御率0点台 & 奪三振率12.0以上)
+    if ((era <= 1.00 && k9 >= 12.0 && stats.ip >= 15) || (stats.so >= 50)) {
+        rank = 'S'; rankValue = 6;
+        comment = "【ドラ1確定】完成度はプロ顔負け。直球の回転数が素晴らしく、即ローテ入り確実。";
+    } 
+    // Aランク: エース級 (防御率2.00以下 & 奪三振率9.0以上)
+    else if ((era <= 2.00 && k9 >= 9.0) || (stats.w >= 5)) {
+        rank = 'A'; rankValue = 5;
+        comment = "【上位指名】ピンチに動じないマウンド度胸。変化球のキレも一級品。";
+    } 
+    // Bランク: 好投手 (防御率3.00以下)
+    else if (era <= 3.00 || k9 >= 8.0) {
+        rank = 'B'; rankValue = 4;
+        comment = "【注目】素材型の投手としてリストアップ。体が出来上がれば化ける。";
+    } 
+    
+    return { rank, rankValue, comment };
+}
+
+// OPS計算ヘルパー (変更なし)
+function calculateOps(stats) {
+    const obp = (stats.ab + stats.bb + stats.hbp + stats.sf) > 0 ? (stats.h + stats.bb + stats.hbp) / (stats.ab + stats.bb + stats.hbp + stats.sf) : 0;
+    const slg = stats.ab > 0 ? (stats.tb || stats.h) / stats.ab : 0; 
+    return (obp + slg).toFixed(3);
+}
+// ▲▲▲ スカウト機能ここまで ▲▲▲
 
 /**
  * チームの今大会の勝ち上がりを「〇〇回戦 vs △△」のように要約するヘルパー関数
@@ -8923,19 +9309,18 @@ function ensureCpuRoster(teamName) {
 }
 
 /**
- * チームの過去試合を埋める際、確定済みのロスター（オーダー）を使って成績を割り振る
- * (★手動入力済みの試合を二重計上しないようガード処理を追加した修正版)
+ * 【修正版】チームの過去試合（スキップ含む）の成績を自動生成する
+ * ★四球(bb)や塁打数(tb)もシミュレートし、分析グラフを面白くする
  */
 function backfillCpuStats(teamName) {
     const record = tournamentState.teamRecords[teamName];
     if (!record) return;
 
-    // 1. ここで既存のロスターを取得（なければ生成して固定）
+    // ロスター取得（なければ生成）
     const roster = ensureCpuRoster(teamName);
     
-    // エースを特定 (背番号1)
-    let acePitcher = roster.find(p => p.number === 1);
-    if (!acePitcher) acePitcher = roster.find(p => p.pos === '投') || roster[0];
+    // エース特定
+    let acePitcher = roster.find(p => p.number === 1) || roster.find(p => p.pos === '投') || roster[0];
 
     const allMatches = { 
         ...tournamentState.matches, 
@@ -8946,52 +9331,32 @@ function backfillCpuStats(teamName) {
     Object.keys(allMatches).forEach(matchId => {
         const match = allMatches[matchId];
         
-        // このチームが関わっていて、かつ勝敗が決まっている試合のみ対象
+        // このチームが関わっていて、かつ勝敗が決まっている試合のみ
         if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
 
-            // ▼▼▼ 【修正】二重計上防止ガード ▼▼▼
-            
-            // Check A: 手動入力データ（details）が存在するか？
-            // 詳細入力がある場合、既に成績は正確に記録されているはずなので、自動生成はスキップする
+            // ★二重計上防止（詳細入力がある場合はスキップ）
             if (match.details && (match.details.batting?.team1?.length > 0 || match.details.batting?.team2?.length > 0)) {
                 return; 
             }
 
-            // Check B: 既にこの試合の成績ログが（誰か一人でも）存在するか？
-            // (エース以外の投手が投げた場合や、部分的な記録がある場合の重複防止)
+            // ★二重計上防止（既にログがある場合はスキップ）
             let alreadyHasStats = false;
-            
-            // 投手ログをチェック
-            if (record.playerStats?.pitching) {
-                for (const pName in record.playerStats.pitching) {
-                    if (record.playerStats.pitching[pName].gamelogs?.some(l => l.matchId === matchId)) {
-                        alreadyHasStats = true;
-                        break;
-                    }
-                }
-            }
-            // 打者ログをチェック
-            if (!alreadyHasStats && record.playerStats?.batting) {
+            if (record.playerStats?.batting) {
                 for (const pName in record.playerStats.batting) {
                     if (record.playerStats.batting[pName].gamelogs?.some(l => l.matchId === matchId)) {
-                        alreadyHasStats = true;
-                        break;
+                        alreadyHasStats = true; break;
                     }
                 }
             }
+            if (alreadyHasStats) return;
 
-            if (alreadyHasStats) {
-                return; // 既に成績があるので何もしない
-            }
-            // ▲▲▲ 修正ここまで ▲▲▲
-
-            
-            // --- 以下、自動生成ロジック (変更なし) ---
-            
+            // --- 自動生成開始 ---
             if (!record.playerStats) record.playerStats = { batting: {}, pitching: {} };
             if (!record.tournamentStats) {
                 record.tournamentStats = { pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, sb: 0, bb: 0, hbp: 0, sf: 0, tb: 0, r: 0, so: 0 };
             }
+            
+            // 投手用コンテナ初期化
             if (!record.playerStats.pitching[acePitcher.name]) {
                 record.playerStats.pitching[acePitcher.name] = { 
                     career: { games:0, w:0, l:0, ip:0, so:0, er:0, h:0, bb:0 }, 
@@ -8999,24 +9364,23 @@ function backfillCpuStats(teamName) {
                 };
             }
 
-            const isCurrentTournamentMatch = !!tournamentState.matches[matchId];
             const isWin = match.winner === teamName;
             const oppScore = parseInt(match.team1 === teamName ? match.score2 : match.score1) || 0;
             const myScore = parseInt(match.team1 === teamName ? match.score1 : match.score2) || 0;
             const opponentName = match.team1 === teamName ? match.team2 : match.team1;
             const roundName = getRoundNameFromMatchId(matchId);
 
-            // A. 投手成績
+            // A. 投手成績シミュレーション
             const ip = 9;
-            const er = Math.max(0, oppScore - Math.floor(Math.random() * 2));
-            const hits = Math.max(3, oppScore * 2 + Math.floor(Math.random() * 4));
+            const er = Math.max(0, oppScore - Math.floor(Math.random() * 2)); // 自責点は失点より少し少ない
+            const hitsAllowed = Math.max(3, oppScore * 2 + Math.floor(Math.random() * 4));
             const so = Math.floor(Math.random() * 8) + 2;
-            const bb = Math.floor(Math.random() * 5);
+            const bbAllowed = Math.floor(Math.random() * 5);
             
             const pLog = {
                 matchId: matchId, date: match.schedule?.date || '日付不明', round: roundName,
                 opponent: opponentName, opponentRank: calculateRank(opponentName, tournamentState),
-                result: isWin ? 'W' : 'L', ip: ip, h: hits, bb: bb, so: so, r: oppScore, er: er
+                result: isWin ? 'W' : 'L', ip: ip, h: hitsAllowed, bb: bbAllowed, so: so, r: oppScore, er: er
             };
             
             record.playerStats.pitching[acePitcher.name].gamelogs.push(pLog);
@@ -9026,63 +9390,92 @@ function backfillCpuStats(teamName) {
             pCareer.ip = (pCareer.ip || 0) + ip;
             pCareer.er = (pCareer.er || 0) + er;
             pCareer.so = (pCareer.so || 0) + so;
-            pCareer.h = (pCareer.h || 0) + hits;
-            pCareer.bb = (pCareer.bb || 0) + bb;
+            pCareer.h = (pCareer.h || 0) + hitsAllowed;
+            pCareer.bb = (pCareer.bb || 0) + bbAllowed;
 
-            // B. 打撃成績
+            // B. 打撃成績シミュレーション (★ここを強化)
             roster.forEach(batter => {
-                if (batter.pos === '投') return;
+                if (batter.pos === '投') return; // 投手は省略(簡易化)
                 
                 if (!record.playerStats.batting[batter.name]) {
-                    record.playerStats.batting[batter.name] = { games:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, gamelogs: [] };
+                    record.playerStats.batting[batter.name] = { games:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, bb:0, tb:0, gamelogs: [] };
                 }
                 
                 const orderNum = parseInt(batter.order);
                 const isCleanup = orderNum >= 3 && orderNum <= 5;
-                const baseHitProb = isWin ? 0.35 : 0.20;
-                const hitProb = isCleanup ? baseHitProb + 0.1 : baseHitProb;
+                const isLeadOff = orderNum === 1;
+
+                // 打率設定 (勝利チームやクリーンナップは打つ)
+                let hitProb = isWin ? 0.30 : 0.20;
+                if (isCleanup) hitProb += 0.05;
+
+                // ★四球率設定
+                let walkProb = 0.08; 
+                if (isLeadOff || isCleanup) walkProb += 0.05; // 1番とクリーンナップは選ぶ
+
+                const pa = Math.floor(Math.random() * 2) + 3; // 3~5打席
+                let h = 0, bb = 0, hr = 0, tb = 0, rbi = 0, sb = 0;
+
+                for(let k=0; k < pa; k++) {
+                    const rand = Math.random();
+                    if (rand < hitProb) {
+                        // ヒットの内訳抽選 (単打:70%, 二塁打:20%, 三塁打:2%, 本塁打:8%)
+                        h++;
+                        const hitType = Math.random();
+                        if (hitType < 0.70) { tb += 1; } // Single
+                        else if (hitType < 0.90) { tb += 2; } // Double
+                        else if (hitType < 0.92) { tb += 3; } // Triple
+                        else { tb += 4; hr++; } // HR
+                    } else if (rand < hitProb + walkProb) {
+                        bb++; // 四球
+                    }
+                }
                 
-                const ab = Math.floor(Math.random() * 2) + 3;
-                let h = 0;
-                for(let k=0; k<ab; k++) { if(Math.random() < hitProb) h++; }
-                
-                let hr = 0;
-                if (h > 0 && isCleanup && Math.random() < 0.2) hr = 1;
-                
-                let rbi = 0;
-                if (myScore > 0 && isCleanup) rbi = Math.floor(Math.random() * (myScore / 2));
-                
-                const sb = Math.random() < 0.1 ? 1 : 0;
+                // 打点 (HRなら必ず入る + ランダム)
+                if (hr > 0) rbi += hr + Math.floor(Math.random() * 2);
+                else if (h > 0 && isCleanup && myScore > 0) rbi += Math.floor(Math.random() * 2);
+
+                // 盗塁 (1番・2番は走りやすい)
+                if ((h > 0 || bb > 0) && (orderNum <= 2 || Math.random() < 0.1)) {
+                    if (Math.random() < 0.3) sb++;
+                }
+
+                const ab = pa - bb; // 打数 = 打席 - 四球
 
                 const bLog = {
                     matchId: matchId, date: match.schedule?.date || '日付不明', round: roundName,
                     opponent: opponentName, opponentRank: calculateRank(opponentName, tournamentState),
-                    order: batter.order, stats: { ab, h, hr, rbi, sb }
+                    order: batter.order, 
+                    stats: { ab, h, hr, rbi, sb, bb, tb } // ★詳細データを保存
                 };
 
                 record.playerStats.batting[batter.name].gamelogs.push(bLog);
                 
                 const bCareer = record.playerStats.batting[batter.name];
                 bCareer.games = (bCareer.games || 0) + 1;
-                bCareer.pa = (bCareer.pa || 0) + ab;
-                bCareer.ab += ab;
+                bCareer.pa = (bCareer.pa || 0) + pa;
+                bCareer.ab = (bCareer.ab || 0) + ab;
                 bCareer.h += h;
                 bCareer.hr += hr;
                 bCareer.rbi += rbi;
                 bCareer.sb += sb;
+                bCareer.bb = (bCareer.bb || 0) + bb; // ★四球を加算
+                bCareer.tb = (bCareer.tb || 0) + tb; // ★塁打を加算
 
-                if (isCurrentTournamentMatch) {
-                    record.tournamentStats.pa += ab;
-                    record.tournamentStats.ab += ab;
-                    record.tournamentStats.h += h;
-                    record.tournamentStats.hr += hr;
-                    record.tournamentStats.rbi += rbi;
-                    record.tournamentStats.sb += sb;
-                }
+                // チーム合計にも加算
+                record.tournamentStats.pa += pa;
+                record.tournamentStats.ab += ab;
+                record.tournamentStats.h += h;
+                record.tournamentStats.hr += hr;
+                record.tournamentStats.rbi += rbi;
+                record.tournamentStats.sb += sb;
+                record.tournamentStats.bb += bb;
+                record.tournamentStats.tb += tb;
             });
         }
     });
 }
+
 /**
  * [UPDATED] 大会終了時に、全チームの最終順位を記録する
  * (★甲子園の場合はマイナスの値を記録して区別する)
@@ -9184,6 +9577,359 @@ function updateTournamentFinishRecords() {
         }
     });
 }
+
+// ▼▼▼ リアルタイム学校検索機能 (オートコンプリート) - 再整理版 ▼▼▼
+
+const searchInput = document.getElementById('school-search-input');
+const suggestionsList = document.getElementById('search-suggestions');
+
+// 1. 文字入力時のイベント (リアルタイム検索)
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    
+    if (!query) {
+        suggestionsList.classList.add('hidden');
+        suggestionsList.innerHTML = '';
+        return;
+    }
+
+    const allTeams = [...new Set([...INITIAL_TEAM_POOL, ...Object.keys(TEAM_DATA)])];
+
+    const matches = allTeams.filter(teamName => {
+        const data = TEAM_DATA[teamName] || {};
+        // 既存のフィルタリングロジック
+        return (
+            teamName.includes(query) || 
+            (data.name_yomi && data.name_yomi.includes(query)) ||
+            (data.region && data.region.includes(query)) ||
+            (data.coach && data.coach.name && data.coach.name.includes(query)) 
+        );
+    }).slice(0, 10);
+
+    // リストの描画 (この関数がメイン検索の表示専用となります)
+    renderSchoolSearchSuggestions(matches, query);
+});
+
+// 2. 【メイン検索専用】候補リストを描画する関数
+function renderSchoolSearchSuggestions(teams, query) {
+    suggestionsList.innerHTML = '';
+
+    if (teams.length === 0) {
+        suggestionsList.classList.add('hidden');
+        return;
+    }
+
+    teams.forEach(teamName => {
+        const data = TEAM_DATA[teamName] || {};
+        const region = data.region || '不明';
+        const coach = data.coach ? data.coach.name : '';
+        
+        const li = document.createElement('li');
+        li.className = 'suggestion-item';
+        li.innerHTML = `
+            <div>
+                <span class="text-gray-800 font-medium">${highlightMatch(teamName, query)}</span>
+                <span class="text-xs text-gray-500 ml-2">(${region})</span>
+            </div>
+            <div class="suggestion-meta">
+                ${coach ? `監督: ${coach}` : ''}
+            </div>
+        `;
+
+        // クリック時の動作 (★アーカイブモーダルを開く動作に固定)
+        li.addEventListener('click', () => {
+            searchInput.value = teamName;
+            suggestionsList.classList.add('hidden');
+            renderSchoolArchiveModal(teamName); 
+        });
+
+        suggestionsList.appendChild(li);
+    });
+
+    suggestionsList.classList.remove('hidden');
+}
+
+
+// 3. 検索キーワードをハイライト表示するヘルパー (定義が重複しないよう、グローバルに残す)
+
+// 4. 外側をクリックしたらリストを閉じる
+document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+        suggestionsList.classList.add('hidden');
+    }
+});
+
+// 5. (既存) 検索ボタンクリック時の動作 (オートコンプリートを呼び出す)
+document.getElementById('school-search-btn').addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    if (!query) return;
+    
+    // 入力イベントを発火させてリアルタイム検索ロジックを呼び出す
+    searchInput.dispatchEvent(new Event('input'));
+
+    // 完全一致があればそれを優先 (既存ロジックを簡略化)
+    const allTeams = [...new Set([...INITIAL_TEAM_POOL, ...Object.keys(TEAM_DATA)])];
+    const match = allTeams.find(t => t === query); 
+    if (match) {
+         renderSchoolArchiveModal(match);
+         suggestionsList.classList.add('hidden');
+    }
+});
+// ▲▲▲ オートコンプリート機能 ここまで ▲▲▲
+/**
+ * 検索結果が複数の場合にリストを表示する関数
+ */
+function showSearchResultsList(teams, query) {
+    const contentEl = document.getElementById('school-archive-content');
+    const modal = document.getElementById('school-archive-modal');
+    
+    let html = `
+        <div class="archive-header">
+            <span class="archive-school-name">検索結果: "${query}"</span>
+            <span class="archive-pref">${teams.length}件 ヒット</span>
+        </div>
+        <div class="mt-4">
+            <ul class="search-result-list">
+    `;
+
+    teams.forEach(teamName => {
+        const data = TEAM_DATA[teamName];
+        const region = data.region || '不明';
+        const rank = calculateRank(teamName, tournamentState);
+        const coach = data.coach ? data.coach.name : '不明';
+
+        // リストアイテムをクリックすると、その学校の詳細モーダルを開く
+        // (onclick属性で関数を呼ぶ形にします)
+        html += `
+            <li class="search-result-item" onclick="document.getElementById('school-search-input').value='${teamName}'; document.getElementById('school-search-btn').click();">
+                <div>
+                    <span class="search-result-name">${teamName}</span>
+                    <span class="search-result-tag">${region}</span>
+                    <span class="search-result-tag bg-gray-100 text-gray-800">ランク${rank}</span>
+                </div>
+                <div class="search-result-info">
+                    監督: ${coach} / 最高成績: ${data.best || '-'}
+                </div>
+            </li>
+        `;
+    });
+
+    html += `
+            </ul>
+        </div>
+    `;
+
+    contentEl.innerHTML = html;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+// ▲▲▲ 学校検索機能ここまで ▲▲▲
+
+/**
+ * 学校アーカイブモーダルを描画するメイン関数
+ */
+function renderSchoolArchiveModal(teamName) {
+    const contentEl = document.getElementById('school-archive-content');
+    const teamData = TEAM_DATA[teamName];
+    const teamRecord = tournamentState.teamRecords[teamName];
+    
+    if (!teamData || !teamRecord) return;
+
+    // --- データ集計 ---
+    // 1. 通算成績 (Win/Loss)
+    const totalWins = teamRecord.wins || 0;
+    const totalLosses = teamRecord.losses || 0;
+    
+    // 2. 最高成績
+    const bestRankStr = teamRecord.best ? formatRecordToString(teamRecord.best) : "なし";
+    
+    // 3. 直近3大会の成績
+    const recentHistory = (teamRecord.history || []).slice(0, 3);
+
+    // 4. 全試合履歴の取得 (getRecentMatchesForTeamを利用し、limitを無限にする)
+    const allMatches = getRecentMatchesForTeam(teamName, 1000); // 1000試合分
+
+    // --- HTML生成 ---
+    let html = `
+        <div class="archive-header">
+            <span class="archive-school-name">${teamName}</span>
+            <span class="archive-pref">(${teamData.region}地区)</span>
+        </div>
+
+        <div class="archive-section-title">概要</div>
+        <div class="result-summary-box">
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">最高成績</dt>
+                <dd class="result-summary-dd">${bestRankStr}</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">通算勝敗</dt>
+                <dd class="result-summary-dd">${totalWins}勝 ${totalLosses}敗</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">チーム特徴</dt>
+                <dd class="result-summary-dd">${teamData.info || '情報なし'}</dd>
+            </div>
+            <div class="result-summary-row">
+                <dt class="result-summary-dt">監督</dt>
+                <dd class="result-summary-dd">${teamData.coach?.name || '不明'} (${teamData.coach?.style || ''})</dd>
+            </div>
+        </div>
+
+        <div class="archive-section-title">直近3大会の成績</div>
+        <ul class="history-list">
+            ${recentHistory.length > 0 ? recentHistory.map(h => `
+                <li class="history-item">
+                    <span class="history-year">${h.year}年 ${tournamentNameMap[h.tournament] || h.tournament}</span>
+                    <span class="history-rank">${getRankString(h.rank)}</span>
+                </li>
+            `).join('') : '<li class="p-2 text-gray-500">記録なし</li>'}
+        </ul>
+
+        <div class="archive-section-title">全試合結果一覧</div>
+        <div class="archive-sub-title">
+            <h3>最新の試合結果</h3>
+            <ul class="flex space-x-4 text-sm font-normal ml-4 mt-1">
+                <li><span class="text-red-600 font-bold">●</span> 勝ち</li>
+                <li><span class="text-blue-600 font-bold">●</span> 負け</li>
+            </ul>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="record-table">
+                <thead>
+                    <tr>
+                        <th>年</th>
+                        <th>大会</th>
+                        <th>回戦</th>
+                        <th>対戦校</th>
+                        <th>スコア</th>
+                        <th>勝敗</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (allMatches.length > 0) {
+        allMatches.forEach(match => {
+            const resultClass = match.isWin ? 'result-win' : 'result-lose';
+            const resultText = match.isWin ? '勝ち' : '負け';
+            const resultIcon = match.isWin ? '🔴' : '🔵'; 
+
+            html += `
+                <tr>
+                    <td>${match.year}</td>
+                    <td>${match.tournamentName}</td>
+                    <td>${match.roundName}</td>
+                    <td class="opponent-cell clickable-team-name cursor-pointer text-blue-600 hover:underline" data-team-name="${match.opponent}">
+                        ${match.opponent}
+                    </td>
+                    <td class="score-cell">${match.scoreResult}</td>
+                    <td class="${resultClass}">${resultIcon} ${resultText}</td>
+                </tr>
+            `;
+        });
+    } else {
+        html += `<tr><td colspan="6" class="text-gray-500">試合データがありません</td></tr>`;
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    contentEl.innerHTML = html;
+    
+    // モーダル表示
+    const modal = document.getElementById('school-archive-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+/**
+ * チームの直近N試合の履歴を取得する
+ * @param {string} teamName - チーム名
+ * @param {number} limit - 取得数 (デフォルト5, アーカイブ表示時は大きく設定)
+ * @returns {Array} - フォーマット済みの試合データ配列
+ */
+function getRecentMatchesForTeam(teamName, limit = 5) {
+    const history = [];
+    const state = tournamentState;
+    const currentYear = state.tournamentYear;
+
+    // 1. データソースの定義 (優先度順: 現在 > 春 > 秋)
+    // ※実際の時系列は 秋(前年) -> 春 -> 夏 ですが、表示上は新しい順に並べたいのでこの順序で走査します
+    const sources = [
+        { label: tournamentNameMap[state.currentTournament], year: currentYear, matches: state.matches, weight: 300 },
+        { label: '春季大会', year: currentYear, matches: state.springData?.allMatches, weight: 200 },
+        { label: '秋季大会', year: currentYear - 1, matches: state.autumnData?.allMatches, weight: 100 }
+    ];
+
+    sources.forEach(source => {
+        if (!source.matches) return;
+        
+        Object.values(source.matches).forEach(match => {
+            // 勝敗が決まっており、かつ対象チームが関わっている試合
+            if (match.winner && (match.team1 === teamName || match.team2 === teamName)) {
+                
+                // BYE(不戦勝)は除外する
+                if (match.team1 === '(BYE)' || match.team2 === '(BYE)') return;
+
+                const isTeam1 = match.team1 === teamName;
+                const opponent = isTeam1 ? match.team2 : match.team1;
+                const myScore = isTeam1 ? match.score1 : match.score2;
+                const oppScore = isTeam1 ? match.score2 : match.score1;
+                const isWin = match.winner === teamName;
+                
+                // ラウンド名の数値化 (ソート用)
+                let roundVal = 0;
+                if (match.id.startsWith('F-')) roundVal = 100; // 決勝
+                else if (match.id.includes('-R')) {
+                    roundVal = parseInt(match.id.split('-R')[1].split('-')[0]);
+                }
+
+                // 試合オブジェクトを作成
+                history.push({
+                    matchId: match.id,
+                    tournamentName: source.label,
+                    year: source.year,
+                    roundName: getRoundNameFromMatchId(match.id),
+                    opponent: opponent,
+                    scoreResult: `${myScore}-${oppScore}`,
+                    result: isWin ? '○' : '●',
+                    isWin: isWin,
+                    // ソート用スコア: (大会の重み * 1000) + ラウンド番号
+                    sortKey: (source.weight * 1000) + roundVal
+                });
+            }
+        });
+    });
+
+    // 2. ソート (新しい順 = sortKeyの降順)
+    history.sort((a, b) => b.sortKey - a.sortKey);
+
+    // 3. 最新N件を返す
+    return history.slice(0, limit);
+}
+
+// ▼▼▼ アーカイブモーダル関連のイベントリスナー ▼▼▼
+
+// 1. モーダルを閉じるボタン
+document.getElementById('school-archive-close-btn').addEventListener('click', () => {
+    document.getElementById('school-archive-modal').classList.add('hidden');
+    document.getElementById('school-archive-modal').classList.remove('flex');
+});
+
+// 2. アーカイブ内の対戦校リンクをクリックした時の処理（再帰的にモーダルを更新）
+document.getElementById('school-archive-content').addEventListener('click', (e) => {
+    if (e.target.classList.contains('clickable-team-name')) {
+        const teamName = e.target.dataset.teamName;
+        renderSchoolArchiveModal(teamName);
+    }
+});
+
+
 // ▼▼▼ ラウンドスキップ新聞生成用の関数群 (ここから追加) ▼▼▼
 
 /**
@@ -9321,8 +10067,7 @@ async function generateSkipRoundArticleContent(roundName, results) {
         mainHeadlineCandidate = `まさか！ ${biggestUpset.loserName}散る`;
         mainImageCaptionCandidate = `${biggestUpset.winnerName}の歓喜`;
     } else if (biggestUpset && biggestUpset.rankDiff < 0) { // 小さな番狂わせ
-        upsetText = `一筋縄ではいかない試合も。${biggestUpset.winnerRank}ランクの「${biggestUpset.winnerN
-ame}」が、${biggestUpset.loserRank}ランクの「${biggestUpset.loserName}」を ${biggestUpset.winnerScore}-${biggestUpset.loserScore} で破る番狂わせがあった。`;
+        upsetText = `一筋縄ではいかない試合も。${biggestUpset.winnerRank}ランクの「${biggestUpset.winnerName}」が、${biggestUpset.loserRank}ランクの「${biggestUpset.loserName}」を ${biggestUpset.winnerScore}-${biggestUpset.loserScore} で破る番狂わせがあった。`;
     }
 
     // 2. シード校の動向を分析
@@ -10906,7 +11651,721 @@ function createFieldingTable(teamKey, details, playersOnField) {
     `;
 }
 
-// ▼▼▼ 既存の「createPlayerBattingTable」関数 (10675行目あたり) を、以下で「置き換え」 ▼▼▼
+// ▼▼▼ 整理済み：貢献度・打順分析機能のイベント処理 (最終版) ▼▼▼
+
+// --- 1. グローバル変数の再取得 ---
+const contribInput = document.getElementById('contribution-team-input');
+const contribList = document.getElementById('contribution-suggestions');
+// ※ activeAnalysisMode はグローバルで定義済みとします
+
+
+// --- 2. 汎用ヘルパー関数 (変更なし) ---
+
+/**
+ * 貢献度モーダルを開く前の初期化処理
+ */
+function initContributionModal() {
+    // 画面リセット
+    document.getElementById('contribution-content').classList.add('hidden');
+    
+    // 入力欄とリストをクリア
+    contribInput.value = '';
+    contribList.classList.add('hidden');
+    
+    // モーダルを表示
+    document.getElementById('contribution-modal').classList.remove('hidden');
+    document.getElementById('contribution-modal').classList.add('flex');
+}
+
+/**
+ * 検索キーワードをハイライト表示するヘルパー (グローバル化)
+ */
+function highlightMatch(text, query) {
+    // 単純な置換だとHTMLが壊れる可能性があるため、テキストとして処理
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.replace(regex, '<span class="suggestion-match">$1</span>');
+}
+
+
+// --- 3. イベントリスナー定義 ---
+
+// A. 【ボタン】貢献度・天体観測 (フラグ設定)
+document.getElementById('show-contribution-btn').addEventListener('click', () => {
+    initContributionModal();
+    activeAnalysisMode = 'CONTRIBUTION'; 
+    document.getElementById('contribution-modal').querySelector('h3').textContent = "🌌 チーム貢献度シェア & 天体観測";
+    contribInput.placeholder = "分析するチーム名を入力...";
+});
+
+// B. 【ボタン】適正打順分析 (フラグ設定)
+document.getElementById('show-lineup-analysis-btn').addEventListener('click', () => {
+    initContributionModal();
+    activeAnalysisMode = 'LINEUP_ANALYSIS'; 
+    document.getElementById('contribution-modal').querySelector('h3').textContent = "⚾ 適正打順・役割分析";
+    contribInput.placeholder = "分析したいチーム名を入力...";
+});
+
+// C. 【入力時】リアルタイム検索 (共通ロジック)
+contribInput.addEventListener('input', () => {
+    const query = contribInput.value.trim().toLowerCase();
+    
+    if (!query) {
+        contribList.classList.add('hidden');
+        return;
+    }
+
+    // 成績データがあるチームのみを検索対象にする
+    const validTeams = Object.keys(tournamentState.teamRecords).filter(t => {
+        const r = tournamentState.teamRecords[t];
+        return r.wins > 0 || r.losses > 0; // 1試合以上したチーム
+    });
+
+    // フィルタリング
+    const matches = validTeams.filter(teamName => {
+        const data = TEAM_DATA[teamName] || {};
+        return (
+            teamName.includes(query) || 
+            (data.name_yomi && data.name_yomi.includes(query)) ||
+            (data.region && data.region.includes(query))
+        );
+    }).slice(0, 10);
+
+    renderContribSuggestions(matches, query);
+});
+
+// D. 【クリック/Enter】実行ロジック (フラグに従って実行)
+function executeAnalysis(teamName) {
+    if (activeAnalysisMode === 'LINEUP_ANALYSIS') {
+        const optimalLineup = generateOptimalLineup(teamName);
+        if (optimalLineup) {
+            renderOptimalLineupModal(teamName, optimalLineup);
+        } else {
+            alert(`「${teamName}」はデータ不足のため、打順を組めません。最低5打席以上の選手が9人必要です。`);
+        }
+    } else {
+        // CONTRIBUTION モード
+        renderContributionAnalysis(teamName);
+    }
+    document.getElementById('contribution-content').classList.remove('hidden');
+}
+
+// E. 【候補リスト】の描画 (クリックアクションを含む)
+function renderContribSuggestions(teams, query) {
+    contribList.innerHTML = '';
+    if (teams.length === 0) {
+        contribList.classList.add('hidden');
+        return;
+    }
+
+    teams.forEach(teamName => {
+        const data = TEAM_DATA[teamName] || {};
+        const region = data.region || '不明';
+        
+        const li = document.createElement('li');
+        li.className = 'suggestion-item';
+        li.innerHTML = `
+            <div>
+                <span class="text-gray-800 font-medium">${highlightMatch(teamName, query)}</span>
+                <span class="text-xs text-gray-500 ml-2">(${region})</span>
+            </div>
+        `;
+
+        // ★★★ 【重要修正】クリック時の動作を executeAnalysis に一本化 ★★★
+        li.addEventListener('click', () => {
+            contribInput.value = teamName;
+            contribList.classList.add('hidden');
+            // グローバルフラグを参照して、適切な分析を実行
+            executeAnalysis(teamName); 
+        });
+
+        contribList.appendChild(li);
+    });
+
+    contribList.classList.remove('hidden');
+}
+
+// F. 【Enterキー】実行リスナーを追加 (シンプルな処理に戻す)
+contribInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const teamName = contribInput.value.trim();
+        // 候補リストを隠し、そのまま実行ロジックを呼び出す
+        contribList.classList.add('hidden');
+        if (teamName) {
+            executeAnalysis(teamName);
+        }
+    }
+});
+
+
+// G. 【外側クリック】でリストを閉じる (変更なし)
+document.addEventListener('click', (e) => {
+    if (!contribInput.contains(e.target) && !contribList.contains(e.target)) {
+        contribList.classList.add('hidden');
+    }
+});
+
+// ▲▲▲ 整理済みコードここまで ▲▲▲
+/**
+ * RC貢献度ランキングを棒グラフで描画する (Chart.js)
+ * ★ RC/G (試合あたり貢献度) に変更
+ */
+function renderRcBarChart(ctx, players) {
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) existingChart.destroy();
+
+    // 1. RC/Gの値を計算して格納
+    const playersWithRCG = players.map(p => {
+        // gamesが未定義の場合があるため、0を代入
+        const games = p.games || 0; 
+        return {
+            ...p,
+            // RC/Gを計算: RC合計 / 試合数 (games)
+            rcg: games > 0 ? p.rc / games : 0
+        };
+    }).filter(p => p.rcg > 0); // RC/Gが0より大きい選手のみ表示
+
+    // データがなければ描画しない
+    if (playersWithRCG.length === 0) {
+        // Canvasを空にする処理（今回はCanvas自体にメッセージは書かない）
+        return; 
+    }
+
+    // 2. RC/Gが高い順にソート（トップ10に制限）
+    const sortedPlayers = playersWithRCG.sort((a, b) => b.rcg - a.rcg).slice(0, 10);
+
+    const labels = sortedPlayers.map(p => p.name);
+    const data = sortedPlayers.map(p => p.rcg);
+    const colors = sortedPlayers.map(p => p.color);
+
+    // 3. Chart.jsによる描画
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Runs Created per Game (RC/G)',
+                data: data,
+                backgroundColor: colors,
+                // 枠線を少し濃く (colors配列が空でないことを前提)
+                borderColor: colors.map(c => c.replace('0.8', '1')), 
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y', // 横棒グラフ
+            scales: {
+                x: {
+                    title: { display: true, text: 'Runs Created per Game (RC/G)' }, 
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            // 小数点第2位まで表示
+                            return `${context.label}: ${context.raw.toFixed(2)}点/試合`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ▼▼▼ renderContributionAnalysis 関数全体（最終修正版）▼▼▼
+
+// ▼▼▼ renderContributionAnalysis 関数全体の置き換え ▼▼▼
+/**
+ * 選択されたチームの分析を描画
+ */
+function renderContributionAnalysis(teamName) {
+    const record = tournamentState.teamRecords[teamName];
+    if (!record || !record.playerStats || !record.playerStats.batting) return;
+
+    // ★★★ 修正ポイント: contentAreaをここで確実に定義 ★★★
+    const contentArea = document.getElementById('contribution-content'); 
+    if (!contentArea) return; // エラー対策
+    
+    // Canvas要素がない場合に再作成するロジックを統合
+    // (打順分析によって Canvas要素が削除されている可能性があるため)
+    if (!document.getElementById('rc-pie-chart')) {
+        contentArea.innerHTML = `
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-gray-400">
+                <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <span class="text-xl mr-2">💡</span> 指標の目安と評価基準
+                </h4>
+                <div id="rc-guidelines" class="space-y-3"></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                <h4 class="text-lg font-bold text-gray-800 mb-4">📊 得点創出シェア (Runs Created Share)</h4>
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <div class="w-full md:w-1/2 h-64">
+                        <canvas id="rc-pie-chart"></canvas>
+                    </div>
+                    <div class="w-full md:w-1/2">
+                        <p class="text-sm text-gray-600 mb-2">
+                            ※ <strong>RC (Runs Created)</strong>: その選手が「一人で何点生み出したか」を推定する指標。
+                        </p>
+                        <div id="rc-analysis-text" class="text-md font-bold text-purple-800 p-3 bg-purple-50 rounded"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">棒グラフ：RC/G（試合あたり貢献度）ランキング (Top 10)</h4>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="rc-bar-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-indigo-500">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4">⚾ 打者タイプ・マップ (OPS分析)</h4>
+                    <div style="height: 400px; width: 100%;">
+                        <canvas id="stellar-scatter-chart"></canvas>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
+                        <div class="p-2 bg-red-50 border border-red-200 rounded"><span class="text-lg">💣 爆発型</span><br>長打力特化 (OPS高)</div>
+                        <div class="p-2 bg-blue-50 border border-blue-200 rounded"><span class="text-lg">🎯 理想型</span><br>打率・OPSのバランス型</div>
+                        <div class="p-2 bg-orange-50 border border-orange-200 rounded"><span class="text-lg">🏹 職人型</span><br>高打率・確実性型 (AVG高)</div>
+                        <div class="p-2 bg-gray-100 border border-gray-300 rounded"><span class="text-lg">📈 成長株</span><br>規定打席未到達/育成枠</div>
+                    </div>
+                </div>
+            `;
+        
+        // グラフエリアを再表示
+        const graphAreas = contentArea.querySelectorAll('.bg-white.p-6.rounded-lg.shadow-md');
+        graphAreas.forEach(el => el.classList.remove('hidden'));
+
+        // 打順表を非表示にする（打順分析から戻ってきた場合）
+        const lineupTable = document.getElementById('optimal-lineup-table');
+        if (lineupTable) {
+            lineupTable.remove(); // 完全にDOMから削除
+            contentArea.querySelector('.archive-header')?.remove(); 
+        }
+    } else {
+         // グラフ要素が残っている場合は、単に非表示クラスを解除する
+        const graphAreas = contentArea.querySelectorAll('.bg-white.p-6.rounded-lg.shadow-md');
+        graphAreas.forEach(el => el.classList.remove('hidden'));
+    }
+    // ★★★ 修正ここまで ★★★
+
+    const players = [];
+    let teamTotalRC = 0;
+
+    // 1. データ計算
+    Object.entries(record.playerStats.batting).forEach(([name, s]) => {
+        // 打数が0でも四球などで貢献している場合があるため、打席数(pa)で判定
+        if ((s.pa || 0) > 0) { 
+            // 簡易RC計算: (安打+四球) * 塁打 / (打数+四球)
+            const h = s.h || 0;
+            const bb = (s.bb || 0) + (s.hbp || 0);
+            const ab = s.ab || 0;
+            const hr = s.hr || 0;
+            const tb = (s.tb || h) + (hr * 3); // 塁打計算
+            
+            const ob = h + bb; // 出塁数
+            const times = ab + bb; // 打席機会
+            
+            let rc = times > 0 ? ((ob * tb) / times) : 0;
+            rc = parseFloat(rc.toFixed(2));
+            
+            if (isNaN(rc)) {
+                rc = 0; // NaNの場合は強制的に0として続行
+            }
+            
+            // OPS計算
+            const ops = parseFloat(calculateOps(s));
+            const avg = ab > 0 ? h / ab : 0;
+            
+            // 天体分類
+            let stellarType = '原始星'; // Proto-star
+            let color = '#94a3b8'; // Gray
+
+            if (ops >= 1.200 || hr >= 3) {
+                stellarType = '超新星'; // Supernova (爆発的)
+                color = '#ef4444'; // Red
+            } else if (ops >= 0.850) {
+                stellarType = '主系列星'; // Main Sequence (主役)
+                color = '#facc15'; // Yellow
+            } else if (s.games >= 3 && ops >= 0.700) {
+                stellarType = '赤色巨星'; // Red Giant (ベテラン/安定)
+                color = '#f97316'; // Orange
+            }
+
+            players.push({ name, rc, ops, avg: avg, hr: hr, type: stellarType, color, games: s.games });
+            teamTotalRC += rc;
+        }
+    });
+
+    // 2. 円グラフ (RCシェア) 描画
+    players.sort((a, b) => b.rc - a.rc); // RC高い順
+    const topPlayers = players.slice(0, 6); // 上位6名
+    const othersRC = players.slice(6).reduce((sum, p) => sum + p.rc, 0);
+    
+    const pieLabels = topPlayers.map(p => p.name);
+    const pieData = topPlayers.map(p => p.rc);
+    const pieColors = topPlayers.map(p => p.color);
+    
+    if (othersRC > 0) {
+        pieLabels.push("その他");
+        pieData.push(othersRC);
+        pieColors.push("#cbd5e1");
+    }
+
+    // テキスト分析
+    const analysisEl = document.getElementById('rc-analysis-text');
+    if (players.length > 0 && teamTotalRC > 0 && analysisEl) {
+        const topShare = (players[0].rc / teamTotalRC) * 100;
+        if (topShare > 40) {
+            analysisEl.textContent = `⚠️ ${players[0].name}への依存度が極めて高い「ワンマン型」構造です。彼が抑えられるとチーム機能が停止する恐れがあります。`;
+        } else if (topShare < 20) {
+            analysisEl.textContent = `✨ 誰からでも得点が生まれる理想的な「分散型」構造です。切れ目のない打線が脅威となります。`;
+        } else {
+            analysisEl.textContent = `⚖️ 主軸と脇役のバランスが取れた標準的な構成です。上位3名で得点の過半数を生み出しています。`;
+        }
+    } else if (analysisEl) {
+        analysisEl.textContent = "データ不足のため分析できません。";
+    }
+
+    // Chart.jsで円グラフ描画
+    const pieCanvas = document.getElementById('rc-pie-chart');
+    if (pieCanvas) {
+        const pieCtx = pieCanvas.getContext('2d');
+        const existingPie = Chart.getChart(pieCtx);
+        if (existingPie) existingPie.destroy();
+        
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    data: pieData,
+                    backgroundColor: pieColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'right' 
+                    },
+                    title: { 
+                        display: true, 
+                        text: '得点創出シェア (Runs Created Score)' 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const label = context.label || '';
+                                const rcValue = context.raw;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = (rcValue / total * 100).toFixed(1);
+                                
+                                return `${label}: ${rcValue.toFixed(2)}点分の貢献 (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. 散布図 (天体図) 描画
+    const scatterCanvas = document.getElementById('stellar-scatter-chart');
+    if (scatterCanvas) {
+        // 描画前に、データが空でないか、または全てが無効でないかチェック
+        if (players.length === 0) {
+            if (Chart.getChart(scatterCanvas)) Chart.getChart(scatterCanvas).destroy();
+            return; // データがなければ描画しない
+        }
+        
+        const scatterCtx = scatterCanvas.getContext('2d');
+        const existingScatter = Chart.getChart(scatterCtx);
+        if (existingScatter) existingScatter.destroy();
+
+        // --- 安全なデータ整形ヘルパー ---
+        const getSafeValue = (value, fallback = 0) => {
+            const v = parseFloat(value);
+            if (isNaN(v) || !isFinite(v)) return fallback;
+            return v;
+        };
+
+        // グラフの凡例データを再定義
+        const datasets = [{
+            label: '選手分布',
+            data: players.map(p => ({ 
+                x: getSafeValue(p.avg, 0), 
+                y: getSafeValue(p.ops, 0.3)
+            })),
+            backgroundColor: players.map(p => {
+                const ops = getSafeValue(p.ops);
+                const avg = getSafeValue(p.avg);
+                // OPSが高い選手は赤系、打率が高い選手は黄系で色分け
+                if (ops >= 1.000) return '#ef4444'; // 超攻撃型
+                if (avg >= 0.400) return '#f97316'; // 高打率型
+                if (ops >= 0.750) return '#3b82f6'; // バランス型
+                return '#9ca3af'; // その他
+            }),
+            pointRadius: players.map(p => Math.max(5, (p.hr || 0) * 2 + 4)), // HRが null の場合のフォールバック
+            pointHoverRadius: 10
+        }];
+
+        new Chart(scatterCtx, {
+            type: 'scatter',
+            data: {
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { 
+                        title: { display: true, text: '確実性 (打率 AVG)' }, 
+                        min: 0.200, 
+                        max: 0.500, // 範囲修正: 0.500で十分
+                        ticks: { callback: (v) => getSafeValue(v).toFixed(3) }
+                    },
+                    y: { 
+                        title: { display: true, text: '破壊力 (OPS)' }, 
+                        min: 0.300, 
+                        max: 1.500, // 範囲を1.500まで広げ、超攻撃型も描画可能に
+                        ticks: { callback: (v) => getSafeValue(v).toFixed(3) }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: '打者タイプ・マップ (OPS vs AVG)' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const p = players[context.dataIndex];
+                                
+                                const type = (() => {
+                                    if (p.type === '超新星') return '💣 爆発型';
+                                    if (p.type === '主系列星') return '🎯 理想型';
+                                    if (p.type === '赤色巨星') return '🏹 職人型';
+                                    return '📈 育成枠';
+                                })();
+                                
+                                // ★★★ ツールチップ表示の安全化 ★★★
+                                const safeOps = getSafeValue(p.ops).toFixed(3);
+                                const safeAvg = getSafeValue(p.avg).toFixed(3);
+                                
+                                return `${p.name} (${type}): OPS ${safeOps}, 打率 ${safeAvg}, HR ${p.hr || 0}`;
+                            }
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        opsLine: { type: 'line', scaleID: 'y', value: 0.850, borderColor: '#facc15', borderWidth: 1, borderDash: [5, 5], label: { content: '主軸レベル', enabled: true, position: 'start' } },
+                        avgLine: { type: 'line', scaleID: 'x', value: 0.350, borderColor: '#3b82f6', borderWidth: 1, borderDash: [5, 5], label: { content: '高打率レベル', enabled: true, position: 'end' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2.5. 棒グラフ (RCランキング) の描画
+    const barCtx = document.getElementById('rc-bar-chart');
+    if (barCtx) {
+        renderRcBarChart(barCtx.getContext('2d'), players);
+    }
+
+    const guidelinesEl = document.getElementById('rc-guidelines');
+    if (guidelinesEl) {
+        // RC/Gなどのテキストガイドラインを挿入
+        guidelinesEl.innerHTML = getGuidelineText(teamTotalRC, players, teamName);
+    }
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
+
+
+/**
+ * 【FIXED】選手データに基づき、最適な打順（1番〜9番）を推奨する
+ * (OPS、出塁率、長打力、貢献度(RC/G)を役割別に評価)
+ * @param {string} teamName - チーム名
+ * @returns {Array<object> | null} - 最適な打順 (1番から9番) の選手オブジェクトの配列
+ */
+function generateOptimalLineup(teamName) {
+    const record = tournamentState.teamRecords[teamName];
+    // データがない、または打者が3人未満の場合は処理しない
+    if (!record || !record.playerStats || !record.playerStats.batting || Object.keys(record.playerStats.batting).length < 3) {
+        return null;
+    }
+
+    const MIN_PA_FOR_RANKING = 5; // 最低打席数
+
+    // 1. 選手のデータと評価指標を計算
+    const allPlayers = Object.keys(record.playerStats.batting).map(playerName => {
+        const stats = record.playerStats.batting[playerName];
+        const { ab = 0, h = 0, hr = 0, rbi = 0, pa = 0, games = 0, tb = 0, bb = 0, hbp = 0, sf = 0 } = stats;
+        
+        // 規定打席未満、または打席機会がなければ除外
+        if (pa < MIN_PA_FOR_RANKING) return null;
+
+        const obp_den = ab + bb + hbp + sf;
+        const obp = obp_den > 0 ? (h + bb + hbp) / obp_den : 0;
+        const slg = ab > 0 ? tb / ab : 0;
+        const ops = obp + slg;
+        
+        // --- ★★★ RC/G 計算の安全化 ★★★ ---
+        const rcCalc = (obp * tb) / (ab + bb);
+        const safeRc = isNaN(rcCalc) ? 0 : rcCalc; // RCのNaNチェック
+        const rcg = games > 0 ? safeRc / games : 0; 
+        
+        // 役割スコアの計算
+        return {
+            name: playerName,
+            rcg: rcg, // ★ RC/Gをデータに含める
+            // 1番スコア (出塁率 + 盗塁重視)
+            leadOff: (obp * 2.0) + (stats.sb * 0.2) + (rcg * 0.5), 
+            // 2番スコア (RC/G + 安定性)
+            rcgScore: (rcg * 2.5) + (obp * 1.0),
+            // 3番スコア (OPS + 確実性)
+            consistency: (ops * 1.5) + (obp * 1.0),
+            // 4/5番スコア (長打 + 打点重視)
+            power: (slg * 1.5) + (rbi * 0.2) + (hr * 0.5) + (ops * 0.5),
+            // 俊足 (盗塁が多いか)
+            isFast: stats.sb >= 3,
+            // 長打力 (OPSが高いか)
+            isSlugger: ops >= 1.000,
+            // 確実性 (打率が高いか)
+            isHighAvg: (ab > 0 && h / ab >= 0.400)
+        };
+    }).filter(p => p !== null).sort((a, b) => b.power - a.power); // 初期はパワー順にソート
+
+    if (allPlayers.length < 9) {
+        console.warn(`[Lineup] データが不足しています。規定打席 (${MIN_PA_FOR_RANKING}) を満たす選手が9人未満です。`);
+        return null;
+    }
+
+    let remainingPlayers = [...allPlayers];
+    const lineup = Array(9).fill(null);
+
+    // 2. 役割別割り当て (高校野球/セイバーメトリクス理論に基づく)
+    
+    // A. 4番 (絶対的パワーヒッター) - Powerスコア最高
+    const p4 = remainingPlayers.shift();
+    lineup[3] = p4;
+
+    // B. 3番 (確実性 + OPS) - 4番の次に高いConsistencyを持つ選手
+    const p3 = remainingPlayers.sort((a, b) => b.consistency - a.consistency).shift();
+    lineup[2] = p3;
+
+    // C. 1番 (出塁 + 俊足) - LeadOffスコア最高
+    remainingPlayers.sort((a, b) => b.leadOff - a.leadOff);
+    const p1 = remainingPlayers.shift();
+    lineup[0] = p1;
+
+    // D. 2番 (RC/G + 安定性) - 1番と3番をつなぐ最も効率的な打者
+    remainingPlayers.sort((a, b) => b.rcgScore - a.rcgScore);
+    const p2 = remainingPlayers.shift();
+    lineup[1] = p2;
+
+    // E. 5番 (後続の打点役) - 4番の次に高いPowerスコア (残りの選手をソート)
+    remainingPlayers.sort((a, b) => b.power - a.power);
+    const p5 = remainingPlayers.shift();
+    lineup[4] = p5;
+    
+    // F. 6番 (残りの中で最もPowerが高い選手)
+    remainingPlayers.sort((a, b) => b.power - a.power);
+    lineup[5] = remainingPlayers.shift();
+    
+    // G. 9番 (下位のリードオフ) - 残りの中でObpが高い選手
+    remainingPlayers.sort((a, b) => b.leadOff - a.leadOff);
+    lineup[8] = remainingPlayers.shift();
+    
+    // H. 7番/8番 (残りをRC/G順に割り当て)
+    remainingPlayers.sort((a, b) => b.rcgScore - a.rcgScore);
+    lineup[6] = remainingPlayers.shift(); // 7番
+    lineup[7] = remainingPlayers.shift(); // 8番
+
+    // 3. 打順番号を付与して返す
+    return lineup.map((p, i) => ({
+        ...p,
+        order: i + 1,
+        recommendation: i + 1
+    }));
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
+
+/**
+ * [FIXED] RC、OPSなどの評価基準と、トップ貢献者を分析するテキストを生成
+ * (★グラフの読み方解説を追加)
+ * @param {number} teamTotalRC - チームの総 Runs Created
+ * @param {Array} players - 選手のRCデータリスト
+ * @param {string} teamName - 分析対象のチーム名 (通算試合数取得用)
+ */
+function getGuidelineText(teamTotalRC, players, teamName) {
+    // プレイヤーがいない、または総RCがゼロなら分析しない
+    if (players.length === 0 || teamTotalRC === 0) {
+        return "<p class='text-gray-500'>まだ打者の成績データが不足しています。</p>";
+    }
+    
+    const sortedPlayers = [...players].sort((a, b) => b.rc - a.rc);
+    const topRcPlayer = sortedPlayers[0];
+    const teamRecord = tournamentState.teamRecords[teamName];
+
+    let html = '';
+
+    // --- 0. グラフの読み方解説 (新規追加) ---
+    html += `
+        <div class="border-b pb-2">
+            <p class="font-bold text-base text-gray-800">📊 打者タイプ・マップの読み方</p>
+            <ul class="list-disc list-inside ml-4 text-sm text-gray-700 space-y-1">
+                <li><strong>OPS（縦軸: 破壊力）:</strong> 高いほど長打力と出塁能力がある。</li>
+                <li><strong>打率（横軸: 確実性）:</strong> 高いほどボールにバットが当たる安定性がある。</li>
+                <li><strong>バブルの大きさ:</strong> その選手の**本塁打数**に比例します。</li>
+            </ul>
+        </div>`;
+        
+    // --- 1. 評価基準とグラフの位置による分類 ---
+    if (topRcPlayer) {
+        // RC/Gの計算
+        const gamesPlayed = topRcPlayer.games || 1;
+        const rcPerGame = topRcPlayer.rc / gamesPlayed;
+        const topShare = (topRcPlayer.rc / teamTotalRC) * 100;
+
+        html += `
+            <div class="border-b pb-2">
+                <p class="font-bold text-base text-indigo-700">評価基準と選手の役割</p>
+                <ul class="list-disc list-inside ml-4 text-sm text-gray-700 space-y-1">
+                    <li><strong>OPS 1.000以上:</strong> 怪物級。プロ注目。</li>
+                    <li><strong class="text-red-600">OPS 0.850以上:</strong> 強豪校の主軸として非常に優秀な水準。</li>
+                    <li><strong>打率 .400以上:</strong> 驚異的。</li>
+                </ul>
+                <div class="mt-3 p-2 bg-yellow-50 rounded">
+                    <p class="font-bold text-xs">グラフ位置による分類:</p>
+                    <ul class="list-none ml-2 text-xs">
+                        <li>- **右上の選手 (理想):** 打率もOPSも高い、最も優秀な打者。</li>
+                        <li>- **左上の選手 (破壊者):** OPSは高いが打率が低い長距離砲。</li>
+                        <li>- **右下の選手 (職人):** 打率は高いが長打力は低いアベレージヒッター。</li>
+                    </ul>
+                </div>
+            </div>`;
+            
+        // --- 2. トップ貢献者の情報 (RC/Gの絶対値を含む) ---
+        html += `
+            <div class="p-2 bg-gray-50 rounded">
+                <p class="font-bold text-sm text-gray-800">🔥 現在の最高貢献者</p>
+                <p class="text-lg font-extrabold text-red-600">${topRcPlayer.name}</p>
+                <p class="text-sm text-gray-700">RC/試合 (RC/G): <strong>${rcPerGame.toFixed(2)}</strong></p>
+                <p class="text-xs text-gray-600">RC/G 2.0以上で「エース級」のペースです。</p>
+            </div>`;
+    }
+    
+    return html;
+}
+
 
 /**
  * 個人別打席結果のテーブルHTMLを生成する
@@ -11903,6 +13362,130 @@ function translateResultForBoxScore(atBatString) {
     return "-";
 }
 
+// ▼▼▼ 勝率変動グラフ機能 ▼▼▼
+
+/**
+ * 勝率変動データを計算する
+ * @param {string} team1 - チーム1の名前
+ * @param {string} team2 - チーム2の名前
+ * @param {Array} scores1 - チーム1のイニングスコア配列
+ * @param {Array} scores2 - チーム2のイニングスコア配列
+ * @param {object} state - tournamentState
+ */
+function calculateWinProbData(team1, team2, scores1, scores2, state) {
+    const rank1 = calculateRank(team1, state);
+    const rank2 = calculateRank(team2, state);
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    
+    // 基礎戦力差による初期勝率 (A vs E なら Aが有利スタート)
+    const rankDiff = rankValues[rank1] - rankValues[rank2];
+    let initialProb = 0.5 + (rankDiff * 0.05); // ランク差1につき5%変動
+    initialProb = Math.max(0.2, Math.min(0.8, initialProb)); // 20%~80%に収める
+
+    const dataPoints = [initialProb]; // 試合開始時
+    const labels = ['開始'];
+
+    let currentScore1 = 0;
+    let currentScore2 = 0;
+    const totalInnings = Math.max(scores1.length, scores2.length, 9);
+
+    for (let i = 0; i < totalInnings; i++) {
+        // 表の攻撃終了
+        currentScore1 += parseInt(scores1[i] || 0);
+        // 裏の攻撃終了（サヨナラなどでデータがない場合は0加算）
+        currentScore2 += parseInt(scores2[i] || 0);
+
+        const scoreDiff = currentScore1 - currentScore2;
+        const inningsLeft = 9 - (i + 1);
+        
+        // 勝率計算アルゴリズム（簡易版）
+        // 残りイニングが少ないほど、点差の重みが増す
+        let timeDecay = 1 + ((9 - inningsLeft) * 0.3); 
+        let probChange = (scoreDiff * 0.1 * timeDecay);
+        
+        let currentProb = initialProb + probChange;
+        
+        // 9回裏終了時（または試合終了時）は 0.0 or 1.0 に収束
+        if (i === totalInnings - 1) {
+            currentProb = currentScore1 > currentScore2 ? 1.0 : 0.0;
+        }
+
+        // 正規化 (0.0 ~ 1.0)
+        currentProb = Math.max(0.0, Math.min(1.0, currentProb));
+        
+        dataPoints.push(currentProb);
+        labels.push(`${i + 1}回`);
+    }
+
+    return { labels, dataPoints };
+}
+
+/**
+ * グラフを描画する (Chart.jsを使用)
+ */
+function renderWinProbChart(ctx, team1, team2, labels, dataPoints) {
+    // 既存のチャートがあれば破棄
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) existingChart.destroy();
+
+    // データセットの作成 (50%を基準に上下させる)
+    const team1Data = dataPoints.map(p => p * 100); // チーム1の勝率%
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `${team1}の勝率`,
+                data: team1Data,
+                borderColor: '#1d4ed8', // Blue
+                backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.3, // 曲線にする
+                fill: {
+                    target: 'origin',
+                    above: 'rgba(29, 78, 216, 0.1)',   // チーム1優勢エリア
+                    below: 'rgba(220, 38, 38, 0.1)'    // チーム2優勢エリア (赤)
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: (context) => context.tick.value === 50 ? '#000' : '#e5e7eb', lineWidth: (context) => context.tick.value === 50 ? 2 : 1 },
+                    ticks: { callback: (v) => `${v}%` }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const val = context.raw;
+                            const t1Win = val.toFixed(1);
+                            const t2Win = (100 - val).toFixed(1);
+                            return `${team1} ${t1Win}% - ${team2} ${t2Win}%`;
+                        }
+                    }
+                },
+                annotation: { // 50%ライン
+                    annotations: {
+                        line1: {
+                            type: 'line', yMin: 50, yMax: 50, borderColor: 'gray', borderWidth: 1, borderDash: [5, 5]
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+// ▲▲▲ 勝率グラフ機能 ここまで ▲▲▲
+
 /**
  * [NEW] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
  * @param {object} dbMatch - 試合オブジェクト (detailsを内包)
@@ -12103,6 +13686,16 @@ function generateBoxScoreHTML(dbMatch) {
 
         return battingTableHtml + pitchingTableHtml;
     };
+
+// ★グラフ用のキャンバスを追加
+    const chartHtml = `
+        <div class="mt-6 p-4 bg-white border rounded-lg shadow-sm">
+            <h3 class="text-lg font-bold text-gray-700 mb-2">📉 勝率変動グラフ (Win Probability)</h3>
+            <div style="height: 250px; width: 100%;">
+                <canvas id="win-prob-chart"></canvas>
+            </div>
+        </div>
+    `;
 
     // --- 4. 最終的なHTMLを組み立て ---
     return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2');
@@ -13250,161 +14843,6 @@ async function setupSpringMainTournament_Round2() {
 
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
-// ▼▼▼ 学校検索・アーカイブ表示機能 ▼▼▼
-
-// 1. 検索ボタンのイベントリスナー
-document.getElementById('school-search-btn').addEventListener('click', () => {
-    const input = document.getElementById('school-search-input');
-    const query = input.value.trim();
-    if (!query) return;
-
-    // 部分一致でチームを検索
-    const allTeams = tournamentState.teams || INITIAL_TEAM_POOL;
-    const matchedTeam = allTeams.find(t => t.includes(query));
-
-    if (matchedTeam) {
-        renderSchoolArchiveModal(matchedTeam);
-    } else {
-        alert(`「${query}」に一致する学校が見つかりませんでした。`);
-    }
-});
-
-// 2. モーダルを閉じるボタン
-document.getElementById('school-archive-close-btn').addEventListener('click', () => {
-    document.getElementById('school-archive-modal').classList.add('hidden');
-    document.getElementById('school-archive-modal').classList.remove('flex');
-});
-
-/**
- * 学校アーカイブモーダルを描画するメイン関数
- */
-function renderSchoolArchiveModal(teamName) {
-    const contentEl = document.getElementById('school-archive-content');
-    const teamData = TEAM_DATA[teamName];
-    const teamRecord = tournamentState.teamRecords[teamName];
-    
-    if (!teamData || !teamRecord) return;
-
-    // --- データ集計 ---
-    // 1. 通算成績 (Win/Loss)
-    const totalWins = teamRecord.wins || 0;
-    const totalLosses = teamRecord.losses || 0;
-    
-    // 2. 最高成績
-    const bestRankStr = teamRecord.best ? formatRecordToString(teamRecord.best) : "なし";
-    
-    // 3. 直近3大会の成績
-    const recentHistory = (teamRecord.history || []).slice(0, 3);
-
-    // 4. 全試合履歴の取得 (getRecentMatchesForTeamを利用し、limitを無限にする)
-    const allMatches = getRecentMatchesForTeam(teamName, 1000); // 1000試合分
-
-    // --- HTML生成 ---
-    let html = `
-        <div class="archive-header">
-            <span class="archive-school-name">${teamName}</span>
-            <span class="archive-pref">(${teamData.region}地区)</span>
-        </div>
-
-        <div class="archive-section-title">概要</div>
-        <div class="result-summary-box">
-            <div class="result-summary-row">
-                <dt class="result-summary-dt">最高成績</dt>
-                <dd class="result-summary-dd">${bestRankStr}</dd>
-            </div>
-            <div class="result-summary-row">
-                <dt class="result-summary-dt">通算勝敗</dt>
-                <dd class="result-summary-dd">${totalWins}勝 ${totalLosses}敗</dd>
-            </div>
-            <div class="result-summary-row">
-                <dt class="result-summary-dt">チーム特徴</dt>
-                <dd class="result-summary-dd">${teamData.info || '情報なし'}</dd>
-            </div>
-            <div class="result-summary-row">
-                <dt class="result-summary-dt">監督</dt>
-                <dd class="result-summary-dd">${teamData.coach?.name || '不明'} (${teamData.coach?.style || ''})</dd>
-            </div>
-        </div>
-
-        <div class="archive-section-title">直近3大会の成績</div>
-        <ul class="history-list">
-            ${recentHistory.length > 0 ? recentHistory.map(h => `
-                <li class="history-item">
-                    <span class="history-year">${h.year}年 ${tournamentNameMap[h.tournament] || h.tournament}</span>
-                    <span class="history-rank">${getRankString(h.rank)}</span>
-                </li>
-            `).join('') : '<li class="p-2 text-gray-500">記録なし</li>'}
-        </ul>
-
-        <div class="archive-section-title">全試合結果一覧</div>
-        <div class="archive-sub-title">
-            <h3>最新の試合結果</h3>
-            <ul class="flex space-x-4 text-sm font-normal ml-4 mt-1">
-                <li><span class="text-red-600 font-bold">●</span> 勝ち</li>
-                <li><span class="text-blue-600 font-bold">●</span> 負け</li>
-            </ul>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="record-table">
-                <thead>
-                    <tr>
-                        <th>年</th>
-                        <th>大会</th>
-                        <th>回戦</th>
-                        <th>対戦校</th>
-                        <th>スコア</th>
-                        <th>勝敗</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    if (allMatches.length > 0) {
-        allMatches.forEach(match => {
-            const resultClass = match.isWin ? 'result-win' : 'result-lose';
-            const resultText = match.isWin ? '勝ち' : '負け';
-            const resultIcon = match.isWin ? '🔴' : '🔵'; // アイコン画像がないので絵文字で代用
-
-            html += `
-                <tr>
-                    <td>${match.year}</td>
-                    <td>${match.tournamentName}</td>
-                    <td>${match.roundName}</td>
-                    <td class="opponent-cell clickable-team-name cursor-pointer text-blue-600 hover:underline" data-team-name="${match.opponent}">
-                        ${match.opponent}
-                    </td>
-                    <td class="score-cell">${match.scoreResult}</td>
-                    <td class="${resultClass}">${resultIcon} ${resultText}</td>
-                </tr>
-            `;
-        });
-    } else {
-        html += `<tr><td colspan="6" class="text-gray-500">試合データがありません</td></tr>`;
-    }
-
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    contentEl.innerHTML = html;
-    
-    // モーダル表示
-    const modal = document.getElementById('school-archive-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
-
-// 4. アーカイブ内の対戦校リンクをクリックした時の処理（再帰的にモーダルを更新）
-document.getElementById('school-archive-content').addEventListener('click', (e) => {
-    if (e.target.classList.contains('clickable-team-name')) {
-        const teamName = e.target.dataset.teamName;
-        renderSchoolArchiveModal(teamName);
-    }
-});
-
 /**
  * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔
  * (★「故障者リスト(injuryReport)」の情報を追加)
@@ -14485,6 +15923,185 @@ ${ballQualityText}
         };
     }
 }
+
+// ▼▼▼ 因縁相関図 生成ロジック (AI解説機能付き・改) ▼▼▼
+
+document.getElementById('show-rivalry-map-btn').addEventListener('click', async () => {
+    document.getElementById('rivalry-map-modal').classList.remove('hidden');
+    document.getElementById('rivalry-map-modal').classList.add('flex');
+    await generateRivalryMap(); // モーダル表示後に生成開始
+});
+
+document.getElementById('rivalry-map-close-btn').addEventListener('click', () => {
+    document.getElementById('rivalry-map-modal').classList.add('hidden');
+    document.getElementById('rivalry-map-modal').classList.remove('flex');
+});
+
+/**
+ * 現在のデータ、常識、そして「偏差値」や「系列」から相関図を生成する
+ */
+async function generateRivalryMap() {
+    const container = document.getElementById('mermaid-container');
+    const analysisContainer = document.getElementById('rivalry-analysis-content');
+    
+    container.innerHTML = '<div class="loader">県内の勢力図を広域スキャン中...</div>';
+    analysisContainer.innerHTML = '<div class="loader">AI記者が勢力図を分析中...</div>';
+
+    // --- 1. Mermaid記法のヘッダー ---
+    let graphDef = "graph TD\n";
+    
+    // クラス定義 (色分け)
+    graphDef += "classDef rankA fill:#fee2e2,stroke:#ef4444,stroke-width:3px,color:#000;\n"; // 赤 (Aランク)
+    graphDef += "classDef rankB fill:#e0f2fe,stroke:#3b82f6,stroke-width:2px,color:#000;\n"; // 青 (Bランク)
+    graphDef += "classDef rankC fill:#fef9c3,stroke:#eab308,stroke-width:2px,color:#000;\n"; // 黄 (Cランク)
+    graphDef += "classDef namco fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#000;\n"; // 紫 (ナムコ系列)
+    graphDef += "classDef normal fill:#fff,stroke:#9ca3af,stroke-width:1px,color:#000;\n";   // 白 (その他)
+
+    // --- 2. ノードとエッジの収集 ---
+    const nodes = new Set();
+    const edges = [];
+    const namcoSchools = ["283学園", "765総合高校", "初星学園", "美城学園", "283学園B"];
+
+    // Helper: エッジ追加 (重複防止はMermaid側で処理されるが念のため)
+    const addEdge = (t1, t2, label, style = '---') => {
+        if (t1 === t2) return;
+        nodes.add(t1); nodes.add(t2);
+        edges.push(`${t1} ${style}|${label}| ${t2}`);
+    };
+
+    // (A) 固定ライバル関係 (RIVALRIES)
+    tournamentState.rivalries.forEach(r => {
+        if (r.teams.length >= 2) addEdge(r.teams[0], r.teams[1], r.type, '<-->');
+    });
+
+    // (B) 動的因縁 (feuds)
+    if (tournamentState.feuds) {
+        tournamentState.feuds.forEach(f => {
+            if (f.teams.length >= 2) addEdge(f.teams[0], f.teams[1], f.type, '-.->');
+        });
+    }
+
+    // (C) 直近の「番狂わせ」や「天敵」関係
+    const strongTeams = Object.keys(tournamentState.teamRecords).filter(t => ['A', 'B'].includes(calculateRank(t, tournamentState)));
+    strongTeams.forEach(teamA => {
+        const history = getRecentMatchesForTeam(teamA, 10);
+        history.forEach(match => {
+            if (!match.isWin && ['C', 'D', 'E'].includes(calculateRank(match.opponent, tournamentState))) {
+                addEdge(match.opponent, teamA, '金星', '==>');
+            }
+        });
+    });
+
+    // --- ★ここから拡張: まだ対戦していなくても表示する ---
+
+    // (D) ナムコグループの結束
+    // 283学園を中心に、他の系列校をつなぐ
+    const mainNamco = "283学園";
+    namcoSchools.forEach(school => {
+        if (school !== mainNamco && tournamentState.teamRecords[school]) { // 存在確認
+            addEdge(mainNamco, school, '系列', '-.-');
+        }
+    });
+
+    // (E) 各地区の「3強」を強制的に表示し、ライバル線で結ぶ
+    const regions = ['東部', '中部', '西部']; // 伊豆は東部に含む場合が多いが、データによっては独立
+    const teamsByRegion = { '東部': [], '中部': [], '西部': [], '伊豆': [] };
+
+    // 全チームを地区分けしてソート
+    Object.keys(TEAM_DATA).forEach(teamName => {
+        const data = TEAM_DATA[teamName];
+        if (data.region && teamsByRegion[data.region]) {
+            // ソート用スコア: ランクが高い順 > 偏差値が高い順
+            const rank = calculateRank(teamName, tournamentState);
+            const rankVal = {'A':5, 'B':4, 'C':3, 'D':2, 'E':1}[rank] || 0;
+            const score = rankVal * 100 + (data.deviation || 50);
+            
+            teamsByRegion[data.region].push({ name: teamName, score: score });
+        }
+    });
+
+    // 各地区の上位3校を抽出し、1位vs2位、2位vs3位をつなぐ
+    Object.keys(teamsByRegion).forEach(region => {
+        // スコア順にソート
+        const sortedTeams = teamsByRegion[region].sort((a, b) => b.score - a.score);
+        const top3 = sortedTeams.slice(0, 3).map(t => t.name);
+
+        if (top3.length >= 2) {
+            addEdge(top3[0], top3[1], `${region}の覇権`, '---');
+        }
+        if (top3.length >= 3) {
+            addEdge(top3[1], top3[2], `上位争い`, '---');
+        }
+        // ノードとして追加（線がなくても重要校は表示）
+        top3.forEach(t => nodes.add(t));
+    });
+
+    // (F) Aランク校は無条件で全員表示（孤立していてもOK）
+    Object.keys(tournamentState.teamRecords).forEach(teamName => {
+        if (calculateRank(teamName, tournamentState) === 'A') {
+            nodes.add(teamName);
+        }
+    });
+
+    // --- 3. ノード定義 (スタイル適用) ---
+    nodes.forEach(team => {
+        const rank = calculateRank(team, tournamentState);
+        let styleClass = "normal";
+        
+        if (namcoSchools.includes(team)) styleClass = "namco";
+        else if (rank === 'A') styleClass = "rankA";
+        else if (rank === 'B') styleClass = "rankB";
+        else if (rank === 'C') styleClass = "rankC";
+        
+        graphDef += `${team}((${team})):::${styleClass}\n`;
+    });
+
+    // --- 4. エッジ定義 ---
+    // 重複エッジを削除するためにSetを使う
+    const uniqueEdges = [...new Set(edges)];
+    uniqueEdges.forEach(edge => { graphDef += `${edge}\n`; });
+
+    if (uniqueEdges.length === 0 && nodes.size === 0) {
+        container.innerHTML = "<p class='text-gray-500'>データがありません。</p>";
+        analysisContainer.innerHTML = "";
+        return;
+    }
+
+    // --- 5. レンダリング実行 ---
+    try {
+        container.innerHTML = `<div class="mermaid">${graphDef}</div>`;
+        await mermaid.run({ nodes: container.querySelectorAll('.mermaid') });
+    } catch (e) {
+        console.error("Mermaid rendering failed:", e);
+        container.innerHTML = "<p class='text-red-500'>図の描画に失敗しました。</p>";
+    }
+
+    // --- 6. AIによる分析レポート ---
+    const displayedTeams = Array.from(nodes);
+    const prompt = `あなたは高校野球の事情通記者です。
+県内の有力校やライバル関係をまとめた「勢力図（相関図）」が完成しました。
+この図に登場する主なチーム（${displayedTeams.slice(0, 10).join(', ')}など）を見て、
+**「現在の県内のパワーバランス」**や**「注目すべき対立構図」**について、300文字程度のコラムを書いてください。
+特に、地区ごとの覇権争いや、ナムコ系列校の存在感について触れてください。
+
+### 出力形式 (JSON)
+{"body": "（コラム本文）"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const aiData = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (aiData && aiData.body) {
+                analysisContainer.innerHTML = `<p>${aiData.body.replace(/\n/g, '<br>')}</p>`;
+            }
+        }
+    } catch (error) {
+        console.error("AI勢力図分析エラー:", error);
+        analysisContainer.innerHTML = "<p class='text-red-500'>AI分析の生成に失敗しました。</p>";
+    }
+}
+// ▲▲▲ 因縁相関図 生成ロジック (拡張版) ここまで ▲▲▲
 
 /**
  * AI記者にニュース記事を執筆させるメイン関数
@@ -18468,6 +20085,103 @@ function updateInningState(teamKey, inningIndex) {
      }
 }
 
+// ▼▼▼ 適正打順分析モーダル機能 ▼▼▼
+
+
+/**
+ * [FIXED] 分析結果を専用のコンテンツで表示する (最終修正版)
+ */
+function renderOptimalLineupModal(teamName, lineup) {
+    const contentEl = document.getElementById('contribution-content');
+    const teamRecord = tournamentState.teamRecords[teamName];
+
+    // --- 1. グラフ要素の破棄 (メモリ解放) ---
+    const pieChart = Chart.getChart('rc-pie-chart');
+    const barChart = Chart.getChart('rc-bar-chart');
+    const scatterChart = Chart.getChart('stellar-scatter-chart');
+    
+    if (pieChart) pieChart.destroy();
+    if (barChart) barChart.destroy();
+    if (scatterChart) scatterChart.destroy();
+
+    // --- 2. 打順表のHTMLを定義 ---
+    let lineupHtml = `
+        <div id="optimal-lineup-table" class="bg-white p-6 rounded-lg shadow-xl mt-4">
+            <h4 class="text-xl font-bold text-blue-700 mb-4">⚾ 推奨打順 (OPS・RC/G基準)</h4>
+            <div class="overflow-x-auto">
+                <table class="career-stats-table">
+                    <thead>
+                        <tr>
+                            <th>推奨打順</th>
+                            <th>選手名</th>
+                            <th>役割</th>
+                            <th>OPS</th>
+                            <th>RC/G</th>
+                            <th>HR/SB</th>
+                            <th>評価理由</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${lineup.map(p => {
+                            const stats = teamRecord.playerStats.batting[p.name];
+                            // OPSはcalculateOpsを使うので、NaNになりにくい
+                            const ops = parseFloat(calculateOps(stats)).toFixed(3);
+                            
+                            // ★★★ 修正ポイント：RC/Gの表示の安全化 ★★★
+                            // p.rcg (generateOptimalLineupで計算済み) がNaNであれば '0.00' にする
+                            const rcg = (p.rcg && !isNaN(p.rcg)) ? p.rcg.toFixed(2) : '0.00'; 
+                            // ★★★ 修正ここまで ★★★
+
+                            let role = '';
+                            let reason = '';
+                            if (p.order === 1) { role = 'リードオフ'; reason = '最高の出塁能力と俊足'; }
+                            else if (p.order === 2) { role = 'つなぎ役'; reason = 'RC/Gが最も高く、効率的な打者'; }
+                            else if (p.order === 3) { role = '確実性/主軸'; reason = 'OPSと打率のバランスが優れている'; }
+                            else if (p.order === 4) { role = '主砲/打点'; reason = '最も長打力と打点能力が高い'; }
+                            else if (p.order === 5) { role = '後続の打点役'; reason = '4番に次ぐパワーとRCを兼ね備える'; }
+                            else if (p.order === 9) { role = '下位のリードオフ'; reason = '残りの選手の中で最も出塁率が高い'; }
+                            else { role = '下位打線'; reason = 'バランスの良い攻撃力'; }
+                            
+                            return `
+                                <tr>
+                                    <td><strong>${p.order}番</strong></td>
+                                    <td>${p.name}</td>
+                                    <td>${role}</td>
+                                    <td>${ops}</td>
+                                    <td>${rcg}</td>
+                                    <td>${stats.hr || 0}HR/${stats.sb || 0}SB</td>
+                                    <td>${reason}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 p-3 bg-gray-50 rounded text-sm">
+                <p>※推奨打順は、OPSやRC(Run Created)などセイバーメトリクスの指標に基づき、各打順の「役割」に最適な選手を配置した論理的打線です。</p>
+            </div>
+        </div>
+    `;
+
+    // --- 3. グラフエリアと打順表の排他表示 ---
+
+    // A. グラフエリア（貢献度分析のパーツ）を非表示にする
+    const graphAreas = contentEl.querySelectorAll('.bg-white.p-6.rounded-lg.shadow-md');
+    graphAreas.forEach(el => el.classList.add('hidden'));
+
+    // B. 打順表をコンテンツエリアに挿入
+    contentEl.innerHTML = `
+        <div class="archive-header">
+            <span class="archive-school-name">適正打順分析: ${teamName}</span>
+            <span class="archive-pref">OPS・RC/Gに基づく推奨打順</span>
+        </div>
+        ${lineupHtml}
+    `;
+
+    contentEl.classList.remove('hidden');
+}
+// ▲▲▲ 置き換えここまで ▲▲▲
+
 // ▼▼▼ この関数をまるごと挿入 ▼▼▼
 /**
  * [NEW HELPER] Finds all mentioned players and formats their full gamelogs for AI prompts.
@@ -18718,8 +20432,7 @@ async function processMatchWin(matchId, winnerName) {
             // (一旦ここで県大会の区切りをつける)
             
             // 2. ユーザーに通知
-            alert(`【祝】${winnerName}が夏の静岡大会を制覇！\n\n続いて「全国高等学校野球選手権大
-会（甲子園）」へ進出します！\n初戦の相手は、岩手の怪物産出校「花巻東」です！`);
+            alert(`【祝】${winnerName}が夏の静岡大会を制覇！\n\n続いて「全国高等学校野球選手権大会（甲子園）」へ進出します！\n初戦の相手は、岩手の怪物産出校「花巻東」です！`);
 
             // 3. 甲子園モードのセットアップを実行
             await setupKoshienTournament(winnerName);
@@ -21294,6 +23007,40 @@ async function generateHomepageNewsUpdate(matchContext) {
     }
 }
 
+document.getElementById('contribution-close-btn').addEventListener('click', () => {
+
+    // 1. 貢献度モーダルを隠す処理
+
+    document.getElementById('contribution-modal').classList.add('hidden');
+
+    document.getElementById('contribution-modal').classList.remove('flex');
+
+
+
+    // 2. ★ Chart.jsのグラフ要素を破棄し、メモリを解放する
+
+    const pieChart = Chart.getChart('rc-pie-chart');
+
+    const barChart = Chart.getChart('rc-bar-chart');
+
+    const scatterChart = Chart.getChart('stellar-scatter-chart');
+
+    
+
+    if (pieChart) pieChart.destroy();
+
+    if (barChart) barChart.destroy();
+
+    if (scatterChart) scatterChart.destroy();
+
+
+
+    // 3. 閉じた際に、貢献度コンテンツ（グラフ）を隠す
+
+    document.getElementById('contribution-content').classList.add('hidden');
+
+});
+
 document.body.addEventListener('click', async (e) => {
 
 
@@ -21509,7 +23256,7 @@ document.body.addEventListener('click', async (e) => {
         const dbMatch = findMatchById(matchId);
         
         if (!dbMatch || !dbMatch.boxScoreHtml) {
-            alert("ボックススコアデータが見つかりません。詳細入力が正しく保存されているか確認してください。");
+            alert("ボックススコアデータが見つかりません。");
             return;
         }
         
@@ -21522,8 +23269,20 @@ document.body.addEventListener('click', async (e) => {
         
         modal.classList.remove('modal-hidden');
         modal.classList.add('flex');
+
+        // ▼▼▼ グラフ描画処理の追加 ▼▼▼
+        // モーダルが表示された後にCanvasを取得して描画
+        setTimeout(() => {
+            const ctx = document.getElementById('win-prob-chart');
+            if (ctx && dbMatch.details && dbMatch.details.inningScore) {
+                const scores1 = dbMatch.details.inningScore.team1;
+                const scores2 = dbMatch.details.inningScore.team2;
+                const { labels, dataPoints } = calculateWinProbData(dbMatch.team1, dbMatch.team2, scores1, scores2, tournamentState);
+                renderWinProbChart(ctx, dbMatch.team1, dbMatch.team2, labels, dataPoints);
+            }
+        }, 100); // 少し待ってから描画
+        // ▲▲▲ ここまで ▲▲▲
     }
-// ▲▲▲ 新規追加ここまで ▲▲▲
 
 // --- [NEW] 簡易入力モーダルを開く ---
     else if (e.target.closest('.scorecard-open-btn')) {
@@ -23829,8 +25588,7 @@ function saveScorecardAndClose() {
                             <div class="space-y-5 text-gray-700 leading-relaxed text-base">
                                 <p>昨年度、創部まもなくして夏の県大会初優勝を果たし、第1シード校として今大会に臨みます。しかし、初出場となった昨夏の甲子園では初戦（対 浦和学院 7-9）で敗退。全国の舞台での「一勝」の重みを痛感しました。</p>
                                 <p>名将・天井努監督の下、昨年の経験を糧に「県大会連覇」と、その先の「甲子園での一勝」を揺るぎない目標として掲げています。王者としてのプレッシャーをはねのけ、チームスローガンである<strong class="font-bold text-blue-700">『強』</strong>を体現します。</p>
-                            </d
-iv>
+                            </div>
                             <div class="mt-10 bg-gray-50 p-6 rounded-lg border border-gray-200">
                                 <h4 class="text-xl font-bold text-gray-800 mb-3">監督・部長あいさつ</h4>
                                 <div class="flex items-start space-x-4">
@@ -24634,9 +26392,6 @@ iv>
         </div>
     </div>
 </div>
-
-
-
 
     </body>
 </html>
