@@ -14500,7 +14500,7 @@ function renderWinProbChart(ctx, team1, team2, labels, dataPoints) {
 
 /**
  * [修正・完全版] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
- * (★変数名エラー修正済み)
+ * (★熱狂度の用途と目安の解説を追加)
  */
 function generateBoxScoreHTML(dbMatch) {
     if (!dbMatch || !dbMatch.details) return "<p>詳細データがありません。</p>";
@@ -14524,13 +14524,12 @@ function generateBoxScoreHTML(dbMatch) {
     const inningScores1 = details.inningScore?.team1 || [];
     const inningScores2 = details.inningScore?.team2 || [];
     
-    // ▼▼▼ 変数名を numInnings に統一（エラー修正） ▼▼▼
     let numInnings = Math.max(9, inningScores1.length, inningScores2.length);
     if (dbMatch.calledGame && dbMatch.calledInning) {
         numInnings = dbMatch.calledInning;
     }
 
-    // --- 2. スコアボード生成 & X/x 判定ロジック ---
+    // --- 2. スコアボード生成 ---
     let inningHeaders = '';
     let inningRow1 = '';
     let inningRow2 = '';
@@ -14565,7 +14564,6 @@ function generateBoxScoreHTML(dbMatch) {
         if (s2_val >= 4) bigInningTeam2 = true;
         if (currentS2 > currentS1) team2LeadOnce = true;
 
-        // X / x 判定
         if (i === numInnings) {
             if (score2 > score1) {
                 if (!hasBottomData) {
@@ -14710,7 +14708,7 @@ function generateBoxScoreHTML(dbMatch) {
         return battingTableHtml + pitchingTableHtml;
     };
 
-    // --- 4. グラフエリア ---
+    // --- 4. グラフエリア (★解説を追加) ---
     const chartHtml = `
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="p-4 bg-white border rounded-lg shadow-sm">
@@ -14718,6 +14716,7 @@ function generateBoxScoreHTML(dbMatch) {
                 <div style="height: 200px; width: 100%;">
                     <canvas id="win-prob-chart"></canvas>
                 </div>
+                <p class="text-xs text-gray-500 mt-2">※点差、残りイニング、戦力差から算出した勝利確率の推移。</p>
             </div>
             <div class="p-4 bg-white border rounded-lg shadow-sm">
                 <h3 class="text-lg font-bold text-orange-600 mb-2 flex justify-between">
@@ -14727,11 +14726,22 @@ function generateBoxScoreHTML(dbMatch) {
                 <div style="height: 200px; width: 100%;">
                     <canvas id="excitement-chart"></canvas>
                 </div>
-            </div>
+                
+                <div class="mt-3 p-2 bg-orange-50 rounded border border-orange-100 text-xs text-gray-700">
+                    <p class="font-bold mb-1 text-orange-800">📊 熱狂度とは？</p>
+                    <p class="mb-2">試合の「面白さ」や「ドラマ性」を数値化した指標です。点差が縮まる、逆転、格下の善戦などで数値が上昇します。</p>
+                    <div class="grid grid-cols-2 gap-1">
+                        <div><span class="font-bold text-red-600">S (35~):</span> 伝説の名勝負・奇跡</div>
+                        <div><span class="font-bold text-orange-600">A (25~):</span> 激熱・シーソーゲーム</div>
+                        <div><span class="font-bold text-blue-600">B (15~):</span> 好ゲーム・接戦</div>
+                        <div><span class="font-bold text-gray-500">C (~15):</span> 凡戦・ワンサイド</div>
+                    </div>
+                </div>
+                </div>
         </div>
     `;
 
-    // --- 5. AI戦評 (numInnings変数が復旧したので正常動作します) ---
+    // --- 5. AI戦評 (既存のまま) ---
     const winner = dbMatch.winner || "不明";
     const loser = dbMatch.team1 === winner ? dbMatch.team2 : dbMatch.team1;
     const wScore = parseInt(dbMatch.team1 === winner ? score1 : score2);
@@ -14803,6 +14813,7 @@ function generateBoxScoreHTML(dbMatch) {
 
     return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2') + chartHtml + aiCommentHtml;
 }
+
 
 /**
  * [新機能] あるチームの、指定された試合ID「以前」の
@@ -22046,8 +22057,8 @@ async function processMatchWin(matchId, winnerName) {
                 let accidentOccurred = false;
                 const isImportant = importance.startsWith('Shuryoku') || importance.startsWith('Regular');
                 
-                const sickChance = isImportant ? 0.02 : 0.02; // 体調不良 (主力3%, 控え1%)
-                const minorInjuryChance = isImportant ? 0.02 : 0.02; // 軽傷 (主力5%, 控え1%)
+                const sickChance = isImportant ? 0.005 : 0.005; // 体調不良 (主力3%, 控え1%)
+                const minorInjuryChance = isImportant ? 0.005 : 0.005; // 軽傷 (主力5%, 控え1%)
 
                 // 4-1. ランダムアクシデント (体調不良)
                 if (Math.random() < sickChance) {
@@ -22100,9 +22111,9 @@ async function processMatchWin(matchId, winnerName) {
                                 const lastDate = parseDate(lastGame.date);
                                 const daysRest = lastDate ? Math.ceil(Math.abs(today - lastDate) / (1000 * 60 * 60 * 24)) - 1 : 99;
                                 
-                                if (daysRest === 0 && Math.random() < 0.20) { 
+                                if (daysRest === 0 && Math.random() < 0.10) { 
                                     setInjury = true; overuseLog = "連投";
-                                } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.40) { 
+                                } else if (daysRest === 1 && pitches >= 80 && Math.random() < 0.20) { 
                                     setInjury = true; overuseLog = "中1日での80球以上の登板";
                                 }
                             }
