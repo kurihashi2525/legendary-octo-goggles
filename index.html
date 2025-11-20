@@ -3555,21 +3555,24 @@ const FACILITY_DATA = {
 // ▼▼▼ このブロックをまるごと「新規追加」(1191行目あたり、JAPANESE_SURNAMES の下など) ▼▼▼
 const TEAM_ROSTER_MASTER = {
     "283学園": [
-        { number: "1", name: "白瀬", grade: 3, position: "投手", throwBat: "R/R", height: 184, weight: 82, origin: "東京シニア" },
-        { number: "2", name: "有栖川", grade: 3, position: "捕手", throwBat: "R/L", height: 178, weight: 78, origin: "神奈川ボーイズ" },
-        { number: "3", name: "姫川", grade: 3, position: "投手/一塁手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア" },
-        { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学" },
-        { number: "5", name: "八宮", grade: 2, position: "三塁手", throwBat: "R/R", height: 175, weight: 72, origin: "浜松ボーイズ" },
-        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス" },
-        { number: "7", name: "芹沢", grade: 2, position: "外野手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア" },
-        { number: "8", name: "花海佑", grade: 1, position: "外野手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア" },
-        { number: "9", name: "花海咲", grade: 3, position: "外野手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア", isCaptain: true },
-        { number: "10", name: "黛", grade: 2, position: "投手", throwBat: "R/R", height: 180, weight: 76, origin: "富士シニア" },
-        { number: "11", name: "市川", grade: 2, position: "投手", throwBat: "L/L", height: 179, weight: 74, origin: "静岡蒲原中学" },
+        // --- スタメン (不動のオーダー) ---
+        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス", desc: "切り込み隊長。高い出塁率と華麗な守備でチームに勢いをもたらす不動の1番ショート。" },
+        { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学", desc: "最強の2番打者。小技だけでなく長打もあり、十王とのコンビは県内最強の二遊間。" },
+        { number: "9", name: "花海咲", grade: 3, position: "右翼手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア", isCaptain: true, desc: "頼れる3番・主将。好機に滅法強く、妹の佑と共にクリーンナップの中核を担う。" },
+        { number: "8", name: "花海佑", grade: 1, position: "中堅手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア", desc: "1年生にして4番に座る怪物。圧倒的な身体能力でグラウンドを支配する天才。" },
+        { number: "7", name: "芹沢", grade: 2, position: "左翼手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア", desc: "5番に座る仕事人。両打ち（スイッチ）の器用さで、上位と下位をつなぐキーマン。" },
+        { number: "1", name: "姫川", grade: 3, position: "投手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア", desc: "「6番・ピッチャー」の超攻撃的エース。150km超の剛球に加え、自らのバットで試合を決める。" },
+        { number: "2", name: "有栖川", grade: 3, position: "捕手", throwBat: "R/L", height: 178, weight: 78, origin: "神奈川ボーイズ", desc: "恐怖の7番打者。強打の捕手として、下位打線からビッグイニングの起点を作る。" },
+        { number: "5", name: "八宮", grade: 2, position: "三塁手", throwBat: "R/R", height: 175, weight: 72, origin: "浜松ボーイズ", desc: "意外性の男。8番に彼がいることで、相手投手は息つく暇がない。" },
+        { number: "3", name: "鈴木", grade: 2, position: "一塁手", throwBat: "R/L", height: 181, weight: 85, origin: "愛知ボーイズ", desc: "ミート力のあるアベレージ型一塁手。9番から上位へ「第2のリードオフ」として繋ぐ。" },
+        
+        // --- 控え選手 ---
+        { number: "10", name: "白瀬", grade: 3, position: "投手", throwBat: "R/R", height: 184, weight: 82, origin: "東京シニア", desc: "MAX155kmを誇るもう一人のエース。姫川とは対照的な剛腕クローザー。" },
+        { number: "11", name: "黛", grade: 2, position: "投手", throwBat: "R/R", height: 180, weight: 76, origin: "富士シニア" },
         { number: "12", name: "福丸", grade: 2, position: "捕手", throwBat: "R/R", height: 176, weight: 77, origin: "焼津リトルシニア" },
-        { number: "13", name: "鈴木", grade: 2, position: "一塁手", throwBat: "R/L", height: 181, weight: 85, origin: "愛知ボーイズ" },
-        { number: "14", name: "有村", grade: 1, position: "内野手", throwBat: "R/R", height: 173, weight: 67, origin: "福岡シニア" },
-        { number: "15", name: "田中", grade: 3, position: "内野手", throwBat: "R/R", height: 174, weight: 70, origin: "静岡服織中学" },
+        { number: "13", name: "田中", grade: 3, position: "内野手", throwBat: "R/R", height: 174, weight: 70, origin: "静岡服織中学" },
+        { number: "14", name: "市川", grade: 2, position: "投手", throwBat: "L/L", height: 179, weight: 74, origin: "静岡蒲原中学" },
+        { number: "15", name: "有村", grade: 1, position: "内野手", throwBat: "R/R", height: 173, weight: 67, origin: "福岡シニア" },
         { number: "16", name: "大崎", grade: 1, position: "外野手", throwBat: "R/L", height: 170, weight: 68, origin: "三島リトルシニア" },
         { number: "17", name: "風野", grade: 2, position: "内野手", throwBat: "R/R", height: 169, weight: 65, origin: "新潟シニア" },
         { number: "18", name: "西城", grade: 2, position: "投手", throwBat: "R/R", height: 183, weight: 81, origin: "広島ボーイズ" },
@@ -3577,6 +3580,7 @@ const TEAM_ROSTER_MASTER = {
         { number: "20", name: "杜野", grade: 1, position: "外野手", throwBat: "L/L", height: 171, weight: 67, origin: "宮城シニア" }
     ]
 };
+// ▲▲▲ 置き換えここまで ▲▲▲
 // ▲▲▲ 置き換えここまで ▲▲▲
 // ▼▼▼ サウンド管理システム ▼▼▼
 
@@ -4607,6 +4611,11 @@ const PREFECTURE_LORE = `
 
 ---
 ### 静岡県高校野球の「常識」と「あるある」
+
+* **283学園**: 昨年の覇者。その強さの象徴は、**「左右ジグザグに組まれた不動のオーダー」**にある。
+        1番・十王と2番・樋口の鉄壁二遊間コンビがチャンスを作り、**3番・花海咲、4番・花海佑の「花海コンビ」**が還す得点パターンは破壊力抜群。
+        さらに、5番・スイッチヒッター芹沢を挟み、**6番に「打てるエース」姫川**が座ることで、下位打線まで全く息が抜けない「切れ目のない打線」が完成している。
+        この黄金の布陣は、県内他校から「283の悪夢」として恐れられている。
 
 #### 1. 宿命の兄弟対決「トコハ・ダービー」
 - **菊川 vs 橘:**
