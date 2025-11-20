@@ -24509,9 +24509,7 @@ document.body.addEventListener('click', async (e) => {
             return;
         }
         
-        // ★★★ ここが修正のポイント ★★★
-        // 保存されている古いHTML（dbMatch.boxScoreHtml）を使うのではなく、
-        // generateBoxScoreHTML(dbMatch) を実行して、最新のHTML（グラフ用タグ付き）を生成します。
+        // HTMLを再生成（グラフ用タグを確実に含めるため）
         const freshHtml = generateBoxScoreHTML(dbMatch);
         
         // モーダル要素を取得
@@ -24523,7 +24521,7 @@ document.body.addEventListener('click', async (e) => {
         const roundName = getRoundNameFromMatchId(matchId);
         modalTitle.textContent = `ボックススコア: ${dbMatch.team1} vs ${dbMatch.team2} (${roundName})`;
         
-        // HTMLを注入（これで <canvas> タグが確実にDOMに入ります）
+        // HTMLを注入
         modalBody.innerHTML = freshHtml;
         
         // モーダルを表示
@@ -24531,29 +24529,33 @@ document.body.addEventListener('click', async (e) => {
         modal.classList.remove('hidden'); 
         modal.classList.add('flex');
 
-        // ▼▼▼ グラフ描画処理 ▼▼▼
-        // モーダルが表示され、Canvasが生成されるのを少し待ってから描画
+        // ▼▼▼ グラフ描画処理（修正済み） ▼▼▼
         setTimeout(() => {
             // 1. 勝率グラフ (Win Probability)
-            const ctxProb = document.getElementById('win-prob-chart');
-            if (ctxProb) {
-                const scores1 = dbMatch.details.inningScore.team1;
-                const scores2 = dbMatch.details.inningScore.team2;
-                // 勝率データを計算
-                const { labels, dataPoints } = calculateWinProbData(dbMatch.team1, dbMatch.team2, scores1, scores2, tournamentState);
-                // グラフを描画
-                renderWinProbChart(ctxProb, dbMatch.team1, dbMatch.team2, labels, dataPoints);
+            const canvasProb = document.getElementById('win-prob-chart');
+            if (canvasProb) {
+                // ★修正: getContext('2d') を取得する
+                const ctxProb = canvasProb.getContext('2d');
+                
+                if (dbMatch.details && dbMatch.details.inningScore) {
+                    const scores1 = dbMatch.details.inningScore.team1;
+                    const scores2 = dbMatch.details.inningScore.team2;
+                    const { labels, dataPoints } = calculateWinProbData(dbMatch.team1, dbMatch.team2, scores1, scores2, tournamentState);
+                    renderWinProbChart(ctxProb, dbMatch.team1, dbMatch.team2, labels, dataPoints);
+                }
             } else {
                 console.warn("勝率グラフのCanvasが見つかりません (ID: win-prob-chart)");
             }
 
             // 2. 熱狂度グラフ (Excitement)
-            const ctxExcitement = document.getElementById('excitement-chart');
-            if (ctxExcitement) {
-                // 熱狂度データを計算
+            const canvasExcitement = document.getElementById('excitement-chart');
+            if (canvasExcitement) {
+                // ★修正: getContext('2d') を取得する
+                // これがないと createLinearGradient でエラーになります
+                const ctxExcitement = canvasExcitement.getContext('2d');
+
                 const exData = calculateExcitementData(dbMatch);
                 if (exData) {
-                    // グラフを描画
                     renderExcitementChart(ctxExcitement, exData);
                     
                     // ランクバッジの更新
@@ -24572,7 +24574,7 @@ document.body.addEventListener('click', async (e) => {
             } else {
                 console.warn("熱狂度グラフのCanvasが見つかりません (ID: excitement-chart)");
             }
-        }, 300); // 描画待ち時間を300msに延長して確実性を高める
+        }, 300); // 描画待ち時間
     }
 
     // --- [NEW] 283学園ホームページモーダルを閉じるボタン ---
