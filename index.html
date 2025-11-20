@@ -14203,7 +14203,7 @@ function renderWinProbChart(ctx, team1, team2, labels, dataPoints) {
 
 /**
  * [NEW] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
- * (★修正版: チャートHTMLの結合漏れを修正)
+ * (★完全版: 逆転、サヨナラ、投手戦、残塁などを詳細に分析するロジック搭載)
  * @param {object} dbMatch - 試合オブジェクト (detailsを内包)
  * @returns {string} - ボックススコア全体のHTML文字列
  */
@@ -14213,35 +14213,66 @@ function generateBoxScoreHTML(dbMatch) {
     const { details } = dbMatch;
     const team1Name = dbMatch.team1;
     const team2Name = dbMatch.team2;
-    const score1 = dbMatch.score1;
-    const score2 = dbMatch.score2;
+    const score1 = parseInt(dbMatch.score1) || 0;
+    const score2 = parseInt(dbMatch.score2) || 0;
 
-    // --- 1. チームの総ヒット数(H)と総エラー数(E)を集計 ---
+    // --- 1. データ集計 (ヒット、エラー、イニングスコア) ---
     let totalHits1 = 0;
     let totalHits2 = 0;
     if (details.playerGameStats) {
         Object.values(details.playerGameStats.team1 || {}).forEach(stats => totalHits1 += (stats.h || 0));
         Object.values(details.playerGameStats.team2 || {}).forEach(stats => totalHits2 += (stats.h || 0));
     }
-    const totalErrors1 = 0;
+    const totalErrors1 = 0; // エラー集計ロジックがあればここに実装
     const totalErrors2 = 0;
 
-    // --- 2. イニングスコアボードHTML ---
     const inningScores1 = details.inningScore?.team1 || [];
     const inningScores2 = details.inningScore?.team2 || [];
     const numInnings = Math.max(9, inningScores1.length, inningScores2.length);
     
+    // --- 2. スコアボード生成 & 試合展開解析 ---
     let inningHeaders = '';
     let inningRow1 = '';
     let inningRow2 = '';
+    
+    // 試合展開解析用フラグ
+    let team1LeadOnce = false;
+    let team2LeadOnce = false;
+    let currentS1 = 0;
+    let currentS2 = 0;
+    let bigInningTeam1 = false;
+    let bigInningTeam2 = false;
+
     for (let i = 1; i <= numInnings; i++) {
         inningHeaders += `<th>${i}</th>`;
-        const score1_inning = (i-1 < inningScores1.length) ? inningScores1[i-1] : '';
-        const score2_inning = (i-1 < inningScores2.length) ? inningScores2[i-1] : '';
-        const isSayonara = (i === 9 && score1 < score2 && inningScores2[i-1] > 0);
+        const s1 = parseInt(inningScores1[i-1] || 0);
+        const s2 = parseInt(inningScores2[i-1] || 0);
         
-        inningRow1 += `<td class="score-cell">${score1_inning}</td>`;
-        inningRow2 += `<td class="score-cell">${isSayonara ? 'X' : score2_inning}</td>`;
+        // ビッグイニング判定 (4点以上)
+        if (s1 >= 4) bigInningTeam1 = true;
+        if (s2 >= 4) bigInningTeam2 = true;
+
+        // 途中経過のリード判定
+        currentS1 += s1;
+        if (currentS1 > currentS2) team1LeadOnce = true;
+        
+        // 裏の攻撃前時点でのスコアチェック
+        // (9回裏サヨナラ判定用)
+        const score1_display = (i-1 < inningScores1.length) ? inningScores1[i-1] : '';
+        let score2_display = (i-1 < inningScores2.length) ? inningScores2[i-1] : '';
+
+        // サヨナラ判定 (最終回、後攻が勝っていて、かつその回に得点がある)
+        const isFinalInning = (i === numInnings);
+        const isSayonara = (isFinalInning && score1 < score2 && s2 > 0);
+        
+        if (isSayonara) score2_display = 'X';
+
+        // 裏の攻撃後のスコア加算
+        currentS2 += s2;
+        if (currentS2 > currentS1) team2LeadOnce = true;
+
+        inningRow1 += `<td class="score-cell">${score1_display}</td>`;
+        inningRow2 += `<td class="score-cell">${score2_display}</td>`;
     }
 
     const scoreBoardHtml = `
@@ -14268,7 +14299,7 @@ function generateBoxScoreHTML(dbMatch) {
         </table>
     `;
 
-    // --- 3. 打撃・投手成績HTML (ヘルパー関数) ---
+    // --- 3. スタッツテーブル生成 (ヘルパー関数) ---
     const generateStatsTables = (teamKey) => {
         const teamName = dbMatch[teamKey];
         const battingData = details.batting?.[teamKey] || [];
@@ -14287,6 +14318,7 @@ function generateBoxScoreHTML(dbMatch) {
         sortedBatters.forEach(player => {
             if (!player.name) return;
             const stats = gameStats[player.name];
+            // 出場なし選手はスキップ
             if (!stats || (!stats.played && (stats.sb || 0) === 0 && player.sub_type !== 'DEF' && player.sub_type !== 'PR')) return;
 
             const isSub = player.order.includes('sub');
@@ -14370,7 +14402,7 @@ function generateBoxScoreHTML(dbMatch) {
         return battingTableHtml + pitchingTableHtml;
     };
 
-    // ★グラフ用のキャンバスを追加
+    // --- 4. グラフエリア HTML ---
     const chartHtml = `
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="p-4 bg-white border rounded-lg shadow-sm">
@@ -14391,9 +14423,103 @@ function generateBoxScoreHTML(dbMatch) {
         </div>
     `;
 
-    // --- 4. 最終的なHTMLを組み立て ---
-    // ★★★ 修正: ここで chartHtml を最後に結合する ★★★
-    return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2') + chartHtml;
+    // --- 5. ★AI戦評 生成ロジック (ルールベース詳細版) ---
+    const winner = dbMatch.winner || "不明";
+    const loser = dbMatch.team1 === winner ? dbMatch.team2 : dbMatch.team1;
+    const wScore = parseInt(dbMatch.team1 === winner ? score1 : score2);
+    const lScore = parseInt(dbMatch.team1 === winner ? score2 : score1);
+    const diff = wScore - lScore;
+    const totalHits = totalHits1 + totalHits2;
+    const isWinnerTeam1 = (winner === team1Name);
+
+    // 勝者のヒット数、敗者のヒット数
+    const wHits = isWinnerTeam1 ? totalHits1 : totalHits2;
+    const lHits = isWinnerTeam1 ? totalHits2 : totalHits1;
+
+    // 逆転勝ちかどうか
+    // (勝者がTeam1なら、Team2が一度でもリードしていれば逆転。逆も然り)
+    const isComeback = (isWinnerTeam1 && team2LeadOnce) || (!isWinnerTeam1 && team1LeadOnce);
+
+    let commentTitle = "試合総括";
+    let commentBody = "";
+    let badgeColor = "bg-gray-100 text-gray-800";
+
+    // A. サヨナラ
+    if (numInnings >= 9 && isWinnerTeam1 === false && parseInt(inningScores2[numInnings-1]) > 0 && (score2 - parseInt(inningScores2[numInnings-1]) <= score1)) {
+        // ※簡易判定: 最終回に後攻が得点し、その得点前は同点以下だった場合
+        commentTitle = "劇的サヨナラ";
+        badgeColor = "bg-pink-100 text-pink-800 border border-pink-300";
+        commentBody = `劇的な幕切れ！ ${winner}が土壇場で勝負強さを発揮し、${loser}との熱戦にサヨナラで終止符を打った。最後まで諦めない姿勢が勝利を呼び込んだ。`;
+    }
+    // B. 完封
+    else if (lScore === 0) {
+        commentTitle = "完封勝利";
+        badgeColor = "bg-blue-100 text-blue-800 border border-blue-300";
+        commentBody = `${winner}投手陣が${loser}打線を散発${lHits}安打に抑え込み、見事な完封リレーを完成させた。守備のリズムが攻撃にも波及し、理想的な試合運びとなった。`;
+    }
+    // C. 圧勝 (7点差以上)
+    else if (diff >= 7) {
+        commentTitle = "圧倒";
+        badgeColor = "bg-red-100 text-red-800 border border-red-300";
+        const attackType = (bigInningTeam1 || bigInningTeam2) ? "ビッグイニングを作るなど打線が爆発。" : "着実に加点し、";
+        commentBody = `${winner}が投打に${loser}を圧倒。${attackType}相手に付け入る隙を与えなかった。${loser}は投手陣が踏ん張れず、苦しい展開となった。`;
+    }
+    // D. 逆転勝ち
+    else if (isComeback) {
+        commentTitle = "逆転勝利";
+        badgeColor = "bg-green-100 text-green-800 border border-green-300";
+        commentBody = `先制を許す苦しい展開だったが、${winner}が粘り強く反撃。中盤以降に試合をひっくり返し、見事な逆転勝利を収めた。${loser}はリードを守り切れなかった。`;
+    }
+    // E. 乱打戦 (両チーム合計20安打以上 または 合計13点以上)
+    else if (totalHits >= 20 || (wScore + lScore) >= 13) {
+        commentTitle = "乱打戦";
+        badgeColor = "bg-purple-100 text-purple-800 border border-purple-300";
+        commentBody = `両チーム合わせて${totalHits}安打が飛び交う激しい打ち合いとなった。取られたら取り返すシーソーゲームを制したのは${winner}。${loser}も驚異的な粘りを見せたが、あと一歩及ばなかった。`;
+    }
+    // F. 投手戦 (合計得点5点以下 かつ 合計安打12以下)
+    else if ((wScore + lScore) <= 5 && totalHits <= 12) {
+        commentTitle = "投手戦";
+        badgeColor = "bg-gray-100 text-gray-800 border border-gray-400";
+        commentBody = `互いの投手が持ち味を発揮し、スコアボードに0が並ぶ緊迫した投手戦となった。数少ないチャンスを確実にものにした${winner}が、${loser}を振り切った。`;
+    }
+    // G. 拙攻 (ヒット数の割に点が取れていない: 負けチームの安打 > 勝ちチームの安打)
+    else if (lHits > wHits) {
+        commentTitle = "勝負強さ";
+        badgeColor = "bg-yellow-100 text-yellow-800 border border-yellow-300";
+        commentBody = `${loser}は${winner}を上回る${lHits}安打を放ちながらも、要所での一本が出ず残塁の山を築いた。対する${winner}は少ない好機を効率よく得点に結びつけ、したたかに勝利をもぎ取った。`;
+    }
+    // H. 接戦 (通常)
+    else if (diff <= 2) {
+        commentTitle = "大接戦";
+        badgeColor = "bg-orange-100 text-orange-800 border border-orange-300";
+        commentBody = `最後までどちらが勝つか分からない好ゲーム。${winner}が${loser}の猛追をわずかな差で振り切った。両チームの力が拮抗した、見応えのある一戦だった。`;
+    }
+    // I. 順当勝ち (その他)
+    else {
+        commentTitle = "快勝";
+        badgeColor = "bg-blue-50 text-blue-600 border border-blue-200";
+        commentBody = `${winner}が終始試合の主導権を握り、${loser}に勝利した。投打のバランスが良く、危なげない試合運びを見せた。`;
+    }
+
+    // 監督メモ（summary）があれば追加
+    if (dbMatch.summary) {
+        commentBody += `<br><span class="text-xs text-gray-500 mt-3 block border-t pt-2">📝 <strong>監督メモ:</strong> ${dbMatch.summary}</span>`;
+    }
+
+    const aiCommentHtml = `
+        <div class="mt-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm border-l-4 border-indigo-500">
+            <div class="flex items-center mb-2">
+                <span class="text-2xl mr-2">🤖</span>
+                <h3 class="font-bold text-gray-800">AI戦評: <span class="text-sm px-2 py-0.5 rounded ${badgeColor} ml-1">${commentTitle}</span></h3>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">
+                ${commentBody}
+            </p>
+        </div>
+    `;
+
+    // --- 6. 最終的なHTMLを組み立て (チャートも忘れずに結合) ---
+    return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2') + chartHtml + aiCommentHtml;
 }
 
 /**
