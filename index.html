@@ -14203,6 +14203,7 @@ function renderWinProbChart(ctx, team1, team2, labels, dataPoints) {
 
 /**
  * [NEW] 試合データから「一球速報」風のHTMLボックススコアを自動生成する
+ * (★修正版: チャートHTMLの結合漏れを修正)
  * @param {object} dbMatch - 試合オブジェクト (detailsを内包)
  * @returns {string} - ボックススコア全体のHTML文字列
  */
@@ -14222,7 +14223,6 @@ function generateBoxScoreHTML(dbMatch) {
         Object.values(details.playerGameStats.team1 || {}).forEach(stats => totalHits1 += (stats.h || 0));
         Object.values(details.playerGameStats.team2 || {}).forEach(stats => totalHits2 += (stats.h || 0));
     }
-    // (エラー(E)は現在集計していないため '0' とする)
     const totalErrors1 = 0;
     const totalErrors2 = 0;
 
@@ -14236,11 +14236,8 @@ function generateBoxScoreHTML(dbMatch) {
     let inningRow2 = '';
     for (let i = 1; i <= numInnings; i++) {
         inningHeaders += `<th>${i}</th>`;
-        // 9回裏サヨナラなどで、片方のイニングデータがない場合も考慮
         const score1_inning = (i-1 < inningScores1.length) ? inningScores1[i-1] : '';
         const score2_inning = (i-1 < inningScores2.length) ? inningScores2[i-1] : '';
-        
-        // 9回裏サヨナラ (X表示)
         const isSayonara = (i === 9 && score1 < score2 && inningScores2[i-1] > 0);
         
         inningRow1 += `<td class="score-cell">${score1_inning}</td>`;
@@ -14278,65 +14275,44 @@ function generateBoxScoreHTML(dbMatch) {
         const gameStats = details.playerGameStats?.[teamKey] || {};
         const pitchingData = details.pitching?.[teamKey] || [];
 
-        // 打順 > 交代順 でソート
         const sortedBatters = battingData.sort((a, b) => {
             const orderA = parseFloat(a.order.replace('-sub', '.'));
             const orderB = parseFloat(b.order.replace('-sub', '.'));
             return orderA - orderB;
         });
 
-        // 打撃テーブル
         let battingRows = '';
         let totalAB = 0, totalR = 0, totalH = 0, totalRBI = 0, totalSO = 0, totalBB = 0;
         
         sortedBatters.forEach(player => {
             if (!player.name) return;
             const stats = gameStats[player.name];
-            // 試合に出ていない選手 (打席0, 代走/守備固めのみ) は表示
             if (!stats || (!stats.played && (stats.sb || 0) === 0 && player.sub_type !== 'DEF' && player.sub_type !== 'PR')) return;
 
             const isSub = player.order.includes('sub');
             const rowClass = isSub ? 'sub-player' : '';
             const playerName = player.name;
-            const playerPos = player.currentPos || player.pos || '?'; // 守備変更後の最終位置
+            const playerPos = player.currentPos || player.pos || '?';
             
-            // この試合の成績 (saveDetailedStatsで集計済み)
-            const ab = stats.ab || 0;
-            const r = stats.r || 0;
-            const h = stats.h || 0;
-            const rbi = stats.rbi || 0;
-            const so = stats.so || 0;
-            const bb = (stats.bb || 0) + (stats.hbp || 0); // 四死球
+            const ab = stats.ab || 0; const r = stats.r || 0; const h = stats.h || 0;
+            const rbi = stats.rbi || 0; const so = stats.so || 0;
+            const bb = (stats.bb || 0) + (stats.hbp || 0);
             
             totalAB += ab; totalR += r; totalH += h; totalRBI += rbi; totalSO += so; totalBB += bb;
 
-            // 打席結果を翻訳
             const resultsText = player.results.map(inningResults => 
                 inningResults.split('、').map(atBat => translateResultForBoxScore(atBat)).filter(res => res !== '-')
             ).flat().join(', ');
 
-            let orderDisplay = '';
-            if (isSub) {
-                if (player.sub_type === 'PH') orderDisplay = '打';
-                else if (player.sub_type === 'PR') orderDisplay = '走';
-                else orderDisplay = '守';
-            } else {
-                orderDisplay = player.order;
-            }
+            let orderDisplay = isSub ? (player.sub_type === 'PH' ? '打' : (player.sub_type === 'PR' ? '走' : '守')) : player.order;
 
             battingRows += `
                 <tr class="${rowClass}">
                     <td class="pos">${orderDisplay} ${playerPos}</td>
                     <td class="player">${playerName}</td>
-                    <td class="at-bat">${ab}</td>
-                    <td class="runs">${r}</td>
-                    <td class="hits">${h}</td>
-                    <td class="rbi">${rbi}</td>
-                    <td class="so">${so}</td>
-                    <td class="walks">${bb}</td>
-                    <td class="results">${resultsText || '-'}</td>
-                </tr>
-            `;
+                    <td class="at-bat">${ab}</td><td class="runs">${r}</td><td class="hits">${h}</td><td class="rbi">${rbi}</td>
+                    <td class="so">${so}</td><td class="walks">${bb}</td><td class="results">${resultsText || '-'}</td>
+                </tr>`;
         });
         
         const battingTableHtml = `
@@ -14353,19 +14329,13 @@ function generateBoxScoreHTML(dbMatch) {
                     ${battingRows}
                     <tr class="team-totals">
                         <td class="player" colspan="2">合計</td>
-                        <td class="at-bat">${totalAB}</td>
-                        <td class="runs">${totalR}</td>
-                        <td class="hits">${totalH}</td>
-                        <td class="rbi">${totalRBI}</td>
-                        <td class="so">${totalSO}</td>
-                        <td class="walks">${totalBB}</td>
-                        <td class="results"></td>
+                        <td class="at-bat">${totalAB}</td><td class="runs">${totalR}</td><td class="hits">${totalH}</td><td class="rbi">${totalRBI}</td>
+                        <td class="so">${totalSO}</td><td class="walks">${totalBB}</td><td class="results"></td>
                     </tr>
                 </tbody>
             </table>
         `;
 
-        // 投手テーブル
         let pitchingRows = '';
         if (pitchingData.length > 0) {
             pitchingData.forEach(p => {
@@ -14387,8 +14357,7 @@ function generateBoxScoreHTML(dbMatch) {
                         <td class="runs">${p.runs || '0'}</td>
                         <td class="er">${p.earnedRuns || '0'}</td>
                         <td class="era">${era}</td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
         
@@ -14398,11 +14367,10 @@ function generateBoxScoreHTML(dbMatch) {
                 <tbody>${pitchingRows}</tbody>
             </table>
         `;
-
         return battingTableHtml + pitchingTableHtml;
     };
 
-// ★グラフ用のキャンバスを追加
+    // ★グラフ用のキャンバスを追加
     const chartHtml = `
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="p-4 bg-white border rounded-lg shadow-sm">
@@ -14422,10 +14390,11 @@ function generateBoxScoreHTML(dbMatch) {
             </div>
         </div>
     `;
+
     // --- 4. 最終的なHTMLを組み立て ---
-    return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2');
+    // ★★★ 修正: ここで chartHtml を最後に結合する ★★★
+    return scoreBoardHtml + generateStatsTables('team1') + generateStatsTables('team2') + chartHtml;
 }
-// ▲▲▲ 新規追加ここまで ▲▲▲
 
 /**
  * [新機能] あるチームの、指定された試合ID「以前」の
