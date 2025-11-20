@@ -24178,40 +24178,6 @@ document.body.addEventListener('click', async (e) => {
             }
         }
 
-// --- [NEW] 試合後 ボックススコア表示ボタン (トーナメント表の「一球速報」) ---
-    else if (e.target.closest('.boxscore-btn')) {
-        e.preventDefault();
-        const matchId = e.target.closest('.boxscore-btn').dataset.matchId;
-        const dbMatch = findMatchById(matchId);
-        
-        if (!dbMatch || !dbMatch.boxScoreHtml) {
-            alert("ボックススコアデータが見つかりません。");
-            return;
-        }
-        
-        const modal = document.getElementById('boxscore-modal');
-        const modalTitle = document.getElementById('boxscore-modal-title');
-        const modalBody = document.getElementById('boxscore-modal-body');
-        
-        modalTitle.textContent = `ボックススコア: ${dbMatch.team1} vs ${dbMatch.team2} (${getRoundNameFromMatchId(matchId)})`;
-        modalBody.innerHTML = dbMatch.boxScoreHtml;
-        
-        modal.classList.remove('modal-hidden');
-        modal.classList.add('flex');
-
-        // ▼▼▼ グラフ描画処理の追加 ▼▼▼
-        // モーダルが表示された後にCanvasを取得して描画
-        setTimeout(() => {
-            const ctx = document.getElementById('win-prob-chart');
-            if (ctx && dbMatch.details && dbMatch.details.inningScore) {
-                const scores1 = dbMatch.details.inningScore.team1;
-                const scores2 = dbMatch.details.inningScore.team2;
-                const { labels, dataPoints } = calculateWinProbData(dbMatch.team1, dbMatch.team2, scores1, scores2, tournamentState);
-                renderWinProbChart(ctx, dbMatch.team1, dbMatch.team2, labels, dataPoints);
-            }
-        }, 100); // 少し待ってから描画
-        // ▲▲▲ ここまで ▲▲▲
-    }
 
 // --- [NEW] 簡易入力モーダルを開く ---
     else if (e.target.closest('.scorecard-open-btn')) {
@@ -24528,10 +24494,14 @@ document.body.addEventListener('click', async (e) => {
 
 // ▼ boxscore-btn の処理ブロックを修正 ▼
 
-    // --- [NEW] 試合後 ボックススコア表示ボタン ---
+// --- [修正版] 試合後 ボックススコア表示ボタン (一球速報) ---
+    // ★重複している場合は、古い方を削除して、このブロック1つに統一してください
     else if (e.target.closest('.boxscore-btn')) {
         e.preventDefault();
-        const matchId = e.target.closest('.boxscore-btn').dataset.matchId;
+        const btn = e.target.closest('.boxscore-btn');
+        const matchId = btn.dataset.matchId;
+        
+        // 試合データを取得
         const dbMatch = findMatchById(matchId);
         
         if (!dbMatch || !dbMatch.boxScoreHtml) {
@@ -24539,45 +24509,63 @@ document.body.addEventListener('click', async (e) => {
             return;
         }
         
+        // モーダル要素を取得
         const modal = document.getElementById('boxscore-modal');
         const modalTitle = document.getElementById('boxscore-modal-title');
         const modalBody = document.getElementById('boxscore-modal-body');
         
-        modalTitle.textContent = `ボックススコア: ${dbMatch.team1} vs ${dbMatch.team2} (${getRoundNameFromMatchId(matchId)})`;
+        // タイトル設定
+        const roundName = getRoundNameFromMatchId(matchId);
+        modalTitle.textContent = `ボックススコア: ${dbMatch.team1} vs ${dbMatch.team2} (${roundName})`;
+        
+        // HTMLを注入（ここにCanvasタグが含まれている必要があります）
         modalBody.innerHTML = dbMatch.boxScoreHtml;
         
+        // モーダルを表示
         modal.classList.remove('modal-hidden');
+        modal.classList.remove('hidden'); // 念のため両方削除
         modal.classList.add('flex');
 
-        // ▼▼▼ グラフ描画処理 (勝率 + 熱狂度) ▼▼▼
+        // ▼▼▼ グラフ描画処理 (CanvasがDOMに生成された後に実行) ▼▼▼
         setTimeout(() => {
-            // 1. 勝率グラフ
+            // 1. 勝率グラフ (Win Probability)
             const ctxProb = document.getElementById('win-prob-chart');
             if (ctxProb && dbMatch.details && dbMatch.details.inningScore) {
                 const scores1 = dbMatch.details.inningScore.team1;
                 const scores2 = dbMatch.details.inningScore.team2;
+                
+                // 勝率データを計算
                 const { labels, dataPoints } = calculateWinProbData(dbMatch.team1, dbMatch.team2, scores1, scores2, tournamentState);
+                
+                // グラフを描画
                 renderWinProbChart(ctxProb, dbMatch.team1, dbMatch.team2, labels, dataPoints);
             }
 
-            // 2. ★熱狂度グラフ (新規追加)
+            // 2. 熱狂度グラフ (Excitement)
             const ctxExcitement = document.getElementById('excitement-chart');
             if (ctxExcitement) {
+                // 熱狂度データを計算
                 const exData = calculateExcitementData(dbMatch);
+                
                 if (exData) {
+                    // グラフを描画
                     renderExcitementChart(ctxExcitement, exData);
+                    
                     // ランクバッジの更新
                     const badge = document.getElementById('excitement-rank-badge');
                     if (badge) {
                         badge.textContent = `ランク: ${exData.rank}`;
-                        // ランクに応じて色を変えるなどの演出も可能
-                        if (exData.rank.startsWith('S')) badge.className = "text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-bold border border-red-500";
+                        if (exData.rank.startsWith('S')) {
+                            badge.className = "text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-bold border border-red-500";
+                        } else {
+                            badge.className = "text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded";
+                        }
                     }
                 }
             }
-        }, 100); 
+        }, 150); // 描画待ち時間を少し長めに確保
         // ▲▲▲ ここまで ▲▲▲
-    }
+    }    
 
     // --- [NEW] 283学園ホームページモーダルを閉じるボタン ---
    else if (e.target.closest('#homepage-modal-close')) {
