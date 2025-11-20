@@ -2358,11 +2358,32 @@
         <svg aria-hidden="true" class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
     </div>
 
+
+
     <ul id="search-suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto">
         </ul>
 </div>
 <button id="school-search-btn" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-3">検索</button>
 </div>
+
+<div class="flex flex-wrap justify-center gap-2 mb-8">
+    <button class="rank-filter-btn bg-red-100 text-red-800 border border-red-300 hover:bg-red-200 font-bold py-1 px-3 rounded-full text-sm transition-colors" data-rank="A">
+        👑 Aランク (名門)
+    </button>
+    <button class="rank-filter-btn bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 font-bold py-1 px-3 rounded-full text-sm transition-colors" data-rank="B">
+        🛡️ Bランク (強豪)
+    </button>
+    <button class="rank-filter-btn bg-yellow-100 text-yellow-800 border border-yellow-300 hover:bg-yellow-200 font-bold py-1 px-3 rounded-full text-sm transition-colors" data-rank="C">
+        🦄 Cランク (中堅)
+    </button>
+    <button class="rank-filter-btn bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-200 font-bold py-1 px-3 rounded-full text-sm transition-colors" data-rank="D">
+        🔥 Dランク (発展途上)
+    </button>
+    <button class="rank-filter-btn bg-white text-gray-600 border border-gray-300 hover:bg-gray-100 font-bold py-1 px-3 rounded-full text-sm transition-colors" data-rank="E">
+        🌱 Eランク (挑戦者)
+    </button>
+</div>
+
         <div class="space-y-4">
             <div class="flex items-center justify-between">
                 <span class="font-semibold">試合記事の自動生成</span>
@@ -3642,7 +3663,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "なむこそうごう",
         region: "中部",
         type: "私立",
-        deviation: 75,
+        deviation: 95,
         best: "甲子園ベスト16",
         last: "県大会2回戦",
         info: "大手ナムコグループが母体となる、県内屈指の資金力と設備を誇る私立校。黒井監督の徹底した管理野球の下、個々の能力が高く、大崩れしない安定した戦いぶりが特徴。２年前には甲子園初出場も果たし、破竹の勢いでベスト16まで勝ち進み、一躍有名校となったのは記憶に新しいだろう。しかし昨年の夏は２回戦敗退、秋は初戦敗退、春も初戦敗退と苦しい時期が続いている。聖地を知るメンバーは今の3年生のみとなった今、逆襲を誓い再び甲子園を目指す。ノーシードではあるがその実力はシード校級であり今大会のダークホースと言っても過言ではないだろう",
@@ -3684,7 +3705,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "いわたみなみ",
         region: "西部",
         type: "公立",
-        deviation: 63,
+        deviation: 73,
         best: "甲子園出場",
         last: "初戦敗退",
         info: "全国トップクラスの進学校。野球は「文武両道」を掲げる課外活動の一環だが、その実力は侮れない。選手個々の野球IQが高く、データを駆使した緻密な戦術を得意とする。知性派集団が、夏のトーナメントに旋風を巻き起こす。余談だが、全国制覇の経験を持つサッカー部が応援に駆けつけることもあり、その独特の応援スタイルも名物となっている。ちなみにサッカー形式の野球応援が珍しいということで、これを目当てに試合に見に来るという隠れファンも多い。",
@@ -3694,7 +3715,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "みしまきた",
         region: "東部",
         type: "公立",
-        deviation: 20,
+        deviation: 60,
         best: "県大会ベスト8",
         last: "県大会ベスト8",
         info: "2年生エース左腕・榛名を擁する公立の実力校。max148キロの球速を持つ榛名の投球が試合の鍵を握るが、打線がエースを援護できるかが長年の課題。絶対的エースの存在に頼るだけでなく、チーム全体で得点を奪う総合力が試される。安定して上位に進出する力は十分に持っている。",
@@ -3725,7 +3746,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "せいれいくりすとふぁー",
         region: "西部",
         type: "私立",
-        deviation: 94,
+        deviation: 114,
         best: "甲子園2回戦",
         last: "県大会ベスト8",
         info: "毎年優勝候補に挙げられる西部地区の雄。名将・片岡監督が築き上げた投手を中心とした堅守は全国レベルと評される。しかし、その堅実さゆえに打線が湿りがちで、トーナメント終盤で涙を飲む展開が続く。タレントは揃っており、悲願の甲子園出場に向けて、伝統の守備力に加えて得点力をどう向上させるか。長年の課題である「ベスト8の壁」を越えられるかが今大会の焦点となる。",
@@ -3746,7 +3767,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ふじのみやきた",
         region: "東部",
         type: "公立",
-        deviation: 51,
+        deviation: 71,
         best: "甲子園出場",
         last: "初戦敗退",
         info: "プロ注目のmax158kmの本格派右腕・斎藤を擁する公立校。彼の存在により、例年以上の注目を集めている。佐々木監督はエースへの負担を考慮しつつ、チーム全体の底上げを図る。斎藤の快投はもちろん、彼を支える野手陣の奮起が、上位進出への鍵となる。",
@@ -3797,7 +3818,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "かけがわにし",
         region: "西部",
         type: "公立",
-        deviation: 91,
+        deviation: 111,
         best: "甲子園2回戦",
         last: "県大会ベスト4",
         info: "静岡高校と並ぶスポーツが盛んな県内二大公立校。サッカー部などが全国的に有名なスポーツ強豪校であり、野球部も毎年安定して上位に進出する実力を持つが、あと一歩で甲子園に届かないシーズンが続く。名将・円堂監督が掲げる、常識にとらわれない大胆な采配は、多くのファンを魅了している。今年こそ他競技の輝かしい実績に追いつきたい。。",
@@ -3807,7 +3828,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "はままついちりつ",
         region: "西部",
         type: "公立",
-        deviation: 65,
+        deviation: 75,
         best: "甲子園出場",
         last: "県大会2回戦",
         info: "毎年安定した力を持つ中堅公立校だが、トーナメント中盤で強豪校と当たり敗退することが多く、「壁」を越えられずにいる。この状況を打破すべく、ベテランの山口監督は今年は機動力野球に特化。塁に出れば積極的に次の塁を狙う、しつこい野球で番狂わせを狙う。。",
@@ -3837,7 +3858,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ふくろい",
         region: "中部",
         type: "公立",
-        deviation: 59,
+        deviation: 79,
         best: "県大会ベスト8",
         last: "初戦敗退",
         info: "県内有数のマンモス校で、毎年一定数の有望な新入生が入部する。突出したスター選手はいないものの、全部員のレベルが高く、総合力で勝負するチーム。ベテラン千葉監督の下、選手層の厚さを活かした多彩な戦術が強み。昨年の初戦敗退の雪辱を誓う。。",
@@ -3867,7 +3888,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "しずおかしょうぎょう",
         region: "中部",
         type: "公立",
-        deviation: 57,
+        deviation: 7,
         best: "甲子園優勝",
         last: "県大会ベスト8",
         info: "甲子園優勝経験もある伝統校で、毎年優勝候補の筆頭に挙げられる。エース成宮を筆頭とする投手力は全国屈指のレベルを誇る。昨年の大会では準々決勝で敗退しており、今年は王座奪還を目指す。名将・国友監督の下、投打に隙がなく、総合力は県内トップクラス。。",
@@ -3888,7 +3909,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "せいけい",
         region: "東部",
         type: "私立",
-        deviation: 38,
+        deviation: 58,
         best: "甲子園出場",
         last: "初戦敗退",
         info: "かつては甲子園にも出場した古豪だが、近年は部員不足に悩み低迷している。勝利のためなら手段を選ばないベテラン影山監督の非情な采配は、物議を醸すことも少なくない。しかし、恵まれない戦力で勝ち上がるため、綺麗事だけでは済まされないというチームの現実も表している。。",
@@ -3898,7 +3919,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "かがくぎじゅつ",
         region: "中部",
         type: "私立",
-        deviation: 23,
+        deviation: 43,
         best: "県大会ベスト4",
         last: "県大会ベスト16",
         info: "VRトレーニングやAIによるデータ解析など、最新技術を積極的に導入している新時代の私立校。その先進的な取り組みはメディアでも度々取り上げられ、知名度は高い。速水監督の下、科学的なアプローチで選手の能力を最大限に引き出す。データ野球が伝統的な強豪校にどこまで通用するのか、注目が集まる。。",
@@ -3928,7 +3949,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ちとく",
         region: "東部",
         type: "私立",
-        deviation: 71,
+        deviation: 91,
         best: "県大会ベスト8",
         last: "初戦敗退",
         info: "『力こそ全て』を校訓に掲げ、練習のほとんどをウエイトトレーニングに費やす脳筋集団。金剛監督の指導の下、全選手がベンチプレス100kg以上を誇るパワーは本物だ。しかし、その大味な野球は、栄養管理や科学的トレーニングを取り入れる強豪校の前に、いつもあと一歩で屈してきた。筋肉は裏切らない。その言葉を信じ、彼らは今日も鉄アレイを握る。",
@@ -3938,7 +3959,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "せいせい",
         region: "中部",
         type: "私立",
-        deviation: 25,
+        deviation: 45,
         best: "甲子園優勝",
         last: "初戦敗退",
         info: "半世紀前に甲子園5連覇を達成した伝説的な古豪。近年は低迷が続くが、その名前は今も高校野球ファンに畏敬の念を抱かせている。かつての名将の血を引く犬飼監督が、伝統の堅守を復活させ、「帝国の再建」を目指す。古豪復活への道のりは険しいが、その一挙手一投足に注目が集まる。。",
@@ -4038,7 +4059,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "するがそうごう",
         region: "中部",
         type: "私立",
-        deviation: 47,
+        deviation: 67,
         best: "県大会準優勝",
         last: "県大会2回戦",
         info: "2019年夏に初の県決勝進出を果たした駿河総合。昨夏の「2020年夏季静岡県高等学校野球大会結果」でもベスト4入り。悲願の甲子園が手の届く位置まできている。同校はチーム力が年々上昇すると同時に、上のカテゴリーで活躍する卒業生が増えている。2018年に社会人野球を経てOBの杉山一樹（福岡ソフトバンク）がプロ入り。最速157キロの剛速球を武器に今季はローテーションの一角として期待される。さらに、2019年のドラフトで指名された紅林弘太郎（オリックス）はプロ1年目から1軍戦に出場。将来の主軸候補として注目を集めている。期待の若手・藤崎監督が持ち込んだデータ野球を武器に、着実に力をつけている。相手の油断を突く情報戦を得意とし、下馬評を覆すポテンシャルは十分。校名とは裏腹に、冷静沈着な野球で番狂わせを狙う。。",
@@ -4048,7 +4069,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "かとうがくえん",
         region: "東部",
         type: "私立",
-        deviation: 99,
+        deviation: 129,
         best: "県大会ベスト16",
         last: "県大会2回戦",
         info: "投手陣は緩急をつける嶋、思い切りのいい榎本らが主戦を争う。打線は長打力がある右田、寺田ら中軸が信頼できる。川崎ら上位が出て、得点機をつくりたい。下位打線の充実が鍵。守備は一年生の時から試合に出ている遊撃坂口、昨年を経験した捕手古田らセンターラインが軸。夏までに確実にアウトを取れる安定感を身につけたい直近の練習試合では東海大翔洋にも勝利するなど今大会の優勝候補と言っても過言ではない",
@@ -4078,7 +4099,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ふじのみやにし",
         region: "東部",
         type: "公立",
-        deviation: 58,
+        deviation: 68,
         best: "甲子園ベスト16",
         last: "初戦敗退",
         info: "約30年前に甲子園出場経験のある古豪。近年は私立校の台頭に押され、上位進出から遠ざかっている。OBや地元ファンの「復活を」という期待が、時に選手たちのプレッシャーになることも。ベテラン拳崎監督は、選手たちが気負わずに実力を発揮できる環境作りに努めている。",
@@ -4088,7 +4109,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ふじいちりつ",
         region: "東部",
         type: "私立",
-        deviation: 61,
+        deviation: 81,
         best: "県大会ベスト8",
         last: "県大会2回戦",
         info: "セイバーメトリクスをいち早く導入し、データに基づいた野球を徹底する私立校。赤嶺監督の采配は、選手のコンディションや相手との相性など、あらゆる情報を分析した上で決定される。その合理的なアプローチは、時に非情とも映るが、着実に結果を残している。",
@@ -4098,7 +4119,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "おいすかはままつこくさい",
         region: "西部",
         type: "私立",
-        deviation: 49,
+        deviation: 69,
         best: "県大会ベスト4",
         last: "県大会2回戦",
         info: "県内を牛耳る巨大資本『ナムコグループ』に対抗すべく、地元の有志『オイスカグループ』が設立した異色の高校。潤沢な資金を持つナムコ系列校とは対照的に、彼らが持つのは反骨精神と結束力だけだ。「伝説」と称される桐生監督の指導は、技術よりも精神的な強さを重視する。その熱いプレースタイルと反骨精神は多くのファンを惹きつけており、大会の波乱要因として注目されている。",
@@ -4118,7 +4139,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "にらやま",
         region: "東部",
         type: "公立",
-        deviation: 68,
+        deviation: 88,
         best: "県大会ベスト16",
         last: "初戦敗退",
         info: "県のシンボル『伊豆山』の麓にある県内屈指の進学校。彼らの名物は、険しい山道を毎日駆け上がる地獄のトレーニングだ。それで鍛え上げられた強靭な足腰は、他校の脅威。ベテラン山路監督が率いる機動力野球は、一度出塁を許すと止まらない。山の民の誇りを胸に、グラウンドを嵐のように駆け巡る。",
@@ -4138,7 +4159,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "いちりつぬまづ",
         region: "東部",
         type: "公立",
-        deviation: 62,
+        deviation: 82,
         best: "県大会ベスト16",
         last: "初戦敗退",
         info: "全国レベルの吹奏楽部が奏でる応援は『市沼サウンド』として有名。その美しくも力強い音圧は、相手チームの集中力を削ぎ、味方を鼓舞する。ベテラン猫又監督が率いるチームは、その応援をバックに、粘り強い守備でリズムを作る。派手な選手はいないが、繋ぐ意識は県内随一。音の魔術師たちが、静かに、しかし確実に相手を追い詰めていく。",
@@ -4433,7 +4454,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '遠山 奬志', style: '堅実', experience: '中堅' }
     },
     "榛原": {
-        name_yomi: "はいばら", region: "中部", type: "公立", deviation: 59,
+        name_yomi: "はいばら", region: "中部", type: "公立", deviation: 19,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "「榛高（はいこう）」の愛称。進学校ながら、機動力を絡めた攻撃的な野球で上位を伺う。",
         coach: { name: '原 辰徳', style: '超攻撃型', experience: 'ベテラン' }
@@ -4493,7 +4514,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '山田 暢久', style: '全員野球', experience: '中堅' }
     },
     "藤枝東": {
-        name_yomi: "ふじえだひがし", region: "中部", type: "公立", deviation: 35,
+        name_yomi: "ふじえだひがし", region: "中部", type: "公立", deviation: 55,
         best: "県大会ベスト8", last: "県大会3回戦",
         info: "「サッカー王国」の一角を担う超名門校。野球部もその伝統を受け継ぎ、フィジカルの強さを活かしたプレーが持ち味。",
         coach: { name: '中山 雅史', style: '積極打撃', experience: '期待の若手' }
@@ -4505,7 +4526,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '石田 雅昭', style: 'データ野球', experience: '中堅' }
     },
     "横須賀": {
-        name_yomi: "よこすか", region: "西部", type: "公立", deviation: 52,
+        name_yomi: "よこすか", region: "西部", type: "公立", deviation: 12,
         best: "県大会ベスト8", last: "県大会2回戦",
         info: "「スカ」の愛称で知られる古豪。近年は安定した実力を保持しており、上位進出も珍しくない。",
         coach: { name: '衣笠 祥雄', style: '根性野球', experience: 'ベテラン' }
@@ -7146,6 +7167,41 @@ function showTeamStatusModal(teamName) {
             statsEl.textContent = '（今大会の集計データなし）';
         }
     }    
+
+// ▼▼▼ ★★★ ここに以下のコードを挿入してください ★★★ ▼▼▼
+
+    // --- [追加] ランク変動予測を表示 ---
+    let predictionContainer = document.getElementById('status-modal-rank-prediction');
+    if (!predictionContainer) {
+        // コンテナがなければ作成して挿入
+        predictionContainer = document.createElement('div');
+        predictionContainer.id = 'status-modal-rank-prediction';
+        predictionContainer.className = "mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm";
+        
+        // 挿入場所: 今大会成績(statsEl)の親要素内、statsElの直後
+        if (statsEl && statsEl.parentNode) {
+            statsEl.parentNode.insertBefore(predictionContainer, statsEl.nextSibling);
+        }
+    }
+    
+    // 予測を実行して表示
+    const prediction = predictRankChanges(teamName);
+    predictionContainer.innerHTML = `
+        <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">次回のランク変動予測</h5>
+        <div class="space-y-2">
+            <div class="flex items-start">
+                <span class="text-xl mr-2">📈</span>
+                <div>${prediction.up}</div>
+            </div>
+            <div class="flex items-start">
+                <span class="text-xl mr-2">📉</span>
+                <div>${prediction.down}</div>
+            </div>
+        </div>
+    `;
+
+    // ▲▲▲ 挿入ここまで ▲▲▲
+
     // --- 5. 通算成績 (Career) の表示 ---
     if (careerStatsEl) {
         const careerBattingStats = teamRecord.playerStats?.batting;
@@ -7658,6 +7714,137 @@ function scheduleRoundMatches(matchIds, dates, stadiumList, gamesPerDayPerStadiu
     });
 }
 
+/**
+ * [NEW] チームのランクスコアを計算する（シミュレーション用）
+ * @param {string} teamName - チーム名
+ * @param {number} hypotheticalFinish - 仮定する最終順位 (1, 2, 4, 8, 16, 32, 64)
+ * @returns {number} - ランクスコア
+ */
+function calculateScore(teamName, hypotheticalFinish) {
+    const teamData = TEAM_DATA[teamName];
+    if (!teamData) return 0;
+
+    let score = 0;
+    
+    // 1. 基礎能力 (偏差値)
+    score += (teamData.deviation || 50) * 0.5;
+
+    // 2. 過去の最高成績ボーナス (文字情報)
+    const bestStr = teamData.best || '';
+    if (bestStr.includes('優勝') && bestStr.includes('甲子園')) score += 40;
+    else if (bestStr.includes('優勝')) score += 25;
+    else if (bestStr.includes('準優勝')) score += 20;
+    else if (bestStr.includes('ベスト4')) score += 15;
+    else if (bestStr.includes('出場')) score += 10;
+    else if (bestStr.includes('ベスト8')) score += 10;
+    else if (bestStr.includes('ベスト16')) score += 5;
+
+    // 3. 直近成績ボーナス (シミュレーション値)
+    // (甲子園成績はマイナス値ですが、ここでは県大会の昇格降格に絞ってプラス値で計算します)
+    if (hypotheticalFinish === 1) score += 20;       // 優勝
+    else if (hypotheticalFinish === 2) score += 15;  // 準優勝
+    else if (hypotheticalFinish <= 4) score += 10;   // ベスト4
+    else if (hypotheticalFinish <= 8) score += 5;    // ベスト8
+    else if (hypotheticalFinish <= 16) score += 2;   // ベスト16
+    else if (hypotheticalFinish >= 64) score -= 5;   // 初戦敗退ペナルティ
+
+    // 4. 人気補正
+    if (teamData.popularity) score += 5;
+
+    return score;
+}
+
+/**
+ * [NEW] スコアからランク(A~E)を判定する
+ */
+function getRankChar(score) {
+    if (score >= 60) return 'A';
+    if (score >= 50) return 'B';
+    if (score >= 40) return 'C';
+    if (score >= 30) return 'D';
+    return 'E';
+}
+
+/**
+ * [UPDATED] ランク変動予測テキストを生成する
+ * (★4回戦(ベスト16)を含む、全ラウンドの昇格・降格分岐を完全網羅した修正版)
+ */
+function predictRankChanges(teamName) {
+    const currentRank = calculateRank(teamName, tournamentState);
+    const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    const currentRankVal = rankValues[currentRank];
+    
+    let rankUpMsg = "";
+    let rankDownMsg = "";
+
+    // --- 1. ランクアップ条件を探す (下から順にチェック) ---
+    // チェック順位: 32(3回戦), 16(4回戦/ベスト16), 8(準々), 4(準決), 2(決勝), 1(優勝)
+    if (currentRank !== 'A') {
+        const upMilestones = [32, 16, 8, 4, 2, 1]; 
+        let upFound = false;
+        
+        for (const finish of upMilestones) {
+            const score = calculateScore(teamName, finish);
+            const projectedRank = getRankChar(score);
+            
+            // 現在のランクより上がる場合
+            if (rankValues[projectedRank] > currentRankVal) {
+                let condition = "";
+                if (finish === 1) condition = "優勝";
+                else if (finish === 2) condition = "決勝";     // 準優勝
+                else if (finish === 4) condition = "ベスト4";  // 準決勝進出
+                else if (finish === 8) condition = "ベスト8";  // 準々決勝進出
+                else if (finish === 16) condition = "ベスト16"; // 4回戦進出
+                else if (finish === 32) condition = "3回戦";   // 3回戦進出 (ベスト32)
+
+                rankUpMsg = `🔥 <strong>${condition}</strong> 進出で <strong>ランク${projectedRank}</strong> へ昇格！`;
+                upFound = true;
+                break; // 最初に見つかった「最も低いハードル（最短目標）」を表示して終了
+            }
+        }
+        
+        if (!upFound) {
+            rankUpMsg = `<span class="text-gray-500">（優勝しても次回の昇格圏内には届きません）</span>`;
+        }
+    } else {
+        rankUpMsg = `<span class="text-amber-600 font-bold">👑 現在 最高ランク到達中</span>`;
+    }
+
+    // --- 2. ランクダウン危険性を探す (下から順にチェック) ---
+    // チェック順位（悪い順）: 64(1/2回戦), 32(3回戦), 16(4回戦), 8(準々), 4(準決), 2(決勝)
+    if (currentRank !== 'E') {
+        const downMilestones = [64, 32, 16, 8, 4, 2];
+        let downFound = false;
+
+        for (const finish of downMilestones) {
+            const score = calculateScore(teamName, finish);
+            const projectedRank = getRankChar(score);
+            
+            // 現在のランクより下がる場合
+            if (rankValues[projectedRank] < currentRankVal) {
+                let lossStage = "";
+                if (finish === 64) lossStage = "初戦(1･2回戦)敗退";
+                else if (finish === 32) lossStage = "3回戦敗退";
+                else if (finish === 16) lossStage = "4回戦(ベスト16)敗退"; // ★ここを追加・修正
+                else if (finish === 8) lossStage = "準々決勝敗退"; // ベスト8止まり
+                else if (finish === 4) lossStage = "準決勝敗退";   // ベスト4止まり
+                else if (finish === 2) lossStage = "決勝敗退";     // 準優勝止まり
+
+                rankDownMsg = `⚠️ <strong>${lossStage}</strong> すると <strong>ランク${projectedRank}</strong> へ降格...`;
+                downFound = true;
+                break; // 最初に見つかった「最も低いハードル（最も早い段階での降格）」を表示して終了
+            }
+        }
+
+        if (!downFound) {
+             rankDownMsg = `<span class="text-blue-600 font-bold">🛡️ ランク維持圏内</span>`;
+        }
+    } else {
+        rankDownMsg = `<span class="text-gray-400">（これ以上の降格はありません）</span>`;
+    }
+
+    return { up: rankUpMsg, down: rankDownMsg };
+}
 /**
  * [FIXED] チームランクを計算する
  * (★甲子園成績(マイナス値)を正しく評価するように修正)
@@ -24701,6 +24888,35 @@ document.body.addEventListener('click', async (e) => {
                 console.warn("熱狂度グラフのCanvasが見つかりません (ID: excitement-chart)");
             }
         }, 300); // 描画待ち時間
+    }
+
+// --- [NEW] ランク別フィルター検索ボタン ---
+    if (e.target.closest('.rank-filter-btn')) {
+        e.preventDefault();
+        const rank = e.target.closest('.rank-filter-btn').dataset.rank;
+        
+        // 全チームデータを取得 (TEAM_DATAにあるすべてのチーム)
+        const allTeams = Object.keys(TEAM_DATA);
+        
+        // 指定されたランクのチームだけをフィルタリング
+        const filteredTeams = allTeams.filter(teamName => {
+            // calculateRank関数を使って現在のランクを判定
+            return calculateRank(teamName, tournamentState) === rank;
+        });
+
+        // 名前順（あいうえお順）または偏差値順にソート
+        filteredTeams.sort((a, b) => {
+            const devA = TEAM_DATA[a].deviation || 50;
+            const devB = TEAM_DATA[b].deviation || 50;
+            return devB - devA; // 偏差値が高い順
+        });
+
+        if (filteredTeams.length > 0) {
+            // 既存の検索結果表示関数を使ってモーダルを開く
+            showSearchResultsList(filteredTeams, `${rank}ランク高校 一覧`);
+        } else {
+            alert(`現在、${rank}ランクのチームは存在しません。`);
+        }
     }
 
     // --- [NEW] 283学園ホームページモーダルを閉じるボタン ---
