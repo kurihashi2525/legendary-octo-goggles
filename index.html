@@ -972,7 +972,8 @@
 .display-card {
     background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
 }
-        #main-bracket-container { display: flex; justify-content: center; padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
+        #main-bracket-container { display: flex; justify-content: flex-start;
+ padding: 20px; font-size: 12px; overflow-x: auto; border: 1px solid #e5e7eb; background-color: #f9fafb; border-radius: 8px;}
         .bracket-half { display: flex; }
         .bracket-half.right { flex-direction: row-reverse; }
         .bracket-final { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; flex-shrink: 0; min-width: 60px; }
@@ -2340,6 +2341,12 @@
             <h3 class="text-xl font-bold">設定</h3>
             <button id="settings-modal-close-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
         </div>
+<div class="mb-6">
+            <h4 class="text-sm font-bold text-gray-600 mb-2 text-center">現在の勢力分布図</h4>
+            <div id="rank-pyramid-container" class="w-full bg-gray-50 p-4 rounded-lg border border-gray-200">
+                </div>
+
+</div>
 <div id="school-archive-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[300] font-sans">
     <div class="bg-white w-full max-w-5xl h-[95vh] overflow-y-auto rounded-lg shadow-2xl relative">
         <button id="school-archive-close-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
@@ -3352,6 +3359,7 @@ const RBIS = ['1点', '2点', '3点', '4点'];
     };
 const tournamentNameMap = { summer: '夏季大会', autumn: '秋季大会', spring: '春季大会' };
 
+
 // ▼▼▼ このブロックをまるごと置き換える ▼▼▼
 const SCANDAL_DEFINITIONS = [
     {
@@ -3633,7 +3641,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "はままつしょうぎょう",
         region: "西部",
         type: "公立",
-        deviation: 32,
+        deviation: 2,
         best: "甲子園優勝",
         last: "県大会2回戦",
         info: "30年前の甲子園優勝校として野球ファンの間では知名度のある高校。近年はナムコグループや新興私立の台頭により低迷しており、昔のような圧倒的な強さはないが、今もなお中堅レベルの実力校として虎視眈々と聖地を狙っている。輝かしい栄光を取り戻すべく、今大会での躍進に期待したいい。",
@@ -3797,7 +3805,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "みしまみなみ",
         region: "東部",
         type: "公立",
-        deviation: 42,
+        deviation: 62,
         best: "甲子園出場",
         last: "県大会2回戦",
         info: "数年前に21世紀枠として甲子園に出場した経験を持つ。数年前ほどの力はないが、今年のチームは全員野球で相手に挑み、守備でリズムを作りながら、つなぐバッティングで得点する野球が特長。エースの吉田と主砲の打川を中心に、泥臭い野球でこの夏は下克上で甲子園まで勝ち上がる。",
@@ -3818,7 +3826,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "かけがわにし",
         region: "西部",
         type: "公立",
-        deviation: 111,
+        deviation: 151,
         best: "甲子園2回戦",
         last: "県大会ベスト4",
         info: "静岡高校と並ぶスポーツが盛んな県内二大公立校。サッカー部などが全国的に有名なスポーツ強豪校であり、野球部も毎年安定して上位に進出する実力を持つが、あと一歩で甲子園に届かないシーズンが続く。名将・円堂監督が掲げる、常識にとらわれない大胆な采配は、多くのファンを魅了している。今年こそ他競技の輝かしい実績に追いつきたい。。",
@@ -3868,7 +3876,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "はままつじょうほくこうぎょう",
         region: "西部",
         type: "公立",
-        deviation: 66,
+        deviation: 76,
         best: "県大会ベスト4",
         last: "初戦敗退",
         info: "県大会ベスト4の経験もある公立校。元プロの金本監督が注入する、積極果敢なフルスイング野球がチームの代名詞。その攻撃的なスタイルは、時にラフプレーと批判されることもあるが、勝利への執念はどのチームよりも強い。昨年の初戦敗退から這い上がり、再び頂点を目指す。。",
@@ -3949,7 +3957,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ちとく",
         region: "東部",
         type: "私立",
-        deviation: 91,
+        deviation: 71,
         best: "県大会ベスト8",
         last: "初戦敗退",
         info: "『力こそ全て』を校訓に掲げ、練習のほとんどをウエイトトレーニングに費やす脳筋集団。金剛監督の指導の下、全選手がベンチプレス100kg以上を誇るパワーは本物だ。しかし、その大味な野球は、栄養管理や科学的トレーニングを取り入れる強豪校の前に、いつもあと一歩で屈してきた。筋肉は裏切らない。その言葉を信じ、彼らは今日も鉄アレイを握る。",
@@ -3989,7 +3997,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "とうかいだいしょうよう",
         region: "中部",
         type: "私立",
-        deviation: 61,
+        deviation: 91,
         best: "県準優勝",
         last: "県大会ベスト16",
         info: "一昨年の夏はノーシードから決勝まで勝ち進むも765総合に敗れ、準優勝。新しいスタイルで今夏こそ甲子園へ！勝利への執念を引き継ぐ現チームの特徴は「機動力」。前チームとはまた違ったスタイルに期待がかかる。機動力以外もレベルアップしている。投手は140キロ右腕の甘田圭澄（2年）が君臨。課題だった2番手も、1年生を中心に台頭しつつある。一方の攻撃力は7試合計90安打を叩き出した昨年のチームに比べて劣るが、機動力を使った野球を展開。チームナンバーワンの俊足・松下揮人（2年＝外野手）や岸川を筆頭に足の速い選手が多いのも追い風となっている。守りからリズムを作り、1点ずつ積み重ねていくニュースタイルが浸透してきた「タテジマ軍団」。2004年夏以来となる甲子園に向けて牙を研ぐ。。",
@@ -4059,7 +4067,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "するがそうごう",
         region: "中部",
         type: "私立",
-        deviation: 67,
+        deviation: 57,
         best: "県大会準優勝",
         last: "県大会2回戦",
         info: "2019年夏に初の県決勝進出を果たした駿河総合。昨夏の「2020年夏季静岡県高等学校野球大会結果」でもベスト4入り。悲願の甲子園が手の届く位置まできている。同校はチーム力が年々上昇すると同時に、上のカテゴリーで活躍する卒業生が増えている。2018年に社会人野球を経てOBの杉山一樹（福岡ソフトバンク）がプロ入り。最速157キロの剛速球を武器に今季はローテーションの一角として期待される。さらに、2019年のドラフトで指名された紅林弘太郎（オリックス）はプロ1年目から1軍戦に出場。将来の主軸候補として注目を集めている。期待の若手・藤崎監督が持ち込んだデータ野球を武器に、着実に力をつけている。相手の油断を突く情報戦を得意とし、下馬評を覆すポテンシャルは十分。校名とは裏腹に、冷静沈着な野球で番狂わせを狙う。。",
@@ -4099,7 +4107,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "ふじのみやにし",
         region: "東部",
         type: "公立",
-        deviation: 68,
+        deviation: 88,
         best: "甲子園ベスト16",
         last: "初戦敗退",
         info: "約30年前に甲子園出場経験のある古豪。近年は私立校の台頭に押され、上位進出から遠ざかっている。OBや地元ファンの「復活を」という期待が、時に選手たちのプレッシャーになることも。ベテラン拳崎監督は、選手たちが気負わずに実力を発揮できる環境作りに努めている。",
@@ -4119,7 +4127,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "おいすかはままつこくさい",
         region: "西部",
         type: "私立",
-        deviation: 69,
+        deviation: 59,
         best: "県大会ベスト4",
         last: "県大会2回戦",
         info: "県内を牛耳る巨大資本『ナムコグループ』に対抗すべく、地元の有志『オイスカグループ』が設立した異色の高校。潤沢な資金を持つナムコ系列校とは対照的に、彼らが持つのは反骨精神と結束力だけだ。「伝説」と称される桐生監督の指導は、技術よりも精神的な強さを重視する。その熱いプレースタイルと反骨精神は多くのファンを惹きつけており、大会の波乱要因として注目されている。",
@@ -4189,7 +4197,7 @@ const TEAM_ROSTER_MASTER = {
         name_yomi: "こさい",
         region: "西部",
         type: "公立",
-        deviation: 57,
+        deviation: 77,
         best: "県大会ベスト8",
         last: "初戦敗退",
         info: "大会ごとに成績が大きく変動する、ムラッ気のあるチームとして知られる。上位進出経験もありポテンシャルは高いが、格下相手への取りこぼしも少なくない。ベテラン海野監督は、長年の課題である精神的な安定感をチームにもたらそうと指導。今大会で安定した戦いぶりを見せられるかが躍進の鍵となる。。",
@@ -4256,7 +4264,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '中田 島蔵', style: '全員野球', experience: '中堅' }
     },
 "浜松修学舎": {
-        name_yomi: "はままつしゅうがくしゃ", region: "西部", type: "私立", deviation: 55,
+        name_yomi: "はままつしゅうがくしゃ", region: "西部", type: "私立", deviation: 70,
         best: "県大会ベスト8", last: "県大会3回戦",
         info: "近年急速に力をつけている私立校。豊富な練習量と「修学舎メソッド」と呼ばれる独自の育成法で、上位を虎視眈々と狙う。",
         coach: { name: '高橋 正和', style: '総合力', experience: '中堅' }
@@ -4268,7 +4276,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '渡辺 徹', style: '堅実', experience: '中堅' }
     },
     "掛川工業": {
-        name_yomi: "かけがわこうぎょう", region: "西部", type: "公立", deviation: 73,
+        name_yomi: "かけがわこうぎょう", region: "西部", type: "公立", deviation: 93,
         best: "県大会2回戦", last: "初戦敗退",
         info: "掛川西、掛川東とは異なる、工業高校らしい実直な野球が持ち味。",
         coach: { name: '掛布 雅之', style: '積極打撃', experience: 'プロOB' }
@@ -4280,13 +4288,13 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '長谷部 誠', style: 'データ野球', experience: '期待の若手' }
     },
     "島田樟誠": {
-        name_yomi: "しまだしょうせい", region: "中部", type: "私立", deviation: 75,
+        name_yomi: "しまだしょうせい", region: "中部", type: "私立", deviation: 95,
         best: "県大会3回戦", last: "県大会2回戦",
         info: "近年、野球部の強化に力を入れている私立校。粘り強い戦いが持ち味。",
         coach: { name: '佐々木 恭介', style: '総合力', experience: 'ベテラン' }
     },
     "富士宮東": {
-        name_yomi: "ふじのみやひがし", region: "東部", type: "公立", deviation: 47,
+        name_yomi: "ふじのみやひがし", region: "東部", type: "公立", deviation: 73,
         best: "県大会2回戦", last: "初戦敗退",
         info: "富士山麓の地元選手で構成されたチーム。地の利を活かした戦いをしたい。",
         coach: { name: '工藤 公康', style: '投手中心', experience: 'プロOB' }
@@ -4316,7 +4324,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '大榎 克己', style: '堅実', experience: '中堅' }
     },
     "沼津商業": {
-        name_yomi: "ぬまづしょうぎょう", region: "東部", type: "公立", deviation: 59,
+        name_yomi: "ぬまづしょうぎょう", region: "東部", type: "公立", deviation: 79,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "東部の伝統ある商業高校。緻密なデータ分析と機動力を絡めた「考える野球」が持ち味。",
         coach: { name: '小宮山 悟', style: 'データ野球', experience: 'ベテラン' }
@@ -4394,13 +4402,13 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '山本 浩二', style: '全員野球', experience: 'ベテラン' }
     },
     "磐田西": {
-        name_yomi: "いわたにし", region: "西部", type: "公立", deviation: 56,
+        name_yomi: "いわたにし", region: "西部", type: "公立", deviation: 76,
         best: "県大会2回戦", last: "初戦敗退",
         info: "粘り強い野球が信条。接戦に持ち込み勝機を伺う。",
         coach: { name: '渡辺 俊介', style: '守備重視', experience: '中堅' }
     },
     "小笠": {
-        name_yomi: "おがさ", region: "西部", type: "公立", deviation: 50,
+        name_yomi: "おがさ", region: "西部", type: "公立", deviation: 68,
         best: "県大会ベスト8", last: "県大会3回戦",
         info: "かつてはベスト8にも名を連ねた古豪。近年は安定した力を見せ、復活の兆しがある。",
         coach: { name: '高橋 昭雄', style: '機動力野球', experience: 'ベテラン' }
@@ -4442,7 +4450,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '西 清孝', style: '守備重視', experience: 'ベテラン' }
     },
     "清流館": {
-        name_yomi: "せいりゅうかん", region: "中部", type: "公立", deviation: 45,
+        name_yomi: "せいりゅうかん", region: "中部", type: "公立", deviation: 65,
         best: "県大会3回戦", last: "県大会2回戦",
         info: "焼津市にある比較的新しい高校。吉田高校と大井川高校が統合。地域の期待を背負い、上位を目指す。",
         coach: { name: '川上 憲伸', style: '投手中心', experience: 'プロOB' }
@@ -4454,7 +4462,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '遠山 奬志', style: '堅実', experience: '中堅' }
     },
     "榛原": {
-        name_yomi: "はいばら", region: "中部", type: "公立", deviation: 19,
+        name_yomi: "はいばら", region: "中部", type: "公立", deviation: 69,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "「榛高（はいこう）」の愛称。進学校ながら、機動力を絡めた攻撃的な野球で上位を伺う。",
         coach: { name: '原 辰徳', style: '超攻撃型', experience: 'ベテラン' }
@@ -4466,7 +4474,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '西 俊児', style: '守備重視', experience: '中堅' }
     },
     "浜松北": {
-        name_yomi: "はままつきた", region: "西部", type: "公立", deviation: 40,
+        name_yomi: "はままつきた", region: "西部", type: "公立", deviation: 60,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "静岡県トップクラスの進学校。限られた時間で超効率的な練習をこなす。",
         coach: { name: '北別府 学', style: 'データ野球', experience: 'ベテラン' }
@@ -4478,7 +4486,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '佐藤 健', style: '堅実', experience: '中堅' }
     },
     "浜松湖北": {
-        name_yomi: "はままつこほく", region: "西部", type: "公立", deviation: 45,
+        name_yomi: "はままつこほく", region: "西部", type: "公立", deviation: 65,
         best: "県大会3回戦", last: "県大会2回戦",
         info: "引佐、気賀、三ケ日の3校が統合して誕生。奥浜名湖の広大な敷地で鍛えた総合力で勝負する。",
         coach: { name: '北川 博敏', style: '積極打撃', experience: '中堅' }
@@ -4502,7 +4510,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '伊藤 裕季', style: '守備重視', experience: 'ベテラン' }
     },
     "富士": {
-        name_yomi: "ふじ", region: "東部", type: "公立", deviation: 65,
+        name_yomi: "ふじ", region: "東部", type: "公立", deviation: 76,
         best: "県大会ベスト16", last: "県大会2回戦",
         info: "東部地区の伝統ある進学校。スマートな試合運びと、ここ一番での集中力が光る。",
         coach: { name: '斎藤 雅樹', style: '投手中心', experience: 'ベテラン' }
@@ -4526,7 +4534,7 @@ const TEAM_ROSTER_MASTER = {
         coach: { name: '石田 雅昭', style: 'データ野球', experience: '中堅' }
     },
     "横須賀": {
-        name_yomi: "よこすか", region: "西部", type: "公立", deviation: 12,
+        name_yomi: "よこすか", region: "西部", type: "公立", deviation: 52,
         best: "県大会ベスト8", last: "県大会2回戦",
         info: "「スカ」の愛称で知られる古豪。近年は安定した実力を保持しており、上位進出も珍しくない。",
         coach: { name: '衣笠 祥雄', style: '根性野球', experience: 'ベテラン' }
@@ -4543,10 +4551,9 @@ const TEAM_ROSTER_MASTER = {
         info: "富士宮市にある私立校。中高一貫の強みを活かし、投打にバランスの取れたチームを編成する。",
         coach: { name: '星野 仙一', style: '投手中心', experience: '名将' }
     }
-
-
-
 };
+
+
 
 
 /**
@@ -9804,6 +9811,87 @@ function updateTournamentFinishRecords() {
     });
 }
 
+/**
+ * [NEW] ランク分布ピラミッドを描画する関数
+ * チーム数に応じて幅が変わる「お腹の出たピラミッド」を生成します
+ */
+function renderRankPyramid() {
+    const container = document.getElementById('rank-pyramid-container');
+    if (!container) {
+        console.warn("Rank pyramid container not found.");
+        return;
+    }
+
+    // 1. 全チームのランクを集計
+    const counts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    // TEAM_DATA が定義されていることを前提とします
+    const allTeams = Object.keys(TEAM_DATA);
+    
+    allTeams.forEach(teamName => {
+        // 現在のロジックでランクを判定 (tournamentStateが必要)
+        const rank = calculateRank(teamName, tournamentState);
+        if (counts[rank] !== undefined) {
+            counts[rank]++;
+        } else {
+            // 万が一想定外のランクが返ってきた場合
+            if (!counts['E']) counts['E'] = 0;
+            counts['E']++; 
+        }
+    });
+
+    // 2. 最大数を取得（グラフの横幅100%の基準にするため）
+    const maxCount = Math.max(...Object.values(counts));
+
+    // 3. HTML生成
+    const ranks = ['A', 'B', 'C', 'D', 'E'];
+    const labels = {
+        A: 'A:名門', B: 'B:強豪', C: 'C:中堅', D: 'D:発展', E: 'E:挑戦'
+    };
+    // Tailwind CSSの色クラス
+    const colors = {
+        A: 'bg-red-500',     // 赤
+        B: 'bg-orange-400',  // オレンジ
+        C: 'bg-yellow-400',  // 黄色
+        D: 'bg-blue-400',    // 青
+        E: 'bg-gray-400'     // グレー
+    };
+
+    let html = '<div class="flex flex-col items-center w-full space-y-2">';
+
+    ranks.forEach(rank => {
+        const count = counts[rank];
+        // 横幅の計算 (最大値を100%とし、最低でも10%は確保して見やすくする)
+        // countが0の場合は幅0にする
+        const widthPct = count > 0 ? Math.max(10, (count / maxCount) * 100) : 0;
+        
+        html += `
+            <div class="w-full flex items-center justify-center text-xs group">
+                <div class="w-16 text-right mr-2 font-semibold text-gray-600">${labels[rank]}</div>
+                
+                <div class="flex-grow flex justify-center h-6">
+                    <div class="${colors[rank]} text-white font-bold rounded-sm flex items-center justify-center shadow-sm transition-all duration-500 relative" 
+                         style="width: ${widthPct}%; height: 100%;">
+                        ${count > 0 ? count : ''}
+                        
+                        <span class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                            ${count}チーム
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="w-16 ml-2"></div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    
+    // 合計チーム数
+    html += `<div class="text-center text-xs text-gray-400 mt-3 border-t pt-2">総チーム数: ${allTeams.length}校</div>`;
+
+    container.innerHTML = html;
+}
+
 // ▼▼▼ リアルタイム学校検索機能 (オートコンプリート) - 再整理版 ▼▼▼
 
 const searchInput = document.getElementById('school-search-input');
@@ -9902,6 +9990,9 @@ document.getElementById('school-search-btn').addEventListener('click', () => {
     }
 });
 // ▲▲▲ オートコンプリート機能 ここまで ▲▲▲
+
+
+
 /**
  * 検索結果が複数の場合にリストを表示する関数
  */
@@ -25257,14 +25348,26 @@ document.body.addEventListener('click', async (e) => {
     }
 
     // --- 設定モーダルを開く/閉じる ---
-    if (e.target.closest('#open-settings-btn')) {
-        document.getElementById('toggle-article-generation').checked = tournamentState.settings.enableArticleGeneration;
-        document.getElementById('toggle-bbs-generation').checked = tournamentState.settings.enableBbsGeneration;
-        document.getElementById('settings-modal').classList.remove('hidden');
-    }
-    if (e.target.closest('#settings-modal-close-btn')) {
-        document.getElementById('settings-modal').classList.add('hidden');
-    }
+   // --- 設定モーダルを開く/閉じる ---
+if (e.target.closest('#open-settings-btn')) {
+    document.getElementById('toggle-article-generation').checked = tournamentState.settings.enableArticleGeneration;
+    document.getElementById('toggle-bbs-generation').checked = tournamentState.settings.enableBbsGeneration;
+    
+    // ▼▼▼ 【追加】 ピラミッドを描画 ▼▼▼
+    renderRankPyramid();
+    // ▲▲▲ 追加ここまで ▲▲▲
+
+    document.getElementById('settings-modal').classList.remove('hidden');
+    
+    document.getElementById('settings-modal').classList.add('flex'); 
+}
+
+// --- 設定モーダルを閉じるボタンのイベントリスナー ---
+document.getElementById('settings-modal-close-btn').addEventListener('click', () => {
+    const modal = document.getElementById('settings-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex'); // flexで表示していた場合の対策
+});
 
     // --- 統合型まとめサイトモーダルを閉じるボタン ---
     if (e.target.closest('#matome-modal-close-btn')) {
