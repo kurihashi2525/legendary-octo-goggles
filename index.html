@@ -269,6 +269,32 @@
 }
 /* ▲▲▲ ここまで ▲▲▲ */
 
+/* ▼▼▼ スカウティングレポート用CSS (新規追加) ▼▼▼ */
+.scout-report-card {
+    background-color: #f0fdf4; /* 薄い緑 */
+    border-left: 5px solid #16a34a; /* 緑のライン */
+    font-family: 'Noto Serif JP', serif; /* 明朝体で玄人感を出す */
+}
+.scout-report-title {
+    color: #14532d;
+    font-weight: bold;
+    border-bottom: 1px dashed #16a34a;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.scout-report-body {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #374151;
+}
+.scout-signature {
+    text-align: right;
+    font-weight: bold;
+    margin-top: 1rem;
+    color: #16a34a;
+}
+/* ▲▲▲ 追加ここまで ▲▲▲ */
+
 /* まとめサイトのロゴスタイル */
 .matome-site-logo-container {
     position: relative;
@@ -1413,6 +1439,121 @@
     color: #6b7280;
 }
 
+/* ▼▼▼ セイバーメトリクス・ダッシュボード用CSS ▼▼▼ */
+.saber-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+    background-color: #f8fafc;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.saber-card {
+    background-color: white;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    text-align: center;
+}
+.saber-title {
+    font-size: 0.7rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.saber-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1.2;
+}
+.saber-desc {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+/* 評価色 */
+.val-excellent { color: #ef4444; } /* 赤 (最高) */
+.val-good { color: #f59e0b; }      /* オレンジ (良い) */
+.val-average { color: #3b82f6; }   /* 青 (普通) */
+.val-poor { color: #64748b; }      /* グレー (悪い) */
+/* ▲▲▲ 追加ここまで ▲▲▲ */
+
+/* ▼▼▼ 283学園ホームページ用CSS (スマホ対応版) ▼▼▼ */
+/* ベース背景 */
+#homepage-scroll-container {
+    background-color: #f9fafb;
+    -webkit-overflow-scrolling: touch; /* iOSでのスクロールを滑らかに */
+}
+
+/* ヒーローセクション（トップ画像） */
+.hero-section {
+    position: relative;
+    width: 100%;
+    height: 200px; /* スマホ: 高さを抑える */
+    background-image: linear-gradient(rgba(17, 24, 39, 0.6), rgba(17, 24, 39, 0.4)), url('https://images.unsplash.com/photo-1519069632080-756b57d9b542?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+/* PCサイズ以上での調整 */
+@media (min-width: 768px) {
+    .hero-section {
+        height: 350px; /* PC: 高さを戻す */
+        margin-bottom: 2rem;
+    }
+}
+
+/* ナビゲーションバー */
+.homepage-nav {
+    background-color: rgba(255, 255, 255, 0.98);
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+/* フッター */
+.homepage-footer {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    padding: 2rem 1rem; /* 左右に余白を持たせる */
+    margin-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.75rem; /* 文字を少し小さく */
+}
+
+/* 横スクロールが必要なテーブル用ラッパー */
+.table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto; /* はみ出たらスクロール */
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+}
+
+/* 部員カードの調整 */
+.player-profile-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    /* スマホで潰れないように */
+    min-width: 0; 
+    word-break: break-word;
+}
+/* ▲▲▲ 追加ここまで ▲▲▲ */
+
 /* ▼▼▼ ラウンドスキップ新聞モーダル用のCSS (ここから修正) ▼▼▼ */
 .newspaper-modal-backdrop {
     position: fixed;
@@ -2042,6 +2183,82 @@
 }
 .history-year { font-weight: bold; color: #555; width: 120px; }
 .history-rank { font-weight: bold; }
+
+/* ▼▼▼ SNSトレンド機能 (X風デザイン) ▼▼▼ */
+.sns-modal-content {
+    background-color: #ffffff;
+    max-width: 600px;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+}
+.sns-header {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    padding: 12px 16px;
+    border-bottom: 1px solid #eff3f4;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.sns-trend-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eff3f4;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+.sns-trend-item:hover { background-color: #f7f9f9; }
+.sns-trend-meta { font-size: 13px; color: #536471; }
+.sns-trend-word { font-size: 15px; font-weight: 700; color: #0f1419; margin-top: 2px; }
+.sns-trend-count { font-size: 13px; color: #536471; margin-top: 4px; }
+
+.sns-post {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eff3f4;
+    display: flex;
+    gap: 12px;
+    animation: fadeIn 0.5s ease-out;
+}
+.sns-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #cfd9de;
+    flex-shrink: 0;
+}
+.sns-content { flex-grow: 1; }
+.sns-user-info { display: flex; align-items: baseline; gap: 4px; }
+.sns-name { font-weight: 700; color: #0f1419; font-size: 15px; }
+.sns-handle { color: #536471; font-size: 14px; }
+.sns-time { color: #536471; font-size: 14px; }
+.sns-text { margin-top: 4px; font-size: 15px; line-height: 1.4; color: #0f1419; white-space: pre-wrap; }
+.sns-actions {
+    display: flex; justify-content: space-between; margin-top: 12px; max-width: 425px; color: #536471; font-size: 13px;
+}
+.sns-action-btn { display: flex; align-items: center; gap: 6px; cursor: pointer; transition: color 0.2s; }
+.sns-action-btn:hover.like { color: #f91880; }
+.sns-action-btn:hover.retweet { color: #00ba7c; }
+
+/* トレンド通知バナー */
+#trend-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #1d9bf0; /* X Blue */
+    color: white;
+    padding: 12px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(29, 155, 240, 0.4);
+    z-index: 300;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#trend-notification.show { transform: translateX(0); }
+/* ▲▲▲ 追加ここまで ▲▲▲ */
 
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
 .match-schedule {
@@ -3314,6 +3531,16 @@ graph TD
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">今大会 チーム成績 (数字)</h4>
                 <p id="status-modal-team-stats" class="text-lg text-blue-700 font-bold"></p>
             </div>
+
+<div class="mt-6">
+                <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider border-b pb-1 mb-2 flex items-center">
+                    <span>📊 セイバーメトリクス詳細分析</span>
+                    <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Beta</span>
+                </h4>
+                <div id="status-modal-sabermetrics">
+                    </div>
+            </div>
+
             <div>
                 <h4 class="font-semibold text-sm text-gray-500 uppercase tracking-wider">チーム通算成績 (全大会)</h4>
                 <p id="status-modal-career-stats" class="text-lg text-gray-800 font-bold"></p>
@@ -3338,6 +3565,33 @@ graph TD
         
     </div>
 </div>
+
+<div id="sns-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[250]">
+    <div class="sns-modal-content h-[80vh] flex flex-col">
+        <div class="sns-header flex justify-between items-center">
+            <h3 class="text-xl font-bold">トレンド</h3>
+            <button id="sns-modal-close" class="text-2xl text-gray-600 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+        </div>
+        
+        <div class="flex border-b border-gray-200">
+            <button class="flex-1 py-3 font-bold hover:bg-gray-100 border-b-4 border-blue-500 text-gray-900" id="sns-tab-trend">おすすめ</button>
+            <button class="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-100" id="sns-tab-timeline">最新</button>
+        </div>
+
+        <div id="sns-content-area" class="overflow-y-auto flex-grow bg-white">
+            </div>
+    </div>
+</div>
+
+<div id="trend-notification">
+    <span class="text-xl">📈</span>
+    <div>
+        <p class="text-xs opacity-90">日本のトレンド</p>
+        <p id="trend-notification-word" class="font-bold">#283学園</p>
+    </div>
+</div>
+
+
 <script type="module">
 
 const BATTING_RESULTS = {
@@ -7186,6 +7440,13 @@ function showTeamStatusModal(teamName) {
         }
     }    
 
+// ▼▼▼ 追加箇所: セイバーメトリクスHTMLの注入 ▼▼▼
+    const saberContainer = document.getElementById('status-modal-sabermetrics');
+    if (saberContainer) {
+        saberContainer.innerHTML = generateSabermetricsHTML(teamName);
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
 // ▼▼▼ ★★★ ここに以下のコードを挿入してください ★★★ ▼▼▼
 
     // --- [追加] ランク変動予測を表示 ---
@@ -10600,6 +10861,118 @@ async function generateArchiveAnalysis(teamName) {
 }
 
 /**
+ * [NEW] チームのセイバーメトリクス指標を計算し、ダッシュボードHTMLを生成する
+ */
+function generateSabermetricsHTML(teamName) {
+    const record = tournamentState.teamRecords[teamName];
+    if (!record || !record.playerStats) return '<p class="text-xs text-center text-gray-400">データ不足のため分析できません</p>';
+
+    // --- 1. データ集計 ---
+    let totalAB = 0, totalTB = 0, totalH = 0, totalBB_Bat = 0, totalSO_Bat = 0; // 打撃
+    let totalIP = 0, totalH_Pit = 0, totalBB_Pit = 0, totalRunsAllowed = 0; // 投手
+    let totalRunsScored = record.tournamentStats?.r || 0; // 得点はtournamentStatsから取得 (簡易)
+
+    // 打撃集計 (IsoP, BB/K用)
+    if (record.playerStats.batting) {
+        Object.values(record.playerStats.batting).forEach(s => {
+            totalAB += s.ab || 0;
+            totalH += s.h || 0;
+            const hr = s.hr || 0;
+            // TB(塁打)がない場合は簡易計算
+            totalTB += (s.tb || (s.h + hr * 3)); 
+            totalBB_Bat += (s.bb || 0) + (s.hbp || 0);
+            totalSO_Bat += s.so || 0;
+            // もしtournamentStatsの得点が0なら、個人の打点合計で代用（簡易）
+            if(totalRunsScored === 0) totalRunsScored += (s.rbi || 0);
+        });
+    }
+
+    // 投手集計 (WHIP, Pythagenpat用)
+    if (record.playerStats.pitching) {
+        Object.values(record.playerStats.pitching).forEach(s => {
+            if (s.career) {
+                totalIP += s.career.ip || 0;
+                totalH_Pit += s.career.h || 0;
+                totalBB_Pit += s.career.bb || 0;
+                totalRunsAllowed += s.career.r || s.career.er || 0; // 失点
+            }
+        });
+    }
+
+    // --- 2. 指標計算 ---
+
+    // A. IsoP (Isolated Power) = 長打率 - 打率
+    // 「純粋な長打力」を示す。0.200超えれば優秀。
+    const avg = totalAB > 0 ? totalH / totalAB : 0;
+    const slg = totalAB > 0 ? totalTB / totalAB : 0;
+    const isoP = slg - avg;
+
+    // B. BB/K (Walks per Strikeout) = 四球 / 三振
+    // 「選球眼とアプローチ」を示す。1.00超えれば優秀。
+    const bbK = totalSO_Bat > 0 ? totalBB_Bat / totalSO_Bat : 0;
+
+    // C. WHIP (Walks plus Hits per Inning Pitched) = (被安打 + 与四球) / 投球回
+    // 「投手の安定感」を示す。1.20未満なら優秀。
+    const whip = totalIP > 0 ? (totalH_Pit + totalBB_Pit) / totalIP : 0;
+
+    // D. Pythagorean Expectation (ピタゴラス勝率) = 得点^2 / (得点^2 + 失点^2)
+    // 「得失点差から見た本来の実力」。実際の勝率より高ければ「不運」、低ければ「幸運」。
+    // ※高校野球用に指数を1.83ではなく2.0（古典的）または少し調整して計算
+    const exponent = 1.83; 
+    const pythWinPct = (totalRunsScored === 0 && totalRunsAllowed === 0) ? 0 
+        : (Math.pow(totalRunsScored, exponent)) / (Math.pow(totalRunsScored, exponent) + Math.pow(totalRunsAllowed, exponent));
+    
+    // 実際の勝率
+    const totalGames = (record.wins + record.losses) || 1;
+    const actualWinPct = record.wins / totalGames;
+    const luckDiff = actualWinPct - pythWinPct; // 正なら運が良い、負なら実力以下
+
+    // --- 3. 表示用ヘルパー ---
+    const getColor = (val, type) => {
+        if (type === 'isop') return val >= 0.2 ? 'val-excellent' : val >= 0.15 ? 'val-good' : 'val-poor';
+        if (type === 'bbk') return val >= 1.0 ? 'val-excellent' : val >= 0.7 ? 'val-good' : 'val-poor';
+        if (type === 'whip') return val > 0 && val < 1.10 ? 'val-excellent' : val < 1.30 ? 'val-good' : 'val-poor';
+        if (type === 'pyth') return Math.abs(val) >= 0.2 ? 'val-excellent' : 'val-poor'; // 乖離が大きいかどうか
+        return 'val-poor';
+    };
+
+    // HTML生成
+    return `
+        <div class="saber-grid">
+            <div class="saber-card">
+                <div class="saber-title">IsoP (純粋長打力)</div>
+                <div class="saber-value ${getColor(isoP, 'isop')}">${isoP.toFixed(3)}</div>
+                <div class="saber-desc">打率を除いた長打の割合。<br>0.200超でスラッガー級。</div>
+            </div>
+            
+            <div class="saber-card">
+                <div class="saber-title">BB/K (選球眼)</div>
+                <div class="saber-value ${getColor(bbK, 'bbk')}">${bbK.toFixed(2)}</div>
+                <div class="saber-desc">四球÷三振。<br>1.00超で極めて優秀。</div>
+            </div>
+            
+            <div class="saber-card">
+                <div class="saber-title">WHIP (投手安定感)</div>
+                <div class="saber-value ${getColor(whip, 'whip')}">${whip.toFixed(2)}</div>
+                <div class="saber-desc">1回あたりに出す走者数。<br>1.20未満でエース級。</div>
+            </div>
+            
+            <div class="saber-card">
+                <div class="saber-title">ピタゴラス勝率</div>
+                <div class="saber-value">${(pythWinPct * 100).toFixed(1)}%</div>
+                <div class="saber-desc" style="color: ${luckDiff > 0 ? '#f59e0b' : '#3b82f6'};">
+                    実際勝率: ${(actualWinPct*100).toFixed(1)}%<br>
+                    (${luckDiff > 0 ? '運で勝利 +' : '実力以下 '}${(Math.abs(luckDiff)*100).toFixed(1)}%)
+                </div>
+            </div>
+        </div>
+        <div class="text-right mt-1">
+            <span class="text-xs text-gray-400">※得失点: ${totalRunsScored}得点 / ${totalRunsAllowed}失点</span>
+        </div>
+    `;
+}
+
+/**
  * チームの直近N試合の履歴を取得する
  * @param {string} teamName - チーム名
  * @param {number} limit - 取得数 (デフォルト5, アーカイブ表示時は大きく設定)
@@ -11689,7 +12062,19 @@ function renderNews(news) {
                     <button class="ignore-scandal-btn bg-gray-500 text-white px-4 py-1 rounded text-sm hover:bg-gray-600 ml-2">見て見ぬふりをする</button>
                 </div>
             `;
-        } else if (article.error) {
+// ▼▼▼ 追加箇所: スカウティングレポートの表示 ▼▼▼
+     }   else if (article.isScoutReport) {
+            articleEl.className = 'scout-report-card p-4 rounded-lg shadow mb-4';
+            articleEl.innerHTML = `
+                <h3 class="scout-report-title text-lg">⚾ ${article.title}</h3>
+                <div class="scout-report-body">
+                    ${article.body.replace(/\n/g, '<br>')}
+                </div>
+            `;
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+         else if (article.error) {
             // ... (エラー記事のロジックは変更なし) ...
             articleEl.className = 'article-error';
             const regenerateButtonHTML = article.context ? `<button class="regenerate-btn" data-index="${originalIndex}">再生成</button>` : '';
@@ -17199,6 +17584,129 @@ async function generateRivalryMap() {
 // ▲▲▲ 因縁相関図 生成ロジック (拡張版) ここまで ▲▲▲
 
 /**
+ * [UPDATED v3] 283学園戦専用：編集部・栗山氏風スカウティングレポートを生成する
+ * (★主力、脇役、敵チームの好選手を書き分ける玄人視点版)
+ */
+async function generateKuriyamaReport(matchContext) {
+    const { winnerName, loserName, dbMatch, matchId, nextOpponent } = matchContext;
+
+    const myTeam = "283学園";
+    const isWin = (winnerName === myTeam);
+    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    const roundName = getRoundNameFromMatchId(matchId);
+
+    const winnerInfo = TEAM_DATA[winnerName]?.info || "";
+    const loserInfo = TEAM_DATA[loserName]?.info || "";
+    
+    let nextGameText = "";
+    if (isWin && nextOpponent) {
+        if (nextOpponent.opponentName === '優勝') nextGameText = "優勝";
+        else if (nextOpponent.opponentName) nextGameText = `次戦の相手は${nextOpponent.opponentName}`;
+    }
+
+    // 選手情報を詳細に抽出するヘルパー
+    const getPlayerInfoDetailed = (teamName, teamKey) => {
+        const gameStats = dbMatch.details?.playerGameStats?.[teamKey] || {};
+        const battingDetails = dbMatch.details?.batting?.[teamKey] || [];
+        const pitchingDetails = dbMatch.details?.pitching?.[teamKey] || [];
+        const roster = TEAM_ROSTER_MASTER[teamName] || []; // 283学園用静的データ
+        
+        let infoList = [];
+
+        // 出場した全選手をチェック
+        for (const [name, stats] of Object.entries(gameStats)) {
+            // 最低限の出場がある選手のみ
+            if ((stats.pa && stats.pa > 0) || (stats.ip && parseFloat(stats.innings) > 0)) {
+                
+                // 打順と守備位置を取得
+                const bDetail = battingDetails.find(p => p.name === name);
+                const order = bDetail ? bDetail.order : "-";
+                const pos = bDetail ? (bDetail.currentPos || bDetail.pos) : "-";
+                
+                // 出身データ (283学園のみ)
+                const staticData = roster.find(p => p.name === name);
+                const origin = staticData?.origin ? `(${staticData.origin})` : "";
+
+                // 成績概要
+                let perf = "";
+                if (stats.h > 0) perf += `${stats.h}安打 `;
+                if (stats.hr > 0) perf += `${stats.hr}HR `;
+                if (stats.rbi > 0) perf += `${stats.rbi}打点 `;
+                if (stats.ip) perf += `投${stats.innings}回${stats.earnedRuns}自責 `;
+                
+                // 属性判定 (AIへのヒント)
+                let role = "脇役";
+                if (pos === "投" || (order.match(/^[345]$/))) role = "主力";
+                
+                infoList.push(`- ${name}${origin} [${role}/打順${order}/守備${pos}]: ${perf}`);
+            }
+        }
+        return infoList.join("\n");
+    };
+
+    const teamKey283 = (dbMatch.team1 === "283学園") ? 'team1' : 'team2';
+    const teamKeyOpp = (teamKey283 === 'team1') ? 'team2' : 'team1';
+    const opponentTeamName = (dbMatch.team1 === "283学園") ? dbMatch.team2 : dbMatch.team1;
+
+    const data283 = getPlayerInfoDetailed("283学園", teamKey283);
+    const dataOpp = getPlayerInfoDetailed(opponentTeamName, teamKeyOpp);
+
+    const prompt = `あなたは高校野球雑誌「静岡高校野球」の編集部員・栗山です。
+今日行われた${roundName}「${winnerName} 対 ${loserName}」の取材メモを元に、**あなた独特の文体（栗山節）**で、マニアックな視点の「スカウティングレポート（ブログ記事）」を執筆してください。
+
+### 試合概要
+- 結果: ${winnerName} ${score} ${loserName}
+- チーム背景: [勝]${winnerInfo} / [負]${loserInfo}
+- ${nextGameText}
+
+### 選手データ（取材メモ）
+**【283学園】**
+${data283}
+
+**【${opponentTeamName}】**
+${dataOpp}
+
+### 執筆指示（以下の3点を必ず盛り込むこと）
+1.  **主力で気になった選手（283学園）**: 
+    - チームの中心選手（投手やクリーンナップ）から1名選び、その活躍や成長ぶりを評価してください。
+    - 「〇〇シニア時代からの成長」や「ボールの押し込みが強くなった」など、継続して見ている記者らしい表現を使ってください。
+2.  **脇役だが輝いていた選手（283学園）**: 
+    - **下位打線、守備職人、控え選手**などから、「いぶし銀」の活躍をした選手を1名見つけてください。
+    - 派手な成績でなくても構いません。「体の軸がブレない」「守備の一歩目が速い」「スイングの軌道が良い」など、**玄人好みのポイント**を絶賛してください。
+3.  **相手チームの好選手**: 
+    - 相手チーム（${opponentTeamName}）から、将来性を感じた選手を1名挙げてください。
+    - 負けたチームであっても、「素材は一級品」「このストレートはえぐかった」「体ができてくれば面白い」と、リスペクトを込めて評価してください。相手の出身中学などは**架空で創作**して補完してください（例：「〇〇中学時代は軟式で...」）。
+
+### 栗山氏の文体
+- 「～を見てきました。」「～が気になりました。」「～だと思いました。」という、丁寧だが熱量のある語り口。
+- 選手をフルネーム（または苗字）で呼び、技術的なディテール（ヒジの使い、下半身の粘り等）に言及する。
+- 最後は「（編集部・栗山）」で締める。
+
+### 出力形式 (JSON)
+{"title": "【編集部・栗山】${roundName}取材記：${winnerName}対${loserName}", "body": "（記事本文）"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const article = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            if (article) {
+                return { 
+                    ...article, 
+                    timestamp: Date.now(),
+                    isScoutReport: true,
+                    context: matchContext
+                };
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error("スカウティングレポート生成エラー:", error);
+        return null;
+    }
+}
+
+/**
  * AI記者にニュース記事を執筆させるメイン関数
  * (★「isNewspaperWorthy」のバグを修正し、R4以降のみ新聞ボタンを表示)
  * (★★ 故障者リスト(injuryReport)への言及をAIに指示するよう修正)
@@ -17954,6 +18462,143 @@ function renderAwardsModal() {
     `;
 
     contentEl.innerHTML = html;
+}
+
+/**
+ * [NEW] 試合結果に基づき、X(旧Twitter)風のトレンドワードとポストを生成する
+ */
+async function generateSnsPosts(matchContext) {
+    const { winnerName, loserName, dbMatch, highlights, playerStatsText } = matchContext;
+    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    
+    // トレンドワード候補の選定
+    let trendCandidates = [`#${winnerName}`, `#高校野球`, `#${loserName}`];
+    
+    // 劇的な展開があればトレンドに追加
+    if (matchContext.highlights.some(h => h.description.includes("サヨナラ"))) trendCandidates.unshift("サヨナラ");
+    if (matchContext.highlights.some(h => h.description.includes("逆転"))) trendCandidates.unshift("逆転勝利");
+    if (parseInt(dbMatch.score1) + parseInt(dbMatch.score2) >= 15) trendCandidates.unshift("乱打戦");
+    if (parseInt(dbMatch.score1) === 0 || parseInt(dbMatch.score2) === 0) trendCandidates.unshift("完封");
+    
+    // 活躍選手を抽出してトレンドに追加
+    if (matchContext.keyPlayerNames && matchContext.keyPlayerNames.length > 0) {
+        trendCandidates.unshift(matchContext.keyPlayerNames[0]); // 最も活躍した選手
+    }
+
+    const primaryTrend = trendCandidates[0];
+
+    const prompt = `あなたはX（旧Twitter）のユーザーです。
+高校野球の試合「${winnerName} vs ${loserName}」が終了しました（結果: ${score}）。
+以下のハイライトを元に、タイムラインに流れる**リアルな短文ポスト（ツイート）を10個**生成してください。
+
+### 試合ハイライト
+${highlights.map(h => h.description).join('\n')}
+
+### トレンドワード
+${trendCandidates.join(', ')}
+
+### 執筆指示
+- **BBS（なんJ）とは異なる文体**にしてください。
+- 絵文字（😭, ✨, 🔥, ⚾）を適度に使ってください。
+- 「感動した」「涙止まらん」「鳥肌たった」など、感情的な投稿を含めてください。
+- 「${winnerName}おめでとう！」「${loserName}もお疲れ様」といった、爽やかな投稿も含めてください。
+- 驚きのプレーには「えぐい」「やばすぎ」といった若者言葉を使ってください。
+- 必ず全てのポストにハッシュタグ（例: #${winnerName}, #高校野球）を1つ以上付けてください。
+- **${primaryTrend}** について言及するポストを多めにしてください。
+
+### 出力形式 (JSON)
+[
+    {"handle": "@baseball_love", "name": "野球垢⚾️", "text": "（ポスト本文）", "likes": 120, "rts": 45},
+    {"handle": "@user1234", "name": "一般人", "text": "（ポスト本文）", "likes": 5, "rts": 0}
+]`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        if (result.candidates?.[0]?.content?.parts?.[0]) {
+            const posts = parseJsonFromText(result.candidates[0].content.parts[0].text);
+            return { posts, trends: trendCandidates.slice(0, 5) };
+        }
+        return null;
+    } catch (error) {
+        console.error("SNS生成エラー:", error);
+        return null;
+    }
+}
+
+let currentSnsData = null; // グローバル変数で保持
+
+function renderSnsModalContent(tab = 'trend') {
+    const container = document.getElementById('sns-content-area');
+    container.innerHTML = '';
+
+    if (!currentSnsData) {
+        container.innerHTML = '<p class="text-center p-8 text-gray-500">データがありません</p>';
+        return;
+    }
+
+    if (tab === 'trend') {
+        // トレンドリスト表示
+        const trendsHtml = currentSnsData.trends.map((word, i) => `
+            <div class="sns-trend-item" onclick="switchSnsTab('timeline')">
+                <div class="sns-trend-meta">${i + 1} · スポーツ · トレンド</div>
+                <div class="sns-trend-word">${word}</div>
+                <div class="sns-trend-count">${Math.floor(Math.random() * 50000 + 1000).toLocaleString()}件のポスト</div>
+            </div>
+        `).join('');
+        container.innerHTML = trendsHtml;
+        
+        // 下部に「話題のポスト」として少しだけTLを表示
+        const previewTitle = document.createElement('div');
+        previewTitle.className = "p-3 font-bold text-gray-800 bg-gray-50 border-b border-t";
+        previewTitle.textContent = "話題のポスト";
+        container.appendChild(previewTitle);
+        
+        renderTimeline(container, currentSnsData.posts.slice(0, 3));
+
+    } else {
+        // タイムライン全表示
+        renderTimeline(container, currentSnsData.posts);
+    }
+}
+
+function renderTimeline(container, posts) {
+    posts.forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'sns-post';
+        div.innerHTML = `
+            <div class="sns-avatar" style="background-color: hsl(${Math.random()*360}, 70%, 80%)"></div>
+            <div class="sns-content">
+                <div class="sns-user-info">
+                    <span class="sns-name">${post.name}</span>
+                    <span class="sns-handle">${post.handle}</span>
+                    <span class="sns-time">· ${Math.floor(Math.random()*10 + 1)}分</span>
+                </div>
+                <div class="sns-text">${post.text.replace(/#(\S+)/g, '<span class="text-blue-500">#$1</span>')}</div>
+                <div class="sns-actions">
+                    <span class="sns-action-btn">💬 ${Math.floor(post.likes / 10)}</span>
+                    <span class="sns-action-btn retweet"> ${post.rts}</span>
+                    <span class="sns-action-btn like">❤️ ${post.likes}</span>
+                    <span class="sns-action-btn">⬆️</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function switchSnsTab(tab) {
+    const btnTrend = document.getElementById('sns-tab-trend');
+    const btnTimeline = document.getElementById('sns-tab-timeline');
+    
+    if (tab === 'trend') {
+        btnTrend.className = "flex-1 py-3 font-bold hover:bg-gray-100 border-b-4 border-blue-500 text-gray-900";
+        btnTimeline.className = "flex-1 py-3 font-bold text-gray-500 hover:bg-gray-100";
+    } else {
+        btnTrend.className = "flex-1 py-3 font-bold text-gray-500 hover:bg-gray-100";
+        btnTimeline.className = "flex-1 py-3 font-bold hover:bg-gray-100 border-b-4 border-blue-500 text-gray-900";
+    }
+    renderSnsModalContent(tab);
 }
 
 /**
@@ -21799,6 +22444,7 @@ async function processMatchWin(matchId, winnerName) {
     let homepageNewsPromise = Promise.resolve(null);
     let cinderellaArticlePromise = Promise.resolve(null);
     let accidentArticlePromise = Promise.resolve(null);
+let scoutReportPromise = Promise.resolve(null);
 
     // ★★★ 甲子園モードかどうかの判定 ★★★
     const isKoshienMode = tournamentState.currentTournament === 'summer_koshien';
@@ -21828,11 +22474,25 @@ async function processMatchWin(matchId, winnerName) {
                 else if (loserRank === 'C' && roundNum === 5) cinderellaType = 'C_Rank_Top_8';
             }
             
+
+
             // 2. 快進撃記事の生成
             if (cinderellaType) {
                 cinderellaArticlePromise = generateCinderellaArticle(loserName, loserRank, roundNumForCinderella, matchContext);
             }
             
+// ★★★ 追加箇所: 283学園戦ならスカウティングレポートを生成 ★★★
+        if (winnerName === "283学園" || loserName === "283学園") {
+            scoutReportPromise = generateKuriyamaReport(matchContext);
+        }
+// ★★★ 追加: 283学園戦ならSNSトレンドを生成 ★★★
+        if (winnerName === "283学園" || loserName === "283学園") {
+             // 283学園戦以外でも「決勝」などは生成しても良いですが、API節約のため絞ります
+             snsPromise = generateSnsPosts(matchContext);
+        }
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
             // 3. ドキュメンタリー or 通常記事
             if (documentary && documentary.target && (documentary.target === winnerName || documentary.target === loserName)) {
                  const isWin = documentary.target === winnerName;
@@ -21878,13 +22538,15 @@ async function processMatchWin(matchId, winnerName) {
     }
 
     // --- 5. AIコンテンツの処理と最終的な画面更新 ---
-    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread, generatedHomepageNews, generatedCinderellaArticle] = await Promise.all([
+    const [generatedArticle, generatedComments, generatedHadaReport, generatedMatomeThread, generatedHomepageNews, generatedCinderellaArticle, generatedScoutReport, generatedSns] = await Promise.all([
         articlePromise, 
         commentsPromise,
         hadaReportPromise,
         matomeThreadPromise,
         homepageNewsPromise,
-        cinderellaArticlePromise
+        cinderellaArticlePromise,
+        scoutReportPromise,
+        snsPromise // <--- ここに追加
     ]);
 
     if (generatedComments) {
@@ -21917,6 +22579,25 @@ async function processMatchWin(matchId, winnerName) {
         }
     }
     
+// ★★★ 追加: SNSデータの保存と通知表示 ★★★
+    if (generatedSns) {
+        currentSnsData = generatedSns; // データを更新
+        
+        // 通知バナーを表示
+        const notif = document.getElementById('trend-notification');
+        const wordEl = document.getElementById('trend-notification-word');
+        
+        // 最もホットなワードを表示
+        wordEl.textContent = generatedSns.trends[0];
+        
+        notif.classList.add('show');
+        
+        // 5秒後に消す
+        setTimeout(() => {
+            notif.classList.remove('show');
+        }, 5000);
+    }
+
     if (generatedCinderellaArticle) {
         tournamentState.news.push(generatedCinderellaArticle);
     }
@@ -21945,6 +22626,11 @@ async function processMatchWin(matchId, winnerName) {
     if (generatedHadaReport) {
         tournamentState.news.push(generatedHadaReport);
     }
+// ★★★ 追加箇所: 生成されたレポートをニュースに追加 ★★★
+    if (generatedScoutReport) {
+        tournamentState.news.push(generatedScoutReport);
+    }
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★
     if (generatedMatomeThread) {
         tournamentState.matomeThreads[matchId] = {
             thread: generatedMatomeThread,
@@ -24438,6 +25124,7 @@ document.getElementById('contribution-close-btn').addEventListener('click', () =
 
 });
 
+
 document.body.addEventListener('click', async (e) => {
 
 
@@ -26337,6 +27024,8 @@ document.body.addEventListener('change', (e) => {
 
 });
 
+
+
    // ==========================================================
 //  2.「送信」イベントを処理するリスナー (新設)
 // ==========================================================
@@ -27260,7 +27949,30 @@ function updatePlayerStatsFromDetails(match) {
     }
 }
 
+// 通知バナーをクリック -> SNSモーダルを開く
+    const trendNotification = document.getElementById('trend-notification');
+    if (trendNotification) {
+        trendNotification.addEventListener('click', () => {
+            const snsModal = document.getElementById('sns-modal');
+            snsModal.classList.remove('hidden');
+            snsModal.classList.add('flex');
+            switchSnsTab('trend'); // デフォルトはトレンドタブ
+            trendNotification.classList.remove('show'); // 通知は消す
+        });
+    }
 
+    // SNSモーダルを閉じる
+    const snsModalClose = document.getElementById('sns-modal-close');
+    if (snsModalClose) {
+        snsModalClose.addEventListener('click', () => {
+            const snsModal = document.getElementById('sns-modal');
+            snsModal.classList.add('hidden');
+            snsModal.classList.remove('flex');
+        });
+    }
+
+    // タブ切り替え関数をHTML側(onclick属性)から呼べるようにグローバルに登録
+    window.switchSnsTab = switchSnsTab;
 
     // アプリケーション起動
     initializeApp();
@@ -27282,58 +27994,43 @@ function updatePlayerStatsFromDetails(match) {
         
         <div id="homepage-scroll-container" class="flex-grow overflow-y-auto" style="font-family: 'Noto Sans JP', sans-serif; background-color: #f4f7fa;">
             
-            <header class="bg-white shadow-sm sticky top-0 z-50">
-                <div class="container mx-auto px-4 sm:px-6 py-3 md:py-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <a href="#" class="text-2xl md:text-3xl font-extrabold text-gray-900 flex items-center">
-                                <svg class="h-8 w-8 md:h-10 md:w-10 mr-2 text-blue-700" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                                <span class="text-blue-700">283</span>学園
-                            </a>
-                        </div>
-                        
-                        <nav class="hidden md:flex space-x-4 lg:space-x-6 text-sm lg:text-base">
-                            <a href="#about" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">野球部について</a>
-                            <a href="#players" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">選手紹介</a>
-                            <a href="#roster" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">部員紹介</a>
-                            <a href="#facility" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">施設紹介</a>
-                            <a href="#school-song" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">校歌</a>
-                            <a href="#results" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">戦績</a>
-                            <a href="#gallery" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">ギャラリー</a>
-                            <a href="#access" class="nav-link text-gray-600 hover:text-blue-700 font-medium pb-1">アクセス</a>
-                        </nav>
+            <header class="homepage-nav">
+    <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-700 rounded flex items-center justify-center text-white font-bold text-lg shadow-sm">2</div>
+            <span class="text-xl font-extrabold text-gray-800 tracking-tighter">
+                <span class="text-blue-700">283</span>学園
+            </span>
+        </div>
+        <nav class="hidden md:flex space-x-6 text-sm font-bold text-gray-600">
+            <a href="#about" class="hover:text-blue-700 transition-colors">チーム</a>
+            <a href="#players" class="hover:text-blue-700 transition-colors">選手</a>
+            <a href="#roster" class="hover:text-blue-700 transition-colors">部員</a>
+            <a href="#results" class="hover:text-blue-700 transition-colors">戦績</a>
+            <a href="#access" class="hover:text-blue-700 transition-colors">アクセス</a>
+        </nav>
+        <div class="md:hidden">
+            <button id="mobile-menu-button" class="text-gray-500 hover:text-blue-700 p-1">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+        </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 absolute w-full shadow-lg">
+        <div class="flex flex-col p-2">
+            <a href="#about" class="mobile-nav-link block py-3 px-4 text-gray-700 font-bold hover:bg-blue-50 rounded-lg">チーム</a>
+            <a href="#players" class="mobile-nav-link block py-3 px-4 text-gray-700 font-bold hover:bg-blue-50 rounded-lg">選手</a>
+            <a href="#roster" class="mobile-nav-link block py-3 px-4 text-gray-700 font-bold hover:bg-blue-50 rounded-lg">部員</a>
+            <a href="#results" class="mobile-nav-link block py-3 px-4 text-gray-700 font-bold hover:bg-blue-50 rounded-lg">戦績</a>
+        </div>
+    </div>
+</header>
 
-                        <div class="md:hidden">
-                            <button id="mobile-menu-button" class="text-gray-500 hover:text-blue-700 focus:outline-none p-2">
-                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="mobile-menu" class="hidden md:hidden bg-gray-50 border-t border-gray-200 absolute w-full shadow-lg">
-                    <div class="flex flex-col px-4 py-2 space-y-1">
-                        <a href="#about" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">野球部について</a>
-                        <a href="#players" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">選手紹介</a>
-                        <a href="#roster" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">部員紹介</a>
-                        <a href="#facility" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">施設紹介</a>
-                        <a href="#school-song" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">校歌</a>
-                        <a href="#results" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">戦績</a>
-                        <a href="#gallery" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700 border-b border-gray-200">ギャラリー</a>
-                        <a href="#access" class="mobile-nav-link block py-3 px-2 text-gray-700 font-medium hover:bg-blue-50 hover:text-blue-700">アクセス</a>
-                    </div>
-                </div>
-            </header>
-            <section class="hero-bg text-white py-40 px-6">
-                <div class="container mx-auto text-center">
-                    <h1 class="slogan tracking-wider animate-fade-in-down">強</h1>
-                    <p class="text-xl sm:text-3xl font-light mt-4 max-w-3xl mx-auto text-shadow-lg animate-fade-in-up">
-                        個の技量に頼らず、一人ひとりの力を集めて戦う。
-                    </p>
-                </div>
-            </section>
+<section class="hero-section">
+    <h1 class="text-6xl md:text-8xl font-black text-white tracking-widest mb-2" style="text-shadow: 0 4px 10px rgba(0,0,0,0.5); font-family: 'Yuji Syuku', serif;">強</h1>
+    <p class="text-white/90 text-lg md:text-xl font-medium bg-black/30 px-6 py-1 rounded-full backdrop-blur-sm">
+        個の技量に頼らず、一人ひとりの力を集めて戦う。
+    </p>
+</section>
 
             <div class="container mx-auto px-4 sm:px-6 py-20">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -27383,12 +28080,16 @@ function updatePlayerStatsFromDetails(match) {
                             </div>
                         </section>
 
-                        <section id="roster" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
-                            <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">部員紹介 (2025年度 夏)</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div class="player-profile-card">
-                                    <div class="player-profile-header">
-                                        <span class="player-profile-number">1</span>
+                        <section id="roster" class="bg-white p-4 md:p-8 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
+    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <span class="w-1.5 h-6 bg-blue-600 mr-3 rounded-full"></span>部員紹介 (2025年度)
+    </h2>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="player-profile-card">
+            <div class="player-profile-header flex items-baseline justify-between border-b pb-2 mb-2">
+                <span class="text-3xl font-black text-blue-900 mr-2">1</span>
+
                                         <span class="player-profile-name">白瀬</span>
                                         <span class="player-profile-grade">3年</span>
                                     </div>
@@ -27798,12 +28499,48 @@ function updatePlayerStatsFromDetails(match) {
                         </div>
                     </section>
 
-                    <section id="ob-career" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
-                        <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">OBの主な進路 (架空)</h2>
-                        <p class="text-gray-700 leading-relaxed mb-6">創部まもないながら、卒業生は野球を継続する道を選んでいます。2025年春、初の卒業生（創部3年目に入学した世代）が新たなステージへと羽ばたきました。</p>
-                        <div class="overflow-x-auto"><table class="w-full min-w-[600px] text-left text-sm"><thead class="bg-gray-100"><tr><th class="px-4 py-3 font-semibold">選手名 (ダミー)</th><th class="px-4 py-3 font-semibold">卒業年度</th><th class="px-4 py-3 font-semibold">ポジション</th><th class="px-4 py-3 font-semibold">主な進路</th></tr></thead><tbody class="divide-y divide-gray-200"><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">高山 翼</td><td class="px-4 py-3">2025年3月卒 (3期生)</td><td class="px-4 py-3">投手</td><td class="px-4 py-3 font-semibold">東京六大学リーグ (進学)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">早川 瞬</td><td class="px-4 py-3">2025年3月卒 (3期生)</td><td class="px-4 py-3">内野手</td><td class="px-4 py-3 font-semibold">社会人野球 (ナムコグループ)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">伊集院 北斗</td><td class="px-4 py-3">2024年3月卒 (2期生)</td><td class="px-4 py-3">外野手</td><td class="px-4 py-3 font-semibold">東都大学リーグ (進学)</td></tr><tr class="hover:bg-gray-50"><td class="px-4 py-3 font-medium">天ヶ瀬 冬馬</td><td class="px-4 py-3">2023年3月卒 (1期生)</td><td class="px-4 py-3">捕手</td><td class="px-4 py-3 font-semibold">独立リーグ (中退)</td></tr></tbody></table></div>
-                    </section>
-
+                    <section id="ob-career" class="bg-white p-4 md:p-8 rounded-xl shadow-sm border border-gray-200 scroll-mt-24">
+    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <span class="w-1.5 h-6 bg-blue-600 mr-3 rounded-full"></span>OBの主な進路
+    </h2>
+    <p class="text-sm text-gray-600 leading-relaxed mb-4">
+        創部まもなくながら、卒業生は野球を継続する道を選んでいます。<br>
+        <span class="text-xs text-gray-400">※表は横にスクロールできます</span>
+    </p>
+    
+    <div class="table-scroll-wrapper">
+        <table class="w-full min-w-[600px] text-left text-sm whitespace-nowrap">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-4 py-3 font-semibold text-gray-700">選手名</th>
+                    <th class="px-4 py-3 font-semibold text-gray-700">卒業年度</th>
+                    <th class="px-4 py-3 font-semibold text-gray-700">ポジション</th>
+                    <th class="px-4 py-3 font-semibold text-gray-700">主な進路</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-blue-50">
+                    <td class="px-4 py-3 font-medium">高山 翼</td>
+                    <td class="px-4 py-3">2025年3月卒</td>
+                    <td class="px-4 py-3">投手</td>
+                    <td class="px-4 py-3 font-bold text-blue-800">東京六大学リーグ (進学)</td>
+                </tr>
+                <tr class="hover:bg-blue-50">
+                    <td class="px-4 py-3 font-medium">早川 瞬</td>
+                    <td class="px-4 py-3">2025年3月卒</td>
+                    <td class="px-4 py-3">内野手</td>
+                    <td class="px-4 py-3 font-bold text-blue-800">社会人野球 (ナムコG)</td>
+                </tr>
+                 <tr class="hover:bg-blue-50">
+                    <td class="px-4 py-3 font-medium">伊集院 北斗</td>
+                    <td class="px-4 py-3">2024年3月卒</td>
+                    <td class="px-4 py-3">外野手</td>
+                    <td class="px-4 py-3 font-bold text-blue-800">東都大学リーグ (進学)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
                     <section id="gallery" class="bg-white p-8 rounded-xl shadow-xl fade-in-section">
                         <h2 class="text-3xl font-bold text-gray-900 section-title mb-8">ギャラリー</h2>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -27853,21 +28590,34 @@ function updatePlayerStatsFromDetails(match) {
             </div>
         </div>
 
-        <footer class="bg-gray-900 text-gray-400 py-16 mt-16">
-            <div class="container mx-auto px-6 text-center">
-                <p class="font-bold text-2xl text-white">283学園 高等学校</p>
-                <p class="text-sm mt-3">〒430-XXXX 静岡県浜松市（ダミー住所）</p>
-                <p class="text-sm mt-1">TEL: 053-XXX-XXXX / FAX: 053-XXX-XXXX</p>
-                <div class="mt-8 border-t border-gray-700 pt-8">
-                     <p class="text-xs">Powered by Namco Group</p>
-                    <p class="text-xs mt-1">&copy; 2025 Tsubasa Gakuen High School. All rights reserved.</p>
-                </div>
+        <footer class="homepage-footer">
+    <div class="container mx-auto px-6 text-center">
+        <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-4">
+            <div class="flex items-center gap-2">
+                 <div class="w-6 h-6 bg-gray-400 rounded flex items-center justify-center text-white font-bold text-xs">2</div>
+                 <p class="font-bold text-lg text-gray-700">283学園 高等学校</p>
             </div>
-        </footer>
+            <span class="hidden md:inline text-gray-300">|</span>
+            <p class="text-sm text-gray-500">硬式野球部 公式サイト</p>
+        </div>
         
+        <div class="flex justify-center gap-6 mb-4 text-xs font-medium text-gray-400">
+            <a href="#" class="hover:text-blue-600 transition">学校トップ</a>
+            <a href="#" class="hover:text-blue-600 transition">入試情報</a>
+            <a href="#" class="hover:text-blue-600 transition">お問い合わせ</a>
+        </div>
+
+        <p class="text-[10px] text-gray-400">
+            &copy; 2025 Tsubasa Gakuen High School. All rights reserved. Powered by Namco Group
+        </p>
     </div>
-</div>
-</div>
+</footer>
+ </div>
+        </div>
+ </div>
+        
+
+
 
 <div id="boxscore-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 modal-hidden items-center justify-center z-[160]">
     <div class="bg-white p-4 md:p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col">
