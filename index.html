@@ -1554,6 +1554,34 @@
 }
 /* ▲▲▲ 追加ここまで ▲▲▲ */
 
+/* ▼▼▼ キャプテンボタン用CSS (新規追加) ▼▼▼ */
+.captain-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1; /* gray-300 */
+    color: #9ca3af; /* gray-400 */
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8fafc;
+    transition: all 0.2s;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+.captain-btn:hover {
+    background-color: #e2e8f0;
+}
+.captain-btn.active {
+    background-color: #f59e0b; /* amber-500 (ゴールドっぽい色) */
+    color: white;
+    border-color: #d97706; /* amber-600 */
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
+}
+/* ▲▲▲ 追加ここまで ▲▲▲ */
+
 /* ▼▼▼ ラウンドスキップ新聞モーダル用のCSS (ここから修正) ▼▼▼ */
 .newspaper-modal-backdrop {
     position: fixed;
@@ -3844,9 +3872,10 @@ const FACILITY_DATA = {
 const TEAM_ROSTER_MASTER = {
     "283学園": [
         // --- スタメン (不動のオーダー) ---
-        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス", desc: "切り込み隊長。高い出塁率と華麗な守備でチームに勢いをもたらす不動の1番ショート。" },
+        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス", desc: "切り込み隊長。高い出塁率と華麗な守備でチームに勢いをもたらす不動の1番ショート。", 
+          isCaptain: true },
         { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学", desc: "最強の2番打者。小技だけでなく長打もあり、十王とのコンビは県内最強の二遊間。" },
-        { number: "9", name: "花海咲", grade: 3, position: "右翼手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア", isCaptain: true, desc: "頼れる3番・主将。好機に滅法強く、妹の佑と共にクリーンナップの中核を担う。" },
+        { number: "9", name: "花海咲", grade: 3, position: "右翼手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア",  desc: "頼れる3番・主将。好機に滅法強く、妹の佑と共にクリーンナップの中核を担う。" },
         { number: "8", name: "花海佑", grade: 1, position: "中堅手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア", desc: "1年生にして4番に座る怪物。圧倒的な身体能力でグラウンドを支配する天才。" },
         { number: "7", name: "芹沢", grade: 2, position: "左翼手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア", desc: "5番に座る仕事人。両打ち（スイッチ）の器用さで、上位と下位をつなぐキーマン。" },
         { number: "1", name: "姫川", grade: 3, position: "投手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア", desc: "「6番・ピッチャー」の超攻撃的エース。150km超の剛球に加え、自らのバットで試合を決める。" },
@@ -7301,6 +7330,26 @@ function showTeamStatusModal(teamName) {
     } else {
         coachEl.textContent = '情報なし';
     }
+// ★★★ ここに貼り付けてください ★★★
+    // ▼▼▼ 追加: キャプテン名の表示 ▼▼▼
+    // ロスター情報からキャプテンを探す
+    let captainDisplay = "不明";
+    if (teamRecord.roster) {
+        const captain = teamRecord.roster.find(p => p.isCaptain);
+        if (captain) captainDisplay = captain.name;
+    } else if (TEAM_ROSTER_MASTER[teamName]) {
+        // まだ試合をしていないがマスタデータがある場合
+        const masterCap = TEAM_ROSTER_MASTER[teamName].find(p => p.isCaptain);
+        if (masterCap) captainDisplay = masterCap.name;
+    }
+
+    // 監督表示の下あたりに追加
+    if (coachEl) {
+        // 既存の監督表示に続けて主将も表示
+        coachEl.innerHTML += `<br><span class="text-sm font-normal text-gray-600">主将: </span><span class="font-bold text-gray-800">${captainDisplay}</span>`;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+    // ★★★★★★★★★★★★★★★★★★★
     if (homepageLinkContainer && homepageLink) {
         if (teamName === "283学園") {
             homepageLink.setAttribute('data-target', 'homepage-modal'); 
@@ -9695,124 +9744,144 @@ ${analysisText}
 // ▼▼▼ 【新規追加】CPUチームの架空成績自動生成システム ▼▼▼
 
 /**
- * チームにロスター（選手名簿）がなければ生成する
- * ★「一度決まったオーダーは大会中ずっと使い続ける」ための修正版
+ * [FIXED] チームにロスター（選手名簿）がなければ生成する
+ * (★ランダム生成チームにもキャプテンを割り当てる修正版)
  */
 function ensureCpuRoster(teamName) {
     const record = tournamentState.teamRecords[teamName];
     if (!record) return null;
 
-    // ★★★ 最重要：既にロスター（オーダー）が存在すれば、それをそのまま返す ★★★
-    // これにより、1回戦で決まった「打順・守備・背番号」が2回戦以降も維持されます。
+    // 既にロスターが存在すれば、それを返す
     if (record.roster && record.roster.length > 0) {
         return record.roster;
     }
 
-    const newRoster = [];
+    let newRoster = [];
 
-    // --- 以下、新規生成ロジック（初回の1回のみ実行されます） ---
-
-    // 1. 守備位置と背番号のペアを作成
-    const positionSlots = [
-        { pos: '投', num: 1 },
-        { pos: '捕', num: 2 },
-        { pos: '一', num: 3 },
-        { pos: '二', num: 4 },
-        { pos: '三', num: 5 },
-        { pos: '遊', num: 6 },
-        { pos: '左', num: 7 },
-        { pos: '中', num: 8 },
-        { pos: '右', num: 9 }
-    ];
-
-    // 2. これをシャッフル（打順をランダムにする）
-    const shuffledSlots = shuffleArray([...positionSlots]);
-
-    // 3. 固定選手（詳細データあり）の取得
-    const detailedData = DETAILED_TEAM_DATA[teamName];
-    let predefinedPlayers = [];
-    if (detailedData && detailedData.players) {
-        predefinedPlayers = [...detailedData.players];
-    }
-
-    // 4. スタメン (1-9番) の生成
-    for (let i = 1; i <= 9; i++) {
-        let playerEntry;
-        let assignedSlot = null;
-
-        if (predefinedPlayers.length > 0) {
-            // 固定選手がいる場合
-            const p = predefinedPlayers.shift();
+    // --- パターンA: マスタデータがある場合 (283学園など) ---
+    if (TEAM_ROSTER_MASTER[teamName]) {
+        const master = TEAM_ROSTER_MASTER[teamName];
+        
+        newRoster = master.map((p, index) => {
+            const order = (index < 9) ? (index + 1).toString() : null;
+            
             let posShort = p.position ? p.position.charAt(0) : '控';
             if (p.position && p.position.includes("外")) posShort = "中";
             if (p.position && p.position.includes("右")) posShort = "右";
             if (p.position && p.position.includes("左")) posShort = "左";
+            if (p.position && p.position.includes("中")) posShort = "中";
 
-            // 固定選手のポジション枠をリストから消費する
-            const slotIndex = shuffledSlots.findIndex(s => s.pos === posShort);
-            if (slotIndex !== -1) {
-                assignedSlot = shuffledSlots.splice(slotIndex, 1)[0];
-            } else {
-                // 枠がない場合は先頭を消費
-                assignedSlot = shuffledSlots.shift();
-            }
-
-            playerEntry = {
-                order: i.toString(),
+            return {
+                order: order,
                 name: p.name,
-                number: assignedSlot ? assignedSlot.num : i, 
+                number: p.number,
                 pos: posShort,
-                throwBat: 'R/R',
-                sub_type: null
+                throwBat: p.throwBat || 'R/R',
+                sub_type: null,
+                isCaptain: p.isCaptain || false // マスタ指定のキャプテンを反映
             };
-        } else {
-            // ランダム選手の場合
-            assignedSlot = shuffledSlots.shift(); // シャッフルされた枠を上から取る
+        });
+        
+    } 
+    // --- パターンB: マスタデータがない場合 (CPUランダム生成) ---
+    else {
+        // 1. 守備位置と背番号のペアを作成
+        const positionSlots = [
+            { pos: '投', num: 1 }, { pos: '捕', num: 2 }, { pos: '一', num: 3 },
+            { pos: '二', num: 4 }, { pos: '三', num: 5 }, { pos: '遊', num: 6 },
+            { pos: '左', num: 7 }, { pos: '中', num: 8 }, { pos: '右', num: 9 }
+        ];
 
-            playerEntry = {
-                order: i.toString(), // 打順は固定 (1, 2, 3...)
-                name: JAPANESE_SURNAMES[Math.floor(Math.random() * JAPANESE_SURNAMES.length)],
-                number: assignedSlot.num, // 背番号はポジション連動 (投=1)
-                pos: assignedSlot.pos,    // ポジションはランダム (例: 1番打者がショート)
-                throwBat: Math.random() > 0.3 ? 'R/R' : 'L/L',
-                sub_type: null
-            };
+        // 2. 打順をランダムに決定
+        const shuffledSlots = shuffleArray([...positionSlots]);
+
+        // 3. 固定選手データの取得
+        const detailedData = DETAILED_TEAM_DATA[teamName];
+        let predefinedPlayers = [];
+        if (detailedData && detailedData.players) {
+            predefinedPlayers = [...detailedData.players];
         }
-        newRoster.push(playerEntry);
-    }
-    
-    // 5. 控え選手 (10-18) の生成
-    const benchPositions = [
-        { pos: '投', num: 10 }, { pos: '投', num: 11 },
-        { pos: '捕', num: 12 }, { pos: '一', num: 13 },
-        { pos: '二', num: 14 }, { pos: '三', num: 15 },
-        { pos: '遊', num: 16 }, { pos: '左', num: 17 },
-        { pos: '中', num: 18 }
-    ];
 
-    for (const benchSlot of benchPositions) {
-        let playerEntry;
-        if (predefinedPlayers.length > 0) {
-            const p = predefinedPlayers.shift();
-            playerEntry = { order: null, name: p.name, number: benchSlot.num, pos: benchSlot.pos, throwBat: 'R/R', sub_type: null };
-        } else {
-            playerEntry = { 
-                order: null, 
-                name: JAPANESE_SURNAMES[Math.floor(Math.random() * JAPANESE_SURNAMES.length)], 
-                number: benchSlot.num, 
-                pos: benchSlot.pos, 
-                throwBat: 'R/R', 
-                sub_type: null 
-            };
+        // 4. スタメン生成
+        for (let i = 1; i <= 9; i++) {
+            let assignedSlot = null;
+            let playerEntry;
+            
+            if (predefinedPlayers.length > 0) {
+                const p = predefinedPlayers.shift();
+                let posShort = p.position ? p.position.charAt(0) : '控';
+                if (p.position && p.position.includes("外")) posShort = "中";
+                
+                const slotIndex = shuffledSlots.findIndex(s => s.pos === posShort);
+                if (slotIndex !== -1) {
+                    assignedSlot = shuffledSlots.splice(slotIndex, 1)[0];
+                } else {
+                    assignedSlot = shuffledSlots.shift();
+                }
+
+                playerEntry = {
+                    order: i.toString(),
+                    name: p.name,
+                    number: assignedSlot ? assignedSlot.num : i, 
+                    pos: posShort,
+                    throwBat: 'R/R',
+                    sub_type: null,
+                    isCaptain: false // 後で設定
+                };
+            } else {
+                assignedSlot = shuffledSlots.shift();
+                playerEntry = {
+                    order: i.toString(),
+                    name: JAPANESE_SURNAMES[Math.floor(Math.random() * JAPANESE_SURNAMES.length)],
+                    number: assignedSlot.num,
+                    pos: assignedSlot.pos,
+                    throwBat: Math.random() > 0.3 ? 'R/R' : 'L/L',
+                    sub_type: null,
+                    isCaptain: false // 後で設定
+                };
+            }
+            newRoster.push(playerEntry);
         }
-        newRoster.push(playerEntry);
+        
+        // 5. 控え選手生成
+        const benchPositions = [
+            { pos: '投', num: 10 }, { pos: '投', num: 11 }, { pos: '捕', num: 12 },
+            { pos: '一', num: 13 }, { pos: '二', num: 14 }, { pos: '三', num: 15 },
+            { pos: '遊', num: 16 }, { pos: '左', num: 17 }, { pos: '中', num: 18 }
+        ];
+
+        for (const benchSlot of benchPositions) {
+            let playerEntry;
+            if (predefinedPlayers.length > 0) {
+                const p = predefinedPlayers.shift();
+                playerEntry = { 
+                    order: null, name: p.name, number: benchSlot.num, pos: benchSlot.pos, 
+                    throwBat: 'R/R', sub_type: null, isCaptain: false 
+                };
+            } else {
+                playerEntry = { 
+                    order: null, 
+                    name: JAPANESE_SURNAMES[Math.floor(Math.random() * JAPANESE_SURNAMES.length)], 
+                    number: benchSlot.num, pos: benchSlot.pos, 
+                    throwBat: 'R/R', sub_type: null, isCaptain: false 
+                };
+            }
+            newRoster.push(playerEntry);
+        }
+
+        // ★★★ 追加: スタメンの中からランダムに1人をキャプテンに任命 ★★★
+        // (0〜8番目のインデックス = 打順1〜9番)
+        const captainIndex = Math.floor(Math.random() * 9);
+        if (newRoster[captainIndex]) {
+            newRoster[captainIndex].isCaptain = true;
+        }
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     }
 
-    // ★ 生成したロスターを保存 (次回以降はこれが使われます)
+    // 保存して返す
     record.roster = newRoster;
     return newRoster;
 }
-
 /**
  * 【修正版】チームの過去試合（スキップ含む）の成績を自動生成する
  * ★四球(bb)や塁打数(tb)もシミュレートし、分析グラフを面白くする
@@ -12544,13 +12613,17 @@ function openDetailsModal(matchId) {
     // --- 前回のロスター情報を引き継ぐ ---
     if ((!details.batting || !details.batting.team1 || details.batting.team1.length === 0)) {
         console.log("[ロスター引継] この試合の詳細は空です。前回のロスターを探します...");
+        
+        // battingオブジェクトがない場合は初期化
+        details.batting = details.batting || { team1: [], team2: [] };
+
         for (const teamKey of ['team1', 'team2']) {
             const teamName = match[teamKey];
             const teamRecord = tournamentState.teamRecords[teamName];
             
+            // パターンA: 保存されたロスターがある場合 (2回戦以降)
             if (teamRecord && teamRecord.roster && teamRecord.roster.length > 0) {
-                console.log(`[ロスター引継] ${teamName} の前回のロスター (${teamRecord.roster.length}人) を読み込みます。`);
-                details.batting = details.batting || { team1: [], team2: [] };
+                console.log(`[ロスター引継] ${teamRecord.roster.length}名のロスターデータを読み込みます。`);
                 details.batting[teamKey] = teamRecord.roster
                     .filter(playerData => playerData.order && !playerData.order.toString().includes('sub'))
                     .map(playerData => ({
@@ -12559,12 +12632,38 @@ function openDetailsModal(matchId) {
                         results: []     
                     }));
             }
+            // パターンB: 過去のスタメン履歴がある場合 (旧データ互換性)
             else if (teamRecord && teamRecord.previousStarters && teamRecord.previousStarters.length > 0) {
-                 details.batting = details.batting || { team1: [], team2: [] };
                  details.batting[teamKey] = teamRecord.previousStarters.map(playerData => ({
                     ...playerData,
                     results: [] 
                 }));
+            }
+            // パターンC: 【新規】マスタデータがある場合 (1回戦・初回)
+            else if (TEAM_ROSTER_MASTER[teamName]) {
+                 console.log(`[ロスター引継] ${teamName} のデフォルトスタメンをロードします。`);
+                 const masterRoster = TEAM_ROSTER_MASTER[teamName];
+                 
+                 // マスタデータをスタメン形式に変換
+                 details.batting[teamKey] = masterRoster.map((p, index) => {
+                     // 9番目まではスタメン(order:1-9)、それ以降は控え(order:null)
+                     // ※TEAM_ROSTER_MASTERがスタメン順に並んでいる前提
+                     const order = (index < 9) ? (index + 1).toString() : null;
+                     
+                     // 守備位置の短縮形 (例: "遊撃手" -> "遊")
+                     const posShort = p.position ? p.position.charAt(0) : '';
+
+                     return {
+                         order: order,
+                         name: p.name,
+                         number: p.number,
+                         pos: posShort,
+                         throwBat: p.throwBat,
+                         isCaptain: p.isCaptain || false, // キャプテン情報も反映
+                         sub_type: null,
+                         results: [] 
+                     };
+                 });
             }
         }
     }
@@ -12616,7 +12715,9 @@ function openDetailsModal(matchId) {
                 let history = [];
                 if (player.pos) {
                     let initialTiming = "スタメン";
-                    if (player.order.includes('sub')) {
+                    // ▼▼▼ 修正: orderが存在する場合のみチェックするよう変更 ▼▼▼
+                    if (player.order && player.order.toString().includes('sub')) {
+                    // ▲▲▲ 修正ここまで ▲▲▲
                         if (player.sub_type === 'PH') initialTiming = "代打出場";
                         else if (player.sub_type === 'PR') initialTiming = "代走出場";
                         else initialTiming = "途中出場";
@@ -13750,6 +13851,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         let starterData = battingData.find(p => p.order && parseInt(p.order) === i) || { order: i, results: Array(numInnings).fill('') };
         if (!starterData.results) starterData.results = Array(numInnings).fill('');
         const pName = starterData.name || ''; 
+const isCaptain = starterData.isCaptain ? 'active' : '';
 
         // ★★★ ここからが修正箇所 ★★★
         let conditionIcon = '';
@@ -13789,15 +13891,18 @@ function createPlayerBattingTable(teamName, teamKey, details) {
                  </td>`;
         }
         
-        bodyRows += `
+       bodyRows += `
             <tr data-order="${starterData.order}">
                 <td class="col-order">${i}</td>
                 <td class="col-number">${starterNumberSelect}</td>
                 <td class="col-throw-bat">${starterThrowBatSelect}</td>
                 <td class="col-player">
                     <div class="flex items-center gap-1">
-                        <input type="text" class="player-name w-full" value="${pName}">
-                        ${conditionIcon} <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
+                        <input type="text" class="player-name w-full" value="${pName}" list="roster-datalist-${teamKey}">
+                        
+                        <button class="captain-btn ${isCaptain}" title="主将に設定">C</button>
+                        ${conditionIcon} 
+                        <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
                                 data-team-name="${teamName}" 
                                 data-player-order-key="${starterData.order}" 
                                 title="通算成績を表示">📊</button>
@@ -13821,6 +13926,7 @@ function createPlayerBattingTable(teamName, teamKey, details) {
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
             const subName = subData.name || '';
+const isSubCaptain = subData.isCaptain ? 'active' : '';
 
             // ★★★ 交代選手の調子アイコンも取得 ★★★
             let subConditionIcon = '';
@@ -13860,14 +13966,13 @@ function createPlayerBattingTable(teamName, teamKey, details) {
                      </td>`;
             }
             
-            bodyRows += `
+           bodyRows += `
                 <tr data-order="${subData.order}">
-                    <td class="col-order"></td>
-                    <td class="col-number">${subNumberSelect}</td>
-                    <td class="col-throw-bat">${subThrowBatSelect}</td>
                     <td class="col-player pl-4">
                         <div class="flex items-center gap-1">
-                            <input type="text" class="player-name w-full" value="${subName}">
+                            <input type="text" class="player-name w-full" value="${subName}" list="roster-datalist-${teamKey}">
+                            
+                            <button class="captain-btn ${isSubCaptain}" title="主将に設定">C</button>
                             ${subConditionIcon} <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
                                     data-team-name="${teamName}" 
                                     data-player-order-key="${subData.order}" 
@@ -14193,6 +14298,7 @@ function saveDetailedStats() {
                         currentPos: row.querySelector('.player-pos').value, // ★ currentPos を保存
                         posHistoryDisplay: row.querySelector('.text-xs.text-gray-500')?.title || '', // ★ 履歴表示を保存
                         sub_type: row.querySelector('.sub-type-select') ? row.querySelector('.sub-type-select').value : null,
+isCaptain: row.querySelector('.captain-btn')?.classList.contains('active') || false,
                         results: results
                     };
                     details.batting[teamKey].push(playerData);
@@ -17722,6 +17828,19 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
         injuryReport // ★ 故障者リスト
     } = matchContext || {};
     
+
+// ▼▼▼ 追加: 両チームのキャプテンを特定する ▼▼▼
+    const getCaptainName = (teamName) => {
+        const record = tournamentState.teamRecords[teamName];
+        if (!record || !record.roster) return "主将";
+        const captain = record.roster.find(p => p.isCaptain);
+        return captain ? captain.name : "主将";
+    };
+
+    const winnerCaptainName = getCaptainName(winnerName);
+    const loserCaptainName = getCaptainName(loserName);
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     let prompt = '';
     
     const tournamentName = tournamentNameMap[tournamentState.currentTournament] || '大会';
@@ -17938,10 +18057,12 @@ ${lineupChangesText}
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
   - **今大会の軌跡**: ${winnerJourney}
   - **監督**: ${winnerCoach ? `${winnerCoach.name} (${winnerCoach.style})` : '情報なし'}
+- **主将**: ${winnerCaptainName}
   - **主な選手プロフィール**:\n${winnerPlayersPrompt}
 - **${loserName} ${loserSeedRank}**: ${loserDynamicInfo}
   - **今大会の軌跡**: ${loserJourney}
   - **監督**: ${loserCoach ? `${loserCoach.name} (${loserCoach.style})` : '情報なし'}
+- **主将**: ${loserCaptainName}
   - **主な選手プロフィール**:\n${loserPlayersPrompt}
 ---
 ### **執筆指示**
@@ -18005,8 +18126,8 @@ ${PREFECTURE_LORE}
 - **ラウンド:** ${roundName} 
 ${scheduleText} 
 ### 試合情報
-- **勝利チーム**: ${winnerName} ${winnerSeedRank} (${winnerRankDesc})
-- **敗北チーム**: ${loserName} ${loserSeedRank} (${loserRankDesc})
+- **勝利チーム**: ${winnerName} ${winnerSeedRank} (${winnerRankDesc})(主将: ${winnerCaptainName})
+- **敗北チーム**: ${loserName} ${loserSeedRank} (${loserRankDesc})(主将: ${loserCaptainName})
 - **スコア**: ${winnerScore} - ${loserScore}
 - **ユーザーによる試合の決め手**: ${dbMatch.summary || 'なし'}
 ${calledGameText} 
@@ -22445,6 +22566,7 @@ async function processMatchWin(matchId, winnerName) {
     let cinderellaArticlePromise = Promise.resolve(null);
     let accidentArticlePromise = Promise.resolve(null);
 let scoutReportPromise = Promise.resolve(null);
+let snsPromise = Promise.resolve(null);
 
     // ★★★ 甲子園モードかどうかの判定 ★★★
     const isKoshienMode = tournamentState.currentTournament === 'summer_koshien';
@@ -25236,6 +25358,28 @@ document.body.addEventListener('click', async (e) => {
         setWeather(weatherType);
     }
 
+// ▼▼▼ 追加: キャプテンボタンのクリック処理 ▼▼▼
+    if (e.target.matches('.captain-btn')) {
+        e.preventDefault();
+        const btn = e.target;
+        
+        // 既にアクティブならOFFにする（キャプテンなしの状態も許容する場合）
+        if (btn.classList.contains('active')) {
+            btn.classList.remove('active');
+        } else {
+            // 同じテーブル（チーム）内の他のキャプテンボタンを全てOFFにする
+            const table = btn.closest('table');
+            if (table) {
+                table.querySelectorAll('.captain-btn.active').forEach(activeBtn => {
+                    activeBtn.classList.remove('active');
+                });
+            }
+            // クリックされたボタンをONにする
+            btn.classList.add('active');
+        }
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     // --- 「チーム通算成績」ボタン（トーナメント表の 📊 ボタン） ---
     if (e.target.matches('.show-team-stats-btn')) {
         e.preventDefault();
@@ -27172,7 +27316,7 @@ document.body.addEventListener('input', (e) => {
             const teamKey = table.id.includes('team1') ? 'team1' : 'team2';
             const teamName = match[teamKey];
             
-            // --- 1. 選手名簿(Roster)からの自動入力 (283学園など) ---
+          // --- 1. 選手名簿(Roster)からの自動入力 ---
             const roster = TEAM_ROSTER_MASTER[teamName];
             if (roster) {
                 const playerData = roster.find(p => p.name === playerName);
@@ -27181,6 +27325,24 @@ document.body.addEventListener('input', (e) => {
                     const throwBatSelect = row.querySelector('.player-throw-bat');
                     if (numberSelect) numberSelect.value = playerData.number;
                     if (throwBatSelect) throwBatSelect.value = playerData.throwBat;
+
+                    // ▼▼▼ ここに追加: キャプテンの自動反映 ▼▼▼
+                    const captainBtn = row.querySelector('.captain-btn');
+                    if (captainBtn) {
+                        if (playerData.isCaptain) {
+                            // 1. 同じチーム(テーブル)内の他のキャプテンを全て解除
+                            const table = row.closest('table');
+                            if (table) {
+                                table.querySelectorAll('.captain-btn.active').forEach(btn => btn.classList.remove('active'));
+                            }
+                            // 2. この選手のボタンをONにする
+                            captainBtn.classList.add('active');
+                        } else {
+                            // キャプテンじゃない選手名に変えた場合、OFFにする
+                            captainBtn.classList.remove('active');
+                        }
+                    }
+                    // ▲▲▲ 追加ここまで ▲▲▲
                 }
             }
 
