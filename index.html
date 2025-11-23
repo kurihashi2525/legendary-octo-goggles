@@ -2684,7 +2684,10 @@
 </button>
  <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-orange-600 shadow-md mt-4 w-full md:w-auto">
     📰 まとめサイトを見る
-    </button>            
+    </button>
+<button id="open-sns-btn-main" class="bg-sky-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-600 shadow-md ml-2">
+    📱 SNS
+</button>            
  </div>
         </div>
 
@@ -2767,7 +2770,9 @@
 <button id="show-matome-site-btn" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md">
     📰 まとめ
     </button>
-
+<button id="open-sns-btn" class="bg-sky-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-sky-600 shadow-md mt-4 w-full md:w-auto ml-2">
+    📱 SNSを見る
+ </button>
 <button id="show-contribution-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md ml-2">
     🌌 貢献度・天体観測
 </button>
@@ -18651,39 +18656,102 @@ ${trendCandidates.join(', ')}
 
 let currentSnsData = null; // グローバル変数で保持
 
+/**
+ * SNSモーダルの内容を描画する (履歴対応版)
+ */
 function renderSnsModalContent(tab = 'trend') {
     const container = document.getElementById('sns-content-area');
     container.innerHTML = '';
 
-    if (!currentSnsData) {
-        container.innerHTML = '<p class="text-center p-8 text-gray-500">データがありません</p>';
+    // 履歴がない場合
+    if (!tournamentState.snsLogs || tournamentState.snsLogs.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-gray-500">
+                <span class="text-4xl mb-2">📱</span>
+                <p>まだSNSの投稿はありません。</p>
+                <p class="text-sm mt-2">283学園の試合後に更新されます。</p>
+            </div>`;
         return;
     }
 
+    // デフォルト表示データがない場合、最新のログを使用
+    if (!currentSnsData) {
+        currentSnsData = tournamentState.snsLogs[0].data;
+    }
+
     if (tab === 'trend') {
-        // トレンドリスト表示
-        const trendsHtml = currentSnsData.trends.map((word, i) => `
-            <div class="sns-trend-item" onclick="switchSnsTab('timeline')">
-                <div class="sns-trend-meta">${i + 1} · スポーツ · トレンド</div>
-                <div class="sns-trend-word">${word}</div>
-                <div class="sns-trend-count">${Math.floor(Math.random() * 50000 + 1000).toLocaleString()}件のポスト</div>
+        // --- [トレンドタブ]：過去ログ一覧（置き場）を表示 ---
+        
+        let historyHtml = `<div class="bg-gray-50 p-3 font-bold text-gray-500 text-xs border-b">トレンド履歴 (タップでTLを表示)</div>`;
+        
+        tournamentState.snsLogs.forEach((log, i) => {
+            const timeStr = new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const topTrend = log.data.trends[0];
+            
+            historyHtml += `
+            <div class="sns-trend-item hover:bg-blue-50 transition-colors cursor-pointer" onclick="loadSnsLog('${log.id}')">
+                <div class="flex justify-between items-start">
+                    <div class="sns-trend-meta text-xs text-gray-400">${i + 1} · ${log.roundName} · ${timeStr}</div>
+                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">${log.score}</span>
+                </div>
+                <div class="sns-trend-word text-base font-bold text-gray-800 mt-1">${topTrend}</div>
+                <div class="sns-trend-count text-xs text-gray-500 mt-1">${log.matchTitle}</div>
             </div>
-        `).join('');
-        container.innerHTML = trendsHtml;
-        
-        // 下部に「話題のポスト」として少しだけTLを表示
-        const previewTitle = document.createElement('div');
-        previewTitle.className = "p-3 font-bold text-gray-800 bg-gray-50 border-b border-t";
-        previewTitle.textContent = "話題のポスト";
-        container.appendChild(previewTitle);
-        
-        renderTimeline(container, currentSnsData.posts.slice(0, 3));
+            `;
+        });
+        container.innerHTML = historyHtml;
 
     } else {
-        // タイムライン全表示
-        renderTimeline(container, currentSnsData.posts);
+        // --- [最新タブ]：選択中の試合のTLを表示 ---
+        
+        // ヘッダー（どの試合のTLか表示）
+        const currentLog = tournamentState.snsLogs.find(l => l.data === currentSnsData) || tournamentState.snsLogs[0];
+        const headerHtml = `
+            <div class="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center sticky top-0 z-10">
+                <div>
+                    <p class="text-xs font-bold text-blue-600">${currentLog.roundName}</p>
+                    <p class="text-sm font-bold text-gray-800">${currentLog.matchTitle}</p>
+                </div>
+                <span class="text-xl font-bold text-blue-300">#</span>
+            </div>
+        `;
+        
+        // タイムライン
+        const postsHtml = document.createElement('div');
+        renderTimeline(postsHtml, currentSnsData.posts);
+        
+        container.innerHTML = headerHtml;
+        container.appendChild(postsHtml);
     }
 }
+
+/**
+ * [NEW] 履歴から特定の試合のSNSデータを読み込んで表示する
+ */
+window.loadSnsLog = function(matchId) {
+    const log = tournamentState.snsLogs.find(l => l.id === matchId);
+    if (log) {
+        currentSnsData = log.data; // 表示データを切り替え
+        switchSnsTab('timeline');  // タイムラインタブへ移動
+    }
+};
+
+// --- イベントリスナーの追加 (ボタンクリック時) ---
+document.body.addEventListener('click', (e) => {
+    // SNSボタン (セットアップ画面 & メイン画面)
+    if (e.target.closest('#open-sns-btn') || e.target.closest('#open-sns-btn-main')) {
+        const modal = document.getElementById('sns-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // 最新のログがあればそれをセット
+        if (tournamentState.snsLogs && tournamentState.snsLogs.length > 0) {
+            currentSnsData = tournamentState.snsLogs[0].data;
+        }
+        
+        switchSnsTab('trend'); // 最初はトレンド一覧（置き場）を表示
+    }
+});
 
 function renderTimeline(container, posts) {
     posts.forEach(post => {
@@ -22705,23 +22773,32 @@ let snsPromise = Promise.resolve(null);
     
 // ★★★ 追加: SNSデータの保存と通知表示 ★★★
     if (generatedSns) {
-        currentSnsData = generatedSns; // データを更新
+        // 1. 履歴配列が存在しなければ作成
+        if (!tournamentState.snsLogs) tournamentState.snsLogs = [];
         
-        // 通知バナーを表示
+        // 2. タイムスタンプと試合情報を付与して保存
+        const snsLogEntry = {
+            id: matchId,
+            roundName: getRoundNameFromMatchId(matchId),
+            matchTitle: `${winnerName} vs ${loserName}`,
+            score: `${dbMatch.score1}-${dbMatch.score2}`,
+            timestamp: Date.now(),
+            data: generatedSns // posts と trends を含む
+        };
+        
+        // 3. 先頭に追加（最新が上に来るように）
+        tournamentState.snsLogs.unshift(snsLogEntry);
+        
+        // 4. 現在表示用のデータとしてセット
+        currentSnsData = generatedSns; 
+        
+        // 5. 通知バナーを表示 (クリックで開く用)
         const notif = document.getElementById('trend-notification');
         const wordEl = document.getElementById('trend-notification-word');
-        
-        // 最もホットなワードを表示
         wordEl.textContent = generatedSns.trends[0];
-        
         notif.classList.add('show');
-        
-        // 5秒後に消す
-        setTimeout(() => {
-            notif.classList.remove('show');
-        }, 5000);
+        // ※自動で消すsetTimeoutは削除済み
     }
-
     if (generatedCinderellaArticle) {
         tournamentState.news.push(generatedCinderellaArticle);
     }
