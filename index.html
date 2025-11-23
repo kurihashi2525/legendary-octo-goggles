@@ -13926,21 +13926,24 @@ const isCaptain = starterData.isCaptain ? 'active' : '';
         substitutes.forEach(subData => {
             if (!subData.results) subData.results = Array(numInnings).fill('');
             const subName = subData.name || '';
-const isSubCaptain = subData.isCaptain ? 'active' : '';
 
-            // ★★★ 交代選手の調子アイコンも取得 ★★★
+            // キャプテン状態
+            const isSubCaptain = subData.isCaptain ? 'active' : '';
+
+            // 調子アイコン
             let subConditionIcon = '';
             if (subName && teamRecord?.playerStats?.batting[subName]) {
                 const flag = teamRecord.playerStats.batting[subName].narrative_flag;
                 subConditionIcon = getPlayerConditionIcon(flag);
             }
-            // ★★★ 修正ここまで ★★★
 
+            // 各種セレクトボックスのHTML生成
             const subNumberSelect = `<select class="player-number w-full bg-transparent">${numberOptions.replace(`value="${subData.number}"`, `value="${subData.number}" selected`)}</select>`;
             const subThrowBatSelect = `<select class="player-throw-bat w-full bg-transparent"><option value="">-投/打-</option>${createThrowBatOptions(subData.throwBat)}</select>`;
             const subPosSelect = `<select class="player-pos w-full bg-transparent"><option value=""></option>${posOptions.replace(`value="${subData.currentPos || subData.pos}"`, `value="${subData.currentPos || subData.pos}" selected`)}</select>`;
             const subPosHistoryHtml = `<span class="text-xs text-gray-500 truncate" title="${subData.posHistoryDisplay || ''}">${subData.posHistoryDisplay || ''}</span>`;
 
+            // イニング入力欄の生成
             let subResultInputs = '';
             for (let j = 0; j < numInnings; j++) {
                 const resultString = subData.results[j] || '';
@@ -13966,25 +13969,25 @@ const isSubCaptain = subData.isCaptain ? 'active' : '';
                      </td>`;
             }
             
-           bodyRows += `
+            // ▼▼▼ 修正: ここで足りなかった最初の3列を復活させました ▼▼▼
+            bodyRows += `
                 <tr data-order="${subData.order}">
-                    <td class="col-player pl-4">
-                        <div class="flex items-center gap-1">
+                    <td class="col-order"></td> <td class="col-number">${subNumberSelect}</td> <td class="col-throw-bat">${subThrowBatSelect}</td> <td class="col-player pl-4"> <div class="flex items-center gap-1">
                             <input type="text" class="player-name w-full" value="${subName}" list="roster-datalist-${teamKey}">
                             
                             <button class="captain-btn ${isSubCaptain}" title="主将に設定">C</button>
-                            ${subConditionIcon} <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
+
+                            ${subConditionIcon} 
+                            <button class="show-player-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" 
                                     data-team-name="${teamName}" 
                                     data-player-order-key="${subData.order}" 
                                     title="通算成績を表示">📊</button>
                         </div>
                     </td>
-                    <td class="col-pos">
-                        <div class="flex items-center justify-between">${subPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-team-key="${teamKey}">変更</button></div>
+                    <td class="col-pos"> <div class="flex items-center justify-between">${subPosSelect}<button class="text-xs bg-gray-200 px-1 ml-1 rounded pos-change-btn" data-team-key="${teamKey}">変更</button></div>
                         ${subPosHistoryHtml}
                     </td>
-                    <td class="col-sub-type align-top">
-                        <select class="sub-type-select w-full bg-transparent mb-1">
+                    <td class="col-sub-type align-top"> <select class="sub-type-select w-full bg-transparent mb-1">
                             <option value="" ${!subData.sub_type ? 'selected' : ''}>-</option>
                             <option value="PH" ${subData.sub_type === 'PH' ? 'selected' : ''}>代打</option>
                             <option value="PR" ${subData.sub_type === 'PR' ? 'selected' : ''}>代走</option>
@@ -13995,8 +13998,7 @@ const isSubCaptain = subData.isCaptain ? 'active' : '';
                             + 交代
                         </button>
                     </td>
-                    ${subResultInputs}
-                </tr>
+                    ${subResultInputs} </tr>
             `;
         });
     }
@@ -25421,12 +25423,29 @@ document.body.addEventListener('click', async (e) => {
         else if (e.target.closest('.calc-pitcher-stats-btn')) {
             e.preventDefault();
             const btn = e.target.closest('.calc-pitcher-stats-btn');
+            
+            // 連打防止 & タップフィードバック
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = "計算中...";
+
             const pitchingTeamKey = btn.dataset.pitchingTeam;
             const battingTeamKey = btn.dataset.battingTeam;
             
-            // ★ async関数を呼び出す
+            // 非同期処理を実行
             (async () => {
-                await fillPitcherStatsFromBatting(pitchingTeamKey, battingTeamKey);
+                try {
+                    // 計算ロジック呼び出し
+                    await fillPitcherStatsFromBatting(pitchingTeamKey, battingTeamKey);
+                } catch (err) {
+                    console.error("自動計算エラー:", err);
+                    // スマホでもエラー内容がわかるようにアラートを出す
+                    alert("計算中にエラーが発生しました:\n" + err.message);
+                } finally {
+                    // 処理が終わったら（成功・失敗に関わらず）ボタンを元に戻す
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
             })();
         }
 // --- [NEW] イニング欄からの「代打」ボタン ---
