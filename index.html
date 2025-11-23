@@ -12138,15 +12138,34 @@ function renderNews(news) {
             `;
 // ▼▼▼ 追加箇所: スカウティングレポートの表示 ▼▼▼
      }   else if (article.isScoutReport) {
-            articleEl.className = 'scout-report-card p-4 rounded-lg shadow mb-4';
+            articleEl.className = 'bg-green-50 border-l-4 border-green-600 p-4 rounded-lg shadow mb-4';
+            
+            // 本文の冒頭だけ少し見せる（最初の読点まで、または50文字）
+            let summary = article.body.split('。')[0] + '...';
+            if (summary.length > 50) summary = article.body.substring(0, 50) + '...';
+
             articleEl.innerHTML = `
-                <h3 class="scout-report-title text-lg">⚾ ${article.title}</h3>
-                <div class="scout-report-body">
-                    ${article.body.replace(/\n/g, '<br>')}
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-lg text-green-900 mb-1" style="font-family: 'Noto Serif JP', serif;">
+                            ${article.title}
+                        </h3>
+                        <p class="text-xs text-green-700 mb-3">${new Date(article.timestamp).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                    <span class="text-3xl">📝</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4 font-serif border-b border-green-200 pb-2">
+                    ${summary}
+                </p>
+                <div class="text-center">
+                    <button class="scout-view-btn bg-white border border-green-600 text-green-700 font-bold py-2 px-6 rounded-full hover:bg-green-600 hover:text-white transition-colors shadow-sm text-sm" 
+                            data-index="${originalIndex}">
+                        レポートを読む
+                    </button>
                 </div>
             `;
         }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        // ▲▲▲ 修正ここまで ▲▲▲ ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
          else if (article.error) {
             // ... (エラー記事のロジックは変更なし) ...
@@ -25437,6 +25456,32 @@ document.body.addEventListener('click', async (e) => {
         setWeather(weatherType);
     }
 
+// ▼▼▼ 追加: スカウティングレポート閲覧ボタン ▼▼▼
+    if (e.target.closest('.scout-view-btn')) {
+        e.preventDefault();
+        const btn = e.target.closest('.scout-view-btn');
+        const index = parseInt(btn.dataset.index, 10);
+        const article = tournamentState.news[index];
+        
+        if (article && article.body) {
+            const modal = document.getElementById('scout-report-view-modal');
+            const bodyEl = document.getElementById('scout-report-view-body');
+            
+            // 本文の改行を反映して流し込む
+            bodyEl.innerHTML = article.body.replace(/\n/g, '<br>');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+
+    // モーダルを閉じるボタン (スカウティングレポート)
+    if (e.target.closest('#scout-report-view-close')) {
+        document.getElementById('scout-report-view-modal').classList.add('hidden');
+        document.getElementById('scout-report-view-modal').classList.remove('flex');
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
 // ▼▼▼ 追加: キャプテンボタンのクリック処理 ▼▼▼
     if (e.target.matches('.captain-btn')) {
         e.preventDefault();
@@ -29155,6 +29200,27 @@ function updatePlayerStatsFromDetails(match) {
                 閉じる
             </button>
             <span class="ml-4">© 2025 静岡 熱闘新聞 全著作権所有</span>
+        </div>
+    </div>
+</div>
+
+<div id="scout-report-view-modal" class="fixed inset-0 bg-gray-900 bg-opacity-70 hidden items-center justify-center z-[200]">
+    <div class="bg-[#f0fdf4] rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border-t-4 border-green-600">
+        
+        <div class="flex-shrink-0 flex justify-between items-center border-b border-green-200 px-6 py-4 bg-white rounded-t-lg">
+            <h3 class="text-xl font-bold text-green-800 flex items-center" style="font-family: 'Noto Serif JP', serif;">
+                <span class="text-2xl mr-2">📝</span> 編集部・栗山のスカウティングレポート
+            </h3>
+            <button id="scout-report-view-close" class="text-gray-400 hover:text-green-700 text-3xl transition-colors">&times;</button>
+        </div>
+        
+        <div id="scout-report-view-body" class="flex-grow overflow-y-auto p-6 text-gray-800 leading-loose text-base" style="font-family: 'Noto Serif JP', serif;">
+            </div>
+        
+        <div class="p-4 border-t border-green-200 bg-gray-50 text-center rounded-b-lg">
+            <button onclick="document.getElementById('scout-report-view-modal').classList.add('hidden')" class="bg-green-600 text-white font-bold py-2 px-8 rounded hover:bg-green-700 transition-colors shadow">
+                閉じる
+            </button>
         </div>
     </div>
 </div>
