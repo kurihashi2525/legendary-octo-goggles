@@ -17715,16 +17715,21 @@ async function generateRivalryMap() {
 }
 // ▲▲▲ 因縁相関図 生成ロジック (拡張版) ここまで ▲▲▲
 
-/**
- * [UPDATED v3] 283学園戦専用：編集部・栗山氏風スカウティングレポートを生成する
- * (★主力、脇役、敵チームの好選手を書き分ける玄人視点版)
- */
 async function generateKuriyamaReport(matchContext) {
     const { winnerName, loserName, dbMatch, matchId, nextOpponent } = matchContext;
 
     const myTeam = "283学園";
     const isWin = (winnerName === myTeam);
-    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    
+    // ▼▼▼ 修正: 勝者のスコアを判定して先に表示する ▼▼▼
+    const score1 = parseInt(dbMatch.score1) || 0;
+    const score2 = parseInt(dbMatch.score2) || 0;
+    const winnerScore = (dbMatch.team1 === winnerName) ? score1 : score2;
+    const loserScore = (dbMatch.team1 === winnerName) ? score2 : score1;
+    
+    const scoreString = `${winnerScore}-${loserScore}`;
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     const roundName = getRoundNameFromMatchId(matchId);
 
     const winnerInfo = TEAM_DATA[winnerName]?.info || "";
@@ -17740,33 +17745,24 @@ async function generateKuriyamaReport(matchContext) {
     const getPlayerInfoDetailed = (teamName, teamKey) => {
         const gameStats = dbMatch.details?.playerGameStats?.[teamKey] || {};
         const battingDetails = dbMatch.details?.batting?.[teamKey] || [];
-        const pitchingDetails = dbMatch.details?.pitching?.[teamKey] || [];
-        const roster = TEAM_ROSTER_MASTER[teamName] || []; // 283学園用静的データ
-        
+        const roster = TEAM_ROSTER_MASTER[teamName] || []; 
         let infoList = [];
 
-        // 出場した全選手をチェック
         for (const [name, stats] of Object.entries(gameStats)) {
-            // 最低限の出場がある選手のみ
             if ((stats.pa && stats.pa > 0) || (stats.ip && parseFloat(stats.innings) > 0)) {
-                
-                // 打順と守備位置を取得
                 const bDetail = battingDetails.find(p => p.name === name);
                 const order = bDetail ? bDetail.order : "-";
                 const pos = bDetail ? (bDetail.currentPos || bDetail.pos) : "-";
                 
-                // 出身データ (283学園のみ)
                 const staticData = roster.find(p => p.name === name);
                 const origin = staticData?.origin ? `(${staticData.origin})` : "";
 
-                // 成績概要
                 let perf = "";
                 if (stats.h > 0) perf += `${stats.h}安打 `;
                 if (stats.hr > 0) perf += `${stats.hr}HR `;
                 if (stats.rbi > 0) perf += `${stats.rbi}打点 `;
                 if (stats.ip) perf += `投${stats.innings}回${stats.earnedRuns}自責 `;
                 
-                // 属性判定 (AIへのヒント)
                 let role = "脇役";
                 if (pos === "投" || (order.match(/^[345]$/))) role = "主力";
                 
@@ -17787,7 +17783,7 @@ async function generateKuriyamaReport(matchContext) {
 今日行われた${roundName}「${winnerName} 対 ${loserName}」の取材メモを元に、**あなた独特の文体（栗山節）**で、マニアックな視点の「スカウティングレポート（ブログ記事）」を執筆してください。
 
 ### 試合概要
-- 結果: ${winnerName} ${score} ${loserName}
+- 結果: **${winnerName}の勝利 (${scoreString})**
 - チーム背景: [勝]${winnerInfo} / [負]${loserInfo}
 - ${nextGameText}
 
@@ -17807,7 +17803,7 @@ ${dataOpp}
     - 派手な成績でなくても構いません。「体の軸がブレない」「守備の一歩目が速い」「スイングの軌道が良い」など、**玄人好みのポイント**を絶賛してください。
 3.  **相手チームの好選手**: 
     - 相手チーム（${opponentTeamName}）から、将来性を感じた選手を1名挙げてください。
-    - 負けたチームであっても、「素材は一級品」「このストレートはえぐかった」「体ができてくれば面白い」と、リスペクトを込めて評価してください。相手の出身中学などは**架空で創作**して補完してください（例：「〇〇中学時代は軟式で...」）。
+    - 負けたチームであっても、「素材は一級品」「ストレートの質が良かった」「体ができてくれば面白い」と、リスペクトを込めて評価してください。相手の出身中学などは**架空で創作**して補完してください（例：「〇〇中学時代は軟式で...」）。
 
 ### 栗山氏の文体
 - 「～を見てきました。」「～が気になりました。」「～だと思いました。」という、丁寧だが熱量のある語り口。
@@ -18611,31 +18607,38 @@ function renderAwardsModal() {
     contentEl.innerHTML = html;
 }
 
-/**
- * [NEW] 試合結果に基づき、X(旧Twitter)風のトレンドワードとポストを生成する
- */
 async function generateSnsPosts(matchContext) {
-    const { winnerName, loserName, dbMatch, highlights, playerStatsText } = matchContext;
-    const score = `${dbMatch.score1}-${dbMatch.score2}`;
+    const { winnerName, loserName, dbMatch, highlights } = matchContext;
+    
+    // ▼▼▼ 修正: 勝者のスコアを判定して先に表示する ▼▼▼
+    const score1 = parseInt(dbMatch.score1) || 0;
+    const score2 = parseInt(dbMatch.score2) || 0;
+    
+    const winnerScore = (dbMatch.team1 === winnerName) ? score1 : score2;
+    const loserScore = (dbMatch.team1 === winnerName) ? score2 : score1;
+    
+    // AIに渡すスコア文字列を「勝者 - 敗者」の順にする (例: "7-0")
+    const scoreString = `${winnerScore}-${loserScore}`;
+    // ▲▲▲ 修正ここまで ▲▲▲
     
     // トレンドワード候補の選定
     let trendCandidates = [`#${winnerName}`, `#高校野球`, `#${loserName}`];
     
-    // 劇的な展開があればトレンドに追加
     if (matchContext.highlights.some(h => h.description.includes("サヨナラ"))) trendCandidates.unshift("サヨナラ");
     if (matchContext.highlights.some(h => h.description.includes("逆転"))) trendCandidates.unshift("逆転勝利");
     if (parseInt(dbMatch.score1) + parseInt(dbMatch.score2) >= 15) trendCandidates.unshift("乱打戦");
-    if (parseInt(dbMatch.score1) === 0 || parseInt(dbMatch.score2) === 0) trendCandidates.unshift("完封");
+    if (winnerScore > 0 && loserScore === 0) trendCandidates.unshift("完封"); // 完封判定も修正
     
-    // 活躍選手を抽出してトレンドに追加
     if (matchContext.keyPlayerNames && matchContext.keyPlayerNames.length > 0) {
-        trendCandidates.unshift(matchContext.keyPlayerNames[0]); // 最も活躍した選手
+        trendCandidates.unshift(matchContext.keyPlayerNames[0]); 
     }
 
     const primaryTrend = trendCandidates[0];
 
     const prompt = `あなたはX（旧Twitter）のユーザーです。
-高校野球の試合「${winnerName} vs ${loserName}」が終了しました（結果: ${score}）。
+高校野球の試合「${winnerName} vs ${loserName}」が終了しました。
+**結果: ${winnerName}の勝利 (${scoreString})**
+
 以下のハイライトを元に、タイムラインに流れる**リアルな短文ポスト（ツイート）を10個**生成してください。
 
 ### 試合ハイライト
