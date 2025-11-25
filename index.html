@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -1124,7 +1125,7 @@
         .feud-match .team-slot { border: 2px solid #8b5cf6 !important; background-color: #f5f3ff; }
         .rivalry-match .team-slot.winner { background-color: #fecaca; }
         .feud-match .team-slot.winner { background-color: #ddd6fe; }
-    
+    
 /* 詳細入力テーブル用のスタイル */
 /* 詳細入力テーブル用のスタイル（最終版） */
 /* ▼▼▼ このブロックを <style> タグ内に「新規追加」 ▼▼▼ */
@@ -2540,9 +2541,9 @@
 .batting-table .col-sub-type { min-width: 80px; }
 .batting-table .col-inning { min-width: 400px; }  /* ←お好みの幅に調整してください */
 /* ▲▲▲ ▲▲▲ */
-        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
+        .add-row-btn { background-color: #e5e7eb; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; }
 
-        .add-row-btn:hover { background-color: #d1d5db; }　
+        .add-row-btn:hover { background-color: #d1d5db; }　
 
 
 
@@ -18172,6 +18173,28 @@ ${cinderellaPraiseInstruction}
 - 記事のタイトルと本文をJSON形式で出力してください。`;
     }
 
+// ▼▼▼ 【追加】インタビュー結果があれば、プロンプトに強制的に追加する ▼▼▼
+    if (matchContext.interview) {
+        const { manager, hero } = matchContext.interview;
+        
+        prompt += `
+\n---
+### 【独占】試合後の喜びの声
+#### ① 監督インタビュー
+記者：「${manager.question}」
+監督：「${manager.answer}」
+
+#### ② ヒーローインタビュー
+記者：「${hero.question}」
+選手：「${hero.answer}」
+
+**執筆指示（最優先）:** 記事の後半で、監督の総括コメントと、ヒーロー選手の生の声を必ず引用してください。
+監督の言葉からは「チームの方針や勝因」を、選手の言葉からは「現場の熱量や感情」を汲み取り、記事に深みを与えてください。
+---
+`;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     try {
         const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
         const result = await response.json(); 
@@ -18982,6 +19005,29 @@ ${cinderellaPraiseInstruction}
 - **【★今大会の成績 (最重要)】**: 「チームの背景」にある『今大会のチーム打率は.XXX』という情報を**必ずコメントに含め**、チームの好調・不振（例：「〇〇、今大会打率.150とかマジ？」）にも言及してください。
 - **【次戦への言及】**: 勝者チームの「次の試合情報」（${nextOpponentText}）に触れ、「次は〇〇か…」といったコメントを必ず含めてください。`;
     }
+
+// ▼▼▼ 【追加】インタビュー結果があれば、プロンプトに追加する ▼▼▼
+    let interviewContext = "";
+    if (matchContext.interview) {
+        const { manager, hero } = matchContext.interview;
+        
+        interviewContext = `
+\n---
+### 【速報】勝利者インタビューまとめ
+【監督】
+Q: ${manager.question}
+A: "${manager.answer}"
+
+【ヒーロー選手】
+Q: ${hero.question}
+A: "${hero.answer}"
+
+**指示:** 掲示板の住人として、これらのコメントに**即座に反応**してください。
+（例：「監督の名言キター！」「〇〇選手、謙虚で推せるわ」「ビッグマウスすぎて草」など、それぞれのキャラに合わせて）
+---
+`;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     const finalPrompt = prompt + `
     
@@ -22650,6 +22696,25 @@ async function processMatchWin(matchId, winnerName) {
         saveState();
         return;
     }
+
+// ▼▼▼ 【追加・修正】283学園勝利時のみ、インタビューを発動 ▼▼▼
+    let interviewData = null;
+    const is283Win = (winnerName === "283学園" || winnerName === "283学園B");
+    
+    // 記事生成ON かつ 283学園勝利の場合
+    if (tournamentState.settings.enableArticleGeneration && is283Win) {
+        // インタビュー実行 (回答が終わるまで待機)
+        try {
+            interviewData = await startHeroInterview(matchContext);
+        } catch (e) { console.error(e); }
+        
+        // 結果をコンテキストに保存（記事生成AIに渡すため）
+        if (interviewData) {
+            matchContext.interview = interviewData;
+        }
+    }
+    // ▲▲▲ ここまで ▲▲▲
+
     let articlePromise = Promise.resolve(null);
     let commentsPromise = Promise.resolve(null);
     let hadaReportPromise = Promise.resolve(null);
@@ -24970,6 +25035,242 @@ ${updateRequestText}
         setTimeout(() => loadingMsg.remove(), 3000);
     }
 }
+
+// ▼▼▼ 音声認識＆インタラクティブ・インタビュー機能 ▼▼▼
+
+const interviewModal = document.getElementById('hero-interview-modal');
+const interviewerText = document.getElementById('interviewer-text');
+const answerInput = document.getElementById('interview-answer-input');
+const voiceBtn = document.getElementById('voice-rec-btn');
+const recIndicator = document.getElementById('rec-indicator');
+const voiceStatus = document.getElementById('voice-status');
+const submitInterviewBtn = document.getElementById('submit-interview-btn');
+const flashEffect = document.getElementById('camera-flash');
+
+let recognition = null;
+let isRecording = false;
+let interviewResolve = null; // Promise解決用
+
+// 1. 音声認識のセットアップ
+function setupSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        voiceBtn.style.display = 'none'; // 非対応ブラウザではマイクを隠す
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ja-JP';
+    recognition.interimResults = true; // リアルタイム変換
+    recognition.continuous = true;     // 連続認識
+
+    recognition.onstart = () => {
+        isRecording = true;
+        voiceBtn.classList.add('bg-red-600', 'animate-pulse');
+        recIndicator.classList.remove('hidden');
+        voiceStatus.textContent = "聞いています...";
+        voiceStatus.classList.add('text-red-400');
+    };
+
+    recognition.onend = () => {
+        isRecording = false;
+        voiceBtn.classList.remove('bg-red-600', 'animate-pulse');
+        recIndicator.classList.add('hidden');
+        voiceStatus.textContent = "待機中";
+        voiceStatus.classList.remove('text-red-400');
+    };
+
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+
+        // 既存のテキストに追加するのではなく、現在の発話内容を表示
+        if (finalTranscript) {
+            const currentVal = answerInput.value;
+            answerInput.value = currentVal + (currentVal ? " " : "") + finalTranscript;
+        }
+    };
+
+    // マイクボタンクリック時の挙動
+    voiceBtn.addEventListener('click', () => {
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            recognition.start();
+            answerInput.focus();
+        }
+    });
+}
+
+// 2. 音声合成（AI記者の読み上げ）
+function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    
+    // 以前の発話をキャンセル
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 1.0; // 速度
+    utterance.pitch = 0.8; // 少し低めの声で記者っぽく
+    
+    window.speechSynthesis.speak(utterance);
+}
+
+// 3. カメラのフラッシュ演出
+function triggerFlash() {
+    flashEffect.classList.remove('opacity-0');
+    flashEffect.classList.add('opacity-50');
+    setTimeout(() => {
+        flashEffect.classList.remove('opacity-50');
+        flashEffect.classList.add('opacity-0');
+    }, 100);
+}
+
+// ▼▼▼ 4. インタビューのメイン処理（監督→ヒーローの2部構成） ▼▼▼
+async function startHeroInterview(matchContext) {
+    // 1. MVP（ヒーロー選手）を特定する
+    const mvpPlayerName = identifyMvpPlayer(matchContext);
+    const heroName = mvpPlayerName || "主将";
+
+    // インタビュー結果を格納するオブジェクト
+    const interviewResult = {
+        manager: null,
+        hero: null
+    };
+
+    // --- 第一部：監督インタビュー ---
+    await showInterviewModal("監督", "勝利監督インタビュー");
+    const managerQ = await generateInterviewQuestion(matchContext, "manager", "監督");
+    interviewResult.manager = await runInterviewSession(managerQ);
+
+    // --- 第二部：ヒーローインタビュー ---
+    await showInterviewModal(heroName, `本日のヒーロー：${heroName}選手`);
+    const heroQ = await generateInterviewQuestion(matchContext, "hero", heroName);
+    interviewResult.hero = await runInterviewSession(heroQ);
+
+    return interviewResult;
+}
+
+// MVP特定ロジック
+function identifyMvpPlayer(matchContext) {
+    const { dbMatch, winnerName } = matchContext;
+    const teamKey = (dbMatch.team1 === winnerName) ? 'team1' : 'team2';
+    
+    if (!dbMatch.details || !dbMatch.details.playerGameStats) return null;
+
+    const stats = dbMatch.details.playerGameStats[teamKey];
+    let bestPlayer = null;
+    let maxScore = -1;
+
+    for (const [name, s] of Object.entries(stats)) {
+        // 簡易スコア計算 (HR=10, RBI=3, H=2, Win=10, SO=1)
+        let score = (s.hr || 0) * 10 + (s.rbi || 0) * 3 + (s.h || 0) * 2;
+        
+        // 投手の場合 (勝利投手や完封は高得点)
+        const pData = dbMatch.details.pitching?.[teamKey]?.find(p => p.name === name);
+        if (pData) {
+            if (pData.result === 'W') score += 10;
+            if (pData.runs === '0' && parseFloat(pData.innings) >= 5) score += 15; // 完封/好投ボーナス
+            score += (parseInt(pData.strikeouts) || 0);
+        }
+
+        if (score > maxScore) {
+            maxScore = score;
+            bestPlayer = name;
+        }
+    }
+    return bestPlayer;
+}
+
+// モーダルの表示設定ヘルパー
+async function showInterviewModal(targetName, titleText) {
+    // 一旦閉じてリセット演出（フェードアウト/イン）
+    interviewModal.classList.add('hidden');
+    interviewModal.classList.remove('flex');
+    await new Promise(r => setTimeout(r, 300)); 
+
+    // タイトルや画像の設定（ここで選手の顔画像などを出せると尚良い）
+    const interviewerBubble = document.getElementById('interviewer-bubble');
+    
+    // 誰へのインタビューかを表示
+    interviewerText.textContent = "（質問を生成中...）";
+    document.querySelector('#hero-interview-modal .text-blue-400').textContent = `YOUR ANSWER as ${targetName}`;
+    
+    interviewModal.classList.remove('hidden');
+    interviewModal.classList.add('flex');
+}
+
+// インタビューの1セッションを実行するヘルパー
+async function runInterviewSession(questionText) {
+    return new Promise((resolve) => {
+        // UIリセット
+        answerInput.value = '';
+        
+        // 質問表示＆読み上げ
+        interviewerText.textContent = questionText;
+        triggerFlash();
+        speakText(questionText);
+
+        // 送信ボタンのハンドラを上書き
+        submitInterviewBtn.onclick = () => {
+            const answer = answerInput.value.trim();
+            if (!answer) { alert("回答を入力してください"); return; }
+            
+            if (isRecording && recognition) recognition.stop();
+            window.speechSynthesis.cancel();
+            
+            resolve({ question: questionText, answer: answer });
+        };
+    });
+}
+
+// 5. 質問生成AI（ターゲット指定に対応）
+async function generateInterviewQuestion(matchContext, type, targetName) {
+    const { winnerName, highlights } = matchContext;
+    const role = type === 'manager' ? '監督' : `${targetName}選手`;
+    
+    const prompt = `あなたはスポーツ記者です。
+高校野球「${winnerName}」の${role}への勝利インタビューで、**最も聞くべき鋭い質問を1つだけ**作成してください。
+
+### 相手
+${role}
+
+### 試合ハイライト
+${highlights.slice(0, 4).map(h => h.description).join('、')}
+
+### 指示
+- 相手が監督なら采配や試合展開について。
+- 相手が選手なら、自身の決定的なプレーや気持ちについて。
+- です・ます調、40文字以内。
+
+### 出力形式(JSON): {"question": "質問本文"}`;
+
+    try {
+        const response = await fetchWithRetry({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await response.json();
+        const json = parseJsonFromText(result.candidates[0].content.parts[0].text);
+        return json.question;
+    } catch (e) {
+        return type === 'manager' 
+            ? "ナイスゲームでした。今の率直な気持ちをお聞かせください。"
+            : "素晴らしい活躍でした！今の気持ちを教えてください。";
+    }
+}
+// ▲▲▲ 修正ここまで ▲▲▲
+
+// 初期化時にセットアップ
+setupSpeechRecognition();
+
+// ▲▲▲ インタビュー機能ここまで ▲▲▲
 
     async function initializeApp() {
   SoundManager.init(); 
@@ -29224,6 +29525,50 @@ function updatePlayerStatsFromDetails(match) {
             <button onclick="document.getElementById('scout-report-view-modal').classList.add('hidden')" class="bg-green-600 text-white font-bold py-2 px-8 rounded hover:bg-green-700 transition-colors shadow">
                 閉じる
             </button>
+        </div>
+    </div>
+</div>
+
+<div id="hero-interview-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-[300] font-sans transition-opacity duration-300">
+    <div class="bg-gray-900 w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-700 relative">
+        
+        <div id="camera-flash" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-10"></div>
+
+        <div class="flex-1 bg-gray-800 p-6 flex flex-col items-center justify-center text-center relative">
+            <div class="mb-4">
+                <div class="w-24 h-24 bg-gray-600 rounded-full mx-auto flex items-center justify-center text-4xl border-4 border-gray-500 shadow-lg">
+                    🎤
+                </div>
+                <p class="text-gray-400 text-sm mt-2 font-bold">羽田 雄平（東海スポーツ）</p>
+            </div>
+            
+            <div id="interviewer-bubble" class="bg-white text-gray-900 p-6 rounded-2xl rounded-t-none shadow-lg max-w-2xl text-xl font-bold leading-relaxed relative animate-fade-in-up">
+                <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-white"></span>
+                <p id="interviewer-text">（ここにAI記者の質問が表示されます...）</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 p-6 border-t border-gray-700">
+            <div class="max-w-3xl mx-auto">
+                <p class="text-blue-400 text-sm font-bold mb-2 text-center">YOUR ANSWER (音声入力対応)</p>
+                
+                <div class="relative">
+                    <textarea id="interview-answer-input" class="w-full bg-gray-800 text-white p-4 pr-16 rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none text-lg" rows="3" placeholder="マイクボタンを押して話してください..."></textarea>
+                    
+                    <button id="voice-rec-btn" class="absolute right-3 top-3 w-12 h-12 rounded-full bg-gray-700 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-300 shadow-lg group">
+                        <span class="text-2xl group-hover:scale-110 transition-transform">🎙️</span>
+                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping hidden" id="rec-indicator"></span>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center mt-4">
+                    <p id="voice-status" class="text-gray-500 text-sm">待機中...</p>
+                    <button id="submit-interview-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded-full shadow-lg transform transition hover:scale-105 flex items-center">
+                        <span>回答する</span>
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
