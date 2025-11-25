@@ -5759,6 +5759,27 @@ async function generateGameMatchBbsComments(matchContext) {
 - **【★快進撃への言及】**: 敗北した${loserName}は${loserRankDesc}(${loserRank}ランク)だったが、${roundName}まで勝ち上がった。この「快進撃」を**「${loserName}、ようやっとる」「来年が楽しみなチーム」**のように、必ず称賛すること。`;
     }
     
+// ▼▼▼ 1. インタビューデータの取得とプロンプト作成（ここに追加） ▼▼▼
+    let interviewPromptPart = "";
+    if (matchContext.interview) {
+        const { manager, hero } = matchContext.interview;
+        
+        interviewPromptPart = `
+### 【速報】試合後インタビュー
+**■ 勝利監督**
+Q: ${manager.question}
+A: "${manager.answer}"
+
+**■ ヒーロー選手**
+Q: ${hero.question}
+A: "${hero.answer}"
+
+**追加指示:** スレッドの流れの中で、この監督や選手のコメントに言及してください。
+（例：>>15「監督のコメント泣けるわ」 >>22「〇〇選手の『${hero.answer.substring(0, 10)}...』って発言、頼もしすぎるだろ」など）
+`;
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     const prompt = `あなたは、匿名掲示板「なんでも実況J（なんJ）」の住民です。あなたは高校野球に詳しく、煽りやユーモアを交えながら会話を盛り上げます。
 以下の試合データに基づき、ファンたちのリアルな会話コメントを**25〜27個**生成してください。
 
@@ -5780,7 +5801,7 @@ ${lineupChangesText}
 ${calledGameText} 
 ${rivalryText} 
 ${injuryReport || ''}
-
+${interviewPromptPart}
 ### データ2：チームの背景
 - **${winnerName} ${winnerSeedRank}**: ${winnerDynamicInfo}
   - **軌跡**: ${winnerJourney}
