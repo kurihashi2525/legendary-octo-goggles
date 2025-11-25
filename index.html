@@ -17,7 +17,221 @@
     <style>
 /* styleタグ内の分かりやすい場所に追加 */
 
+/* ▼▼▼ バーチャルチームカード用CSS (新規追加) ▼▼▼ */
+.virtual-card-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 300; /* 最前面 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.virtual-card-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
 
+.virtual-card {
+    width: 320px;
+    background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+    border-radius: 20px;
+    box-shadow: 
+        0 20px 50px rgba(0,0,0,0.3),
+        0 0 0 1px rgba(255,255,255,0.5) inset;
+    padding: 2rem;
+    text-align: center;
+    transform: scale(0.8) translateY(50px) rotateX(20deg);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.virtual-card-overlay.active .virtual-card {
+    transform: scale(1) translateY(0) rotateX(0);
+    opacity: 1;
+}
+
+/* ホログラム風の光沢 */
+.virtual-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: linear-gradient(
+        45deg,
+        rgba(255,255,255,0) 40%,
+        rgba(255,255,255,0.4) 50%,
+        rgba(255,255,255,0) 60%
+    );
+    transform: rotate(30deg);
+    pointer-events: none;
+    animation: hologramShine 6s infinite linear;
+}
+
+@keyframes hologramShine {
+    0% { transform: translateY(-100%) rotate(30deg); }
+    100% { transform: translateY(100%) rotate(30deg); }
+}
+
+/* 生成されたロゴスタイル */
+.generated-logo {
+    width: 110px;
+    height: 110px;
+    margin: 0 auto 1.5rem auto;
+    border-radius: 50%; /* 円形（校章風） */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Yuji Syuku', serif;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 
+        0 10px 25px rgba(0,0,0,0.3),
+        0 0 0 4px rgba(255, 255, 255, 0.8), /* 内側の白枠 */
+        0 0 0 6px rgba(0, 0, 0, 0.1);      /* 外側の薄い影枠 */
+    position: relative;
+    z-index: 1;
+    border: 2px solid white;
+    overflow: hidden; /* 背景演出のはみ出し防止 */
+}
+
+/* 文字（頭文字） */
+.logo-initial {
+    font-size: 3rem;
+    font-weight: 900;
+    line-height: 1;
+    z-index: 2;
+}
+
+/* サブアイコン（背景に薄く浮かぶ） */
+.logo-icon {
+    position: absolute;
+    font-size: 5rem;
+    opacity: 0.3;
+    z-index: 1;
+    filter: blur(1px);
+    transform: rotate(-15deg);
+}
+
+/* --- テーマ別デザイン定義 --- */
+
+/* 🌊 海・水産・青系 (焼津水産, 浜名, 283学園など) */
+.theme-ocean {
+    background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%);
+    border-color: #bae6fd;
+}
+.theme-ocean .logo-initial { color: #f0f9ff; }
+
+/* 🔥 熱血・火・赤系 (常葉菊川, 飛龍, 熱海など) */
+.theme-fire {
+    background: linear-gradient(135deg, #991b1b 0%, #dc2626 50%, #f87171 100%);
+    border-color: #fca5a5;
+}
+.theme-fire .logo-initial { color: #fef2f2; }
+
+/* 🌲 森・山・農業・緑系 (天竜, 田方農業, 静岡農業など) */
+.theme-nature {
+    background: linear-gradient(135deg, #166534 0%, #22c55e 50%, #86efac 100%);
+    border-color: #bbf7d0;
+}
+.theme-nature .logo-initial { color: #f0fdf4; }
+
+/* ⚙️ 工業・技術・グレー系 (浜松工, 島田工, 科学技術など) */
+.theme-tech {
+    background: linear-gradient(135deg, #374151 0%, #6b7280 50%, #9ca3af 100%);
+    border-color: #e5e7eb;
+}
+.theme-tech .logo-initial { color: #f9fafb; text-shadow: 0 0 5px #000; }
+
+/* 👑 王者・伝統・紫紺系 (静岡, 静岡商, 765総合など) */
+.theme-royal {
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%);
+    border-color: #ddd6fe;
+}
+.theme-royal .logo-initial { color: #fff; }
+
+/* 🐯 猛虎・商業・黄色系 (御殿場西, 誠恵など) */
+.theme-tiger {
+    background: linear-gradient(135deg, #854d0e 0%, #eab308 50%, #fde047 100%);
+    border-color: #fef08a;
+    color: #422006; /* 文字色を濃く */
+}
+.theme-tiger .logo-initial { text-shadow: none; color: #422006; }
+
+/* 🌸 アイドル・女子・ピンク系 (初星学園など) */
+.theme-idol {
+    background: linear-gradient(135deg, #be185d 0%, #ec4899 50%, #fbcfe8 100%);
+    border-color: #fce7f3;
+}
+
+/* ▲▲▲ 修正ここまで ▲▲▲ */
+
+.card-rank-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.card-team-name {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    font-family: 'Yuji Syuku', serif;
+    line-height: 1.2;
+}
+
+.card-info-text {
+    font-size: 0.85rem;
+    color: #4b5563;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.card-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    background: rgba(255,255,255,0.5);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.card-stat-item {
+    display: flex;
+    flex-direction: column;
+}
+.card-stat-label { font-size: 0.7rem; color: #6b7280; font-weight: bold; }
+.card-stat-value { font-size: 1.1rem; font-weight: 800; color: #1f2937; }
+
+.card-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* チームカラー別の背景グラデーション */
+.logo-bg-red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.logo-bg-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.logo-bg-purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.logo-bg-green { background: linear-gradient(135deg, #10b981, #047857); }
+.logo-bg-orange { background: linear-gradient(135deg, #f97316, #c2410c); }
+.logo-bg-gray { background: linear-gradient(135deg, #6b7280, #374151); }
+
+/* ▲▲▲ 追加ここまで ▲▲▲ */
 
 
 .player-profile-card {
@@ -20301,6 +20515,188 @@ function getNextOpponentInfoForPrompt(teamName) {
         return null;
     }
 
+// ▼▼▼ バーチャルカード機能用ロジック (新規追加) ▼▼▼
+
+// ▼▼▼ 【改修版】バーチャルカード＆校章生成ロジック ▼▼▼
+
+/**
+ * チーム名とinfo(紹介文)を解析し、最適なテーマカラーとアイコンを決定する
+ * @param {string} name - チーム名
+ * @param {string} info - チーム紹介文
+ */
+function analyzeTeamTheme(name, info) {
+    const text = (name + info).toLowerCase(); // 検索対象テキスト
+
+    // 1. 特別指定 (ユニーク校)
+    if (name.includes("283")) return { css: "theme-ocean", icon: "🪶", initial: "翼" }; // 翼
+    if (name.includes("765")) return { css: "theme-royal", icon: "👑", initial: "765" };
+    if (name.includes("初星")) return { css: "theme-idol", icon: "⭐", initial: "星" };
+    if (name.includes("オイスカ")) return { css: "theme-nature", icon: "🌏", initial: "O" };
+    if (name.includes("虎府島")) return { css: "theme-ocean", icon: "🐯", initial: "虎" }; // 虎＋島
+    if (name.includes("浜松特支")) return { css: "theme-nature", icon: "🌱", initial: "特" };
+
+    // 2. キーワード検索によるテーマ決定
+    
+    // 🌊 海・水系
+    if (text.includes("水産") || text.includes("海") || text.includes("港") || text.includes("島") || text.includes("湖") || text.includes("沼") || text.includes("波") || text.includes("浜") || text.includes("津")) {
+        let icon = "🌊";
+        if (text.includes("水産") || text.includes("魚")) icon = "🐟";
+        if (text.includes("船") || text.includes("港")) icon = "⚓";
+        return { css: "theme-ocean", icon: icon, initial: name.charAt(0) };
+    }
+
+    // 🔥 火・熱血系
+    if (text.includes("飛龍") || text.includes("熱") || text.includes("陽") || text.includes("日") || text.includes("紅") || text.includes("赤") || text.includes("攻撃")) {
+        let icon = "🔥";
+        if (text.includes("龍") || text.includes("竜")) icon = "🐉";
+        if (text.includes("日") || text.includes("陽")) icon = "☀️";
+        return { css: "theme-fire", icon: icon, initial: name.charAt(0) };
+    }
+
+    // ⚙️ 工業・技術系
+    if (text.includes("工業") || text.includes("技術") || text.includes("高専") || text.includes("科学") || text.includes("鉄")) {
+        let icon = "⚙️";
+        if (text.includes("科学") || text.includes("データ")) icon = "📈";
+        return { css: "theme-tech", icon: icon, initial: name.includes("工業") ? "工" : name.charAt(0) };
+    }
+
+    // 🌲 自然・農業系
+    if (text.includes("農業") || text.includes("農") || text.includes("山") || text.includes("森") || text.includes("林") || text.includes("松") || text.includes("緑") || text.includes("葉") || text.includes("芝")) {
+        let icon = "🌲";
+        if (text.includes("農業") || text.includes("農")) icon = "🌾";
+        if (text.includes("山") || text.includes("岳")) icon = "⛰️";
+        if (text.includes("葉") || text.includes("芝") || text.includes("茶")) icon = "🍃";
+        return { css: "theme-nature", icon: icon, initial: name.includes("農業") ? "農" : name.charAt(0) };
+    }
+
+    // 🐯 商業・猛獣系 (黄色・ゴールド)
+    if (text.includes("商業") || text.includes("商") || text.includes("虎") || text.includes("獅子") || text.includes("星") || text.includes("金")) {
+        let icon = "💰"; // デフォルト商業
+        if (text.includes("虎")) icon = "🐯";
+        if (text.includes("星")) icon = "⭐";
+        return { css: "theme-tiger", icon: icon, initial: name.includes("商業") ? "商" : name.charAt(0) };
+    }
+
+    // 👑 王者・伝統・名門 (紫・ロイヤル)
+    if (text.includes("静岡") || text.includes("聖隷") || text.includes("帝王") || text.includes("王") || text.includes("皇") || text.includes("紫")) {
+        return { css: "theme-royal", icon: "🛡️", initial: name.charAt(0) };
+    }
+
+    // 🌸 その他・デフォルト (名前のハッシュで色を分散)
+    const colors = ["theme-ocean", "theme-fire", "theme-nature", "theme-royal"];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const randomTheme = colors[Math.abs(hash) % colors.length];
+    
+    return { css: randomTheme, icon: "⚾", initial: name.charAt(0) };
+}
+
+// チームロゴとカードを表示する関数 (アップデート版)
+function showVirtualTeamCard(teamName) {
+    const overlay = document.getElementById('virtual-card-overlay');
+    const card = document.getElementById('virtual-card');
+    const data = TEAM_DATA[teamName];
+    const record = tournamentState.teamRecords[teamName];
+
+    if (!data || !record) return;
+
+    // ランク計算
+    const rank = calculateRank(teamName, tournamentState);
+    let rankColor = '#6b7280'; // E
+    if(rank === 'A') rankColor = '#ef4444'; // 赤
+    if(rank === 'B') rankColor = '#f97316'; // オレンジ
+    if(rank === 'C') rankColor = '#eab308'; // 黄
+    if(rank === 'D') rankColor = '#3b82f6'; // 青
+
+    // ★★★ ここでAIデザイン生成を実行 ★★★
+    const theme = analyzeTeamTheme(teamName, data.info || "");
+    
+    // 短い紹介文生成
+    let shortInfo = data.info.split('。')[0] + '。';
+    if (shortInfo.length > 50) shortInfo = shortInfo.substring(0, 50) + '...';
+
+    // 成績概要
+    const wins = record.wins || 0;
+    const bestResult = record.best ? getRankString(record.best.rank) : 'なし';
+    
+    // 監督情報
+    const coachName = data.coach ? data.coach.name : '不明';
+    const coachStyle = data.coach ? data.coach.style : '---';
+
+    // HTML生成
+    card.innerHTML = `
+        <span class="card-rank-badge" style="background-color: ${rankColor}; box-shadow: 0 0 10px ${rankColor};">RANK ${rank}</span>
+        
+        <div class="generated-logo ${theme.css}">
+            <span class="logo-icon">${theme.icon}</span>
+            <span class="logo-initial">${theme.initial}</span>
+        </div>
+
+        <h3 class="card-team-name">${teamName}</h3>
+        <p class="text-xs text-gray-500 font-bold mb-3 tracking-widest uppercase">
+            ${data.region} AREA / ${data.type} SCHOOL
+        </p>
+        
+        <p class="card-info-text border-t border-b border-gray-200 py-3 mx-2">
+            ${shortInfo}
+        </p>
+
+        <div class="card-stats-grid">
+            <div class="card-stat-item">
+                <span class="card-stat-label">監督・采配</span>
+                <span class="card-stat-value text-sm">${coachName}</span>
+                <span class="text-xs text-gray-500">(${coachStyle})</span>
+            </div>
+            <div class="card-stat-item">
+                <span class="card-stat-label">最高成績</span>
+                <span class="card-stat-value text-sm">${bestResult}</span>
+            </div>
+        </div>
+
+        <div class="card-actions">
+            <button id="vcard-close-btn" class="bg-gray-100 text-gray-600 px-5 py-2 rounded-full font-bold hover:bg-gray-200 transition text-sm">閉じる</button>
+            <button id="vcard-detail-btn" class="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-8 py-2 rounded-full font-bold hover:from-blue-700 hover:to-blue-600 transition shadow-md transform hover:scale-105 text-sm" data-team-name="${teamName}">
+                データ室へ
+            </button>
+        </div>
+    `;
+
+    // 表示アニメーション
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        overlay.classList.add('active');
+    });
+
+    // イベントリスナー
+    document.getElementById('vcard-detail-btn').onclick = (e) => {
+        e.stopPropagation();
+        closeVirtualCard();
+        showTeamStatusModal(teamName);
+    };
+    document.getElementById('vcard-close-btn').onclick = (e) => {
+        e.stopPropagation();
+        closeVirtualCard();
+    };
+}
+// ▲▲▲ 修正ここまで ▲▲▲
+
+// カードを閉じる関数
+function closeVirtualCard() {
+    const overlay = document.getElementById('virtual-card-overlay');
+    overlay.classList.remove('active');
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+    }, 300); // CSSのtransition時間と合わせる
+}
+
+// オーバーレイ背景クリックで閉じる
+document.getElementById('virtual-card-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('virtual-card-overlay')) {
+        closeVirtualCard();
+    }
+});
+// ▲▲▲ 追加ここまで ▲▲▲
+
 // ▼▼▼ この関数ブロックを「新規追加」(11843行目あたり) ▼▼▼
 
 /**
@@ -27115,16 +27511,15 @@ document.getElementById('settings-modal-close-btn').addEventListener('click', ()
     // --- チーム名クリック（ステータス表示） ---
     // (他のボタン操作と競合しないよう、ボタン以外がクリックされたかチェック)
     else if (e.target.closest('.clickable-team-name') && !e.target.closest('button')) {
-            const clickableTeamName = e.target.closest('.clickable-team-name');
-            const teamName = clickableTeamName.dataset.teamName;
-            
-            // ★★★ 修正箇所 ★★★
-                        if(teamName && teamName !== 'null' && teamName !== '') {
-                // ★ matchId を渡さない
-                showTeamStatusModal(teamName); 
-            }
-            // ★★★ 修正ここまで ★★★
-        }    // ★★★★★ 修正ここまで ★★★★★
+        const clickableTeamName = e.target.closest('.clickable-team-name');
+        const teamName = clickableTeamName.dataset.teamName;
+        
+        if(teamName && teamName !== 'null' && teamName !== '') {
+            // ★ ここを変更：いきなり詳細ではなく、バーチャルカードを表示する
+            showVirtualTeamCard(teamName); 
+        }
+    }
+   // ★★★★★ 修正ここまで ★★★★★
 
     // --- 記事表示ボタン（通常記事の「本文」） ---
     const newsArticleBtn = e.target.closest('.news-article-btn');
@@ -29629,6 +30024,11 @@ function updatePlayerStatsFromDetails(match) {
             </div>
         </div>
     </div>
+</div>
+
+<div id="virtual-card-overlay" class="virtual-card-overlay">
+    <div id="virtual-card" class="virtual-card">
+        </div>
 </div>
 
     </body>
