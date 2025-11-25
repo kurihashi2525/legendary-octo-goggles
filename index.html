@@ -4895,6 +4895,7 @@ const FINAL_STAGE_STADIUMS = [
  * (★ユーザー指摘に基づき、年度を修正した最終版)
  */
 const PREFECTURE_LORE = `
+ランクは言い換える→Aは名門、Bは強豪、Cは中堅校、Dは挑戦校、Eは無名校
 静岡県の高校野球界は、長らく「公立の雄」である **静岡**（シズコウ）と**掛川西**（カケニシ）、そして甲子園優勝経験もある「古豪」**浜松商業**（ハマショウ）や**静岡商業**（静商） といった伝統校が上位を占める時代が長かった。
 
 その均衡を打ち破ったのが、2007年のセンバツ全国制覇 を果たした**常葉菊川**（常葉大菊川）である。彼らの「超攻撃型野球」は一世を風靡し、県の勢力図を「伝統校 vs 菊川」の構図に変えた。
@@ -25135,7 +25136,7 @@ function triggerFlash() {
     }, 100);
 }
 
-// ▼▼▼ 4. インタビューのメイン処理（監督→ヒーローの2部構成） ▼▼▼
+// ▼▼▼ 4. インタビューのメイン処理（修正版：確実に閉じる） ▼▼▼
 async function startHeroInterview(matchContext) {
     // 1. MVP（ヒーロー選手）を特定する
     const mvpPlayerName = identifyMvpPlayer(matchContext);
@@ -25147,20 +25148,92 @@ async function startHeroInterview(matchContext) {
         hero: null
     };
 
-    // --- 第一部：監督インタビュー ---
-    await showInterviewModal("監督", "勝利監督インタビュー");
-    const managerQ = await generateInterviewQuestion(matchContext, "manager", "監督");
-    interviewResult.manager = await runInterviewSession(managerQ);
+    try {
+        // --- 第一部：監督インタビュー ---
+        await showInterviewModal("監督", "勝利監督インタビュー");
+        const managerQ = await generateInterviewQuestion(matchContext, "manager", "監督");
+        interviewResult.manager = await runInterviewSession(managerQ);
 
-    // --- 第二部：ヒーローインタビュー ---
-    await showInterviewModal(heroName, `本日のヒーロー：${heroName}選手`);
-    const heroQ = await generateInterviewQuestion(matchContext, "hero", heroName);
-    interviewResult.hero = await runInterviewSession(heroQ);
+        // --- 第二部：ヒーローインタビュー ---
+        // 少し間を空ける
+        await new Promise(r => setTimeout(r, 500));
+        
+        await showInterviewModal(heroName, `本日のヒーロー：${heroName}選手`);
+        const heroQ = await generateInterviewQuestion(matchContext, "hero", heroName);
+        interviewResult.hero = await runInterviewSession(heroQ);
+
+    } catch (e) {
+        console.error("インタビュー中にエラーが発生しました:", e);
+    } finally {
+        // 【重要】どんな状況でも最後は必ずモーダルを閉じて音声停止する
+        closeInterviewModalForcefully();
+    }
 
     return interviewResult;
 }
 
-// MVP特定ロジック
+// 強制終了ヘルパー
+function closeInterviewModalForcefully() {
+    if (interviewModal) {
+        interviewModal.classList.add('hidden');
+        interviewModal.classList.remove('flex');
+    }
+    // 音声周りの停止
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (recognition) {
+        try { recognition.stop(); } catch(e){}
+    }
+    isRecording = false;
+    if (voiceBtn) voiceBtn.classList.remove('bg-red-600', 'animate-pulse');
+    if (recIndicator) recIndicator.classList.add('hidden');
+    if (voiceStatus) {
+        voiceStatus.textContent = "待機中";
+        voiceStatus.classList.remove('text-red-400');
+    }
+}
+
+// インタビューの1セッションを実行するヘルパー（修正版）
+async function runInterviewSession(questionText) {
+    return new Promise((resolve) => {
+        // UIリセット
+        if(answerInput) answerInput.value = '';
+        
+        // 質問表示＆読み上げ
+        if(interviewerText) interviewerText.textContent = questionText;
+        triggerFlash();
+        speakText(questionText);
+
+        // 送信ハンドラを作成
+        const handleSubmit = () => {
+            const answer = answerInput.value.trim();
+            if (!answer) { 
+                alert("回答を入力してください"); 
+                return; 
+            }
+            
+            // 音声認識停止
+            if (isRecording && recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            
+            // イベントリスナー解除（重複防止のためnullにする）
+            submitInterviewBtn.onclick = null;
+
+            // ★ここではモーダルを閉じない（次のセッションまたはfinallyで閉じるため）
+            // ただし、視覚的な完了を示すために一旦隠すのはOK
+            interviewModal.classList.add('hidden');
+            interviewModal.classList.remove('flex');
+            
+            resolve({ question: questionText, answer: answer });
+        };
+
+        // ボタンにイベントをセット (onclickで上書きして以前のハンドラを消す)
+        if(submitInterviewBtn) submitInterviewBtn.onclick = handleSubmit;
+    });
+}
+
+// MVP特定ロジック（変更なし）
 function identifyMvpPlayer(matchContext) {
     const { dbMatch, winnerName } = matchContext;
     const teamKey = (dbMatch.team1 === winnerName) ? 'team1' : 'team2';
@@ -25172,17 +25245,13 @@ function identifyMvpPlayer(matchContext) {
     let maxScore = -1;
 
     for (const [name, s] of Object.entries(stats)) {
-        // 簡易スコア計算 (HR=10, RBI=3, H=2, Win=10, SO=1)
         let score = (s.hr || 0) * 10 + (s.rbi || 0) * 3 + (s.h || 0) * 2;
-        
-        // 投手の場合 (勝利投手や完封は高得点)
         const pData = dbMatch.details.pitching?.[teamKey]?.find(p => p.name === name);
         if (pData) {
             if (pData.result === 'W') score += 10;
-            if (pData.runs === '0' && parseFloat(pData.innings) >= 5) score += 15; // 完封/好投ボーナス
+            if (pData.runs === '0' && parseFloat(pData.innings) >= 5) score += 15; 
             score += (parseInt(pData.strikeouts) || 0);
         }
-
         if (score > maxScore) {
             maxScore = score;
             bestPlayer = name;
@@ -25191,67 +25260,36 @@ function identifyMvpPlayer(matchContext) {
     return bestPlayer;
 }
 
-// モーダルの表示設定ヘルパー
+// モーダルの表示設定ヘルパー（変更なし）
 async function showInterviewModal(targetName, titleText) {
-    // 一旦閉じてリセット演出（フェードアウト/イン）
     interviewModal.classList.add('hidden');
     interviewModal.classList.remove('flex');
     await new Promise(r => setTimeout(r, 300)); 
 
-    // タイトルや画像の設定（ここで選手の顔画像などを出せると尚良い）
-    const interviewerBubble = document.getElementById('interviewer-bubble');
-    
     // 誰へのインタビューかを表示
-    interviewerText.textContent = "（質問を生成中...）";
-    document.querySelector('#hero-interview-modal .text-blue-400').textContent = `YOUR ANSWER as ${targetName}`;
+    if(interviewerText) interviewerText.textContent = "（質問を生成中...）";
+    const roleText = document.querySelector('#hero-interview-modal .text-blue-400');
+    if(roleText) roleText.textContent = `YOUR ANSWER as ${targetName}`;
     
     interviewModal.classList.remove('hidden');
     interviewModal.classList.add('flex');
 }
 
-// インタビューの1セッションを実行するヘルパー
-async function runInterviewSession(questionText) {
-    return new Promise((resolve) => {
-        // UIリセット
-        answerInput.value = '';
-        
-        // 質問表示＆読み上げ
-        interviewerText.textContent = questionText;
-        triggerFlash();
-        speakText(questionText);
-
-        // 送信ボタンのハンドラを上書き
-        submitInterviewBtn.onclick = () => {
-            const answer = answerInput.value.trim();
-            if (!answer) { alert("回答を入力してください"); return; }
-            
-            if (isRecording && recognition) recognition.stop();
-            window.speechSynthesis.cancel();
-            
-            resolve({ question: questionText, answer: answer });
-        };
-    });
-}
-
-// 5. 質問生成AI（ターゲット指定に対応）
+// 5. 質問生成AI（変更なし）
 async function generateInterviewQuestion(matchContext, type, targetName) {
     const { winnerName, highlights } = matchContext;
     const role = type === 'manager' ? '監督' : `${targetName}選手`;
     
     const prompt = `あなたはスポーツ記者です。
 高校野球「${winnerName}」の${role}への勝利インタビューで、**最も聞くべき鋭い質問を1つだけ**作成してください。
-
 ### 相手
 ${role}
-
 ### 試合ハイライト
 ${highlights.slice(0, 4).map(h => h.description).join('、')}
-
 ### 指示
 - 相手が監督なら采配や試合展開について。
 - 相手が選手なら、自身の決定的なプレーや気持ちについて。
 - です・ます調、40文字以内。
-
 ### 出力形式(JSON): {"question": "質問本文"}`;
 
     try {
@@ -25266,7 +25304,6 @@ ${highlights.slice(0, 4).map(h => h.description).join('、')}
     }
 }
 // ▲▲▲ 修正ここまで ▲▲▲
-
 // 初期化時にセットアップ
 setupSpeechRecognition();
 
