@@ -3381,35 +3381,63 @@
 
 
     
-    <div id="save-load-modal" class="save-load-modal hidden">
-        <div class="save-load-modal-content">
-            <div class="flex border-b">
-                <button id="save-tab-btn" class="px-4 py-2 font-semibold border-b-2 border-blue-500">セーブ (合い言葉の発行)</button>
-                <button id="load-tab-btn" class="px-4 py-2 text-gray-500">ロード (合い言葉の入力)</button>
-            </div>
-            <div id="save-tab-content" class="py-4">
-                <p class="text-sm mb-2">現在の進行状況を保存するための「合い言葉」を発行します。下のボタンを押してください。</p>
-                <button id="generate-save-code-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">合い言葉を発行</button>
-                <div id="save-code-area" class="hidden mt-4">
-                    <p class="text-sm font-bold text-green-600">合い言葉が発行されました。以下をコピーして安全な場所に保管してください。</p>
-                    <div class="flex items-center mt-2">
-                        <div id="save-code-output" class="flex-grow text-xs"></div>
-                        <button id="copy-save-code-btn" class="ml-2 bg-gray-200 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-300">コピー</button>
-                    </div>
-                    <p id="copy-feedback" class="text-xs text-green-600 mt-1 h-4"></p>
+<div id="save-load-modal" class="save-load-modal hidden fixed inset-0 bg-gray-900 bg-opacity-80 items-center justify-center z-[300]">
+    <div class="save-load-modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl">
+        <h3 class="text-xl font-bold mb-4 border-b pb-2 text-gray-800 flex items-center">
+            <span class="text-2xl mr-2">💾</span> データ管理
+        </h3>
+
+        <div class="flex border-b mb-4">
+            <button id="tab-slots" class="px-6 py-2 font-bold border-b-2 border-blue-600 text-blue-600 transition-colors">
+                スロット保存/読込
+            </button>
+            <button id="tab-code" class="px-6 py-2 font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">
+                合い言葉 (バックアップ)
+            </button>
+        </div>
+
+        <div id="content-slots" class="space-y-4">
+            <p class="text-sm text-gray-600 mb-2">ブラウザにデータを保存します。こまめなセーブを推奨します。</p>
+            
+            <div class="bg-yellow-50 border border-yellow-200 p-3 rounded flex justify-between items-center mb-4">
+                <div>
+                    <span class="text-xs font-bold bg-yellow-200 text-yellow-800 px-2 py-1 rounded">AUTO</span>
+                    <span id="autosave-info" class="text-sm ml-2 text-gray-600">データなし</span>
                 </div>
+                <button id="load-autosave-btn" class="bg-yellow-500 text-white text-xs font-bold px-3 py-1.5 rounded hover:bg-yellow-600 shadow">
+                    再開する
+                </button>
             </div>
-            <div id="load-tab-content" class="py-4 hidden">
-                <p class="text-sm mb-2">保存した「合い言葉」を以下に貼り付けてください。</p>
-                <textarea id="load-code-input" placeholder="合い言葉をここに貼り付け" class="w-full h-32 p-2 border rounded mb-2"></textarea>
-                <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">このデータで再開する</button>
+
+            <div id="save-slots-container" class="space-y-2">
+                </div>
+        </div>
+
+        <div id="content-code" class="hidden space-y-4">
+            <div class="p-4 bg-gray-50 rounded border">
+                <h4 class="font-bold text-sm mb-2">データを出力 (セーブ)</h4>
+                <button id="generate-save-code-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-bold shadow">
+                    合い言葉を発行してコピー
+                </button>
+                <textarea id="save-code-output" class="w-full h-24 mt-2 p-2 text-xs border rounded bg-gray-100" readonly placeholder="ここにコードが表示されます"></textarea>
             </div>
-             <div class="mt-4 text-right">
-                 <button id="save-load-close" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">閉じる</button>
-             </div>
+
+            <div class="p-4 bg-gray-50 rounded border">
+                <h4 class="font-bold text-sm mb-2">データを入力 (ロード)</h4>
+                <textarea id="load-code-input" class="w-full h-24 p-2 text-xs border rounded" placeholder="ここに合い言葉を貼り付けてください"></textarea>
+                <button id="load-from-code-btn" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-bold shadow mt-2">
+                    このデータで再開
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-6 text-right border-t pt-4">
+            <button id="save-load-close" class="bg-gray-200 text-gray-700 font-bold px-6 py-2 rounded hover:bg-gray-300">
+                閉じる
+            </button>
         </div>
     </div>
-
+</div>
     <div id="newspaper-modal" class="newspaper-modal hidden">
         <div class="newspaper-modal-content">
             <div id="newspaper-modal-body"></div>
@@ -5513,12 +5541,18 @@ AIは以下の「球速帯」が持つ意味を、**投手の左右**と**学校
     
     function saveState() {
         try {
+            // 1. 既存のレジューム用保存 (メイン)
             localStorage.setItem('tournamentState', JSON.stringify(tournamentState));
+            
+            // 2. ★新規追加: オートセーブ用スロットへの保存
+            performAutoSave(); 
+
         } catch (e) {
             console.error("進行状況の保存に失敗しました:", e);
             showAlert("進行状況の保存に失敗しました。ブラウザのストレージ容量が不足している可能性があります。");
         }
     }
+
     
     function uint8ArrayToBase64(bytes) {
         let binary = '';
@@ -22011,6 +22045,214 @@ document.getElementById('lineup-manager-close-btn').onclick = () => {
 };
 document.getElementById('lineup-manager-save-btn').onclick = applyLineupChanges;
 
+// ▼▼▼ 【新規追加】セーブデータ・スロット管理機能 ▼▼▼
+
+const MAX_SAVE_SLOTS = 5;
+
+// スロット一覧を描画する
+function renderSaveSlots() {
+    const container = document.getElementById('save-slots-container');
+    container.innerHTML = '';
+
+    for (let i = 1; i <= MAX_SAVE_SLOTS; i++) {
+        const key = `tournament_save_slot_${i}`;
+        const dataJson = localStorage.getItem(key);
+        let infoText = "データなし";
+        let timestamp = "";
+        let hasData = false;
+
+        if (dataJson) {
+            try {
+                const data = JSON.parse(dataJson);
+                const date = new Date(data.savedAt || Date.now());
+                const yearStr = data.tournamentYear || '????';
+                const tourneyStr = tournamentNameMap[data.currentTournament] || '';
+                // 進行状況の要約
+                infoText = `${yearStr}年 ${tourneyStr}`;
+                timestamp = date.toLocaleString('ja-JP');
+                hasData = true;
+            } catch (e) {
+                infoText = "データ破損";
+            }
+        }
+
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between p-3 border rounded bg-white hover:bg-gray-50 transition-colors";
+        div.innerHTML = `
+            <div class="flex flex-col">
+                <span class="font-bold text-gray-700">SLOT ${i}</span>
+                <span class="text-sm text-blue-600 font-semibold">${infoText}</span>
+                <span class="text-xs text-gray-400">${timestamp}</span>
+            </div>
+            <div class="flex space-x-2">
+                <button class="save-slot-btn bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded hover:bg-blue-200 border border-blue-300" data-slot="${i}">
+                    上書き保存
+                </button>
+                ${hasData ? `
+                <button class="load-slot-btn bg-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded hover:bg-green-200 border border-green-300" data-slot="${i}">
+                    ロード
+                </button>
+                <button class="delete-slot-btn bg-red-50 text-red-600 text-xs font-bold px-2 py-1.5 rounded hover:bg-red-100 border border-red-200" data-slot="${i}">
+                    削除
+                </button>` : ''}
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    // オートセーブの表示更新
+    updateAutosaveDisplay();
+}
+
+// オートセーブ情報の更新
+function updateAutosaveDisplay() {
+    const autoKey = 'tournament_autosave';
+    const dataJson = localStorage.getItem(autoKey);
+    const infoEl = document.getElementById('autosave-info');
+    const btn = document.getElementById('load-autosave-btn');
+
+    if (dataJson) {
+        try {
+            const data = JSON.parse(dataJson);
+            const date = new Date(data.savedAt || Date.now());
+            infoEl.textContent = `${data.tournamentYear}年 (${date.toLocaleString()})`;
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } catch (e) {
+            infoEl.textContent = "データ破損";
+            btn.disabled = true;
+        }
+    } else {
+        infoEl.textContent = "データなし";
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// スロットへの保存
+function saveToSlot(slotNum) {
+    if (!tournamentState) return;
+    
+    // 保存時刻を追加
+    tournamentState.savedAt = Date.now();
+    
+    const key = `tournament_save_slot_${slotNum}`;
+    try {
+        localStorage.setItem(key, JSON.stringify(tournamentState));
+        renderSaveSlots(); // リスト更新
+        alert(`スロット${slotNum}に保存しました。`);
+    } catch (e) {
+        alert("保存に失敗しました。容量不足の可能性があります。");
+    }
+}
+
+// スロットからのロード
+async function loadFromSlot(slotNum) {
+    const key = `tournament_save_slot_${slotNum}`;
+    const dataJson = localStorage.getItem(key);
+    if (!dataJson) return;
+
+    if (await showConfirm(`スロット${slotNum}のデータをロードしますか？\n現在の進行状況は失われます。`)) {
+        try {
+            const data = JSON.parse(dataJson);
+            tournamentState = data;
+            
+            // 甲子園データの復元処理など（既存ロジックの流用）
+            if (tournamentState.currentTournament === 'summer_koshien') {
+                restoreKoshienData(tournamentState.teams);
+            }
+            
+            alert("ロードしました。");
+            document.getElementById('save-load-modal').classList.add('hidden');
+            renderTournament(tournamentState);
+        } catch (e) {
+            alert("ロードに失敗しました。");
+        }
+    }
+}
+
+// オートセーブの実行（試合終了時などに呼ぶ）
+function performAutoSave() {
+    if (!tournamentState) return;
+    tournamentState.savedAt = Date.now();
+    localStorage.setItem('tournament_autosave', JSON.stringify(tournamentState));
+    // console.log("Auto-saved.");
+}
+
+// オートセーブからのロード
+async function loadFromAutosave() {
+    const dataJson = localStorage.getItem('tournament_autosave');
+    if (!dataJson) return;
+
+    if (await showConfirm(`オートセーブデータをロードしますか？`)) {
+        try {
+            const data = JSON.parse(dataJson);
+            tournamentState = data;
+            if (tournamentState.currentTournament === 'summer_koshien') {
+                restoreKoshienData(tournamentState.teams);
+            }
+            document.getElementById('save-load-modal').classList.add('hidden');
+            renderTournament(tournamentState);
+        } catch (e) {
+            alert("ロードに失敗しました。");
+        }
+    }
+}
+
+// スロット削除
+function deleteSlot(slotNum) {
+    if (confirm(`スロット${slotNum}のデータを削除しますか？`)) {
+        localStorage.removeItem(`tournament_save_slot_${slotNum}`);
+        renderSaveSlots();
+    }
+}
+
+// イベントリスナー登録
+document.addEventListener('click', (e) => {
+    // タブ切り替え
+    if (e.target.id === 'tab-slots') {
+        document.getElementById('content-slots').classList.remove('hidden');
+        document.getElementById('content-code').classList.add('hidden');
+        e.target.classList.add('border-blue-600', 'text-blue-600');
+        e.target.classList.remove('border-transparent', 'text-gray-500');
+        const codeTab = document.getElementById('tab-code');
+        codeTab.classList.remove('border-blue-600', 'text-blue-600');
+        codeTab.classList.add('border-transparent', 'text-gray-500');
+        renderSaveSlots();
+    }
+    if (e.target.id === 'tab-code') {
+        document.getElementById('content-slots').classList.add('hidden');
+        document.getElementById('content-code').classList.remove('hidden');
+        e.target.classList.add('border-blue-600', 'text-blue-600');
+        e.target.classList.remove('border-transparent', 'text-gray-500');
+        const slotsTab = document.getElementById('tab-slots');
+        slotsTab.classList.remove('border-blue-600', 'text-blue-600');
+        slotsTab.classList.add('border-transparent', 'text-gray-500');
+    }
+
+    // スロット操作
+    if (e.target.matches('.save-slot-btn')) saveToSlot(e.target.dataset.slot);
+    if (e.target.matches('.load-slot-btn')) loadFromSlot(e.target.dataset.slot);
+    if (e.target.matches('.delete-slot-btn')) deleteSlot(e.target.dataset.slot);
+    
+// オートセーブロード
+    if (e.target.id === 'load-autosave-btn') loadFromAutosave();
+// メイン画面のセーブボタン
+    if (e.target.id === 'save-btn') {
+        renderSaveSlots();
+        document.getElementById('tab-slots').click(); // スロットタブを開く
+        // ★ モーダルを表示する処理を追加
+        document.getElementById('save-load-modal').classList.remove('hidden');
+        document.getElementById('save-load-modal').classList.add('flex');
+    }
+    });
+// モーダルを開いた時の初期化フック
+const originalSaveBtnClick = document.getElementById('save-btn').onclick; // 念のため
+document.getElementById('save-btn').addEventListener('click', () => {
+    renderSaveSlots();
+    document.getElementById('tab-slots').click(); // デフォルトでスロットタブを開く
+});
+
 /**
  * [修正・完全版] 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す
  * (★変数重複エラー修正済み)
@@ -26347,12 +26589,7 @@ await updateNarrativesWithAI(tournamentState);
         }
     });
 
-    saveBtn.addEventListener('click', () => {
-        document.getElementById('save-code-area').classList.add('hidden');
-        saveLoadModal.classList.remove('hidden');
-        saveTabBtn.click();
-    });
-    
+        
     startRankingPlayoffsBtn.addEventListener('click', async () => {
          const confirmed = await showConfirm("全ブロックの予選が終了しました。地区内順位決定戦に進みますか？");
          if(confirmed) setupAutumnRankingTournaments();
@@ -28795,29 +29032,17 @@ document.getElementById('status-modal-close').addEventListener('click', () => {
     document.getElementById('team-status-modal').classList.add('hidden');
 });
 
-    saveTabBtn.addEventListener('click', () => {
-        saveTabBtn.classList.add('border-blue-500'); saveTabBtn.classList.remove('text-gray-500');
-        loadTabBtn.classList.remove('border-blue-500'); loadTabBtn.classList.add('text-gray-500');
-        saveTabContent.classList.remove('hidden'); loadTabContent.classList.add('hidden');
-    });
-    loadTabBtn.addEventListener('click', () => {
-        loadTabBtn.classList.add('border-blue-500'); loadTabBtn.classList.remove('text-gray-500');
-        saveTabBtn.classList.remove('border-blue-500'); saveTabBtn.classList.add('text-gray-500');
-        loadTabContent.classList.remove('hidden'); saveTabContent.classList.add('hidden');
-    });
-    generateSaveCodeBtn.addEventListener('click', () => {
+        generateSaveCodeBtn.addEventListener('click', () => {
         const jsonString = JSON.stringify(tournamentState);
         const compressed = pako.deflate(jsonString);
         const base64 = uint8ArrayToBase64(compressed);
-        document.getElementById('save-code-output').textContent = base64;
-        document.getElementById('save-code-area').classList.remove('hidden');
+        const outputEl = document.getElementById('save-code-output');
+        outputEl.value = base64; // textContentではなくvalueに
+        outputEl.select();
+        document.execCommand('copy'); // 自動コピー
+        alert("合い言葉をクリップボードにコピーしました！");
     });
-    copySaveCodeBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(document.getElementById('save-code-output').textContent);
-        const feedback = document.getElementById('copy-feedback');
-        feedback.textContent = 'コピーしました！';
-        setTimeout(() => { feedback.textContent = '' }, 2000);
-    });
+    
     loadFromCodeBtn.addEventListener('click', () => {
         try {
             const code = document.getElementById('load-code-input').value;
