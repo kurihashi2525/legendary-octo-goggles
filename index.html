@@ -2503,6 +2503,64 @@
 #trend-notification.show { transform: translateX(0); }
 /* ▲▲▲ 追加ここまで ▲▲▲ */
 
+/* 作戦ボード用スタイル */
+.lineup-card {
+    display: flex;
+    align-items: center;
+    background-color: #1e293b; /* slate-800 */
+    border: 1px solid #334155; /* slate-700 */
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.lineup-card:hover {
+    background-color: #334155; /* slate-700 */
+    transform: translateX(4px);
+}
+.lineup-card.selected {
+    background-color: #2563eb; /* blue-600 */
+    border-color: #60a5fa; /* blue-400 */
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    transform: scale(1.02);
+    z-index: 10;
+}
+.lineup-order-num {
+    font-family: 'Impact', sans-serif;
+    font-size: 1.2rem;
+    color: #94a3b8; /* slate-400 */
+    width: 30px;
+    text-align: center;
+    margin-right: 10px;
+}
+.lineup-pos-badge {
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #475569; /* slate-600 */
+    color: #e2e8f0;
+    margin-right: 10px;
+    min-width: 32px;
+    text-align: center;
+}
+.lineup-name {
+    font-weight: bold;
+    flex-grow: 1;
+}
+.lineup-stat {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-left: 8px;
+}
+/* ポジション別の色 */
+.pos-P { background-color: #be185d; } /* Pink */
+.pos-C { background-color: #1d4ed8; } /* Blue */
+.pos-IF { background-color: #0f766e; } /* Teal */
+.pos-OF { background-color: #ea580c; } /* Orange */
+
 /* ▼▼▼ アニメーション説明用のCSS ▼▼▼ */
 .match-schedule {
             font-family: 'Noto Sans JP', sans-serif;
@@ -4091,30 +4149,29 @@ const FACILITY_DATA = {
 // ▼▼▼ このブロックをまるごと「新規追加」(1191行目あたり、JAPANESE_SURNAMES の下など) ▼▼▼
 const TEAM_ROSTER_MASTER = {
     "283学園": [
-        // --- スタメン (不動のオーダー) ---
-        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス", desc: "切り込み隊長。高い出塁率と華麗な守備でチームに勢いをもたらす不動の1番ショート。", 
-          isCaptain: true },
-        { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学", desc: "最強の2番打者。小技だけでなく長打もあり、十王とのコンビは県内最強の二遊間。" },
-        { number: "9", name: "花海咲", grade: 3, position: "右翼手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア",  desc: "頼れる3番・主将。好機に滅法強く、妹の佑と共にクリーンナップの中核を担う。" },
-        { number: "8", name: "花海佑", grade: 1, position: "中堅手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア", desc: "1年生にして4番に座る怪物。圧倒的な身体能力でグラウンドを支配する天才。" },
-        { number: "7", name: "芹沢", grade: 2, position: "左翼手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア", desc: "5番に座る仕事人。両打ち（スイッチ）の器用さで、上位と下位をつなぐキーマン。" },
-        { number: "3", name: "姫川", grade: 3, position: "投手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア", desc: "「6番・ピッチャー」の超攻撃的エース。150km超の剛球に加え、自らのバットで試合を決める。" },
-        { number: "2", name: "有栖川", grade: 3, position: "捕手", throwBat: "R/L", height: 178, weight: 78, origin: "神奈川ボーイズ", desc: "恐怖の7番打者。強打の捕手として、下位打線からビッグイニングの起点を作る。" },
-        { number: "5", name: "八宮", grade: 2, position: "三塁手", throwBat: "R/R", height: 175, weight: 72, origin: "浜松ボーイズ", desc: "意外性の男。8番に彼がいることで、相手投手は息つく暇がない。" },
-        { number: "13", name: "鈴木", grade: 2, position: "一塁手", throwBat: "R/L", height: 181, weight: 85, origin: "愛知ボーイズ", desc: "ミート力のあるアベレージ型一塁手。9番から上位へ「第2のリードオフ」として繋ぐ。" },
+        // --- スタメン (新オーダー) ---
+        { number: "6", name: "十王", grade: 3, position: "遊撃手", throwBat: "R/L", height: 176, weight: 70, origin: "名古屋ドリームス", desc: "切り込み隊長。高い出塁率と華麗な守備でチームに勢いをもたらす不動の1番ショート。", isCaptain: true },
+        { number: "9", name: "花海咲", grade: 3, position: "右翼手", throwBat: "L/L", height: 178, weight: 75, origin: "北海道シニア", desc: "攻撃的2番打者。主将としてチームを牽引し、長打力で初回から得点を狙う。" },
+        { number: "4", name: "樋口", grade: 3, position: "二塁手", throwBat: "R/R", height: 170, weight: 68, origin: "静岡葵中学", desc: "勝負強い3番打者。広角に打ち分ける技術と、チャンスでの集中力が光る。" },
+        { number: "20", name: "杜野", grade: 1, position: "左翼手", throwBat: "L/L", height: 171, weight: 67, origin: "宮城シニア", desc: "1年生ながら4番に大抜擢された新星。非凡な打撃センスでレギュラーを勝ち取った。" },
+        { number: "8", name: "花海佑", grade: 1, position: "中堅手", throwBat: "R/R", height: 177, weight: 73, origin: "北海道シニア", desc: "5番に座る怪物1年生。杜野との「1年生コンビ」で中軸を形成し、相手投手を威圧する。" },
+        { number: "13", name: "鈴木", grade: 2, position: "一塁手", throwBat: "R/L", height: 181, weight: 85, origin: "愛知ボーイズ", desc: "6番に座るポイントゲッター。ミート力のある打撃で、下位打線への繋ぎ役もこなす。" },
+        { number: "2", name: "有栖川", grade: 3, position: "捕手", throwBat: "R/L", height: 178, weight: 78, origin: "神奈川ボーイズ", desc: "恐怖の7番打者。強打の捕手として、下位からでもビッグイニングを作れる。" },
+        { number: "3", name: "姫川", grade: 3, position: "投手", throwBat: "R/R", height: 182, weight: 80, origin: "大阪シニア", desc: "8番・投手。エースとしてマウンドを守りながら、自らのバットで援護する。" },
+        { number: "5", name: "八宮", grade: 2, position: "三塁手", throwBat: "R/R", height: 175, weight: 72, origin: "浜松ボーイズ", desc: "意外性の男。9番打者として上位へ繋ぐ「第2のリードオフマン」の役割を担う。" },
         
         // --- 控え選手 ---
+        { number: "7", name: "芹沢", grade: 2, position: "外野手", throwBat: "R/S", height: 172, weight: 69, origin: "沼津シニア", desc: "左右両打席で打てる好打者。スタメンを外れたが、代打の切り札として控える。" },
         { number: "1", name: "白瀬", grade: 3, position: "投手", throwBat: "R/R", height: 184, weight: 82, origin: "東京シニア", desc: "MAX155kmを誇るもう一人のエース。姫川とは対照的な剛腕クローザー。" },
         { number: "10", name: "黛", grade: 2, position: "投手", throwBat: "R/R", height: 180, weight: 76, origin: "富士シニア" },
-        { number: "12", name: "福丸", grade: 2, position: "捕手", throwBat: "R/R", height: 176, weight: 77, origin: "焼津リトルシニア" },
-        { number: "15", name: "田中", grade: 3, position: "内野手", throwBat: "R/R", height: 174, weight: 70, origin: "静岡服織中学" },
         { number: "11", name: "市川", grade: 2, position: "投手", throwBat: "L/L", height: 179, weight: 74, origin: "静岡蒲原中学" },
+        { number: "12", name: "福丸", grade: 2, position: "捕手", throwBat: "R/R", height: 176, weight: 77, origin: "焼津リトルシニア" },
         { number: "14", name: "有村", grade: 1, position: "内野手", throwBat: "R/R", height: 173, weight: 67, origin: "福岡シニア" },
+        { number: "15", name: "田中", grade: 3, position: "内野手", throwBat: "R/R", height: 174, weight: 70, origin: "静岡服織中学" },
         { number: "16", name: "大崎", grade: 1, position: "外野手", throwBat: "R/L", height: 170, weight: 68, origin: "三島リトルシニア" },
         { number: "17", name: "風野", grade: 2, position: "内野手", throwBat: "R/R", height: 169, weight: 65, origin: "新潟シニア" },
         { number: "18", name: "西城", grade: 2, position: "投手", throwBat: "R/R", height: 183, weight: 81, origin: "広島ボーイズ" },
-        { number: "19", name: "浅倉", grade: 1, position: "内野手", throwBat: "R/R", height: 168, weight: 64, origin: "長崎シニア" },
-        { number: "20", name: "杜野", grade: 1, position: "外野手", throwBat: "L/L", height: 171, weight: 67, origin: "宮城シニア" }
+        { number: "19", name: "浅倉", grade: 1, position: "内野手", throwBat: "R/R", height: 168, weight: 64, origin: "長崎シニア" }
     ]
 };
 // ▲▲▲ 置き換えここまで ▲▲▲
@@ -5149,10 +5206,10 @@ const PREFECTURE_LORE = `
 ---
 ### 静岡県高校野球の「常識」と「あるある」
 
-* **283学園**: 昨年の覇者。その強さの象徴は、**「左右ジグザグに組まれた不動のオーダー」**にある。
-        1番・十王と2番・樋口の鉄壁二遊間コンビがチャンスを作り、**3番・花海咲、4番・花海佑の「花海コンビ」**が還す得点パターンは破壊力抜群。
-        さらに、5番・スイッチヒッター芹沢を挟み、**6番に「打てるエース」姫川**が座ることで、下位打線まで全く息が抜けない「切れ目のない打線」が完成している。
-        この黄金の布陣は、県内他校から「283の悪夢」として恐れられている。
+* **283学園**: 昨年の覇者。今年は**「1年生4番・杜野」**を中心とした超攻撃的布陣で連覇を狙う。
+        攻撃の起点は、**1番・十王、2番・花海咲、3番・樋口**の「黄金のトライアングル」。この上位3人がチャンスを作り、**4番に抜擢された1年生・杜野**と、**5番・花海佑**の「1年生コンビ」が還すパターンが確立されている。
+        さらに下位には**鈴木**、**有栖川**、**姫川**、**八宮**といった強打者が並び、切れ目のない打線は県内随一の破壊力を誇る。
+        投手陣は、打てるエース・**姫川**が先発し、終盤に剛腕・**白瀬**で締める継投が基本線。**市川**や**黛**らも控えており、投手層の厚さも盤石だ。
 
 #### 1. 宿命の兄弟対決「トコハ・ダービー」
 - **菊川 vs 橘:**
@@ -12862,7 +12919,7 @@ function createInningScoreTable(team1Name, team2Name, details, isCalledGame, cal
 
 /**
  * 新しい試合詳細モーダルを開き、各種テーブルを生成する
- * (★コールドゲーム対応・イニング数動的調整版)
+ * (★初戦でも作戦ボードが開けるように修正した完全版)
  */
 function openDetailsModal(matchId) {
     currentMatchIdForDetails = matchId;
@@ -12872,14 +12929,11 @@ function openDetailsModal(matchId) {
         return;
     }
 
-    console.log("--- [モーダル表示 開始] ---", { matchId: matchId, 既存データ: match.details });
-
+    // 1. 既存データの読み込み、または初期化
     let details = JSON.parse(JSON.stringify(match.details || {}));
 
-    // --- 前回のロスター情報を引き継ぐ ---
+    // --- 前回のロスター情報を引き継ぐ処理 ---
     if ((!details.batting || !details.batting.team1 || details.batting.team1.length === 0)) {
-        console.log("[ロスター引継] この試合の詳細は空です。前回のロスターを探します...");
-        
         // battingオブジェクトがない場合は初期化
         details.batting = details.batting || { team1: [], team2: [] };
 
@@ -12889,7 +12943,6 @@ function openDetailsModal(matchId) {
             
             // パターンA: 保存されたロスターがある場合 (2回戦以降)
             if (teamRecord && teamRecord.roster && teamRecord.roster.length > 0) {
-                console.log(`[ロスター引継] ${teamRecord.roster.length}名のロスターデータを読み込みます。`);
                 details.batting[teamKey] = teamRecord.roster
                     .filter(playerData => playerData.order && !playerData.order.toString().includes('sub'))
                     .map(playerData => ({
@@ -12905,27 +12958,19 @@ function openDetailsModal(matchId) {
                     results: [] 
                 }));
             }
-            // パターンC: 【新規】マスタデータがある場合 (1回戦・初回)
+            // パターンC: マスタデータがある場合 (1回戦・初回)
             else if (TEAM_ROSTER_MASTER[teamName]) {
-                 console.log(`[ロスター引継] ${teamName} のデフォルトスタメンをロードします。`);
                  const masterRoster = TEAM_ROSTER_MASTER[teamName];
-                 
-                 // マスタデータをスタメン形式に変換
                  details.batting[teamKey] = masterRoster.map((p, index) => {
-                     // 9番目まではスタメン(order:1-9)、それ以降は控え(order:null)
-                     // ※TEAM_ROSTER_MASTERがスタメン順に並んでいる前提
                      const order = (index < 9) ? (index + 1).toString() : null;
-                     
-                     // 守備位置の短縮形 (例: "遊撃手" -> "遊")
                      const posShort = p.position ? p.position.charAt(0) : '';
-
                      return {
                          order: order,
                          name: p.name,
                          number: p.number,
                          pos: posShort,
                          throwBat: p.throwBat,
-                         isCaptain: p.isCaptain || false, // キャプテン情報も反映
+                         isCaptain: p.isCaptain || false, 
                          sub_type: null,
                          results: [] 
                      };
@@ -12934,7 +12979,7 @@ function openDetailsModal(matchId) {
         }
     }
 
-    // ▼▼▼ 修正箇所1：表示するイニング数の計算ロジックを変更 ▼▼▼
+    // イニング数の計算 (コールド判定含む)
     let numInnings = 9;
     const currentMaxLen = Math.max(
         details.inningScore?.team1?.length || 0,
@@ -12943,105 +12988,89 @@ function openDetailsModal(matchId) {
     );
     
     if (match.calledGame && match.calledInning) {
-        // コールドゲームなら、その回数に合わせる
         numInnings = match.calledInning;
     } else {
-        // 通常なら最低9回、延長があればそれに合わせる
         numInnings = Math.max(9, currentMaxLen);
     }
-    console.log(`[モーダル表示] イニング数を ${numInnings} 回として描画します`);
-    // ▲▲▲ 修正ここまで ▲▲▲
 
-    // データ構造の初期化（配列長を numInnings に合わせる）
+    // データ構造の完全初期化
     details.inningScore = details.inningScore || { team1: [], team2: [] };
     details.batting = details.batting || { team1: [], team2: [] };
     details.pitching = details.pitching || { team1: [], team2: [] };
     details.fielding = details.fielding || { team1: [], team2: [] };
     details.inningEvents = details.inningEvents || { team1: [], team2: [] };
     details.positionChanges = details.positionChanges || [];
+    details.playerGameStats = details.playerGameStats || { team1: {}, team2: {} };
 
-    // --- 守備交代の履歴生成 ---
-    const allChanges = details.positionChanges || [];
-    const sortedChanges = allChanges.sort((a, b) => {
+    // 守備交代履歴生成のためのソート
+    const sortedChanges = (details.positionChanges || []).sort((a, b) => {
         const inningA = parseInt(a.inning) || 0;
         const inningB = parseInt(b.inning) || 0;
         if (inningA !== inningB) return inningA - inningB;
         return (a.topBottom === '裏' ? 1 : 0) - (b.topBottom === '裏' ? 1 : 0);
     });
 
+    // 選手データの補完 (イニング配列など)
     for (const teamKey of ['team1', 'team2']) {
-        const teamBattingData = details.batting[teamKey];
-        if (teamBattingData) {
-            teamBattingData.forEach(player => {
-                if (!player.name) {
-                    player.posHistoryDisplay = ''; 
-                    player.currentPos = ''; 
-                    return;
-                }
-                let history = [];
-                if (player.pos) {
-                    let initialTiming = "スタメン";
-                    // ▼▼▼ 修正: orderが存在する場合のみチェックするよう変更 ▼▼▼
-                    if (player.order && player.order.toString().includes('sub')) {
-                    // ▲▲▲ 修正ここまで ▲▲▲
-                        if (player.sub_type === 'PH') initialTiming = "代打出場";
-                        else if (player.sub_type === 'PR') initialTiming = "代走出場";
-                        else initialTiming = "途中出場";
-                    }
-                    history.push({ pos: player.pos, timing: initialTiming });
-                }
-                sortedChanges.forEach(change => {
-                    if (change.teamKey === teamKey && change.playerName === player.name) {
-                        let timingStr = `${change.inning || '?'}回${change.topBottom || ''}`;
-                        if (change.timing === 'mid') timingStr += ` ${change.outs || '0'}死`;
-                        else timingStr += ` 0死`;
-                        history.push({ pos: change.newPos, timing: timingStr });
-                    }
-                });
-                const uniqueHistory = history.filter((entry, index) => {
-                    return entry.pos && (index === 0 || entry.pos !== history[index - 1].pos);
-                });
-                if (uniqueHistory.length > 1) {
-                    player.posHistoryDisplay = uniqueHistory.map((entry, index) => {
-                        if (index === 0) return entry.pos;
-                        return `→ (${entry.timing}) ${entry.pos}`;
-                    }).join(' ');
-                    player.currentPos = uniqueHistory[uniqueHistory.length - 1].pos;
-                } else if (uniqueHistory.length === 1) {
-                    player.posHistoryDisplay = uniqueHistory[0].pos;
-                    player.currentPos = uniqueHistory[0].pos;
-                } else {
-                    player.posHistoryDisplay = '';
-                    player.currentPos = player.pos || '';
-                }
-            });
-        }
-    }
-
-    for(const teamKey of ['team1', 'team2']) {
-        if (!details.inningEvents[teamKey]) details.inningEvents[teamKey] = [];
+        // 配列の長さを揃える
         while (details.inningScore[teamKey].length < numInnings) details.inningScore[teamKey].push('');
         while (details.inningEvents[teamKey].length < numInnings) details.inningEvents[teamKey].push('');
-        if (details.batting[teamKey]) {
-            details.batting[teamKey].forEach(player => {
-                if (!player.results) player.results = [];
-                while (player.results.length < numInnings) player.results.push('');
-            });
-        }
-    }
-
-    // 選手名簿読み込み
-    for (const teamKey of ['team1', 'team2']) {
+        
+        // 打者データがない場合のフォールバック (ランダム生成など)
         const teamName = match[teamKey];
         const teamRecord = tournamentState.teamRecords[teamName];
         if (details.batting[teamKey].length === 0 && teamRecord && teamRecord.roster) {
             details.batting[teamKey] = teamRecord.roster.map(p => ({ ...p, results: Array(numInnings).fill('') }));
         }
+
+        // 守備位置履歴の作成
+        details.batting[teamKey].forEach(player => {
+            if (!player.results) player.results = Array(numInnings).fill('');
+            else while (player.results.length < numInnings) player.results.push('');
+
+            if (!player.name) {
+                player.posHistoryDisplay = ''; 
+                player.currentPos = ''; 
+                return;
+            }
+            let history = [];
+            if (player.pos) {
+                let initialTiming = "スタメン";
+                if (player.order && player.order.toString().includes('sub')) {
+                    if (player.sub_type === 'PH') initialTiming = "代打出場";
+                    else if (player.sub_type === 'PR') initialTiming = "代走出場";
+                    else initialTiming = "途中出場";
+                }
+                history.push({ pos: player.pos, timing: initialTiming });
+            }
+            sortedChanges.forEach(change => {
+                if (change.teamKey === teamKey && change.playerName === player.name) {
+                    let timingStr = `${change.inning || '?'}回${change.topBottom || ''}`;
+                    if (change.timing === 'mid') timingStr += ` ${change.outs || '0'}死`;
+                    else timingStr += ` 0死`;
+                    history.push({ pos: change.newPos, timing: timingStr });
+                }
+            });
+            const uniqueHistory = history.filter((entry, index) => {
+                return entry.pos && (index === 0 || entry.pos !== history[index - 1].pos);
+            });
+            if (uniqueHistory.length > 1) {
+                player.posHistoryDisplay = uniqueHistory.map((entry, index) => {
+                    if (index === 0) return entry.pos;
+                    return `→ (${entry.timing}) ${entry.pos}`;
+                }).join(' ');
+                player.currentPos = uniqueHistory[uniqueHistory.length - 1].pos;
+            } else {
+                player.posHistoryDisplay = '';
+                player.currentPos = player.pos || '';
+            }
+        });
     }
     
     const playersTeam1 = details.batting.team1.filter(p => p.name).map(p => ({name: p.name}));
     const playersTeam2 = details.batting.team2.filter(p => p.name).map(p => ({name: p.name}));
 
+    // HTML生成
     const detailsBody = document.getElementById('details-modal-body');
     detailsBody.innerHTML = `
         <div class="space-y-4">
@@ -13053,15 +13082,25 @@ function openDetailsModal(matchId) {
                     <span class="ml-2 text-gray-700 font-bold">この試合をコールドゲームとして記録する</span>
                 </label>
             </div>
-            <div class="text-center py-2 border-t border-b">
-                <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">先攻・後攻を入れ替え</button>
+            
+            <div class="text-center py-2 border-t border-b flex justify-center gap-2 bg-gray-50">
+                <button id="swap-teams-btn" data-match-id="${matchId}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-4 rounded text-sm">
+                    ⇅ 先攻・後攻入替
+                </button>
+                <button id="auto-complete-innings-btn" data-match-id="${matchId}" class="bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold py-1 px-4 rounded text-sm border border-orange-300">
+                    ⏩ 残りイニング自動消化
+                </button>
+                <button id="auto-generate-summary-btn" data-match-id="${matchId}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold py-1 px-4 rounded text-sm border border-indigo-300">
+                    🤖 AI戦評生成
+                </button>
             </div>
             
             <div class="space-y-4">
                 <h4 class="font-bold text-lg">${match.team1} 打撃成績</h4>
-                <div class="overflow-x-auto border rounded-lg bg-white">${createPlayerBattingTable(match.team1, 'team1', details)}</div>
+                ${createPlayerBattingTable(match.team1, 'team1', details)}
+                
                 <h4 class="font-bold text-lg mt-4">${match.team2} 打撃成績</h4>
-                <div class="overflow-x-auto border rounded-lg bg-white">${createPlayerBattingTable(match.team2, 'team2', details)}</div>
+                ${createPlayerBattingTable(match.team2, 'team2', details)}
             </div>
             
             <div class="space-y-4 mt-4">
@@ -13103,7 +13142,7 @@ function openDetailsModal(matchId) {
         </div>
     `;
 
-    // 283学園用 datalist
+    // 283学園用 datalist (変更なし)
     const roster283 = TEAM_ROSTER_MASTER["283学園"];
     if (roster283) {
         const rosterOptionsHTML = roster283.map(p => `<option value="${p.name}"></option>`).join('');
@@ -13125,10 +13164,14 @@ function openDetailsModal(matchId) {
         }
     }
 
+    // ▼▼▼ 【重要修正】ここでデータを試合オブジェクトにリンクさせる ▼▼▼
+    // これを行わないと、保存ボタンを押すまで「作戦ボード」などの機能がデータを見つけられない
+    match.details = details; 
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     detailsModal.classList.remove('hidden');
     updateTotalScores();
 }
-
 // ▲▲▲ 置き換えここまで ▲▲▲ 
 
 /**
@@ -14077,8 +14120,7 @@ function getGuidelineText(teamTotalRC, players, teamName) {
 
 /**
  * 個人別打席結果のテーブルHTMLを生成する
- * (★「個人成績モーダル」ボタンを追加)
- * (★★「調子」アイコンを追加★★)
+ * (★作戦ボードボタンを追加した修正版)
  */
 function createPlayerBattingTable(teamName, teamKey, details) {
     const battingData = details.batting[teamKey] || [];
@@ -14111,6 +14153,19 @@ function createPlayerBattingTable(teamName, teamKey, details) {
 
     let bodyRows = '';
     const teamRecord = tournamentState.teamRecords[teamName]; // ★調子取得用
+
+    // ▼▼▼ 【ここが追加・変更箇所】 ▼▼▼
+    // 283学園（プレイヤーチーム）かどうかを判定
+    const isMyTeam = teamName.includes("283") || teamName.includes("７６５") || teamName.includes("ナムコ");
+    
+    // 283学園なら「作戦ボード」ボタンのHTMLを作成、そうでなければ空文字
+    const strategyBtnHtml = isMyTeam ? `
+        <button class="open-lineup-manager-btn bg-indigo-600 text-white text-xs px-3 py-1 rounded hover:bg-indigo-700 shadow ml-2 flex items-center" 
+                data-match-id="${currentMatchIdForDetails}" data-team-key="${teamKey}">
+            <span class="mr-1">⚔️</span> 作戦ボード
+        </button>
+    ` : '';
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     // --- 1. スタメン (1〜9番) の行を生成 ---
     for (let i = 1; i <= 9; i++) {
@@ -14270,7 +14325,16 @@ const isCaptain = starterData.isCaptain ? 'active' : '';
     }
 
     return `
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto border rounded-lg bg-white mt-2">
+            <div class="flex justify-between items-center p-2 bg-gray-50 border-b">
+                <h4 class="font-bold text-lg flex items-center">
+                    ${teamName} 打撃成績
+                    ${strategyBtnHtml} </h4>
+                <div class="text-xs">
+                    <button class="load-lineup-btn bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 mr-1" data-team-key="${teamKey}">📂 読込</button>
+                    <button class="save-lineup-btn bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200" data-team-key="${teamKey}">💾 保存</button>
+                </div>
+            </div>
             <table class="details-table batting-table" id="batting-table-${teamKey}">
                 <thead>
                     <tr>
@@ -14286,11 +14350,10 @@ const isCaptain = starterData.isCaptain ? 'active' : '';
                 </thead>
                 <tbody>${bodyRows}</tbody>
             </table>
-            </div>
+        </div>
     `;
+    // ▲▲▲ 修正ここまで ▲▲▲
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
-
 
 
 /**
@@ -16721,20 +16784,49 @@ async function setupSpringMainTournament_Round2() {
 // --- AI Content Generation & Helpers (Part A: Main Generators) ---
 
 /**
+ * [NEW HELPER] 日付文字列間の「中n日」を正確に計算して文字列を返す
+ * @param {string} currentDateStr - 今日の日付 (例: "7/15")
+ * @param {string} prevDateStr - 前回の日付 (例: "7/10")
+ * @param {number} baseYear - 大会の年度
+ * @returns {string} - " (連投)", " (中1日)", " (中4日)" など
+ */
+function getRestDaysString(currentDateStr, prevDateStr, baseYear) {
+    if (!currentDateStr || !prevDateStr) return "";
+    if (currentDateStr === '日付不明' || prevDateStr === '日付不明') return "";
+    
+    const parse = (dStr) => {
+        if (!dStr || !dStr.includes('/')) return null;
+        const [m, d] = dStr.split('/').map(Number);
+        // 1~3月は翌年扱い (年度またぎ対応)
+        const y = (m <= 3) ? baseYear + 1 : baseYear; 
+        return new Date(y, m - 1, d);
+    };
+
+    const curr = parse(currentDateStr);
+    const prev = parse(prevDateStr);
+    
+    if (!curr || !prev) return "";
+
+    // ミリ秒差分を日数に変換 (Math.roundで微細なズレを吸収)
+    const diffTime = curr - prev;
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) return " (ダブルヘッダー)"; // 同日または過去
+    if (diffDays === 1) return " (連投)"; // 翌日 (差が1日 -> 中0日)
+    return ` (中${diffDays - 1}日)`; // 2日以上 (差が2日 -> 中1日)
+}
+
+/**
  * 試合の全情報を集約した「matchContext」オブジェクトを生成する司令塔
- * (★「故障者リスト(injuryReport)」の情報を追加)
- * (★★ 故障者リストに「軽傷(🩹)」と「選手の重要度(主力/控え)」も含めるよう修正 ★★)
+ * (★登板間隔の計算を修正した最終版)
  */
 function createMatchContext(matchId, winnerName, team1QualityText, team2QualityText) {
     const dbMatch = findMatchById(matchId);
     if (!dbMatch) return null;
 
-// ▼▼▼ 【追加】対戦相手の過去成績がない場合、自動生成して埋める ▼▼▼
-    // 283学園が関わる試合かどうかに関わらず、勝者・敗者両方の過去ログを整備する
-    // (これにより、決勝戦の相手などが「初出場」扱いされなくなる)
+    // 対戦相手の過去成績がない場合、自動生成して埋める
     backfillCpuStats(winnerName);
     backfillCpuStats(dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1);
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     const loserName = dbMatch.team1 === winnerName ? dbMatch.team2 : dbMatch.team1;
     const nextOpponentInfo = findNextOpponent(winnerName, matchId);
@@ -16745,16 +16837,13 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
 
     const { highlights, keyPlayerNames } = createHighlightsText(dbMatch, winnerName);
     
-    // (Gamelog収集ロジックは変更なし)
+    // --- Gamelog収集 (登板間隔の修正適用) ---
     let pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴 (この試合より前)\n";
     let relevantLogsFound = false;
-    const parseDate = (dateStr) => {
-        if (!dateStr || !dateStr.includes('/')) return null;
-        const [month, day] = dateStr.split('/').map(Number);
-        const year = tournamentState.tournamentYear + (month <= 3 ? 1 : 0);
-        return new Date(year, month - 1, day);
-    };
-    const today = parseDate(dbMatch.schedule?.date);
+    
+    // ★ この試合の日付を取得 (なければデフォルト)
+    const todayStr = dbMatch.schedule?.date || "7/15";
+
     if (dbMatch.details && dbMatch.details.pitching) {
         for (const teamKey of ['team1', 'team2']) {
             const pitchingData = dbMatch.details.pitching[teamKey] || [];
@@ -16763,31 +16852,36 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                 if (!playerName) return;
                 const teamRecord = tournamentState.teamRecords[dbMatch[teamKey]];
                 const pStats = teamRecord?.playerStats?.pitching[playerName];
+                
                 if (pStats && pStats.gamelogs && pStats.gamelogs.length > 0) {
                     const currentTournamentKey = tournamentState.currentTournament;
                     const previousLogs = pStats.gamelogs.filter(log => {
                         if (log.matchId === matchId) return false;
                         const logRound = log.round || '';
+                        // 大会フィルター
                         if (currentTournamentKey === 'summer') return logRound.includes('回戦') || logRound.includes('決勝');
                         if (currentTournamentKey === 'autumn') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                         if (currentTournamentKey === 'spring') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
                         return false;
                     });
+
                     if (previousLogs.length > 0) {
                         relevantLogsFound = true;
                         pitcherGamelogInfo += `- ${playerName} (${dbMatch[teamKey]}):\n`;
-                        previousLogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        
+                        // 日付順にソート (簡易ヘルパー)
+                        const parseForSort = (dStr) => {
+                            if(!dStr || !dStr.includes('/')) return 0;
+                            const [m, d] = dStr.split('/').map(Number);
+                            return m * 100 + d;
+                        };
+                        previousLogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
+
                         previousLogs.forEach(log => {
-                            let dateInfo = log.date || '日付不明';
-                            if (today) {
-                                const logDate = parseDate(log.date);
-                                if (logDate) {
-                                    const diffDays = Math.ceil(Math.abs(today - logDate) / (1000 * 60 * 60 * 24)) - 1;
-                                    if (diffDays === 0) dateInfo = `${log.date} (連投)`;
-                                    else if (diffDays === 1) dateInfo = `${log.date} (中1日)`;
-                                    else if (diffDays > 0) dateInfo = `${log.date} (中${diffDays - 1}日)`;
-                                }
-                            }
+                            // ★ ここで新ヘルパー関数を使用 (正確に計算)
+                            const intervalInfo = getRestDaysString(todayStr, log.date, tournamentState.tournamentYear);
+                            const dateInfo = log.date + intervalInfo;
+                            
                             const opponentRank = log.opponentRank || 'E';
                             const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
                             pitcherGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
@@ -16800,9 +16894,11 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
     if (!relevantLogsFound) {
         pitcherGamelogInfo = "\n### 参考情報：今大会の主な投手登板履歴\n- この試合に出場した投手は、全員今大会これが初登板です。\n";
     }
+
+    // --- 打者成績履歴 ---
     let batterGamelogInfo = "\n### 参考情報：今大会の主な打者成績履歴 (この試合より前)\n";
     let relevantBatterLogsFound = false;
-    const today_batter = parseDate(dbMatch.schedule?.date);
+    
     if (dbMatch.details && dbMatch.details.batting) {
         for (const teamKey of ['team1', 'team2']) {
             const battingData = dbMatch.details.batting[teamKey] || [];
@@ -16824,9 +16920,17 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                     if (previousLogs.length > 0) {
                         relevantBatterLogsFound = true;
                         batterGamelogInfo += `- ${playerName} (${dbMatch[teamKey]}):\n`;
-                        previousLogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        
+                        const parseForSort = (dStr) => {
+                            if(!dStr || !dStr.includes('/')) return 0;
+                            const [m, d] = dStr.split('/').map(Number);
+                            return m * 100 + d;
+                        };
+                        previousLogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
+
                         previousLogs.forEach(log => {
-                            let dateInfo = log.date || '日付不明';
+                            // 打者の場合、登板間隔は不要なので日付のみ
+                            const dateInfo = log.date || '日付不明';
                             const opponentRank = log.opponentRank || 'E';
                             const stats = log.stats || { ab: 0, h: 0, hr: 0, rbi: 0, sb: 0 };
                             let role = "";
@@ -16846,7 +16950,7 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         batterGamelogInfo = "\n### 参考情報：今大会の主な打者成績履歴\n- この試合に出場した打者は、全員今大会これが初出場です。\n";
     }
 
-// ★★★ 追加箇所: 県大会(予選)成績のテキスト化 ★★★
+    // 県大会成績
     let prefecturalStatsText = "";
     if (tournamentState.currentTournament === 'summer_koshien') {
         const pStats = tournamentState.teamRecords[winnerName]?.prefecturalStats;
@@ -16855,55 +16959,36 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
             prefecturalStatsText += `- **${winnerName} (静岡大会)**: 打率${avg}, 本塁打${pStats.hr}, 盗塁${pStats.sb}, 総得点${pStats.r}\n`;
         }
     }
-    // ★★★ 追加ここまで ★★★
 
-    // ★★★ ここからが修正箇所 (怪我人リストアップの強化) ★★★
+    // 故障者リスト
     let injuryReportText = "\n### 参考情報：主な欠場者・怪我人リスト\n";
     let injuriesFound = false;
-
     for (const teamName of [winnerName, loserName]) {
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord || !teamRecord.playerStats) continue;
-
-        // 静的ロスター（283学園用）と、直前のロスターを取得
         const staticRoster = TEAM_ROSTER_MASTER[teamName]; 
-        const fullRoster = teamRecord.roster || []; 
-
-        // チェック対象の選手リストを作成（静的ロスターがいればそれを優先、なければ履歴から）
         let checkList = [];
         if (staticRoster) {
             checkList = staticRoster.map(p => p.name);
         } else if (teamRecord.playerStats.batting) {
             checkList = Object.keys(teamRecord.playerStats.batting);
         }
-
         let injuredPlayers = []; 
-
-        // 全リストを走査して、怪我フラグが立っている選手を探す
         checkList.forEach(playerName => {
-            // 打撃・投手どちらかのレコードに怪我フラグがあるか
             const bFlag = teamRecord.playerStats.batting?.[playerName]?.narrative_flag;
             const pFlag = teamRecord.playerStats.pitching?.[playerName]?.narrative_flag;
             const flag = (bFlag === 'injured' || bFlag === 'sick' || bFlag === 'minor_injury') ? bFlag :
                          (pFlag === 'injured' || pFlag === 'sick' || pFlag === 'minor_injury') ? pFlag : null;
-
             if (flag) {
-                // この試合に出場したかチェック
                 const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
                 const playedBatting = dbMatch.details?.batting?.[teamKey]?.some(p => p.name === playerName);
                 const playedPitching = dbMatch.details?.pitching?.[teamKey]?.some(p => p.name === playerName);
                 const isAbsent = !playedBatting && !playedPitching;
-
-                // 重要度を判定
                 let importance = 'Hikae';
                 const staticData = staticRoster?.find(p => p.name === playerName);
-                
-                // 1. 静的データによる判定 (背番号1、主将、捕手)
                 if (staticData && (staticData.number == 1 || staticData.isCaptain || staticData.position.includes('捕'))) {
                     importance = 'Shuryoku_Static';
-                }
-                // 2. 成績データによる判定 (打率4割超, 防御率1点台)
-                else {
+                } else {
                      const tourneyStats = calculateCurrentTournamentStats(
                         teamRecord.playerStats.batting?.[playerName]?.gamelogs, 
                         teamRecord.playerStats.pitching?.[playerName]?.gamelogs, 
@@ -16915,40 +17000,28 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                         importance = 'Regular_Dynamic';
                     }
                 }
-
-                injuredPlayers.push({ 
-                    name: playerName, 
-                    flag: flag, 
-                    importance: importance,
-                    isAbsent: isAbsent // 欠場したかどうかのフラグ
-                });
+                injuredPlayers.push({ name: playerName, flag: flag, importance: importance, isAbsent: isAbsent });
             }
         });
-
-        // テキスト生成
         if (injuredPlayers.length > 0) {
             const playerStates = injuredPlayers.map(p => {
                 let importanceLabel = '控え';
                 if (p.importance.startsWith('Shuryoku')) importanceLabel = '主力';
                 else if (p.importance.startsWith('Regular')) importanceLabel = 'レギュラー';
-                
                 let flagIcon = '🩹(軽傷)'; 
                 if (p.flag === 'injured') flagIcon = '🏥(故障)';
                 if (p.flag === 'sick') flagIcon = '😷(体調不良)';
-                
                 const status = p.isAbsent ? "**欠場**" : "強行出場";
                 return `${p.name} ${flagIcon} [${importanceLabel}] -> ${status}`;
             });
-
             injuryReportText += `- **${teamName}**: ${playerStates.join(', ')}\n`;
             injuriesFound = true;
         }
     }
-
     if (!injuriesFound) {
         injuryReportText += "特筆すべき故障者・欠場者は記録されていません。\n";
     }
-    // ★★★ 修正ここまで ★★★
+
     const context = {
         winnerName,
         loserName,
@@ -16978,16 +17051,16 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
         pitcherGamelogInfo: pitcherGamelogInfo,
         batterGamelogInfo: batterGamelogInfo,
         injuryReport: injuryReportText,
-        prefecturalStatsText: prefecturalStatsText // ★ 修正されたテキスト
+        prefecturalStatsText: prefecturalStatsText
     };
     return context;
 }
 
 /**
- * [新ロジック] 前試合とのスタメンを比較し、「復帰」「初スタメン」「スタメン落ち」を分析する
+ * [成績連動・強化版] スタメン変更や打順入れ替えを、過去の成績や直近の活躍を根拠に詳細に分析する
  * @param {string} teamName - 分析対象のチーム名
  * @param {object} dbMatch - 現在の試合オブジェクト
- * @returns {string} - 変更点をまとめた短いテキスト (例: "鈴木がスタメン復帰、田中が今大会初スタメン")
+ * @returns {string} - 変更点をまとめたテキスト
  */
 function analyzeLineupChanges(teamName, dbMatch) {
     const teamKey = dbMatch.team1 === teamName ? 'team1' : 'team2';
@@ -16995,61 +17068,208 @@ function analyzeLineupChanges(teamName, dbMatch) {
         return "比較データなし";
     }
 
-    // 1. 現在のスタメンを取得
-    const currentStarters = dbMatch.details.batting[teamKey]
-        .filter(p => p.name && p.order && !p.order.toString().includes('sub'))
-        .map(p => p.name);
-    
-    // 2. 「これまでの全試合」のスタメン履歴を取得
-    const history = getStarterHistory(teamName, dbMatch.id);
+    // 1. 現在のスタメン情報を取得
+    const currentStartersMap = {};
+    dbMatch.details.batting[teamKey].forEach(p => {
+        if (p.name && p.order && !p.order.toString().includes('sub')) {
+            currentStartersMap[p.name] = parseInt(p.order);
+        }
+    });
+    const currentStartersNames = Object.keys(currentStartersMap);
 
-    // 3. 履歴がない場合 (今大会初戦)
-    if (history.length === 0) {
+    // 2. 過去の全試合データを走査して「文脈」を構築
+    const allMatches = { 
+        ...tournamentState.matches, 
+        ...(tournamentState.autumnData?.allMatches || {}),
+        ...(tournamentState.springData?.allMatches || {}) 
+    };
+
+    const currentRoundSortKey = getRoundSortKey(dbMatch.id);
+    const playerHistory = {};
+    
+    // 過去の試合を抽出
+    const pastMatches = Object.values(allMatches).filter(m => {
+        if (!m.winner || !m.details || !m.details.batting) return false;
+        const tKey = m.team1 === teamName ? 'team1' : (m.team2 === teamName ? 'team2' : null);
+        if (!tKey || !m.details.batting[tKey]) return false;
+        const mSortKey = getRoundSortKey(m.id);
+        return mSortKey < currentRoundSortKey;
+    }).sort((a, b) => getRoundSortKey(a.id) - getRoundSortKey(b.id));
+
+    if (pastMatches.length === 0) {
         return "今大会初スタメン。";
     }
 
-    // 4. 履歴から「直前の試合のスタメン」と「過去に一度でもスタメンだったか」のリストを作成
-    const lastGameStarters = new Set(history[history.length - 1].starters);
-    const allPastStarters = new Set(history.flatMap(game => game.starters));
+    // 履歴データの蓄積
+    pastMatches.forEach((m, index) => {
+        const tKey = m.team1 === teamName ? 'team1' : 'team2';
+        const isLastMatch = (index === pastMatches.length - 1);
+        
+        m.details.batting[tKey].forEach(p => {
+            if (p.name && p.order && !p.order.toString().includes('sub')) {
+                const ord = parseInt(p.order);
+                if (!playerHistory[p.name]) {
+                    playerHistory[p.name] = { orderCounts: {}, lastOrder: null, totalStarts: 0 };
+                }
+                playerHistory[p.name].orderCounts[ord] = (playerHistory[p.name].orderCounts[ord] || 0) + 1;
+                playerHistory[p.name].totalStarts++;
+                if (isLastMatch) playerHistory[p.name].lastOrder = ord;
+            }
+        });
+    });
 
-    const changes = [];
+    // --- 3. 分析と文章生成 ---
+    const topics = [];
 
-    // 5. 現在のスタメンを分析
-    currentStarters.forEach(playerName => {
-        if (!lastGameStarters.has(playerName)) {
-            // 直前の試合にいなかった
-            if (allPastStarters.has(playerName)) {
-                // ...でも過去にはスタメンだった → 復帰
-                changes.push(`${playerName}がスタメン復帰`);
+    // ヘルパー: 最多打順を取得
+    const getMainOrder = (name) => {
+        const history = playerHistory[name];
+        if (!history) return null;
+        let mainOrd = null, maxCount = -1;
+        for (const [ord, count] of Object.entries(history.orderCounts)) {
+            if (count > maxCount) { maxCount = count; mainOrd = parseInt(ord); }
+        }
+        return { order: mainOrd, count: maxCount, total: history.totalStarts };
+    };
+
+    // A. スタメン「入り」「落ち」
+    const lastMatchStarters = Object.keys(playerHistory).filter(name => playerHistory[name].lastOrder !== null);
+    
+    currentStartersNames.forEach(name => {
+        if (!playerHistory[name] || playerHistory[name].lastOrder === null) {
+            // 復帰・初スタメン
+            const narrative = getPlayerPreMatchNarrative(name, teamName, dbMatch.id);
+            if (playerHistory[name] && playerHistory[name].totalStarts > 0) {
+                topics.push(`${narrative}${name}がスタメン復帰`);
             } else {
-                // ...かつ過去にも一度もスタメンでない → 今大会初
-                changes.push(`${playerName}が今大会初スタメン`);
+                topics.push(`${name}が今大会初スタメン`);
             }
         }
     });
 
-    // 6. 直前のスタメンを分析
-    lastGameStarters.forEach(playerName => {
-        if (!currentStarters.includes(playerName)) {
-            // 直前の試合にいたのに、現在はいない → スタメン落ち
-            changes.push(`${playerName}がスタメン落ち`);
+    lastMatchStarters.forEach(name => {
+        if (!currentStartersMap[name]) {
+            // スタメン落ち
+            const narrative = getPlayerPreMatchNarrative(name, teamName, dbMatch.id, true); // true=不振強調
+            topics.push(`${narrative}${name}がスタメン外れる`);
         }
     });
 
-    if (changes.length === 0) {
-        return "前試合からスタメン変更なし。";
-    }
-    
-    // 変更点を「復帰」→「初スタメン」→「落ち」の順に並べ替えて分かりやすくする
-    changes.sort((a, b) => {
-        if (a.includes('復帰')) return -1;
-        if (b.includes('復帰')) return 1;
-        if (a.includes('初スタメン')) return -1;
-        if (b.includes('初スタメン')) return 1;
-        return 0;
+    // B. 打順変更（コンバート）
+    currentStartersNames.forEach(name => {
+        const currentOrd = currentStartersMap[name];
+        const history = playerHistory[name];
+        
+        if (history && history.lastOrder !== null) {
+            const prevOrd = history.lastOrder;
+            const main = getMainOrder(name);
+            const mainOrd = main.order;
+
+            if (currentOrd !== prevOrd) {
+                // 成績に基づく枕詞を取得
+                // 昇格ならポジティブ、降格ならネガティブな情報を優先
+                const isPromotion = (currentOrd < prevOrd) || (currentOrd === 4);
+                const narrative = getPlayerPreMatchNarrative(name, teamName, dbMatch.id, !isPromotion);
+
+                if (prevOrd === 4 && currentOrd !== 4) {
+                    topics.push(`${narrative}4番だった${name}を${currentOrd}番に配置転換`);
+                } else if (prevOrd !== 4 && currentOrd === 4) {
+                    topics.push(`${narrative}${name}を新4番に抜擢`);
+                } else if (currentOrd === 1 && mainOrd >= 3) {
+                    topics.push(`${narrative}中軸の${name}を1番に置く攻撃的オーダー`);
+                } else if (prevOrd >= 6 && currentOrd <= 5) {
+                    topics.push(`${narrative}${name}を${currentOrd}番に昇格`);
+                } else if (prevOrd <= 5 && currentOrd >= 6) {
+                    topics.push(`${narrative}${name}を${currentOrd}番に下げるテコ入れ`);
+                } else {
+                    topics.push(`${narrative}${name}(${prevOrd}→${currentOrd}番)`);
+                }
+            }
+        }
     });
 
-    return `主な変更点: ${changes.join('、')}。`;
+    if (topics.length === 0) return "不動のオーダー。";
+
+    // 優先度順にソート（4番、抜擢、好調な選手を先に）
+    const priorityKeywords = ['4番', '抜擢', '昇格', '攻撃的', '打率', '本塁打', '復帰'];
+    topics.sort((a, b) => {
+        const scoreA = priorityKeywords.some(k => a.includes(k)) ? 1 : 0;
+        const scoreB = priorityKeywords.some(k => b.includes(k)) ? 1 : 0;
+        return scoreB - scoreA;
+    });
+
+    if (topics.length >= 5) {
+        return `打順を大幅に組み替え。${topics.slice(0, 3).join('、')}など。`;
+    }
+    return `主な変更点: ${topics.join('、')}。`;
+}
+
+/**
+ * [NEW] 選手の試合前までの成績を集計し、打順変更の理由となりそうな「語り（ナラティブ）」を生成する
+ * @param {string} playerName - 選手名
+ * @param {string} teamName - チーム名
+ * @param {string} currentMatchId - 現在の試合ID（これ以前の成績を見る）
+ * @param {boolean} focusOnNegative - 不振情報を優先するかどうか（降格時など）
+ * @returns {string} - 「今大会打率.450の」「前戦2発の」といった枕詞
+ */
+function getPlayerPreMatchNarrative(playerName, teamName, currentMatchId, focusOnNegative = false) {
+    const teamRecord = tournamentState.teamRecords[teamName];
+    if (!teamRecord || !teamRecord.playerStats || !teamRecord.playerStats.batting[playerName]) {
+        return "";
+    }
+
+    const pStats = teamRecord.playerStats.batting[playerName];
+    if (!pStats.gamelogs || pStats.gamelogs.length === 0) return "";
+
+    // 現在の試合より前のログのみ抽出
+    const currentRoundSortKey = getRoundSortKey(currentMatchId);
+    const validLogs = pStats.gamelogs.filter(log => {
+        return getRoundSortKey(log.matchId) < currentRoundSortKey;
+    }).sort((a, b) => getRoundSortKey(b.matchId) - getRoundSortKey(a.matchId)); // 新しい順
+
+    if (validLogs.length === 0) return "";
+
+    // 集計
+    let ab = 0, h = 0, hr = 0, rbi = 0;
+    validLogs.forEach(log => {
+        ab += log.stats.ab || 0;
+        h += log.stats.h || 0;
+        hr += log.stats.hr || 0;
+        rbi += log.stats.rbi || 0;
+    });
+
+    const avg = ab > 0 ? h / ab : 0;
+    const lastGame = validLogs[0]; // 直近の試合
+    const lastStats = lastGame.stats || {};
+
+    // --- 文章生成ロジック ---
+    
+    // 1. 直近のインパクト絶大（前戦HRなど）
+    if (!focusOnNegative) {
+        if (lastStats.hr >= 2) return `前戦${lastGame.round}で2発を放った`;
+        if (lastStats.hr >= 1) return `前戦で本塁打を放った`;
+        if (lastStats.h >= 3) return `前戦${lastStats.h}安打と当たっている`;
+        if (lastStats.rbi >= 3) return `前戦${lastStats.rbi}打点を挙げた`;
+    }
+
+    // 2. 大会通算成績が凄まじい
+    if (!focusOnNegative) {
+        if (hr >= 2) return `今大会${hr}本塁打${rbi > 5 ? `・${rbi}打点` : ''}の`;
+        if (avg >= 0.500 && ab >= 5) return `今大会打率${avg.toFixed(3).substring(1)}と絶好調の`;
+        if (avg >= 0.400 && ab >= 5) return `打率4割超えの`;
+        if (rbi >= 5) return `今大会${rbi}打点の勝負強さを持つ`;
+        if (pStats.sb >= 3) return `今大会${pStats.sb}盗塁と足の使える`;
+    }
+
+    // 3. 不振（降格・スタメン落ち用）
+    if (focusOnNegative) {
+        if (ab >= 5 && avg <= 0.100) return `今大会打率${avg.toFixed(3).substring(1)}と不振の`;
+        if (ab >= 10 && h === 0) return `今大会ノーヒットの`;
+        if (lastStats.ab >= 3 && lastStats.h === 0) return `前戦無安打に終わった`;
+    }
+
+    // 4. 特になし
+    return "";
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
 /**
@@ -21564,6 +21784,232 @@ function translateResult(res, playerInfo, eventType = '') {
 };
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
+// ▼▼▼ 【新規追加】作戦ボード (打順入れ替え) 機能 ▼▼▼
+
+// ▼▼▼ 【改良版】作戦ボード (打順入れ替え) 機能 ▼▼▼
+
+let editingLineup = { starters: [], bench: [], teamKey: null, matchId: null };
+let selectedPlayerIndex = null; // 選択中の選手のインデックス
+
+// 作戦ボードを開く
+function openLineupManager(matchId, teamKey) {
+    const match = findMatchById(matchId);
+    if (!match || !match.details || !match.details.batting || !match.details.batting[teamKey]) {
+        alert("データが見つかりません。一度詳細画面を開いてください。");
+        return;
+    }
+
+    const currentBatting = match.details.batting[teamKey];
+    const teamName = match[teamKey];
+    const teamRecord = tournamentState.teamRecords[teamName];
+
+    editingLineup.matchId = matchId;
+    editingLineup.teamKey = teamKey;
+    editingLineup.starters = [];
+    editingLineup.bench = [];
+    selectedPlayerIndex = null;
+
+    // ロスターマスタを取得
+    let fullRoster = [];
+    if (TEAM_ROSTER_MASTER[teamName]) {
+        fullRoster = JSON.parse(JSON.stringify(TEAM_ROSTER_MASTER[teamName]));
+    } else if (teamRecord && teamRecord.roster) {
+        fullRoster = JSON.parse(JSON.stringify(teamRecord.roster));
+    }
+
+    // 成績取得ヘルパー
+    const getStats = (pName) => {
+        if (!teamRecord || !teamRecord.playerStats || !teamRecord.playerStats.batting || !teamRecord.playerStats.batting[pName]) {
+            return { avg: ".---", hr: 0, rbi: 0, ops: ".---", condition: "" };
+        }
+        const s = teamRecord.playerStats.batting[pName];
+        const avg = s.ab > 0 ? (s.h / s.ab).toFixed(3) : ".000";
+        const ops = calculateOps(s);
+        
+        // 調子アイコンの取得
+        let cond = "";
+        if (s.narrative_flag) cond = getPlayerConditionIcon(s.narrative_flag);
+        else if (teamRecord.playerStats.pitching?.[pName]?.narrative_flag) {
+            cond = getPlayerConditionIcon(teamRecord.playerStats.pitching[pName].narrative_flag);
+        }
+        
+        return { avg, hr: s.hr || 0, rbi: s.rbi || 0, ops, condition: cond };
+    };
+
+    // 1. 現在のスタメン (1-9番) を抽出
+    for (let i = 1; i <= 9; i++) {
+        const currentData = currentBatting.find(p => p.order == i);
+        let playerObj = null;
+
+        if (currentData && currentData.name) {
+            playerObj = fullRoster.find(p => p.name === currentData.name);
+            if (!playerObj) playerObj = { ...currentData, grade: '?', throwBat: '?' };
+        }
+
+        if (!playerObj) playerObj = { name: '---', pos: '?', number: '', empty: true };
+        
+        // ★ 成績データを付与
+        playerObj.stats = getStats(playerObj.name);
+        
+        editingLineup.starters.push(playerObj);
+    }
+
+    // 2. ベンチ入りメンバーを抽出
+    fullRoster.forEach(p => {
+        const isStarter = editingLineup.starters.some(s => s.name === p.name);
+        if (!isStarter) {
+            const pClone = { ...p }; // コピーを作成
+            pClone.stats = getStats(p.name); // ★ 成績データを付与
+            editingLineup.bench.push(pClone);
+        }
+    });
+
+    renderLineupBoard();
+    document.getElementById('lineup-manager-modal').classList.remove('hidden');
+    document.getElementById('lineup-manager-modal').classList.add('flex');
+}
+
+// ボードを描画する
+function renderLineupBoard() {
+    const startersContainer = document.getElementById('lineup-starters-container');
+    const benchContainer = document.getElementById('lineup-bench-container');
+    startersContainer.innerHTML = '';
+    benchContainer.innerHTML = '';
+
+    editingLineup.starters.forEach((p, index) => {
+        const card = createPlayerCard(p, index, true);
+        startersContainer.appendChild(card);
+    });
+
+    editingLineup.bench.forEach((p, index) => {
+        const globalIndex = 9 + index;
+        const card = createPlayerCard(p, globalIndex, false);
+        benchContainer.appendChild(card);
+    });
+}
+
+// 選手カード要素を作成 (★成績表示を追加)
+function createPlayerCard(p, index, isStarter) {
+    const div = document.createElement('div');
+    div.className = `lineup-card ${selectedPlayerIndex === index ? 'selected' : ''}`;
+    div.dataset.index = index;
+    
+    let posClass = 'bg-gray-600';
+    if (p.pos === '投') posClass = 'pos-P';
+    else if (p.pos === '捕') posClass = 'pos-C';
+    else if (['一','二','三','遊'].includes(p.pos)) posClass = 'pos-IF';
+    else if (['左','中','右','外'].includes(p.pos)) posClass = 'pos-OF';
+    
+    // 成績HTMLの生成
+    const stats = p.stats || { avg: ".---", hr: 0, rbi: 0, ops: ".---", condition: "" };
+    
+    // 打率によって色を変える
+    const avgVal = parseFloat(stats.avg);
+    const avgClass = avgVal >= 0.400 ? 'text-orange-400 font-bold' : (avgVal >= 0.300 ? 'text-yellow-300' : 'text-gray-400');
+
+    const statsHtml = p.empty ? '' : `
+        <div class="text-xs mt-0.5 flex space-x-2 items-center">
+            <span class="${avgClass}">率${stats.avg}</span>
+            <span class="text-gray-300">本${stats.hr}</span>
+            <span class="text-gray-300">点${stats.rbi}</span>
+            <span class="text-blue-300">OPS${stats.ops}</span>
+        </div>
+    `;
+
+    div.innerHTML = `
+        ${isStarter ? `<div class="lineup-order-num">${index + 1}</div>` : ''}
+        <div class="lineup-pos-badge ${posClass}">${p.pos || '?'}</div>
+        
+        <div style="flex-grow: 1; min-width: 0;">
+            <div class="lineup-name flex items-center">
+                <span class="truncate">${p.name}</span>
+                <span class="text-xs font-normal text-gray-500 ml-1">#${p.number}</span>
+                <span class="ml-2">${stats.condition}</span>
+            </div>
+            ${statsHtml}
+        </div>
+        
+        <div class="lineup-stat text-right text-xs text-gray-500 ml-2">
+            <div>${p.throwBat || ''}</div>
+            <div>${p.grade ? p.grade + '年' : ''}</div>
+        </div>
+    `;
+
+    div.onclick = () => handlePlayerClick(index);
+    return div;
+}
+
+// クリック時の処理
+function handlePlayerClick(index) {
+    if (selectedPlayerIndex === null) {
+        selectedPlayerIndex = index;
+        renderLineupBoard();
+    } else if (selectedPlayerIndex === index) {
+        selectedPlayerIndex = null;
+        renderLineupBoard();
+    } else {
+        swapPlayers(selectedPlayerIndex, index);
+        selectedPlayerIndex = null;
+        renderLineupBoard();
+    }
+}
+
+// 選手を入れ替えるロジック
+function swapPlayers(idx1, idx2) {
+    const getListAndLocalIdx = (idx) => {
+        if (idx < 9) return { list: editingLineup.starters, localIdx: idx };
+        return { list: editingLineup.bench, localIdx: idx - 9 };
+    };
+
+    const obj1 = getListAndLocalIdx(idx1);
+    const obj2 = getListAndLocalIdx(idx2);
+
+    const temp = obj1.list[obj1.localIdx];
+    obj1.list[obj1.localIdx] = obj2.list[obj2.localIdx];
+    obj2.list[obj2.localIdx] = temp;
+}
+
+// 決定ボタン：変更を詳細入力画面に反映する
+function applyLineupChanges() {
+    const { matchId, teamKey } = editingLineup;
+    const match = findMatchById(matchId);
+    if (!match) return;
+
+    const targetArray = match.details.batting[teamKey];
+    
+    // スタメン配列を更新（既存のorderに合わせて中身を書き換え）
+    editingLineup.starters.forEach((p, i) => {
+        const order = (i + 1).toString();
+        let targetRow = targetArray.find(row => row.order == order);
+        
+        if (!targetRow) {
+            targetRow = { order: order, results: [], sub_type: null };
+            targetArray.push(targetRow);
+        }
+
+        targetRow.name = p.name;
+        targetRow.number = p.number;
+        targetRow.pos = p.pos;
+        targetRow.throwBat = p.throwBat;
+    });
+
+    saveState();
+    
+    // モーダルを閉じて詳細画面をリロード
+    document.getElementById('lineup-manager-modal').classList.add('hidden');
+    document.getElementById('lineup-manager-modal').classList.remove('flex');
+    openDetailsModal(matchId); 
+    
+    // 少し遅れて通知（リロードと重ならないように）
+    setTimeout(() => alert("オーダーを変更しました。"), 100);
+}
+
+// イベントリスナー
+document.getElementById('lineup-manager-close-btn').onclick = () => {
+    document.getElementById('lineup-manager-modal').classList.add('hidden');
+    document.getElementById('lineup-manager-modal').classList.remove('flex');
+};
+document.getElementById('lineup-manager-save-btn').onclick = applyLineupChanges;
 
 /**
  * [修正・完全版] 試合の詳細データから「事実オブジェクトの配列」と活躍選手リストを返す
@@ -22779,32 +23225,44 @@ function renderOptimalLineupModal(teamName, lineup) {
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
-// ▼▼▼ この関数をまるごと挿入 ▼▼▼
 /**
- * [NEW HELPER] Finds all mentioned players and formats their full gamelogs for AI prompts.
- * @param {Set<string>} mentionedTeams - A Set of team names mentioned.
- * @param {string} conversationText - The text to scan for player names.
- * @returns {string} - A formatted string block of all found gamelogs.
+ * [NEW HELPER] 会話の中で言及された選手のGamelogを収集・整形する
+ * (★登板間隔の計算を修正した最終版)
+ * @param {Set<string>} mentionedTeams - 言及されたチーム名のセット
+ * @param {string} conversationText - 会話テキスト
+ * @param {string|null} referenceDate - 基準となる日付 (nullの場合は最終試合の日付を使用)
+ * @returns {string} - 整形されたGamelogテキスト
  */
-function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
+function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText, referenceDate = null) {
     let logInfo = "";
     let relevantLogsFound = false;
     
-    // Helper to parse date (already exists, but let's re-define for safety/scoping if needed, or just ensure it's available)
-    const parseDate = (dateStr) => {
-        if (!dateStr || !dateStr.includes('/')) return null;
-        const [month, day] = dateStr.split('/').map(Number);
-        const year = tournamentState.tournamentYear + (month <= 3 ? 1 : 0);
-        return new Date(year, month - 1, day);
-    };
+    // 基準日の決定: 引数があればそれ、なければトーナメントの最新試合の日付
+    let todayStr = referenceDate;
+    if (!todayStr) {
+        const allMatches = Object.values(tournamentState.matches);
+        // 実施済みの最後の試合を探す
+        for (let i = allMatches.length - 1; i >= 0; i--) {
+            if (allMatches[i].winner && allMatches[i].schedule?.date) {
+                todayStr = allMatches[i].schedule.date;
+                break;
+            }
+        }
+        if (!todayStr) todayStr = "7/25"; // 完全なフォールバック
+    }
 
-    const today = parseDate(tournamentState.matches['F-R1-M1']?.schedule?.date || "7/25"); // Use a fallback "today"
+    // 日付ソート用ヘルパー
+    const parseForSort = (dStr) => {
+        if(!dStr || !dStr.includes('/')) return 0;
+        const [m, d] = dStr.split('/').map(Number);
+        return m * 100 + d;
+    };
 
     mentionedTeams.forEach(teamName => {
         const teamRecord = tournamentState.teamRecords[teamName];
         if (!teamRecord || !teamRecord.playerStats) return;
 
-        // 1. Check Batting Gamelogs
+        // 1. 打者ログ
         const battingStats = teamRecord.playerStats.batting;
         if (battingStats) {
             for (const playerName in battingStats) {
@@ -22815,7 +23273,7 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
                         relevantLogsFound = true;
                         logInfo += `- ${playerName} (${teamName}, 打者):\n`;
                         
-                        bStats.gamelogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        bStats.gamelogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
                         
                         bStats.gamelogs.forEach(log => {
                             const dateInfo = log.date || '日付不明';
@@ -22834,7 +23292,7 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
             }
         }
 
-        // 2. Check Pitching Gamelogs
+        // 2. 投手ログ (★ここを修正)
         const pitchingStats = teamRecord.playerStats.pitching;
         if (pitchingStats) {
             for (const playerName in pitchingStats) {
@@ -22845,22 +23303,16 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
                         relevantLogsFound = true;
                         logInfo += `- ${playerName} (${teamName}, 投手):\n`;
 
-                        pStats.gamelogs.sort((a, b) => (parseDate(a.date) || 0) - (parseDate(b.date) || 0));
+                        pStats.gamelogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
 
                         pStats.gamelogs.forEach(log => {
-                            let dateInfo = log.date || '日付不明';
-                            if (today) {
-                                const logDate = parseDate(log.date);
-                                if (logDate) {
-                                    const diffDays = Math.ceil(Math.abs(today - logDate) / (1000 * 60 * 60 * 24));
-                                    if (diffDays === 1) dateInfo = `${log.date} (連投)`;
-                                    else if (diffDays === 2) dateInfo = `${log.date} (中1日)`;
-                                    else if (diffDays > 0) dateInfo = `${log.date} (中${diffDays - 1}日)`;
-                                }
-                            }
+                            // ★ ここで新ヘルパー関数を使用
+                            const intervalInfo = getRestDaysString(todayStr, log.date, tournamentState.tournamentYear);
+                            const dateInfo = log.date + intervalInfo;
+
                             const opponentRank = log.opponentRank || 'E';
                             const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
-                            pitcherGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
+                            logInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
                         });
                     }
                 }
@@ -22873,7 +23325,6 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText) {
     }
     return logInfo;
 }
-// ▲▲▲ 挿入ここまで ▲▲▲
 
 // ▼▼▼ この関数をまるごと追加 ▼▼▼
 /**
@@ -26141,6 +26592,13 @@ document.body.addEventListener('click', async (e) => {
         await processMatchWin(matchId, winnerName);
     }
 
+// --- 作戦ボードを開くボタン ---
+    else if (e.target.closest('.open-lineup-manager-btn')) {
+        e.preventDefault();
+        const btn = e.target.closest('.open-lineup-manager-btn');
+        openLineupManager(btn.dataset.matchId, btn.dataset.teamKey);
+    }
+
     // --- 「勢力図をアニメーションで見る」ボタン ---
     if (e.target.matches('.view-analysis-btn')) {
         document.getElementById('analysis-modal').classList.remove('hidden');
@@ -27922,7 +28380,7 @@ document.getElementById('settings-modal-close-btn').addEventListener('click', ()
         // 4. 選手個人のGamelog (今大会の成績履歴)
         // (試合前なので、スキャン対象はチーム名だけ。AIが文中の選手名を読み取る)
         const mentionedTeams = new Set([teamName]);
-        const playerGamelogs = formatPlayerGamelogsForPrompt(mentionedTeams, teamName);
+        const playerGamelogs = formatPlayerGamelogsForPrompt(mentionedTeams, teamName, match?.schedule?.date);
 
         // 5. 試合情報 (球場、因縁)
         const scheduleInfo = match?.schedule 
@@ -30034,6 +30492,44 @@ function updatePlayerStatsFromDetails(match) {
 <div id="virtual-card-overlay" class="virtual-card-overlay">
     <div id="virtual-card" class="virtual-card">
         </div>
+</div>
+
+<div id="lineup-manager-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden items-center justify-center z-[200] font-sans">
+    <div class="bg-slate-800 w-full max-w-4xl h-[90vh] overflow-y-auto rounded-xl shadow-2xl flex flex-col border border-slate-600">
+        <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 text-white sticky top-0 z-10">
+            <div>
+                <h3 class="text-xl font-bold flex items-center text-blue-400">
+                    <span class="text-2xl mr-2">⚔️</span> 作戦ボード：スタメン編成
+                </h3>
+                <p class="text-xs text-gray-400 mt-1">選手をクリックして選択し、入れ替え先をクリックしてください。</p>
+            </div>
+            <button id="lineup-manager-close-btn" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+        </div>
+        
+        <div class="flex-grow p-4 flex flex-col md:flex-row gap-4 overflow-hidden">
+            
+            <div class="w-full md:w-1/2 flex flex-col">
+                <h4 class="text-white font-bold mb-2 border-b border-blue-500 pb-1 flex justify-between">
+                    <span>スタメン (Starting Lineup)</span>
+                    <button id="reset-lineup-btn" class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-0.5 rounded">元に戻す</button>
+                </h4>
+                <div id="lineup-starters-container" class="flex-grow overflow-y-auto space-y-1 pr-1">
+                    </div>
+            </div>
+
+            <div class="w-full md:w-1/2 flex flex-col">
+                <h4 class="text-white font-bold mb-2 border-b border-gray-500 pb-1">ベンチ (Bench)</h4>
+                <div id="lineup-bench-container" class="flex-grow overflow-y-auto space-y-1 pr-1 bg-slate-900/50 p-2 rounded">
+                    </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-700 bg-slate-900 text-center">
+            <button id="lineup-manager-save-btn" class="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-12 rounded-full hover:from-blue-500 hover:to-blue-400 shadow-lg transform transition hover:scale-105">
+                このオーダーで決定
+            </button>
+        </div>
+    </div>
 </div>
 
     </body>
