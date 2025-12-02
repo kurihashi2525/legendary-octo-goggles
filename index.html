@@ -25313,14 +25313,21 @@ function addLegendaryTeamsData() {
 }
 
 /**
- * [NEW] 甲子園開幕特別企画：大会注目選手10選の記事を生成する
- * (予選成績に基づき、プレイヤー選手と全国の怪物をランキング化)
+ * [修正版] 甲子園開幕特別企画：大会注目選手10選の記事を生成する
+ * (★参加チームのみを対象にするようフィルタリングを追加)
  */
 async function generateTopPlayersArticle() {
     const allPlayers = [];
 
-    // 1. 全チームをスキャンして選手データを収集
+    // ★ 1. 現在の大会に参加しているチームのリストを取得
+    // (甲子園モードなら、tournamentState.teams には出場64校が入っているはず)
+    const participatingTeams = new Set(tournamentState.teams);
+
+    // 2. 全チーム記録をスキャンするが、参加チームのみ処理する
     Object.keys(tournamentState.teamRecords).forEach(teamName => {
+        // ★ ここでフィルタリング：不参加チームとBYEは除外
+        if (!participatingTeams.has(teamName) || teamName === '(BYE)') return;
+
         const record = tournamentState.teamRecords[teamName];
         if (!record.playerStats) return;
 
@@ -25359,10 +25366,10 @@ async function generateTopPlayersArticle() {
         }
     });
 
-    // 2. スコア順にソートしてトップ10を抽出
+    // 3. スコア順にソートしてトップ10を抽出
     const top10 = allPlayers.sort((a, b) => b.value - a.value).slice(0, 10);
 
-    // 3. 記事生成
+    // 4. 記事生成
     if (top10.length === 0) return null;
 
     const rankingText = top10.map((p, i) => 
