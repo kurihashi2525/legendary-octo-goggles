@@ -2503,57 +2503,77 @@
 #trend-notification.show { transform: translateX(0); }
 /* ▲▲▲ 追加ここまで ▲▲▲ */
 
-/* 作戦ボード用スタイル */
+/* 作戦ボード用スタイル (スマホ対応版) */
 .lineup-card {
     display: flex;
     align-items: center;
     background-color: #1e293b; /* slate-800 */
     border: 1px solid #334155; /* slate-700 */
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 12px 10px; /* タップしやすいように広げる */
     color: white;
     cursor: pointer;
     transition: all 0.15s ease;
     user-select: none;
+    margin-bottom: 4px; /* カード間の隙間 */
+    /* スマホ用のアクティブフィードバック */
+    touch-action: manipulation; 
 }
-.lineup-card:hover {
-    background-color: #334155; /* slate-700 */
-    transform: translateX(4px);
+
+.lineup-card:active {
+    transform: scale(0.98);
+    background-color: #334155;
 }
+
 .lineup-card.selected {
     background-color: #2563eb; /* blue-600 */
-    border-color: #60a5fa; /* blue-400 */
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    border: 2px solid #fbbf24; /* amber-400 (黄色い枠線で強調) */
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.8);
     transform: scale(1.02);
     z-index: 10;
+    position: relative; /* 重なり順を制御 */
 }
+
+/* 選択された状態のとき、番号を光らせる */
+.lineup-card.selected .lineup-order-num {
+    color: #fbbf24;
+    text-shadow: 0 0 5px #fbbf24;
+}
+
 .lineup-order-num {
     font-family: 'Impact', sans-serif;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     color: #94a3b8; /* slate-400 */
-    width: 30px;
+    width: 35px;
     text-align: center;
-    margin-right: 10px;
+    margin-right: 8px;
 }
+
 .lineup-pos-badge {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: bold;
-    padding: 2px 6px;
+    padding: 3px 8px;
     border-radius: 4px;
-    background-color: #475569; /* slate-600 */
+    background-color: #475569;
     color: #e2e8f0;
     margin-right: 10px;
-    min-width: 32px;
+    min-width: 40px;
     text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
+
 .lineup-name {
     font-weight: bold;
     flex-grow: 1;
+    font-size: 1rem; /* 名前を少し大きく */
 }
+
 .lineup-stat {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #94a3b8;
     margin-left: 8px;
+    min-width: 40px;
+    text-align: right;
 }
 /* ポジション別の色 */
 .pos-P { background-color: #be185d; } /* Pink */
@@ -30876,37 +30896,40 @@ function updatePlayerStatsFromDetails(match) {
 </div>
 
 <div id="lineup-manager-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden items-center justify-center z-[200] font-sans">
-    <div class="bg-slate-800 w-full max-w-4xl h-[90vh] overflow-y-auto rounded-xl shadow-2xl flex flex-col border border-slate-600">
-        <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 text-white sticky top-0 z-10">
+    <div class="bg-slate-800 w-full h-full md:h-[90vh] md:max-w-5xl md:rounded-xl shadow-2xl flex flex-col border border-slate-600">
+        
+        <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 text-white sticky top-0 z-10 flex-shrink-0">
             <div>
-                <h3 class="text-xl font-bold flex items-center text-blue-400">
-                    <span class="text-2xl mr-2">⚔️</span> 作戦ボード：スタメン編成
+                <h3 class="text-lg md:text-xl font-bold flex items-center text-blue-400">
+                    <span class="text-xl md:text-2xl mr-2">⚔️</span> スタメン編成
                 </h3>
-                <p class="text-xs text-gray-400 mt-1">選手をクリックして選択し、入れ替え先をクリックしてください。</p>
+                <p class="text-xs text-gray-400 mt-1">選手をタップして選択し、入替先をタップ</p>
             </div>
-            <button id="lineup-manager-close-btn" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            <button id="lineup-manager-close-btn" class="p-2 text-gray-400 hover:text-white text-3xl font-bold leading-none">&times;</button>
         </div>
         
-        <div class="flex-grow p-4 flex flex-col md:flex-row gap-4 overflow-hidden">
+        <div class="flex-grow flex flex-col md:flex-row overflow-hidden">
             
-            <div class="w-full md:w-1/2 flex flex-col">
-                <h4 class="text-white font-bold mb-2 border-b border-blue-500 pb-1 flex justify-between">
-                    <span>スタメン (Starting Lineup)</span>
-                    <button id="reset-lineup-btn" class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-2 py-0.5 rounded">元に戻す</button>
+            <div class="w-full md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-slate-700 basis-1/2 min-h-0">
+                <h4 class="p-3 bg-slate-800/90 text-white font-bold text-sm border-b border-blue-500/50 flex justify-between items-center sticky top-0 z-10 backdrop-blur-sm">
+                    <span class="flex items-center gap-2"><span class="w-2 h-2 bg-blue-500 rounded-full"></span>スタメン (Starting)</span>
+                    <button id="reset-lineup-btn" class="text-xs bg-slate-600 hover:bg-slate-500 text-white px-3 py-1.5 rounded border border-slate-500 transition">元に戻す</button>
                 </h4>
-                <div id="lineup-starters-container" class="flex-grow overflow-y-auto space-y-1 pr-1">
+                <div id="lineup-starters-container" class="flex-grow overflow-y-auto p-3 space-y-1 scrollbar-thin">
                     </div>
             </div>
 
-            <div class="w-full md:w-1/2 flex flex-col">
-                <h4 class="text-white font-bold mb-2 border-b border-gray-500 pb-1">ベンチ (Bench)</h4>
-                <div id="lineup-bench-container" class="flex-grow overflow-y-auto space-y-1 pr-1 bg-slate-900/50 p-2 rounded">
+            <div class="w-full md:w-1/2 flex flex-col basis-1/2 min-h-0 bg-slate-900/30">
+                <h4 class="p-3 bg-slate-800/90 text-white font-bold text-sm border-b border-gray-600 flex items-center sticky top-0 z-10 backdrop-blur-sm">
+                    <span class="w-2 h-2 bg-gray-500 rounded-full mr-2"></span>ベンチ (Bench)
+                </h4>
+                <div id="lineup-bench-container" class="flex-grow overflow-y-auto p-3 space-y-1 scrollbar-thin">
                     </div>
             </div>
         </div>
 
-        <div class="p-4 border-t border-slate-700 bg-slate-900 text-center">
-            <button id="lineup-manager-save-btn" class="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-12 rounded-full hover:from-blue-500 hover:to-blue-400 shadow-lg transform transition hover:scale-105">
+        <div class="p-4 border-t border-slate-700 bg-slate-900 text-center flex-shrink-0 pb-8 md:pb-4">
+            <button id="lineup-manager-save-btn" class="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-3 px-12 rounded-full hover:from-blue-500 hover:to-blue-400 shadow-lg transform transition active:scale-95 text-lg tracking-wider">
                 このオーダーで決定
             </button>
         </div>
