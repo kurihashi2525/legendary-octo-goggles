@@ -16,7 +16,8 @@ exports.handler = async function(event, context) {
   const apiKey = "AIzaSyDJisMT_ddyr-rXw7v972o_n3DsFCI-8N8"; 
 
   // ★★★ 変更点：ここを 2.5 から 2.0 に変更しました ★★★
-  const modelName = "gemini-2.0-flash";
+  // エイリアスではなく、具体的なバージョン名を指定
+const modelName = "gemini-2.0-flash-001";
    
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
