@@ -2333,6 +2333,84 @@
 }
 /* ▲▲▲ 新規追加ここまで ▲▲▲ */
 
+/* ▼▼▼ チーム追跡機能用CSS (新規追加) ▼▼▼ */
+#team-tracker-container {
+    position: fixed;
+    bottom: 50px; /* ニュースティッカーの上 */
+    left: 20px;
+    z-index: 200;
+    width: 260px;
+    transition: all 0.3s ease;
+}
+
+.tracker-bar {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #3b82f6;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    padding: 5px 15px;
+    backdrop-filter: blur(5px);
+}
+
+.tracker-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.tracker-icon {
+    font-size: 16px;
+    margin-right: 8px;
+    color: #3b82f6;
+}
+
+/* 候補リスト */
+#tracker-suggestions {
+    position: absolute;
+    bottom: 110%; /* バーの上に出す */
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+#tracker-suggestions.visible {
+    display: block;
+}
+.tracker-suggestion-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.1s;
+}
+.tracker-suggestion-item:hover {
+    background-color: #eff6ff;
+}
+
+/* チーム発見時のハイライトアニメーション */
+@keyframes targetPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); background-color: #fee2e2; }
+    50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); background-color: #fecaca; }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); background-color: white; }
+}
+
+.team-slot.tracker-highlight {
+    animation: targetPulse 1.5s ease-in-out infinite;
+    z-index: 10;
+    border: 2px solid #ef4444 !important;
+}
+/* ▲▲▲ 追加ここまで ▲▲▲ */
 
 /* ▼▼▼ 学校アーカイブモーダル用CSS ▼▼▼ */
 .archive-header {
@@ -2968,6 +3046,15 @@
     </div>
     <div id="app-container" class="max-w-full mx-auto">
 /div>
+
+<div id="team-tracker-container">
+    <ul id="tracker-suggestions"></ul>
+    <div class="tracker-bar">
+        <span class="tracker-icon">🔍</span>
+        <input type="text" id="tracker-input" class="tracker-input" placeholder="チーム位置を検索..." autocomplete="off">
+        <button id="tracker-clear-btn" class="text-gray-400 hover:text-gray-600 text-xs ml-1 font-bold hidden">✕</button>
+    </div>
+</div>
 
 <div id="news-ticker-container">
     <div class="ticker-label">NEWS</div>
@@ -7140,6 +7227,124 @@ ${finalFeedbackPrompt}
         return null;
     }
 }
+
+// ▼▼▼ チーム追跡機能用ロジック (新規追加) ▼▼▼
+
+/**
+ * チーム追跡機能のセットアップ
+ */
+function setupTeamTracker() {
+    const input = document.getElementById('tracker-input');
+    const suggestions = document.getElementById('tracker-suggestions');
+    const clearBtn = document.getElementById('tracker-clear-btn');
+    
+    if (!input || !suggestions) return;
+
+    // 入力イベント
+    input.addEventListener('input', () => {
+        const query = input.value.trim().toLowerCase();
+        
+        // 検索クエリがない、またはトーナメント表が表示されていない場合は隠す
+        if (!query || document.getElementById('main-bracket-wrapper').classList.contains('hidden')) {
+            suggestions.classList.remove('visible');
+            clearBtn.classList.add('hidden');
+            return;
+        }
+        
+        clearBtn.classList.remove('hidden');
+
+        // トーナメント表内に存在するチームのみを検索対象にする
+        // data-team-name属性を持つ要素を探す
+        const teamElements = Array.from(document.querySelectorAll('#main-bracket-container .team-name'));
+        const teamsInBracket = [...new Set(teamElements.map(el => el.dataset.teamName).filter(name => name && name !== '---' && name !== '(BYE)'))];
+
+        const matches = teamsInBracket.filter(team => {
+            const data = TEAM_DATA[team] || {};
+            return (
+                team.toLowerCase().includes(query) ||
+                (data.name_yomi && data.name_yomi.includes(query))
+            );
+        }).slice(0, 8); // 最大8件表示
+
+        if (matches.length > 0) {
+            suggestions.innerHTML = matches.map(team => `
+                <li class="tracker-suggestion-item" data-team="${team}">
+                    <span class="font-bold text-gray-800">${team}</span>
+                    <span class="text-xs text-gray-400 ml-1">へジャンプ 🚀</span>
+                </li>
+            `).join('');
+            suggestions.classList.add('visible');
+        } else {
+            suggestions.classList.remove('visible');
+        }
+    });
+
+    // 候補クリックイベント
+    suggestions.addEventListener('click', (e) => {
+        const item = e.target.closest('.tracker-suggestion-item');
+        if (item) {
+            const teamName = item.dataset.team;
+            jumpToTeamInBracket(teamName);
+            input.value = teamName; // 入力欄にセット
+            suggestions.classList.remove('visible');
+        }
+    });
+    
+    // クリアボタン
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        suggestions.classList.remove('visible');
+        clearBtn.classList.add('hidden');
+        // ハイライトを消す
+        document.querySelectorAll('.tracker-highlight').forEach(el => el.classList.remove('tracker-highlight'));
+    });
+
+    // Enterキーで一番上の候補へジャンプ
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const firstItem = suggestions.querySelector('.tracker-suggestion-item');
+            if (firstItem) {
+                firstItem.click();
+                input.blur(); // キーボードを閉じる
+            }
+        }
+    });
+}
+
+/**
+ * 指定されたチームの場所にスクロールしてハイライトする
+ */
+function jumpToTeamInBracket(teamName) {
+    // 以前のハイライトを削除
+    document.querySelectorAll('.tracker-highlight').forEach(el => el.classList.remove('tracker-highlight'));
+
+    // トーナメント表内の該当チーム要素を全て探す
+    const targets = Array.from(document.querySelectorAll(`#main-bracket-container .team-name[data-team-name="${teamName}"]`));
+    
+    if (targets.length === 0) {
+        alert(`${teamName} は現在のトーナメント表に見つかりません。`);
+        return;
+    }
+
+    // 最新の試合（最も右側にある要素）を優先してターゲットにする
+    // bracket-half leftなら右端、rightなら左端が最新だが、
+    // 単純にDOM順で後ろの方（勝ち上がり先）をターゲットにするのが自然
+    const targetElement = targets[targets.length - 1].closest('.team-slot');
+
+    if (targetElement) {
+        // 1. スクロール (スムーズに中央へ)
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        
+        // 2. ハイライトクラス付与
+        targetElement.classList.add('tracker-highlight');
+        
+        // 3. 数秒後にハイライトを消す
+        setTimeout(() => {
+            targetElement.classList.remove('tracker-highlight');
+        }, 4000);
+    }
+}
+// ▲▲▲ 追加ここまで ▲▲▲
 
 /**
  * Sets the weather effect for the background.
@@ -26675,6 +26880,7 @@ setupSpeechRecognition();
      */
     async function initializeApp() {
         SoundManager.init();
+setupTeamTracker();
         
         // --- 1. 背景画像のプリロードと適用 ---
         const bgContainer = document.querySelector('.ballpark-background');
