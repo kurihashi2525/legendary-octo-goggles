@@ -1,5 +1,3 @@
-// netlify/functions/generateApiContent.js
-
 exports.handler = async function(event, context) {
   if (!event.body) {
     return { statusCode: 400, body: JSON.stringify({ error: "Request body is empty" }) };
@@ -12,12 +10,14 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON format" }) };
   }
 
-  // ★★★ APIキー（Google AI Studioで取得したもの） ★★★
+  // ★★★ APIキー ★★★
+  // 【推奨】Netlifyの管理画面で "GEMINI_API_KEY" という環境変数を設定し、
+  // 下の行を const apiKey = process.env.GEMINI_API_KEY; に書き換えてください。
   const apiKey = "AIzaSyDJisMT_ddyr-rXw7v972o_n3DsFCI-8N8"; 
 
-  // ★★★ 変更点：現在利用可能な最新モデル「gemini-2.5-flash」を指定 ★★★
-  const modelName = "gemini-2.5-flash";
-  
+  // ★★★ 変更点：ここを 2.5 から 2.0 に変更しました ★★★
+  const modelName = "gemini-2.0-flash";
+   
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   const safetySettings = [
