@@ -20,11 +20,16 @@ exports.handler = async function(event, context) {
     };
   }
 
-  const apiKey = process.env.GOOGLE_API_KEY;
-  // モデルは最新の 2.5-flash を使用 (または 1.5-flash)
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  // ★★★ APIキーを設定しました ★★★
+  const apiKey = "AIzaSyDJisMT_ddyr-rXw7v972o_n3DsFCI-8N8"; 
 
-  // 安全フィルターを無効化
+  // ★★★ モデルを制限の緩い「gemini-1.5-flash」に固定しました ★★★
+  // (1日1500回まで無料で使えます)
+  const modelName = "gemini-1.5-flash";
+  
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  // 安全フィルターを無効化（ゲーム内の表現がブロックされないように）
   const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
