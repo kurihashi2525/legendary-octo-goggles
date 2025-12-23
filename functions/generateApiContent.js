@@ -13,7 +13,7 @@ exports.handler = async function(event, context) {
   // ★★★ APIキー ★★★
   // 【推奨】Netlifyの管理画面で "GEMINI_API_KEY" という環境変数を設定し、
   // 下の行を const apiKey = process.env.GEMINI_API_KEY; に書き換えてください。
-  const apiKey = "AIzaSyDJisMT_ddyr-rXw7v972o_n3DsFCI-8N8"; 
+  const apiKey = process.env.GOOGLE_API_KEY; 
 
   // ★★★ 変更点：ここを 2.5 から 2.0 に変更しました ★★★
   // エイリアスではなく、具体的なバージョン名を指定
