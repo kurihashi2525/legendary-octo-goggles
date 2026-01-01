@@ -18,7 +18,7 @@ exports.handler = async function(event, context) {
   // ★★★ 変更点：ここを 2.5 から 2.0 に変更しました ★★★
   // エイリアスではなく、具体的なバージョン名を指定
 // ★★★ 20回制限ですが、最新で性能が良い 2.5 Flash に戻します ★★★
-const modelName = "gemini-2.5-flash";
+const modelName = "gemini-3-flash-preview";
    
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
