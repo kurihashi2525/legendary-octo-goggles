@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -3166,7 +3167,7 @@
 
         <div id="setup" class="setup-card">
              <div class="w-full">
-                 <h2 class="text-xl font-semibold mb-4 border-b pb-2 setup-header">参加チーム (126チーム)</h2>
+                 <h2 class="text-xl font-semibold mb-4 border-b pb-2 setup-header">夏の参加校（117校）</h2>
                  <textarea id="teams-list" class="w-full h-96 p-3 border border-gray-300 rounded-lg" readonly></textarea>
              </div>
              <div class="mt-8 text-center">
@@ -3846,8 +3847,11 @@
                     <div class="p-4 border rounded-lg bg-yellow-50">
                         <h5 class="font-semibold text-gray-800">夏の大会 (甲子園への道)</h5>
                         <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
-                            <li>3年生にとって最後の大会。64校による一発勝負のトーナメント。</li>
-                            <li>春季大会のベスト8がシード校となります。</li>
+                            <li>3年生にとって最後の大会。現行の実在108校と架空校9校、計117校による一発勝負のトーナメント。</li>
+                            <li>実在校・架空校ともに全校参加し、参加校を抽選で除外することはありません。</li>
+                            <li>春季県大会のベスト16がシード校となります（ベスト4＝Aシード、ベスト8＝Bシード、ベスト16＝Cシード）。</li>
+                            <li>シード16校は4つの大ブロックへ均等に分けられ、互いに早い段階で当たらないよう配置されます。</li>
+                            <li>128枠との差となる11の不戦勝枠は、A・Bシード8校とCシード上位3校へ割り当てられます。</li>
                             <li>優勝校は夏の甲子園に出場したとみなされ、AIがその全国での戦績（例: 全国ベスト8、甲子園初戦敗退など）を自動でシミュレートし、記録します。</li>
                             <li>大会前には組み合わせ抽選会イベントが発生します。</li>
                         </ul>
@@ -3895,7 +3899,7 @@
                             <li>それ以外の全チームは、まず地区予選に参加し、各地区代表枠 (東5, 中5, 西5, 伊豆1) を争います。</li>
                             <li>地区予選を突破した16チームが、県大会1回戦で対戦します。</li>
                             <li>1回戦の勝者8チームが、2回戦で待つシード8チームと対戦します（計16チームによる本戦トーナメント）。</li>
-                            <li>この大会で**ベスト8**以上の成績を収めると、次の**夏の大会のシード権**を獲得できます。
+                            <li>県大会2回戦へ進んだ**ベスト16**の16校が、次の**夏の大会のシード権**を獲得できます。
                                 <div class="mt-2 mb-2 p-2 bg-green-100 rounded text-xs border border-green-300">
                                     <p class="font-semibold mb-1">県大会の仕組み:</p>
                                     {/* Mermaid Diagram Code Block - Requires Mermaid.js library */}
@@ -3909,7 +3913,7 @@ graph TD
             QF --> SF{準決勝 (ベスト4)}
             SF --> F{決勝}
         end
-        QF --▶ |夏のシード権獲得| SumSeed(夏の大会シード権)
+        R2 --▶ |出場16校が夏シード| SumSeed(夏の大会シード権)
     end
 
     subgraph 地区予選
@@ -3920,7 +3924,7 @@ graph TD
     style S fill:#f9f,stroke:#333,stroke-width:2px
     style SumSeed fill:#ccf,stroke:#333,stroke-width:2px
                                     </code></pre>
-                                    <p class="mt-1 text-gray-500">(図の説明) シード校は2回戦から登場。地区予選突破組は1回戦から戦い、勝ち上がるとシード校と対戦。ベスト8以上で夏のシード権獲得。</p>
+                                    <p class="mt-1 text-gray-500">(図の説明) 秋のシード校は春の県大会2回戦から登場。地区予選突破組は1回戦を勝つと2回戦へ進み、その時点のベスト16全校が夏のシード権を獲得。</p>
                                 </div>
                             </li>
                         </ul>
@@ -5231,8 +5235,8 @@ const TEAM_ROSTER_MASTER = {
         info: "地元の選手を中心に構成された、地域密着型の公立校。",
         coach: { name: '山本 浩二', style: '全員野球', experience: 'ベテラン' }
     },
-    "磐田西": {
-        name_yomi: "いわたにし", region: "西部", type: "公立", deviation: 76,
+    "聖愛学園": {
+        name_yomi: "せいあいがくえん", region: "西部", type: "公立", deviation: 176,
         best: "県大会2回戦", last: "初戦敗退",
         info: "粘り強い野球が信条。接戦に持ち込み勝機を伺う。",
         coach: { name: '渡辺 俊介', style: '守備重視', experience: '中堅' }
@@ -5380,6 +5384,36 @@ const TEAM_ROSTER_MASTER = {
         best: "県大会ベスト8", last: "県大会3回戦",
         info: "富士宮市にある私立校。中高一貫の強みを活かし、投打にバランスの取れたチームを編成する。",
         coach: { name: '星野 仙一', style: '投手中心', experience: '名将' }
+    },
+    "小山": {
+        name_yomi: "おやま", region: "東部", type: "公立", deviation: 47,
+        best: "県大会3回戦", last: "初戦敗退",
+        info: "駿東郡小山町の公立校。地元出身選手を中心に、粘り強い守備と全員野球で初戦突破を狙う。",
+        coach: { name: '佐藤 健', style: '全員野球', experience: '中堅' }
+    },
+    "沼津工業": {
+        name_yomi: "ぬまづこうぎょう", region: "東部", type: "公立", deviation: 45,
+        best: "県大会3回戦", last: "初戦敗退",
+        info: "沼津市の工業高校。鍛えた体力と堅実な守備を土台に、接戦へ持ち込む野球を得意とする。",
+        coach: { name: '鈴木 誠', style: '守備重視', experience: '中堅' }
+    },
+    "静岡東": {
+        name_yomi: "しずおかひがし", region: "中部", type: "公立", deviation: 64,
+        best: "県大会ベスト16", last: "県大会2回戦",
+        info: "静岡市の進学校。状況判断を重視した堅実な試合運びと、最後まで崩れない守備力が持ち味。",
+        coach: { name: '高橋 秀樹', style: 'データ野球', experience: '中堅' }
+    },
+    "静岡大成": {
+        name_yomi: "しずおかたいせい", region: "中部", type: "私立", deviation: 44,
+        best: "県大会3回戦", last: "県大会2回戦",
+        info: "静岡市の私立校。機動力と積極的な走塁を武器に、流れをつかんで一気に畳みかける。",
+        coach: { name: '山本 和也', style: '機動力野球', experience: '中堅' }
+    },
+    "磐田西": {
+        name_yomi: "いわたにし", region: "西部", type: "公立", deviation: 46,
+        best: "県大会3回戦", last: "初戦敗退",
+        info: "磐田市の公立校。基本に忠実な守備と粘り強い打撃で、終盤まで食らいつく全員野球を掲げる。",
+        coach: { name: '伊藤 達也', style: '堅実', experience: '中堅' }
     }
 };
 
@@ -9190,11 +9224,108 @@ function processByes(state) {
 }
 // ▲▲▲ 新規追加ここまで ▲▲▲
 
+const SUMMER_SEED_COUNT = 16;
+const OFFICIAL_REAL_SCHOOL_COUNT = 108;
+const CURRENT_SUMMER_SCHOOL_COUNT = 117;
+let preparedInitialSummerTeamPool = null;
+
+// 架空校は夏の参加校調整でも必ず残す。
+const FICTIONAL_TEAM_NAMES = [
+    '初星学園',
+    '浜松特支',
+    '765総合高校',
+    '283学園',
+    '美城学園',
+    '美城学園B',
+    '虎府島総合',
+    '283学園B',
+    '聖愛学園'
+];
+
+/**
+ * 現行の実在108校と架空校9校を、夏の大会へすべて参加させる。
+ */
+function createCurrentSummerTeamPool(seeds = []) {
+    return [...INITIAL_TEAM_POOL];
+}
+
+/**
+ * 夏のシード区分を返す。
+ * 現行の静岡大会方式: 春ベスト4=A、ベスト8=B、ベスト16=C。
+ */
+function getSummerSeedTier(rank) {
+    if (rank <= 4) return 'A';
+    if (rank <= 8) return 'B';
+    return 'C';
+}
+
+function createSummerSeedList(rankedTeams) {
+    return rankedTeams.slice(0, SUMMER_SEED_COUNT).map((team, index) => ({
+        team: team.name,
+        rank: index + 1,
+        tier: getSummerSeedTier(index + 1)
+    }));
+}
+
+function createInitialSummerSeeds() {
+    const initialSeedTeams = [
+        // Aシード
+        '283学園', '常葉菊川', '静岡', '掛川西',
+        // Bシード
+        '三島北', '聖隷クリストファー', '静岡商業', '藤枝明誠',
+        // Cシード
+        '浜松商業', '富士市立', '常葉橘', '浜松開誠館',
+        '聖愛学園', '桐陽', '日大三島', '御殿場西'
+    ];
+    return createSummerSeedList(initialSeedTeams.map(name => ({ name })));
+}
+
+/**
+ * 128枠に117校を収めるとBYEは11枠。
+ * A・Bシード8校を優先し、続くCシード3校までを1回戦免除とする。
+ */
+function getSummerSeedByeTeams(seeds, totalByesNeeded) {
+    return new Set(
+        [...seeds]
+            .sort((a, b) => a.rank - b.rank)
+            .slice(0, Math.min(totalByesNeeded, seeds.length))
+            .map(seed => seed.team)
+    );
+}
+
+/**
+ * 128枠を16の小ブロック（各8枠）に分け、各ブロックへシードを1校ずつ置く。
+ * Aは4つの32校ブロックへ1校ずつ、Bも1校ずつ、Cは2校ずつ配置する。
+ */
+function createSummerSeedPlacements(seeds) {
+    const placements = {};
+    const aPositionByRank = { 1: 0, 2: 64, 3: 96, 4: 32 };
+    seeds.filter(seed => seed.tier === 'A').forEach(seed => {
+        placements[aPositionByRank[seed.rank]] = seed;
+    });
+
+    const bPositions = shuffleArray([16, 48, 80, 112]);
+    shuffleArray(seeds.filter(seed => seed.tier === 'B')).forEach((seed, index) => {
+        placements[bPositions[index]] = seed;
+    });
+
+    const cPositions = shuffleArray([8, 24, 40, 56, 72, 88, 104, 120]);
+    shuffleArray(seeds.filter(seed => seed.tier === 'C')).forEach((seed, index) => {
+        placements[cPositions[index]] = seed;
+    });
+    return placements;
+}
+
 /**
  * 新しいトーナメントを開始するメイン関数
- * (★BYE 16枠固定配置、★R2-R4球場シャッフル に対応した最終版)
+ * (★夏は現行の16校シード制、★BYE固定配置、★R2-R4球場シャッフルに対応)
  */
-async function createNewTournament(isNext = false, nextTournamentType = 'summer', predeterminedTeams = null) {
+async function createNewTournament(
+    isNext = false,
+    nextTournamentType = 'summer',
+    predeterminedTeams = null,
+    participatingTeamPoolOverride = null
+) {
     setupEl.classList.add('hidden');
     tournamentDisplayEl.classList.remove('hidden');
 
@@ -9260,23 +9391,18 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     let teams;
     let seeds = [];
 
-    // (シード校の決定ロジックは変更なし)
+    const isSummerTournament = nextTournamentType === 'summer';
+
+    // 夏は春季県大会ベスト16、その他の大会は従来どおり上位8校を使用
     if (isNext) { 
         const lastTournamentTeams = Object.keys(tournamentState.teamRecords)
             .map(teamName => ({ name: teamName, ...tournamentState.teamRecords[teamName] }))
             .sort((a, b) => a.lastFinish - b.lastFinish); 
-        seeds = lastTournamentTeams.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 })); 
+        seeds = isSummerTournament
+            ? createSummerSeedList(lastTournamentTeams)
+            : lastTournamentTeams.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 }));
     } else { 
-        const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-        const setInitialSeedRank = (teamName) => {
-            if (teamName === '283学園') return 1; if (teamName === '常葉菊川') return 2;
-            if (teamName === '静岡') return 3; if (teamName === '掛川西') return 4;
-            const rank = historicalRanks.find(hr => hr.name === teamName)?.rank || 128;
-            if (rank === 8) return 8; return rank;
-        };
-        const adjustedHistoricalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: setInitialSeedRank(teamName) }));
-        adjustedHistoricalRanks.sort((a, b) => a.rank - b.rank);
-        seeds = adjustedHistoricalRanks.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 }));
+        seeds = isSummerTournament ? createInitialSummerSeeds() : [];
     }
     
     // (組み合わせの決定)
@@ -9285,44 +9411,63 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
     } else {
         const seedTeamsList = seeds.map(s => s.team);
         
-        // ★★★ [NEW] 112校選抜 + 16BYE固定配置ロジック ★★★
-        
-        // 1. 全チーム(112校)からシード(8校)を除く
-        let nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t)); // 104校
+        const participatingTeamPool = isSummerTournament
+            ? (
+                Array.isArray(participatingTeamPoolOverride) &&
+                participatingTeamPoolOverride.length === CURRENT_SUMMER_SCHOOL_COUNT &&
+                seeds.every(seed => participatingTeamPoolOverride.includes(seed.team))
+                    ? [...participatingTeamPoolOverride]
+                    : createCurrentSummerTeamPool(seeds)
+            )
+            : INITIAL_TEAM_POOL;
+
+        // ★★★ 128枠へ参加校とBYEを配置するロジック ★★★
+
+        // 1. 全チームからシード校を除く
+        let nonSeeds = participatingTeamPool.filter(t => !seedTeamsList.includes(t));
         nonSeeds = shuffleArray(nonSeeds);
         
         teams = Array(numTeamsInTournament).fill(null); // 128スロット
-        
-        // 2. シード校（8校）を固定配置 (各16チームブロックの先頭)
-        const seedPositions = [0, 16, 32, 48, 64, 80, 96, 112]; 
-        
-        const seedPlacements = {};
-        const rank1_4 = seeds.filter(s => s.rank <= 4).sort((a, b) => a.rank - b.rank);
-        seedPlacements[seedPositions[0]] = rank1_4.find(s => s.rank === 1).team; // A (0)
-        seedPlacements[seedPositions[4]] = rank1_4.find(s => s.rank === 2).team; // C (64)
-        seedPlacements[seedPositions[2]] = rank1_4.find(s => s.rank === 4).team; // B (32)
-        seedPlacements[seedPositions[6]] = rank1_4.find(s => s.rank === 3).team; // D (96)
-        const rank5_8 = shuffleArray(seeds.filter(s => s.rank > 4));
-        const remainingSeedSlots = [16, 80, 48, 112]; // 残りのシード枠
-        rank5_8.forEach((seed, i) => { seedPlacements[remainingSeedSlots[i]] = seed.team; });
-        for (const position in seedPlacements) { teams[position] = seedPlacements[position]; }
 
-        // 3. BYE（16校）を固定配置
-        // (各16チームブロックのシード校がいない山に2つずつ)
-        const byePositions = [
-            4, 12,  // 1シード (0) の山
-            20, 28, // 5-8シード (16) の山
-            36, 44, // 4シード (32) の山
-            52, 60, // 5-8シード (48) の山
-            68, 76, // 2シード (64) の山
-            84, 92, // 5-8シード (80) の山
-            100, 108, // 3シード (96) の山
-            116, 124  // 5-8シード (112) の山
-        ];
-        byePositions.forEach(slot => { teams[slot] = '(BYE)'; });
-        
-        // 4. ノーシード校（104校）を、残りの 104 スロットに配置
-        const teamsToPlace = shuffleArray(nonSeeds); // 104校
+        if (isSummerTournament) {
+            // 2. A4校・B4校・C8校を16の小ブロックへ分散配置
+            const seedPlacements = createSummerSeedPlacements(seeds);
+            const totalByesNeeded = numTeamsInTournament - participatingTeamPool.length;
+            const seedByeTeams = getSummerSeedByeTeams(seeds, totalByesNeeded);
+            Object.entries(seedPlacements).forEach(([position, seed]) => {
+                const seedPosition = Number(position);
+                teams[seedPosition] = seed.team;
+                if (seedByeTeams.has(seed.team)) {
+                    teams[seedPosition + 1] = '(BYE)';
+                }
+            });
+
+            // シード校へ割り当ててもBYEが残る場合は、別々の1回戦カードへ配置する。
+            const extraByesNeeded = totalByesNeeded - seedByeTeams.size;
+            const openFirstRoundPairs = [];
+            for (let slot = 0; slot < numTeamsInTournament; slot += 2) {
+                if (teams[slot] === null && teams[slot + 1] === null) {
+                    openFirstRoundPairs.push([slot, slot + 1]);
+                }
+            }
+            shuffleArray(openFirstRoundPairs)
+                .slice(0, extraByesNeeded)
+                .forEach(pair => {
+                    const byeSlot = pair[Math.floor(Math.random() * pair.length)];
+                    teams[byeSlot] = '(BYE)';
+                });
+        } else {
+            // 夏以外でこの共通ブラケットを使う場合の従来8校配置
+            const seedPositions = [0, 16, 32, 48, 64, 80, 96, 112];
+            seeds.forEach((seed, index) => {
+                if (seedPositions[index] !== undefined) teams[seedPositions[index]] = seed.team;
+            });
+            [4, 12, 20, 28, 36, 44, 52, 60, 68, 76, 84, 92, 100, 108, 116, 124]
+                .forEach(slot => { teams[slot] = '(BYE)'; });
+        }
+
+        // 3. ノーシード校を残りのスロットに配置
+        const teamsToPlace = shuffleArray(nonSeeds);
         
         let nonSeedIndex = 0;
         for (let i = 0; i < numTeamsInTournament; i++) {
@@ -9334,8 +9479,8 @@ async function createNewTournament(isNext = false, nextTournamentType = 'summer'
             }
         }
         
-        if (nonSeedIndex !== 104) {
-             console.error(`抽選ロジックエラー: 104校を配置する予定でしたが、${nonSeedIndex}校しか配置されませんでした。`);
+        if (nonSeedIndex !== teamsToPlace.length) {
+             console.error(`抽選ロジックエラー: ${teamsToPlace.length}校を配置する予定でしたが、${nonSeedIndex}校しか配置されませんでした。`);
         }
     }
     
@@ -9875,7 +10020,8 @@ async function generateBracketAnalysisNewsArticle(state) {
     let tournamentContextPrompt = "";
     let seedContext = "前大会ベスト8";
     if (currentTournament === 'summer') {
-        tournamentContextPrompt = "3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。";
+        tournamentContextPrompt = "3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。春季県大会ベスト16がA・B・Cの16校シードとして各ブロックへ分散配置され、117校で優勝を争います。";
+        seedContext = "春季県大会ベスト16";
     } else if (currentTournament === 'summer_koshien') {
         tournamentContextPrompt = "全国の代表校が集う夏の甲子園。負ければ終わりの一発勝負です。";
         seedContext = "注目校";
@@ -10268,10 +10414,10 @@ const springAnimation = [
     },
     // Step 6: Reward (Summer Seed)
     async () => {
-        await setNarration("この大会でベスト8以上に入ると、夏の選手権大会のシード権獲得！🔥");
+        await setNarration("県大会2回戦へ進んだベスト16全校が、夏の選手権大会のシード権を獲得！🔥");
         await springAnimation[5]();
         const r2Bracket = document.getElementById('r2-bracket');
-        const reward = createAnimElement('bracket', '🏅ベスト8 → 夏のシード権', { style: { marginTop: '15px', borderColor: 'gold' } });
+        const reward = createAnimElement('bracket', '🏅ベスト16 → 夏のシード権', { style: { marginTop: '15px', borderColor: 'gold' } });
         stage.appendChild(reward);
         await showElement(reward, 200);
         highlightElement(reward);
@@ -12763,7 +12909,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
         <div class="team-slot ${t1Empty ? 'empty' : ''} ${dbMatch.winner === team1 && !t1Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team1 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team1 || ''}">
             <span class="team-name clickable-team-name ${isSeed1 ? 'seed' : ''}" title="${team1 || ''}" data-team-name="${team1 || ''}">
                 ${team1 ? `<span class="rank ${rankColor(rank1)}">[${rank1}]</span>` : ''}
-                ${isSeed1 ? `[${seedInfo1.rank}] ` : ''}${team1 || '---'}
+                ${getSeedShortLabel(seedInfo1)}${team1 || '---'}
                 ${team1ConditionIcons}
             </span>
             ${createSpecialButtons(team1)} 
@@ -12777,7 +12923,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
         <div class="team-slot ${t2Empty ? 'empty' : ''} ${dbMatch.winner === team2 && !t2Empty ? 'winner' : ''} ${dbMatch.winner && dbMatch.winner !== team2 && dbMatch.winner !== null ? 'loser' : ''}" data-team-name="${team2 || ''}">
             <span class="team-name clickable-team-name ${isSeed2 ? 'seed' : ''}" title="${team2 || ''}" data-team-name="${team2 || ''}">
                 ${team2 ? `<span class="rank ${rankColor(rank2)}">[${rank2}]</span>` : ''}
-                ${isSeed2 ? `[${seedInfo2.rank}] ` : ''}${team2 || '---'}
+                ${getSeedShortLabel(seedInfo2)}${team2 || '---'}
                 ${team2ConditionIcons}
             </span>
             ${createSpecialButtons(team2)}
@@ -18776,7 +18922,8 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
     let tournamentContextPrompt = "";
     let seedContext = "前大会ベスト8";
     if (tournamentState.currentTournament === 'summer') {
-        tournamentContextPrompt = "3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。";
+        tournamentContextPrompt = "3年生にとっては最後の夏であり、甲子園出場をかけた最も熱い戦いです。春季県大会ベスト16がA・B・Cの16校シードとして各ブロックへ分散配置され、117校で優勝を争います。";
+        seedContext = "春季県大会ベスト16";
     } else if (tournamentState.currentTournament === 'autumn') {
         tournamentContextPrompt = "1,2年生による新チームが始動する最初の公式戦であり、来春のセンバツ出場校選考にも影響する重要な大会です。";
     } else if (tournamentState.currentTournament === 'spring') {
@@ -18816,23 +18963,23 @@ async function generateNewsArticle(matchContext, userFeedback = null) {
                 notablePlayersText += `- **${team}**: ${players.map(p => `${p.name}(${p.year}年)`).join(', ')}\n`;
             });
         }
-        const seedText = seeds.map(s => `${s.team}(第${s.rank}シード)`).join(', ');
+        const seedText = seeds.map(s => `${s.team}${getSeedRankString(s.team, seeds)}`).join(', ');
         prompt = `あなたは、日本の高校野球を深く愛する、情熱的なスポーツ記者です。
 間もなく開幕する「${tournamentYear}年度 ${tournamentName}」の展望記事を作成してください。
 ### 大会の文脈 (最重要)
 ${tournamentContextPrompt}
-シード校は「${seedContext}」の8校です。
+シード校は「${seedContext}」の${seeds.length}校です。
 ### 参考情報：静岡県高校野球の「常識」（勢力図）
 ${PREFECTURE_LORE}
 ---
-### シード校 (前大会ベスト8)
+### シード校 (${seedContext})
 ${seedText}
 ### 各ブロックの有力校
 ${blockAnalysis}
 ${notablePlayersText}
 ### 執筆指示
 - 【★大会の文脈を反映】: 記事全体で、${tournamentName}ならではの視点（例：夏の3年生の想い、秋の新チームの試金石、春のシード権争い）を必ず反映させてください。
-- 【★シードランク言及】: 「第1シードの〇〇」や「前大会ベスト8の△△」のように、シードランクにも触れて分析してください。
+- 【★シード区分・ランク言及】: 夏は「Aシードの〇〇」「Cシードの△△」、それ以外は「第1シードの〇〇」のように、シード情報にも触れて分析してください。
 - どのシード校が最も厳しいブロックに入ったか、逆に最も楽なブロックはどこかを分析してください。
 - ノーシードの実力校の中から、大会の「ダークホース」となりそうなチームを挙げてみてください。
 - 記事のタイトルと本文をJSON形式で出力してください。
@@ -20053,6 +20200,7 @@ A: "${hero.answer}"
  */
 async function generateBracketReactionComments(state) {
     const { teams, seeds } = state;
+    const seedTeamNames = seeds.map(seed => typeof seed === 'string' ? seed : seed.team);
     // チーム数が少ない場合はコメントを生成しない
     if (teams.length < 8) return [];
 
@@ -20060,7 +20208,7 @@ async function generateBracketReactionComments(state) {
     let commentDirections = ''; // AIへの指示を入れる変数
 
     // --- トーナメント表の詳細分析ロジック ---
-    const numBlocks = Math.max(1, Math.ceil(teams.length / 16)); // 64チームなら4ブロック、16チームなら1ブロック
+    const numBlocks = teams.length >= 64 ? 4 : Math.max(1, Math.ceil(teams.length / 16));
     const blockSize = Math.floor(teams.length / numBlocks);
     const blockData = []; // 各ブロックの情報を格納 [{ name: 'A', teams: [...], strongTeams: [...], matchupsR1: [...], potentialR2: [], potentialR3: [] }, ...]
     const rankValues = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 }; // ランクの強さ
@@ -20076,7 +20224,7 @@ async function generateBracketReactionComments(state) {
 
         const strongTeamsInBlock = blockTeams.filter(team => {
             const rank = getTeamRank(team);
-            return seeds.includes(team) || ['A', 'B'].includes(rank);
+            return seedTeamNames.includes(team) || ['A', 'B'].includes(rank);
         });
 
         const matchupsR1 = []; // 1回戦のカード
@@ -20093,7 +20241,7 @@ async function generateBracketReactionComments(state) {
             const matchup = { team1, rank1, team2, rank2 };
             matchupsR1.push(matchup);
             // 1回戦での有力校潰し合いチェック
-            if ((seeds.includes(team1) || ['A', 'B'].includes(rank1)) && (seeds.includes(team2) || ['A', 'B'].includes(rank2))) {
+            if ((seedTeamNames.includes(team1) || ['A', 'B'].includes(rank1)) && (seedTeamNames.includes(team2) || ['A', 'B'].includes(rank2))) {
                 matchup.isCrush = true; // 潰し合いフラグ
             }
         }
@@ -20116,7 +20264,7 @@ async function generateBracketReactionComments(state) {
         // 3回戦 (64チームトーナメントの場合のみ)
         if (teams.length === 64 && blockTeams.length >= 8) {
              // 簡易的にブロック内のシード校同士が当たる可能性などをリストアップ (より詳細な予測も可能)
-             const blockSeeds = strongTeamsInBlock.filter(t => seeds.includes(t));
+             const blockSeeds = strongTeamsInBlock.filter(t => seedTeamNames.includes(t));
              if (blockSeeds.length >= 2) {
                  potentialR3.push(`${blockSeeds[0]} vs ${blockSeeds[1]} (予想)`); // 例: ブロック内のシード上位2校
              }
@@ -21009,17 +21157,26 @@ function getPlayerConditionIcon(flag) {
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
-/**
-     * チーム名からシードランクの文字列 (例: "(第1シード)") を取得するヘルパー関数
+    function getSeedShortLabel(seedInfo) {
+        if (!seedInfo) return '';
+        return seedInfo.tier
+            ? `[${seedInfo.tier}${seedInfo.rank}] `
+            : `[${seedInfo.rank}] `;
+    }
+
+    /**
+     * チーム名からシード情報の文字列を取得するヘルパー関数
      * @param {string} teamName - チーム名
      * @param {Array<object>} seeds - tournamentState.seeds (シード校のオブジェクト配列)
-     * @returns {string} - "(第1シード)" または ""
+     * @returns {string} - "(Aシード・第1シード)"、"(第1シード)" または ""
      */
     function getSeedRankString(teamName, seeds) {
         if (!seeds || !teamName) return '';
-        // seeds 配列が { team: "...", rank: 1 } の形式であることを前提とする
         const seedInfo = seeds.find(s => s.team === teamName);
-        return seedInfo ? `(第${seedInfo.rank}シード)` : '';
+        if (!seedInfo) return '';
+        return seedInfo.tier
+            ? `(${seedInfo.tier}シード・第${seedInfo.rank}シード)`
+            : `(第${seedInfo.rank}シード)`;
     }
 
     /**
@@ -25010,8 +25167,8 @@ function createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
     // シード表示
     const seedInfo1 = seeds.find(s => s.team === team1);
     const seedInfo2 = seeds.find(s => s.team === team2);
-    const seedLabel1 = seedInfo1 ? `[${seedInfo1.rank}] ` : '';
-    const seedLabel2 = seedInfo2 ? `[${seedInfo2.rank}] ` : '';
+    const seedLabel1 = getSeedShortLabel(seedInfo1);
+    const seedLabel2 = getSeedShortLabel(seedInfo2);
 
     const roundClassMatch = matchId.includes('-R1-M') ? 'r1' : '';
 
@@ -25093,10 +25250,8 @@ async function startLotteryEvent() {
     lotteryModal.classList.remove('hidden');
     lotteryModal.classList.add('flex');
 
-    // (シード校決定ロジックは変更なし)
-    const historicalRanks = INITIAL_TEAM_POOL.map(teamName => ({ name: teamName, rank: getRankFromHistoryString(TEAM_DATA[teamName].last) }));
-    historicalRanks.sort((a, b) => a.rank - b.rank);
-    const seeds = historicalRanks.slice(0, 8).map((t, i) => ({ team: t.name, rank: i + 1 })); 
+    // 現行方式: 春季県大会ベスト16をA4・B4・C8のシード校とする
+    const seeds = createInitialSummerSeeds();
     
     // ★★★ ここからが修正箇所 ★★★
     // 簡易トーナメント表を作成 (128チーム分)
@@ -25119,17 +25274,21 @@ async function startLotteryEvent() {
     document.getElementById('skip-lottery-btn').onclick = () => {
         lotteryModal.classList.add('hidden');
         SoundManager.stopBgm();
-        createNewTournament(false, 'summer');
+        createNewTournament(false, 'summer', null, participatingTeamPool);
     };
 
-    // (抽選順の決定ロジックは変更なし)
+    // 実在108校と架空9校の全117校が参加し、シード16校のあとにノーシード校が抽選する
+    const preparedPoolIsValid =
+        Array.isArray(preparedInitialSummerTeamPool) &&
+        preparedInitialSummerTeamPool.length === CURRENT_SUMMER_SCHOOL_COUNT &&
+        seeds.every(seed => preparedInitialSummerTeamPool.includes(seed.team));
+    const participatingTeamPool = preparedPoolIsValid
+        ? [...preparedInitialSummerTeamPool]
+        : createCurrentSummerTeamPool(seeds);
     const seedTeamsList = seeds.map(s => s.team);
-    const nonSeeds = INITIAL_TEAM_POOL.filter(t => !seedTeamsList.includes(t));
-    
-    // ★ 不戦勝(BYE)を抽選対象に追加
-    const byesNeeded = 128 - nonSeeds.length - seeds.length;
-    const byes = Array(byesNeeded).fill('(BYE)');
-    const lotteryOrder = [...seedTeamsList, ...shuffleArray([...nonSeeds, ...byes])];
+    const nonSeeds = participatingTeamPool.filter(t => !seedTeamsList.includes(t));
+    // BYEは自動配置するため抽選対象に含めない
+    const lotteryOrder = [...seedTeamsList, ...shuffleArray(nonSeeds)];
 
     SoundManager.startBgm();
 }
@@ -25137,9 +25296,9 @@ async function startLotteryEvent() {
 
 /**
  * 抽選会のアニメーションを実行する
- * (★128チーム制・7ラウンド制に対応した最終版)
+ * (★128枠・現行16校シード制・7ラウンド制に対応)
  * @param {Array<string>} lotteryOrder - 全チームの抽選順 (シード校が先)
- * @param {Array<object>} seeds - シード校8チームのランク付きオブジェクト配列
+ * @param {Array<object>} seeds - シード校16チームのランク・区分付きオブジェクト配列
  */
 async function runLotteryAnimation(lotteryOrder, seeds) {
     // --- 1. 初期設定 ---
@@ -25154,25 +25313,33 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const potEl = document.getElementById('lottery-pot');
     const potNameEl = document.getElementById('pot-name');
     
-    // ★★★ 修正点 ★★★
-    const teamPositions = Array(128).fill(null); // 64 -> 128
-    const seedPositionsTemplate = [0, 64, 32, 96, 16, 80, 48, 112]; // 128チーム用の配置
-    // ★★★ 修正ここまで ★★★
-    
-    // (シード配置スロットの準備ロジック ... 変更なし)
-    const rank1_4_teams_sorted = seeds.filter(s => s.rank <= 4).sort((a, b) => a.rank - b.rank);
-    const rank1_4_teams = [
-        rank1_4_teams_sorted[0], // 第1シード
-        rank1_4_teams_sorted[1], // 第2シード
-        rank1_4_teams_sorted[3], // 第4シード
-        rank1_4_teams_sorted[2]  // 第3シード
-    ].filter(Boolean);
-    const rank5_8_teams = shuffleArray(seeds.filter(s => s.rank > 4));
-    const rank1_4_positions = seedPositionsTemplate.slice(0, 4); // [0, 64, 32, 96]
-    const rank5_8_positions = shuffleArray(seedPositionsTemplate.slice(4)); // [16, 80, 48, 112] をシャッフル
-    
-    // ★★★ 修正点 ★★★
-    let availableNonSeedSlots = Array.from({length: 128}, (_, i) => i).filter(p => !seedPositionsTemplate.includes(p)); // 64 -> 128
+    const teamPositions = Array(128).fill(null);
+    const seedPlacements = createSummerSeedPlacements(seeds);
+    const seedPositionsTemplate = Object.keys(seedPlacements).map(Number);
+    const totalByesNeeded = 128 - lotteryOrder.length;
+    const seedByeTeams = getSummerSeedByeTeams(seeds, totalByesNeeded);
+    const byePositions = Object.entries(seedPlacements)
+        .filter(([, seed]) => seedByeTeams.has(seed.team))
+        .map(([position]) => Number(position) + 1);
+    let availableNonSeedSlots = Array.from({length: 128}, (_, i) => i)
+        .filter(position => !seedPositionsTemplate.includes(position) && !byePositions.includes(position));
+
+    // シード校へ割り当ててもBYEが残る場合は、互いに異なる1回戦カードへ配置する。
+    const extraByesNeeded = totalByesNeeded - byePositions.length;
+    const openFirstRoundPairs = [];
+    for (let slot = 0; slot < 128; slot += 2) {
+        if (availableNonSeedSlots.includes(slot) && availableNonSeedSlots.includes(slot + 1)) {
+            openFirstRoundPairs.push([slot, slot + 1]);
+        }
+    }
+    const extraByePositions = shuffleArray(openFirstRoundPairs)
+        .slice(0, extraByesNeeded)
+        .map(pair => pair[Math.floor(Math.random() * pair.length)]);
+    extraByePositions.forEach(position => {
+        teamPositions[position] = '(BYE)';
+    });
+    availableNonSeedSlots = availableNonSeedSlots
+        .filter(position => !extraByePositions.includes(position));
     const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
     // (内部ヘルパー関数: playSound, isStrongRank ... 変更なし)
@@ -25208,69 +25375,75 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     // ★★★ 修正ここまで ★★★
 
 
-    // --- 2. 抽選会フェーズ1：シード校の配置 ---
-    potNameEl.textContent = "シード校";
-    
-    // (第1〜第4シードの配置 (固定位置・山分け) ... 変更なし)
-    for (let i = 0; i < rank1_4_teams.length; i++) {
-        const teamName = rank1_4_teams[i].team;
-        const teamRank = rank1_4_teams[i].rank;
-        const position = rank1_4_positions[i]; 
+    // --- 2. 抽選会フェーズ1：A・B・Cシード校の配置 ---
+    const orderedSeeds = [...seeds].sort((a, b) => a.rank - b.rank);
+    for (const seedInfo of orderedSeeds) {
+        const teamName = seedInfo.team;
+        const teamRank = seedInfo.rank;
+        const tier = seedInfo.tier;
+        const placementEntry = Object.entries(seedPlacements)
+            .find(([, placedSeed]) => placedSeed.team === teamName);
+        if (!placementEntry) continue;
+        const position = Number(placementEntry[0]);
+        const hasFirstRoundBye = seedByeTeams.has(teamName);
+        const byePosition = hasFirstRoundBye ? position + 1 : null;
 
+        potNameEl.textContent = `${tier}シード校`;
         let dreadBg = null;
         if (isStrongRank(teamName) && initialAiEnabled) {
             dreadBg = document.createElement('div');
             dreadBg.className = 'dread-mode-bg';
             document.body.appendChild(dreadBg);
             potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る... 第${teamRank}シード、 ${teamName} です...`;
+            commentaryEl.textContent = `会場が静まり返る... ${tier}シード、${teamName}です...`;
             await sleep(2500);
         }
 
-        commentaryEl.textContent = `第${teamRank}シード、${teamName}がクジを引きます...`;
+        commentaryEl.textContent = `${tier}シード（第${teamRank}シード）、${teamName}がクジを引きます...`;
         playSound('sound-drumroll');
         await sleep(1500);
         drawnTeamEl.textContent = teamName;
         drawnTeamContainer.classList.add('fade-in-out');
         teamPositions[position] = teamName;
+        if (hasFirstRoundBye) {
+            teamPositions[byePosition] = '(BYE)';
+        }
         await sleep(1250);
         const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = `[${teamRank}] ${teamName}`;
-        targetSlot.classList.add('filled', 'highlight'); 
+        const byeSlot = hasFirstRoundBye
+            ? document.querySelector(`.lottery-slot[data-index="${byePosition}"]`)
+            : null;
+        targetSlot.querySelector('.team-name-placeholder').textContent = `[${tier}${teamRank}] ${teamName}`;
+        if (byeSlot) {
+            byeSlot.querySelector('.team-name-placeholder').textContent = '(BYE)';
+        }
+        targetSlot.classList.add('filled', 'highlight');
+        if (byeSlot) {
+            byeSlot.classList.add('filled');
+        }
         playSound('sound-cymbal');
         if (dreadBg) {
             dreadBg.remove();
             potEl.classList.remove('dread');
             playSound('sound-gasp');
         }
-        commentaryEl.textContent = `第${teamRank}シード、${teamName}は ${position + 1}番に決定！`;
+        commentaryEl.textContent = hasFirstRoundBye
+            ? `${tier}シードの${teamName}は ${position + 1}番、2回戦からの登場です！`
+            : `${tier}シードの${teamName}は ${position + 1}番、1回戦から登場します！`;
         await sleep(1500);
         drawnTeamContainer.classList.remove('fade-in-out');
         targetSlot.classList.remove('highlight');
     }
 
-    // (第5〜第8シードの配置 (ランダム位置) ... 変更なし)
-    for (let i = 0; i < rank5_8_teams.length; i++) {
-        const teamName = rank5_8_teams[i].team;
-        const teamRank = rank5_8_teams[i].rank;
-        const position = rank5_8_positions[i]; 
-        commentaryEl.textContent = `第${teamRank}シード、${teamName}がクジを引きます...`;
-        playSound('sound-drumroll');
+    if (extraByePositions.length > 0) {
+        commentaryEl.textContent = `参加117校に合わせ、追加の不戦勝枠${extraByePositions.length}枠を配置します。`;
+        extraByePositions.forEach(position => {
+            const byeSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+            byeSlot.querySelector('.team-name-placeholder').textContent = '(BYE)';
+            byeSlot.classList.add('filled');
+        });
         await sleep(1500);
-        drawnTeamEl.textContent = teamName;
-        drawnTeamContainer.classList.add('fade-in-out');
-        teamPositions[position] = teamName;
-        await sleep(1250);
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = `[${teamRank}] ${teamName}`;
-        targetSlot.classList.add('filled', 'highlight');
-        playSound('sound-cymbal');
-        commentaryEl.textContent = `第${teamRank}シード、${teamName}は ${position + 1}番に決定！`;
-        await sleep(1500);
-        drawnTeamContainer.classList.remove('fade-in-out');
-        targetSlot.classList.remove('highlight');
     }
-
 
     // --- 3. 抽選会フェーズ2：ノーシード校の配置 (ロジック変更なし) ---
     potNameEl.textContent = "ノーシード校";
@@ -25362,7 +25535,12 @@ async function generateCaptainInterviews(teamPositions) {
     // 128チーム制(県) or 64チーム制(甲子園)
     const numTeams = teamPositions.length;
     for(let i=0; i<numTeams; i+=2){
-        if (teamPositions[i] && teamPositions[i+1]) {
+        if (
+            teamPositions[i] &&
+            teamPositions[i+1] &&
+            teamPositions[i] !== '(BYE)' &&
+            teamPositions[i+1] !== '(BYE)'
+        ) {
             matchups.push({team1: teamPositions[i], team2: teamPositions[i+1]});
         }
     }
@@ -26997,7 +27175,8 @@ setupTeamTracker();
         tournamentDisplayEl.classList.add('hidden');
         
         if (teamsTextarea) {
-            teamsTextarea.value = INITIAL_TEAM_POOL.join('\n');
+            preparedInitialSummerTeamPool = createCurrentSummerTeamPool(createInitialSummerSeeds());
+            teamsTextarea.value = preparedInitialSummerTeamPool.join('\n');
         }
 
         updateTicker();
