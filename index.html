@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -3033,6 +3034,342 @@
 
         .add-row-btn:hover { background-color: #d1d5db; }　
 
+/* ▼▼▼ チーム別「大会への反応」機能 ▼▼▼ */
+.team-reaction-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0 3px 0 1px;
+    padding: 3px 6px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.team-reaction-btn:hover {
+    transform: translateY(-1px);
+    background: #bfdbfe;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22);
+}
+.team-reaction-btn:active { transform: translateY(0) scale(0.97); }
+.team-slot.loser .team-reaction-btn { opacity: 1; }
+
+.team-reaction-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 420;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(15, 23, 42, 0.76);
+    backdrop-filter: blur(7px);
+}
+.team-reaction-modal.hidden { display: none; }
+.team-reaction-panel {
+    width: min(720px, 100%);
+    max-height: min(880px, 94vh);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 22px;
+    background: #f8fafc;
+    box-shadow: 0 28px 80px rgba(2, 6, 23, 0.44);
+    animation: teamReactionOpen 0.22s ease-out both;
+}
+@keyframes teamReactionOpen {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.team-reaction-header {
+    position: relative;
+    padding: 22px 58px 20px 24px;
+    color: white;
+    background:
+        radial-gradient(circle at 88% 12%, rgba(255,255,255,0.2), transparent 28%),
+        linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
+}
+.team-reaction-kicker {
+    margin-bottom: 5px;
+    color: #bfdbfe;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+.team-reaction-title {
+    margin: 0;
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 800;
+    line-height: 1.3;
+}
+.team-reaction-subtitle {
+    margin-top: 6px;
+    color: #dbeafe;
+    font-size: 13px;
+}
+.team-reaction-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    background: rgba(255,255,255,0.12);
+    font-size: 25px;
+    line-height: 34px;
+    text-align: center;
+    cursor: pointer;
+}
+.team-reaction-close:hover { background: rgba(255,255,255,0.24); }
+.team-reaction-scroll {
+    max-height: calc(min(880px, 94vh) - 116px);
+    overflow-y: auto;
+    padding: 20px 22px 22px;
+}
+.team-reaction-overview {
+    padding: 14px 16px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #ffffff, #eff6ff);
+}
+.team-reaction-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 10px;
+}
+.team-reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 25px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 800;
+}
+.team-reaction-chip.rank-A { background: #fee2e2; color: #b91c1c; }
+.team-reaction-chip.rank-B { background: #ffedd5; color: #c2410c; }
+.team-reaction-chip.rank-C { background: #fef9c3; color: #a16207; }
+.team-reaction-chip.rank-D { background: #dbeafe; color: #1d4ed8; }
+.team-reaction-chip.rank-E { background: #e5e7eb; color: #475569; }
+.team-reaction-chip.phase-live { background: #dcfce7; color: #166534; }
+.team-reaction-chip.phase-hard { background: #fee2e2; color: #991b1b; }
+.team-reaction-chip.phase-out { background: #e5e7eb; color: #4b5563; }
+.team-reaction-chip.phase-champion { background: #fef3c7; color: #92400e; }
+.team-reaction-overview-line {
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 10px;
+    padding: 5px 0;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.team-reaction-overview-label {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+.team-reaction-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: 14px;
+    padding: 5px;
+    border: 1px solid #dbe3ef;
+    border-radius: 13px;
+    background: #e9eff7;
+}
+.team-reaction-mode-btn {
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #64748b;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.team-reaction-mode-btn:hover {
+    color: #1e3a8a;
+    transform: translateY(-1px);
+}
+.team-reaction-mode-btn.active {
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    background: white;
+    box-shadow: 0 3px 9px rgba(30, 64, 175, 0.13);
+}
+.team-reaction-mode-btn.ai.active {
+    border-color: #c4b5fd;
+    color: #6d28d9;
+    background: linear-gradient(135deg, #ffffff, #f5f3ff);
+}
+.team-reaction-mode-description {
+    min-height: 30px;
+    padding: 7px 3px 0;
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.5;
+}
+.team-reaction-list {
+    display: grid;
+    gap: 11px;
+    margin-top: 15px;
+}
+.team-reaction-card {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 12px;
+    padding: 14px 15px;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+    border-radius: 13px;
+    background: white;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+}
+.team-reaction-card.mood-confident { border-left-color: #16a34a; }
+.team-reaction-card.mood-wary { border-left-color: #f59e0b; }
+.team-reaction-card.mood-hard { border-left-color: #ef4444; }
+.team-reaction-card.mood-out { border-left-color: #64748b; }
+.team-reaction-card.is-ai {
+    border-top-color: #ddd6fe;
+    border-right-color: #ddd6fe;
+    border-bottom-color: #ddd6fe;
+    background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+}
+.team-reaction-avatar {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #eff6ff;
+    font-size: 21px;
+}
+.team-reaction-speaker {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 900;
+}
+.team-reaction-speaker-tag {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+}
+.team-reaction-card.is-ai .team-reaction-speaker-tag {
+    color: #6d28d9;
+    background: #ede9fe;
+}
+.team-reaction-text {
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.72;
+}
+.team-reaction-loading,
+.team-reaction-error {
+    padding: 24px 18px;
+    border: 1px dashed #c4b5fd;
+    border-radius: 13px;
+    color: #5b21b6;
+    background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+    text-align: center;
+}
+.team-reaction-loading-orb {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto 11px;
+    border: 4px solid #ddd6fe;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: teamReactionSpin 0.8s linear infinite;
+}
+@keyframes teamReactionSpin { to { transform: rotate(360deg); } }
+.team-reaction-loading strong,
+.team-reaction-error strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+.team-reaction-loading span,
+.team-reaction-error span {
+    display: block;
+    color: #7c3aed;
+    font-size: 11px;
+    line-height: 1.55;
+}
+.team-reaction-error button {
+    margin-top: 12px;
+    padding: 8px 13px;
+    border: 1px solid #c4b5fd;
+    border-radius: 9px;
+    color: #6d28d9;
+    background: white;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.team-reaction-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+.team-reaction-refresh {
+    padding: 9px 14px;
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    background: white;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.team-reaction-refresh:hover { background: #eff6ff; }
+.team-reaction-refresh:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+.team-reaction-note {
+    color: #94a3b8;
+    font-size: 10px;
+}
+@media (max-width: 640px) {
+    .team-reaction-modal { padding: 8px; }
+    .team-reaction-panel { max-height: 97vh; border-radius: 16px; }
+    .team-reaction-header { padding: 18px 50px 17px 18px; }
+    .team-reaction-scroll { max-height: calc(97vh - 103px); padding: 14px; }
+    .team-reaction-overview-line { grid-template-columns: 68px 1fr; }
+    .team-reaction-mode-btn { padding-inline: 7px; font-size: 11px; }
+    .team-reaction-card { grid-template-columns: 36px 1fr; padding: 12px; }
+    .team-reaction-avatar { width: 34px; height: 34px; font-size: 18px; }
+    .team-reaction-text { font-size: 13px; }
+}
+/* ▲▲▲ チーム別「大会への反応」機能 ▲▲▲ */
+
 
 
 　 </style>
@@ -4163,6 +4500,31 @@ graph TD
     <div>
         <p class="text-xs opacity-90">日本のトレンド</p>
         <p id="trend-notification-word" class="font-bold">#283学園</p>
+    </div>
+</div>
+
+<!-- チーム別「大会への反応」モーダル -->
+<div id="team-reaction-modal" class="team-reaction-modal hidden" role="dialog" aria-modal="true" aria-labelledby="team-reaction-title">
+    <div class="team-reaction-panel">
+        <header class="team-reaction-header">
+            <button id="team-reaction-close-btn" class="team-reaction-close" type="button" aria-label="閉じる">&times;</button>
+            <div class="team-reaction-kicker">FAN TOURNAMENT VOICE</div>
+            <h3 id="team-reaction-title" class="team-reaction-title">ファンの反応</h3>
+            <p id="team-reaction-subtitle" class="team-reaction-subtitle">ファンが組み合わせと勝ち上がりを見たら？</p>
+        </header>
+        <div class="team-reaction-scroll">
+            <div id="team-reaction-overview" class="team-reaction-overview"></div>
+            <div class="team-reaction-mode-switch" role="tablist" aria-label="コメント生成方法">
+                <button id="team-reaction-local-mode-btn" class="team-reaction-mode-btn active" type="button" role="tab" aria-selected="true">⚡ 即時生成</button>
+                <button id="team-reaction-ai-mode-btn" class="team-reaction-mode-btn ai" type="button" role="tab" aria-selected="false">✨ AI生成</button>
+            </div>
+            <p id="team-reaction-mode-description" class="team-reaction-mode-description">組み合わせと勝ち上がりから、用意された豊富なファン目線の反応をすぐ表示します。</p>
+            <div id="team-reaction-list" class="team-reaction-list"></div>
+            <div class="team-reaction-actions">
+                <button id="team-reaction-refresh-btn" class="team-reaction-refresh" type="button">🔄 別の3人の反応を見る</button>
+                <span id="team-reaction-note" class="team-reaction-note">地元ファン・OB・データ派などの視点で生成</span>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -8720,6 +9082,884 @@ function getRoundNameFromMatchId(matchId) {
 }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
+// ▼▼▼ チーム別「大会への反応」エンジン ▼▼▼
+const TEAM_REACTION_RANK_VALUE = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+const TEAM_REACTION_SPEAKER_GROUPS = [
+    [
+        { role: '地元の高校野球ファン', icon: '🏟️', tag: '地元目線', tone: 'local' },
+        { role: '組み合わせ表マニア', icon: '🗺️', tag: '山を分析', tone: 'bracket' },
+        { role: '心配性のファン', icon: '😓', tag: '慎重派', tone: 'cautious' }
+    ],
+    [
+        { role: '卒業生ファン', icon: '🎓', tag: '母校推し', tone: 'alumni' },
+        { role: 'データ好きの県大会ファン', icon: '📊', tag: '勝ち上がり比較', tone: 'data' },
+        { role: 'ポジティブすぎるファン', icon: '🔥', tag: '期待全開', tone: 'optimist' }
+    ],
+    [
+        { role: '球場通いの常連', icon: '🎫', tag: '現地観戦派', tone: 'veteran' },
+        { role: '静岡高校野球通', icon: '🧠', tag: '県内情勢', tone: 'neutral' },
+        { role: '番狂わせ好き', icon: '⚡', tag: '波乱待ち', tone: 'upset' }
+    ],
+    [
+        { role: '近所のおっちゃん', icon: '🧢', tag: '地元の評判', tone: 'casual' },
+        { role: 'SNS観戦民', icon: '📱', tag: 'ネットの声', tone: 'sns' },
+        { role: '冷静な中立ファン', icon: '⚖️', tag: 'ひいきなし', tone: 'neutral' }
+    ],
+    [
+        { role: '保護者世代のファン', icon: '🍵', tag: '見守り目線', tone: 'warm' },
+        { role: '昔からの県大会ファン', icon: '📻', tag: '大会古参', tone: 'veteran' },
+        { role: '初見の高校野球ファン', icon: '👀', tag: '素直な印象', tone: 'casual' }
+    ],
+    [
+        { role: 'ブラバン好きのファン', icon: '🎺', tag: 'スタンド派', tone: 'local' },
+        { role: '戦力ランク研究民', icon: '🔎', tag: '相手を比較', tone: 'data' },
+        { role: '期待と不安が半々のファン', icon: '🤞', tag: '五分五分', tone: 'cautious' }
+    ],
+    [
+        { role: '他校推しの県大会ファン', icon: '⚾', tag: '外からの評価', tone: 'away' },
+        { role: 'トーナメント予想勢', icon: '📝', tag: '展開予想', tone: 'bracket' },
+        { role: '甲子園まで夢見るファン', icon: '🌟', tag: '夢は大きく', tone: 'optimist' }
+    ],
+    [
+        { role: '現役高校生ファン', icon: '🎒', tag: '同世代目線', tone: 'sns' },
+        { role: '試合結果を全部追う人', icon: '📰', tag: '大会ウォッチ', tone: 'data' },
+        { role: '負けるまで信じるファン', icon: '📣', tag: '最後まで応援', tone: 'warm' }
+    ]
+];
+
+let currentReactionTeamName = null;
+let currentReactionVariant = 0;
+let currentReactionMode = 'local';
+let teamReactionAiRequestToken = 0;
+const teamReactionAiCache = new Map();
+
+function reactionEscapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function reactionHash(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < String(text).length; i++) {
+        hash ^= String(text).charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return Math.abs(hash >>> 0);
+}
+
+function reactionPick(options, key) {
+    if (!options || options.length === 0) return '';
+    return options[reactionHash(key) % options.length];
+}
+
+function isReactionTeamName(name) {
+    return !!name && name !== '(BYE)' && name !== '---' && name !== '（未定）';
+}
+
+function getReactionFinalRound(state = tournamentState) {
+    const teamCount = Math.max(2, state.teams?.length || 128);
+    return Math.round(Math.log2(teamCount));
+}
+
+function getReactionRoundNumber(matchId, state = tournamentState) {
+    if (!matchId) return 0;
+    if (matchId.startsWith('F-')) return getReactionFinalRound(state);
+    const match = matchId.match(/-R(\d+)-/);
+    return match ? parseInt(match[1], 10) : 0;
+}
+
+function getReactionRoundLabel(roundNumber, state = tournamentState) {
+    const finalRound = getReactionFinalRound(state);
+    const teamCount = Math.max(2, state.teams?.length || 128);
+    const entrants = Math.max(2, Math.round(teamCount / Math.pow(2, Math.max(0, roundNumber - 1))));
+    if (roundNumber === finalRound) return '決勝';
+    if (roundNumber === finalRound - 1) return '準決勝';
+    if (roundNumber === finalRound - 2) return `準々決勝（ベスト${entrants}）`;
+    if (roundNumber === finalRound - 3) return `${roundNumber}回戦（ベスト${entrants}）`;
+    return `${roundNumber}回戦`;
+}
+
+function getReactionSeedInfo(teamName, state = tournamentState) {
+    return state.seeds?.find(seed => seed.team === teamName) || null;
+}
+
+function getReactionSeedLabel(teamName, state = tournamentState) {
+    const seed = getReactionSeedInfo(teamName, state);
+    if (!seed) return '';
+    if (seed.tier) return `${seed.tier}シード`;
+    return seed.rank ? `第${seed.rank}シード` : 'シード';
+}
+
+function getReactionStrength(teamName, state = tournamentState) {
+    const rank = calculateRank(teamName, state) || 'E';
+    const seed = getReactionSeedInfo(teamName, state);
+    const seedBonus = seed?.tier === 'A' ? 8 : seed?.tier === 'B' ? 5 : seed?.tier === 'C' ? 2 : seed ? 3 : 0;
+    return (TEAM_REACTION_RANK_VALUE[rank] || 1) * 10 + seedBonus;
+}
+
+function getReactionOpponent(match, teamName) {
+    if (!match) return null;
+    if (match.team1 === teamName) return match.team2;
+    if (match.team2 === teamName) return match.team1;
+    return null;
+}
+
+function getReactionCompletedPath(teamName, state = tournamentState) {
+    return Object.values(state.matches || {})
+        .filter(match =>
+            match?.winner === teamName &&
+            (match.team1 === teamName || match.team2 === teamName) &&
+            isReactionTeamName(getReactionOpponent(match, teamName))
+        )
+        .sort((a, b) => getReactionRoundNumber(a.id, state) - getReactionRoundNumber(b.id, state))
+        .map(match => {
+            const opponent = getReactionOpponent(match, teamName);
+            const isTeam1 = match.team1 === teamName;
+            return {
+                match,
+                opponent,
+                opponentRank: calculateRank(opponent, state),
+                opponentSeed: getReactionSeedInfo(opponent, state),
+                roundNumber: getReactionRoundNumber(match.id, state),
+                roundLabel: getReactionRoundLabel(getReactionRoundNumber(match.id, state), state),
+                score: `${isTeam1 ? match.score1 : match.score2}-${isTeam1 ? match.score2 : match.score1}`
+            };
+        });
+}
+
+function getReactionLoss(teamName, state = tournamentState) {
+    const losses = Object.values(state.matches || {})
+        .filter(match =>
+            match?.winner &&
+            match.winner !== teamName &&
+            (match.team1 === teamName || match.team2 === teamName)
+        )
+        .sort((a, b) => getReactionRoundNumber(b.id, state) - getReactionRoundNumber(a.id, state));
+    if (!losses.length) return null;
+    const match = losses[0];
+    const opponent = getReactionOpponent(match, teamName);
+    const isTeam1 = match.team1 === teamName;
+    return {
+        match,
+        opponent,
+        roundNumber: getReactionRoundNumber(match.id, state),
+        roundLabel: getReactionRoundLabel(getReactionRoundNumber(match.id, state), state),
+        score: `${isTeam1 ? match.score1 : match.score2}-${isTeam1 ? match.score2 : match.score1}`
+    };
+}
+
+function getReactionCurrentMatch(teamName, state = tournamentState) {
+    return Object.values(state.matches || {})
+        .filter(match =>
+            !match?.winner &&
+            (match.team1 === teamName || match.team2 === teamName)
+        )
+        .sort((a, b) => getReactionRoundNumber(a.id, state) - getReactionRoundNumber(b.id, state))[0] || null;
+}
+
+function getReactionFeederIds(matchId, state = tournamentState) {
+    const match = state.matches?.[matchId];
+    if (!matchId) return [];
+    if (matchId.startsWith('F-')) {
+        const semiRound = getReactionFinalRound(state) - 1;
+        return [
+            match?.prevMatch1Id || `L-R${semiRound}-M1`,
+            match?.prevMatch2Id || `R-R${semiRound}-M1`
+        ];
+    }
+    const parts = matchId.match(/^([LR])-R(\d+)-M(\d+)$/);
+    if (!parts) return [];
+    const side = parts[1];
+    const round = parseInt(parts[2], 10);
+    const number = parseInt(parts[3], 10);
+    if (round <= 1) return [];
+    return [
+        match?.prevMatch1Id || `${side}-R${round - 1}-M${number * 2 - 1}`,
+        match?.prevMatch2Id || `${side}-R${round - 1}-M${number * 2}`
+    ];
+}
+
+function getReactionNextMatchId(matchId, state = tournamentState) {
+    if (!matchId || matchId.startsWith('F-')) return null;
+    const parts = matchId.match(/^([LR])-R(\d+)-M(\d+)$/);
+    if (!parts) return null;
+    const side = parts[1];
+    const round = parseInt(parts[2], 10);
+    const number = parseInt(parts[3], 10);
+    const finalRound = getReactionFinalRound(state);
+    if (round >= finalRound - 1) return 'F-R1-M1';
+    return `${side}-R${round + 1}-M${Math.ceil(number / 2)}`;
+}
+
+function collectReactionCandidates(matchId, state = tournamentState, seen = new Set()) {
+    if (!matchId || seen.has(matchId)) return [];
+    seen.add(matchId);
+    const match = state.matches?.[matchId];
+    if (!match) return [];
+    if (isReactionTeamName(match.winner)) return [match.winner];
+
+    const feeders = getReactionFeederIds(matchId, state);
+    if (!feeders.length) {
+        return [match.team1, match.team2].filter(isReactionTeamName);
+    }
+
+    const candidates = [];
+    if (isReactionTeamName(match.team1)) candidates.push(match.team1);
+    else candidates.push(...collectReactionCandidates(feeders[0], state, seen));
+    if (isReactionTeamName(match.team2)) candidates.push(match.team2);
+    else candidates.push(...collectReactionCandidates(feeders[1], state, seen));
+    return [...new Set(candidates)];
+}
+
+function getReactionUnresolvedOpponents(teamName, match, state = tournamentState) {
+    if (!match) return [];
+    const knownOpponent = getReactionOpponent(match, teamName);
+    if (isReactionTeamName(knownOpponent)) return [knownOpponent];
+
+    const feeders = getReactionFeederIds(match.id, state);
+    if (!feeders.length) return [];
+    let opponentFeeder = null;
+    if (match.team1 === teamName) opponentFeeder = feeders[1];
+    else if (match.team2 === teamName) opponentFeeder = feeders[0];
+    if (!opponentFeeder) return [];
+    return collectReactionCandidates(opponentFeeder, state)
+        .filter(name => name !== teamName)
+        .sort((a, b) => getReactionStrength(b, state) - getReactionStrength(a, state));
+}
+
+function getReactionNextRoundCandidates(teamName, currentMatch, state = tournamentState) {
+    if (!currentMatch) return [];
+    const nextMatchId = getReactionNextMatchId(currentMatch.id, state);
+    if (!nextMatchId) return [];
+    const feeders = getReactionFeederIds(nextMatchId, state);
+    const otherFeeder = feeders.find(id => id !== currentMatch.id);
+    if (!otherFeeder) return [];
+    return collectReactionCandidates(otherFeeder, state)
+        .filter(name => name !== teamName)
+        .sort((a, b) => getReactionStrength(b, state) - getReactionStrength(a, state));
+}
+
+function getReactionBlockContext(teamName, state = tournamentState) {
+    const teams = state.teams || [];
+    const teamIndex = teams.indexOf(teamName);
+    if (teamIndex < 0) {
+        return { teams: [], threats: [], watchTeams: [], label: '組み合わせ外', target: '上位進出' };
+    }
+    const blockSize = teams.length >= 64 ? 8 : teams.length >= 16 ? 4 : teams.length;
+    const start = Math.floor(teamIndex / blockSize) * blockSize;
+    const blockTeams = teams.slice(start, start + blockSize).filter(isReactionTeamName);
+    const others = blockTeams.filter(name => name !== teamName);
+    const threats = others
+        .filter(name => {
+            const rank = calculateRank(name, state);
+            const seed = getReactionSeedInfo(name, state);
+            return ['A', 'B'].includes(rank) || ['A', 'B'].includes(seed?.tier);
+        })
+        .sort((a, b) => getReactionStrength(b, state) - getReactionStrength(a, state));
+    const watchTeams = others
+        .filter(name => !threats.includes(name) && (calculateRank(name, state) === 'C' || getReactionSeedInfo(name, state)?.tier === 'C'))
+        .sort((a, b) => getReactionStrength(b, state) - getReactionStrength(a, state));
+    const survivingTarget = Math.max(1, Math.round(teams.length / blockSize));
+    return {
+        teams: blockTeams,
+        threats,
+        watchTeams,
+        blockSize,
+        label: `第${Math.floor(teamIndex / blockSize) + 1}小ブロック（${blockSize}校枠${blockTeams.length < blockSize ? `・実参加${blockTeams.length}校` : ''}）`,
+        target: survivingTarget === 1 ? '優勝' : `ベスト${survivingTarget}`
+    };
+}
+
+function formatReactionNames(names, limit = 4) {
+    const filtered = [...new Set((names || []).filter(isReactionTeamName))];
+    if (!filtered.length) return '';
+    const shown = filtered.slice(0, limit);
+    return `${shown.join('、')}${filtered.length > limit ? 'など' : ''}`;
+}
+
+function getReactionPathDifficulty(path, state = tournamentState) {
+    return path.reduce((total, item) => total + getReactionStrength(item.opponent, state), 0);
+}
+
+function convertReactionToFanPerspective(text, teamName) {
+    return String(text || '')
+        .replace(/自分たちの野球/g, `${teamName}らしい野球`)
+        .replace(/勝てる準備はしてきた/g, '勝てるカードだと思っていた')
+        .replace(/そこまで含めて準備したい/g, 'ファンとしてはその先まで見ておきたい')
+        .replace(/勝ち上がりを全部見て対策を変える/g, 'どちらが来るかでファンの見方も変わってくる')
+        .replace(/取りこぼさないこと/g, '取りこぼしだけは勘弁してほしい')
+        .replace(/警戒したい/g, '警戒は必要だと思う')
+        .replace(/来年はそこを越えたい/g, '来年こそそこを越えてほしい')
+        .replace(/秋からまた作り直そう/g, '秋からまた立て直してほしい')
+        .replace(/序盤から受けに回らないこと/g, '序盤から受けに回る展開だけは避けてほしい');
+}
+
+function styleReactionAsFanVoice(text, persona, teamName, variant, index, mood) {
+    const normalized = convertReactionToFanPerspective(text, teamName);
+    const toneIntros = {
+        local: [`地元でずっと見てる側からすると、`, `${teamName}を応援してる身としては、`, `スタンド目線で言うと、`],
+        bracket: [`組み合わせ表を眺めた感じ、`, `この山を上から追ってみると、`, `トーナメント表だけ見れば、`],
+        cautious: [`期待したいけど、`, `浮かれたくはないけど、`, `正直ちょっと怖いのは、`],
+        alumni: [`母校ファンとしては、`, `卒業生目線だと、`, `${teamName}を昔から見てると、`],
+        data: [`勝ち上がりを数字で見ると、`, `対戦履歴まで比べると、`, `ランクと勝ち上がりを合わせて見ると、`],
+        optimist: [`いや、これ普通に、`, `ちょっと夢を見ていいなら、`, `ファンのひいき目込みでも、`],
+        veteran: [`昔から県大会を見てるけど、`, `何年もこの大会を追ってる感覚だと、`, `こういう山を何度も見てきたけど、`],
+        neutral: [`ひいき抜きで見ても、`, `冷静に比べると、`, `名前をいったん忘れて見ると、`],
+        upset: [`こういう組み合わせこそ、`, `波乱が起きるとしたら、`, `一発勝負の面白さで言えば、`],
+        casual: [`ぱっと見の感想だけど、`, `いやこれ、`, `素直に組み合わせを見たら、`],
+        sns: [`組み合わせ出た瞬間に思ったけど、`, `これSNSでも言われそうだけど、`, `結果だけ追ってても、`],
+        warm: [`応援する側としては、`, `ここまで来た選手たちを思うと、`, `勝ってほしい気持ちはもちろんだけど、`],
+        away: [`${teamName}推しではないけど、`, `他校ファンから見ても、`, `外からこの山を見ると、`]
+    };
+    const suffixes = {
+        confident: [` これはちょっと期待していい。`, ` 過信は禁物だけど、かなり楽しみ。`, ` この夏、まだ先まで見られそう。`, ``],
+        wary: [` こういう試合が一番読めない。`, ` 期待と不安がちょうど半々だな。`, ` まずは当日、固くならないでほしい。`, ``],
+        hard: [` それでも一発勝負なら分からん。`, ` 苦しいけど、ゼロではない。`, ` 勝ったら一気に大会の主役だ。`, ``],
+        out: [` それでもこの夏は忘れない。`, ` 悔しいけど、ちゃんと拍手したい。`, ` また次のチームを応援したい。`, ``]
+    };
+    const introPool = toneIntros[persona.tone] || toneIntros.casual;
+    const intro = reactionPick([...introPool, '', ''], `${teamName}-${variant}-${index}-${persona.role}-intro`);
+    const suffix = reactionPick(suffixes[mood] || suffixes.wary, `${teamName}-${variant}-${index}-${persona.role}-suffix`);
+    return `${intro}${normalized}${suffix}`.replace(/、、/g, '、').trim();
+}
+
+function buildReactionVoices(texts, moods, teamName, variant) {
+    const group = TEAM_REACTION_SPEAKER_GROUPS[variant % TEAM_REACTION_SPEAKER_GROUPS.length];
+    return texts.slice(0, 3).map((text, index) => ({
+        ...group[index],
+        text: styleReactionAsFanVoice(text, group[index], teamName, variant, index, moods[index] || 'wary'),
+        mood: moods[index] || 'wary',
+        key: `${teamName}-${variant}-${index}`
+    }));
+}
+
+function generateTeamTournamentReaction(teamName, variant = 0, state = tournamentState) {
+    const rank = calculateRank(teamName, state) || 'E';
+    const seedLabel = getReactionSeedLabel(teamName, state);
+    const path = getReactionCompletedPath(teamName, state);
+    const loss = getReactionLoss(teamName, state);
+    const currentMatch = getReactionCurrentMatch(teamName, state);
+    const champion = state.matches?.['F-R1-M1']?.winner === teamName;
+    const block = getReactionBlockContext(teamName, state);
+    const currentRoundNumber = currentMatch ? getReactionRoundNumber(currentMatch.id, state) : 0;
+    const currentRoundLabel = currentMatch ? getReactionRoundLabel(currentRoundNumber, state) : '';
+    const knownOpponent = currentMatch ? getReactionOpponent(currentMatch, teamName) : null;
+    const unresolvedOpponents = currentMatch ? getReactionUnresolvedOpponents(teamName, currentMatch, state) : [];
+    const currentOpponent = isReactionTeamName(knownOpponent) ? knownOpponent : unresolvedOpponents[0] || null;
+    const nextRoundCandidates = currentMatch ? getReactionNextRoundCandidates(teamName, currentMatch, state) : [];
+    const nextThreat = nextRoundCandidates[0] || null;
+    const ownStrength = getReactionStrength(teamName, state);
+    const opponentStrength = currentOpponent ? getReactionStrength(currentOpponent, state) : 0;
+    const opponentPath = currentOpponent ? getReactionCompletedPath(currentOpponent, state) : [];
+    const strongVictims = path.filter(item =>
+        ['A', 'B'].includes(item.opponentRank) || ['A', 'B'].includes(item.opponentSeed?.tier)
+    );
+    const opponentStrongVictims = opponentPath.filter(item =>
+        ['A', 'B'].includes(item.opponentRank) || ['A', 'B'].includes(item.opponentSeed?.tier)
+    );
+    const opponentHadLightPath = opponentPath.length >= 2 && opponentPath.every(item =>
+        (TEAM_REACTION_RANK_VALUE[item.opponentRank] || 1) <= 3 && !['A', 'B'].includes(item.opponentSeed?.tier)
+    );
+    const keyBase = `${teamName}|${variant}|${path.map(item => item.opponent).join('|')}|${currentOpponent || ''}`;
+
+    let statusLabel = '組み合わせ確認';
+    let phaseClass = 'phase-live';
+    let nextLine = '対戦相手はまだ決まっていない';
+    let journeyLine = path.length ? `${formatReactionNames(path.map(item => item.opponent))}に勝利（${path.length}勝）` : 'まだ試合前';
+    let texts = [];
+    let moods = [];
+
+    if (champion) {
+        statusLabel = '県大会優勝';
+        phaseClass = 'phase-champion';
+        nextLine = '🏆 全試合終了';
+        texts = [
+            reactionPick([
+                `${formatReactionNames(path.map(item => item.opponent), 5)}を全部越えての優勝。楽な山だったなんて絶対に言わせない。`,
+                `組み合わせを見た時から厳しい夏になると思っていた。それでも最後に${teamName}の名前を残せた。最高だ。`
+            ], `${keyBase}-champion-1`),
+            strongVictims.length
+                ? `${formatReactionNames(strongVictims.map(item => item.opponent))}を倒した勢いを、決勝まで切らさなかった。勝ち上がりそのものに価値がある。`
+                : `一戦ごとに戦い方を変えながら勝ち切った。ランクでは測れない粘りが最後に出た。`,
+            `このトーナメントはもう何度でも見返したい。${teamName}が静岡の頂点、本当におめでとう！`
+        ];
+        moods = ['confident', 'confident', 'confident'];
+    } else if (loss) {
+        statusLabel = `${loss.roundLabel}敗退`;
+        phaseClass = 'phase-out';
+        nextLine = `${loss.opponent}に${loss.score}で敗戦`;
+        const opponentLaterPath = getReactionCompletedPath(loss.opponent, state);
+        const opponentAdvancedFurther = opponentLaterPath.filter(item => item.roundNumber > loss.roundNumber);
+        texts = [
+            reactionPick([
+                `${loss.opponent}に${loss.score}。組み合わせのせいだけにはできないけど、あの場面を取り切れていれば流れは違った。`,
+                `${loss.roundLabel}で終わったのは悔しい。${loss.opponent}の強さは分かっていたし、それでも勝てる準備はしてきた。`
+            ], `${keyBase}-loss-1`),
+            path.length
+                ? `それでも${formatReactionNames(path.map(item => item.opponent))}を倒して、ここまで来た。結果だけでこの勝ち上がりまで否定する必要はない。`
+                : `初戦で力を出し切れなかった。相手より先に、自分たちの野球をさせてもらえなかったのがすべて。`,
+            opponentAdvancedFurther.length
+                ? `${loss.opponent}がその後も${formatReactionNames(opponentAdvancedFurther.map(item => item.opponent))}を破っている。負けた相手の強さを認めつつ、来年はそこを越えたい。`
+                : reactionPick([
+                    `この山を経験した下級生は必ず強くなると思う。次は「惜しかった」で終わらないところを見たい。`,
+                    `組み合わせが変わっても勝ち切れるチームになってほしい。秋からまた立て直してほしい。`
+                ], `${keyBase}-loss-3`)
+        ];
+        moods = ['out', 'out', 'wary'];
+    } else if (currentMatch) {
+        const opponentSeedLabel = currentOpponent ? getReactionSeedLabel(currentOpponent, state) : '';
+        const opponentDisplay = currentOpponent ? `${opponentSeedLabel ? `${opponentSeedLabel}の` : ''}${currentOpponent}` : '未定の相手';
+        statusLabel = path.length ? `${path.length}勝・${currentRoundLabel}進出` : `${currentRoundLabel}待機`;
+        nextLine = currentOpponent
+            ? `${currentRoundLabel} vs ${currentOpponent}`
+            : `${currentRoundLabel} vs ${formatReactionNames(unresolvedOpponents, 3) || '未定'}の勝者`;
+        if (currentOpponent && opponentStrength >= ownStrength + 18) phaseClass = 'phase-hard';
+
+        if (!path.length || currentRoundNumber <= 2) {
+            let immediateText;
+            if (!currentOpponent) {
+                immediateText = `${currentRoundLabel}の相手は${formatReactionNames(unresolvedOpponents, 3) || 'まだ未定'}。どこが来てもいいように、先入観なしで見ておきたい。`;
+            } else if (opponentStrength <= ownStrength - 14) {
+                immediateText = `${currentRoundLabel}の${currentOpponent}戦は、普通に自分たちの野球ができれば大丈夫だと思う。`;
+            } else if (opponentStrength >= ownStrength + 14) {
+                immediateText = `初戦から${opponentDisplay}かぁ……正直キツい。でも一発勝負なら、守って終盤まで持ち込めば何か起こせる。`;
+            } else {
+                immediateText = `${currentRoundLabel}は${opponentDisplay}。ほぼ五分のカードだと思うし、先にミスした方が苦しくなりそう。`;
+            }
+
+            if (nextThreat) {
+                const nextSeedLabel = getReactionSeedLabel(nextThreat, state);
+                const nextRoundNumber = Math.min(getReactionFinalRound(state), currentRoundNumber + 1);
+                if (getReactionStrength(nextThreat, state) >= ownStrength + 10) {
+                    immediateText += ` ただ、その次が${nextSeedLabel ? `${nextSeedLabel}の` : ''}${nextThreat}になりそうなのはキッツいな……。`;
+                } else if (getReactionStrength(nextThreat, state) <= ownStrength - 10) {
+                    immediateText += ` 次も${nextThreat}のいる山なら、勝ち上がって${getReactionRoundLabel(nextRoundNumber, state)}まで行く絵は見える。`;
+                } else {
+                    immediateText += ` 次は${nextThreat}あたりが来そう。そこまで含めて準備したい。`;
+                }
+            }
+
+            let blockText;
+            if (!block.threats.length && !block.watchTeams.length) {
+                blockText = seedLabel && ['Aシード', 'Bシード'].includes(seedLabel)
+                    ? `この${block.blockSize}校の小ブロックは、見渡した限りうちが明確な軸。${block.target}までは取りこぼしの方を警戒したい。`
+                    : `この${block.blockSize}校の小ブロック、有力校らしい有力校がいない。これ、ワンチャン${block.target}まで狙えるんじゃないか？`;
+            } else if (!block.threats.length) {
+                blockText = seedLabel && ['Aシード', 'Bシード'].includes(seedLabel)
+                    ? `${block.target}までで注意するなら${formatReactionNames(block.watchTeams)}。格下でも勢いに乗せないことが一番大事。`
+                    : `${block.target}までの山で警戒するなら${formatReactionNames(block.watchTeams)}くらい。大本命がいない分、かなり開けたブロックだと思う。`;
+            } else if (block.threats.length === 1) {
+                blockText = `${block.target}までを見ると、最大の壁は${block.threats[0]}。そこを越えられれば一気に景色が変わる山だ。`;
+            } else {
+                blockText = `${block.blockSize}校の中に${formatReactionNames(block.threats)}。ここは明らかに詰まった山で、${block.target}へ行くまでに一つは番狂わせが必要。`;
+            }
+
+            let targetText;
+            if (seedLabel && ['Aシード', 'Bシード'].includes(seedLabel)) {
+                targetText = `${seedLabel}として、この組み合わせで${block.target}未満は失敗。先の相手より、まず取りこぼさないこと。`;
+            } else if (block.threats.length === 0) {
+                targetText = `抽選だけ見れば追い風。欲を出していい山だけど、こういう時ほど初戦の入りが一番怖い。`;
+            } else {
+                targetText = `楽な山ではない。でも強豪同士が先に当たるなら、消耗したところを突く余地はある。`;
+            }
+            texts = [immediateText, blockText, targetText];
+            moods = [
+                currentOpponent && opponentStrength >= ownStrength + 14 ? 'hard' : opponentStrength <= ownStrength - 14 ? 'confident' : 'wary',
+                block.threats.length >= 2 ? 'hard' : block.threats.length === 0 ? 'confident' : 'wary',
+                block.threats.length === 0 ? 'confident' : 'wary'
+            ];
+        } else {
+            let ownPathText;
+            if (strongVictims.length >= 2) {
+                ownPathText = `うちは${formatReactionNames(strongVictims.map(item => item.opponent))}を倒してここまで来てる。これだけの相手を越えたんだから、${currentOpponent ? `${currentOpponent}にも勝てる` : '誰が来てもやれる'}と思う。`;
+            } else if (strongVictims.length === 1) {
+                ownPathText = `${strongVictims[0].opponent}を倒してから明らかに空気が変わった。ファンももう相手の名前を見て引く段階じゃない。`;
+            } else {
+                ownPathText = `ここまで${formatReactionNames(path.map(item => item.opponent))}を一つずつ越えてきた。派手さはなくても、勝ち方を知ってる感じが出てきた。`;
+            }
+
+            let opponentPathText;
+            if (!currentOpponent) {
+                opponentPathText = `次の相手候補は${formatReactionNames(unresolvedOpponents, 3) || 'まだ未定'}。どちらが来ても、勝ち上がりを全部見て対策を変える。`;
+            } else if (opponentHadLightPath) {
+                opponentPathText = `${currentOpponent}の勝ち上がりを見ると、倒してきたのは${formatReactionNames(opponentPath.map(item => item.opponent))}。正直、まだ強いところとは当たっていないし、名前ほど構えなくていい。`;
+            } else if (opponentStrongVictims.length) {
+                opponentPathText = `${currentOpponent}は${formatReactionNames(opponentStrongVictims.map(item => item.opponent))}を倒している。ランク以上に今大会で仕上がっている相手だと思った方がいい。`;
+            } else if (opponentPath.length) {
+                opponentPathText = `${currentOpponent}も${formatReactionNames(opponentPath.map(item => item.opponent))}を破っての勝ち上がり。楽ではないが、うちの通ってきた道と比べて怖がりすぎる必要はない。`;
+            } else {
+                opponentPathText = `${opponentDisplay}はこの試合が大会初戦。情報が少ない分、序盤でどんな相手か見えてくるまでが怖い。`;
+            }
+
+            const pathDifference = currentOpponent ? getReactionPathDifficulty(path, state) - getReactionPathDifficulty(opponentPath, state) : 0;
+            let stageText;
+            if (currentRoundNumber >= getReactionFinalRound(state)) {
+                stageText = `決勝まで来たらランクもシードも関係ない。最後は「この夏を終わらせたくない」と思える方が一枚強い。`;
+            } else if (currentRoundNumber === getReactionFinalRound(state) - 1) {
+                stageText = `あと2勝で甲子園。準決勝は技術より、先制された後に平常心を保てるかで決まると思う。`;
+            } else if (currentRoundNumber >= getReactionFinalRound(state) - 3) {
+                stageText = pathDifference >= 20
+                    ? `対戦相手より、${teamName}の方が厳しい勝ち上がりを経験している。その差は終盤の一打で出ると思う。`
+                    : pathDifference <= -20
+                        ? `相手の方が厳しい山を抜けている。試合の勢いで押される前に、序盤から受けに回らないこと。`
+                        : `ベスト16以降は実力差がほとんどない。継投と守備の一つの判断が、そのまま夏の終わりになる。`;
+            } else {
+                stageText = `ここからは抽選時の評価より、実際の試合内容を見るべき。勝ち上がりながら強くなったチームが一番怖い。`;
+            }
+            texts = [ownPathText, opponentPathText, stageText];
+            moods = [
+                strongVictims.length ? 'confident' : 'wary',
+                opponentHadLightPath ? 'confident' : opponentStrongVictims.length ? 'hard' : 'wary',
+                pathDifference >= 20 ? 'confident' : pathDifference <= -20 ? 'hard' : 'wary'
+            ];
+        }
+    } else {
+        statusLabel = '大会状況を確認中';
+        phaseClass = 'phase-out';
+        texts = [
+            `${teamName}は現在のトーナメント表に見つからない。次の大会の組み合わせが決まれば、ここにファンの反応が表示される。`,
+            `チームデータ自体は残っているので、春・秋・夏の大会切り替え後にもう一度確認したい。`,
+            `対戦相手と勝ち上がりが確定するほど、反応の内容も具体的になっていく。`
+        ];
+        moods = ['out', 'wary', 'wary'];
+    }
+
+    const voices = buildReactionVoices(texts, moods, teamName, variant);
+    return {
+        teamName,
+        rank,
+        seedLabel,
+        statusLabel,
+        phaseClass,
+        nextLine,
+        journeyLine,
+        blockLine: `${block.label}／目標地点 ${block.target}`,
+        voices
+    };
+}
+
+function renderTeamReactionVoiceCards(voices, isAi = false) {
+    const list = document.getElementById('team-reaction-list');
+    if (!list) return;
+    list.innerHTML = voices.map(voice => `
+        <article class="team-reaction-card mood-${reactionEscapeHtml(voice.mood)}${isAi ? ' is-ai' : ''}">
+            <div class="team-reaction-avatar" aria-hidden="true">${reactionEscapeHtml(voice.icon)}</div>
+            <div>
+                <div class="team-reaction-speaker">
+                    ${reactionEscapeHtml(voice.role)}
+                    <span class="team-reaction-speaker-tag">${reactionEscapeHtml(voice.tag)}</span>
+                </div>
+                <p class="team-reaction-text">「${reactionEscapeHtml(voice.text)}」</p>
+            </div>
+        </article>
+    `).join('');
+}
+
+function setTeamReactionModeUi(mode) {
+    const isAi = mode === 'ai';
+    const localButton = document.getElementById('team-reaction-local-mode-btn');
+    const aiButton = document.getElementById('team-reaction-ai-mode-btn');
+    const description = document.getElementById('team-reaction-mode-description');
+    const refreshButton = document.getElementById('team-reaction-refresh-btn');
+    const note = document.getElementById('team-reaction-note');
+    localButton?.classList.toggle('active', !isAi);
+    aiButton?.classList.toggle('active', isAi);
+    localButton?.setAttribute('aria-selected', String(!isAi));
+    aiButton?.setAttribute('aria-selected', String(isAi));
+    if (description) {
+        description.textContent = isAi
+            ? '現在の大会データをAIが読み、立場や温度感の違うファンコメントを新しく3件作ります。'
+            : '組み合わせと勝ち上がりから、用意された豊富なファン目線の反応をすぐ表示します。';
+    }
+    if (refreshButton) {
+        refreshButton.textContent = isAi ? '✨ AIでもう3件生成' : '🔄 別の3人の反応を見る';
+        refreshButton.disabled = false;
+    }
+    if (note) {
+        note.textContent = isAi
+            ? 'AI生成時のみ通信します。結果・学校名の創作は禁止する指示付き'
+            : '地元ファン・卒業生・データ派など24種類の人物像';
+    }
+}
+
+function getTeamReactionAiFacts(teamName, state = tournamentState) {
+    const report = generateTeamTournamentReaction(teamName, currentReactionVariant, state);
+    const path = getReactionCompletedPath(teamName, state);
+    const loss = getReactionLoss(teamName, state);
+    const currentMatch = getReactionCurrentMatch(teamName, state);
+    const knownOpponent = currentMatch ? getReactionOpponent(currentMatch, teamName) : null;
+    const unresolvedOpponents = currentMatch ? getReactionUnresolvedOpponents(teamName, currentMatch, state) : [];
+    const nextRoundCandidates = currentMatch ? getReactionNextRoundCandidates(teamName, currentMatch, state) : [];
+    const block = getReactionBlockContext(teamName, state);
+    const opponentPath = isReactionTeamName(knownOpponent) ? getReactionCompletedPath(knownOpponent, state) : [];
+    const pathToPlainData = items => items.map(item => ({
+        round: item.roundLabel,
+        opponent: item.opponent,
+        opponentRank: item.opponentRank || calculateRank(item.opponent, state) || 'E',
+        opponentSeed: item.opponentSeed?.tier ? `${item.opponentSeed.tier}シード` : '',
+        score: item.score
+    }));
+    return {
+        tournament: `${state.tournamentYear || ''}年度 ${tournamentNameMap[state.currentTournament] || '大会'}`,
+        focusTeam: {
+            name: teamName,
+            rank: report.rank,
+            seed: report.seedLabel || 'シードなし',
+            status: report.statusLabel
+        },
+        nextMatch: report.nextLine,
+        completedWins: pathToPlainData(path),
+        eliminatedBy: loss ? {
+            round: loss.roundLabel,
+            opponent: loss.opponent,
+            score: loss.score
+        } : null,
+        confirmedOpponent: isReactionTeamName(knownOpponent) ? {
+            name: knownOpponent,
+            rank: calculateRank(knownOpponent, state) || 'E',
+            seed: getReactionSeedLabel(knownOpponent, state) || 'シードなし',
+            completedWins: pathToPlainData(opponentPath)
+        } : null,
+        opponentCandidates: unresolvedOpponents.slice(0, 5).map(name => ({
+            name,
+            rank: calculateRank(name, state) || 'E',
+            seed: getReactionSeedLabel(name, state) || 'シードなし'
+        })),
+        possibleNextRoundTeams: nextRoundCandidates.slice(0, 5).map(name => ({
+            name,
+            rank: calculateRank(name, state) || 'E',
+            seed: getReactionSeedLabel(name, state) || 'シードなし'
+        })),
+        smallBlock: {
+            label: block.label,
+            target: block.target,
+            teams: block.teams.map(name => ({
+                name,
+                rank: calculateRank(name, state) || 'E',
+                seed: getReactionSeedLabel(name, state) || 'シードなし'
+            })),
+            leadingThreats: block.threats,
+            watchTeams: block.watchTeams
+        }
+    };
+}
+
+function getTeamReactionAiCacheKey(teamName, state = tournamentState) {
+    const matchSnapshot = Object.values(state.matches || {})
+        .map(match => [
+            match?.id || '',
+            match?.team1 || '',
+            match?.team2 || '',
+            match?.winner || '',
+            match?.score1 ?? '',
+            match?.score2 ?? ''
+        ])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+    const stateKey = JSON.stringify({
+        year: state.tournamentYear,
+        tournament: state.currentTournament,
+        teamName,
+        teams: state.teams,
+        seeds: state.seeds,
+        matches: matchSnapshot
+    });
+    return `${teamName}-${reactionHash(stateKey)}`;
+}
+
+function getTeamReactionAiIcon(personality) {
+    const label = String(personality || '');
+    if (/データ|分析|予想|研究/.test(label)) return '📊';
+    if (/地元|近所|常連/.test(label)) return '🏟️';
+    if (/卒業|OB|母校/.test(label)) return '🎓';
+    if (/SNS|ネット|高校生/.test(label)) return '📱';
+    if (/中立|他校/.test(label)) return '⚖️';
+    if (/古参|昔|ベテラン/.test(label)) return '📻';
+    if (/心配|慎重|不安/.test(label)) return '🤞';
+    return '📣';
+}
+
+function normalizeAiFanRole(role, teamName, index) {
+    const cleaned = String(role || '').replace(/[「」"'<>]/g, '').trim().slice(0, 24);
+    if (!cleaned || /監督|主将|副主将|選手|部員|マネージャー|エース|捕手|投手|スコアラー/.test(cleaned)) {
+        return [`${teamName}の地元ファン`, '県大会を追うデータ派', '卒業生ファン'][index] || `${teamName}ファン`;
+    }
+    return cleaned;
+}
+
+function buildTeamReactionAiPrompt(teamName, facts) {
+    return `
+あなたは静岡県の高校野球を長年見ている「ファン掲示板」の編集AIです。
+以下の確定済み大会データだけを使い、${teamName}についてファン目線の自然な反応を3件作ってください。
+
+【絶対条件】
+- 監督・選手・主将・マネージャーなどチーム内部の発言にしない。全件を観客、地元ファン、卒業生ファン、他校ファン、データ派など外から応援・観戦する人の言葉にする。
+- 3件は人物像も温度感も変える。楽観、慎重、勝ち上がり比較など、少し意見が割れてよい。
+- 掲示板や球場帰りの会話のような、くだけた自然な日本語にする。記事調・解説者調・敬語だけの文章は避ける。
+- 組み合わせ直後なら、目の前の相手だけでなく次戦候補や小ブロックの有力校にも触れてよい。
+- 試合が進んでいるなら、${teamName}と相手が実際に倒してきた学校の差を具体的に比較してよい。
+- データにない学校名、選手名、スコア、勝敗、試合内容は絶対に作らない。未確定の対戦は断定しない。
+- 各コメントは45〜120文字程度。同じ書き出しや結論を繰り返さない。
+
+【確定済み大会データ】
+${JSON.stringify(facts, null, 2)}
+
+次のJSON配列だけを返してください。説明文やMarkdownは不要です。
+[
+  {"personality":"地元ファン","comment":"コメント本文","mood":"confident"},
+  {"personality":"データ派の県大会ファン","comment":"コメント本文","mood":"wary"},
+  {"personality":"卒業生ファン","comment":"コメント本文","mood":"hard"}
+]
+moodは confident / wary / hard / out のいずれかにしてください。
+`.trim();
+}
+
+function showTeamReactionAiLoading() {
+    const list = document.getElementById('team-reaction-list');
+    const refreshButton = document.getElementById('team-reaction-refresh-btn');
+    if (refreshButton) refreshButton.disabled = true;
+    if (list) {
+        list.innerHTML = `
+            <div class="team-reaction-loading" role="status">
+                <div class="team-reaction-loading-orb" aria-hidden="true"></div>
+                <strong>AIがファン3人の反応を考えています</strong>
+                <span>現在の組み合わせと両校の勝ち上がりを読み比べています…</span>
+            </div>
+        `;
+    }
+}
+
+function showTeamReactionAiError() {
+    const list = document.getElementById('team-reaction-list');
+    const refreshButton = document.getElementById('team-reaction-refresh-btn');
+    if (refreshButton) refreshButton.disabled = false;
+    if (list) {
+        list.innerHTML = `
+            <div class="team-reaction-error" role="alert">
+                <strong>AIコメントを生成できませんでした</strong>
+                <span>通信環境やAIバックエンドの設定を確認するか、即時生成版をお使いください。</span>
+                <button id="team-reaction-ai-retry-btn" type="button">もう一度試す</button>
+            </div>
+        `;
+    }
+}
+
+async function generateAiTeamFanReactions(teamName, force = false) {
+    const cacheKey = getTeamReactionAiCacheKey(teamName, tournamentState);
+    if (force) teamReactionAiCache.delete(cacheKey);
+    const cached = teamReactionAiCache.get(cacheKey);
+    if (cached) {
+        if (currentReactionMode === 'ai' && currentReactionTeamName === teamName) {
+            renderTeamReactionVoiceCards(cached, true);
+        }
+        return;
+    }
+
+    const requestToken = ++teamReactionAiRequestToken;
+    showTeamReactionAiLoading();
+    try {
+        const facts = getTeamReactionAiFacts(teamName, tournamentState);
+        const prompt = buildTeamReactionAiPrompt(teamName, facts);
+        const response = await fetchWithRetry({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        }, 2);
+        const result = await response.json();
+        const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const parsed = parseJsonFromText(rawText);
+        const entries = Array.isArray(parsed)
+            ? parsed
+            : parsed?.comments || parsed?.reactions || parsed?.fanComments || [];
+        if (!Array.isArray(entries) || entries.length < 3) {
+            throw new Error('AIのコメント件数が不足しています。');
+        }
+        const allowedMoods = new Set(['confident', 'wary', 'hard', 'out']);
+        const voices = entries.slice(0, 3).map((entry, index) => {
+            const role = normalizeAiFanRole(entry.personality || entry.role || entry.speaker, teamName, index);
+            const rawComment = String(entry.comment || entry.text || '').trim();
+            if (!rawComment) throw new Error('AIコメント本文が空です。');
+            return {
+                role,
+                icon: getTeamReactionAiIcon(role),
+                tag: 'AI生成・ファン目線',
+                text: convertReactionToFanPerspective(rawComment.slice(0, 220), teamName),
+                mood: allowedMoods.has(entry.mood) ? entry.mood : 'wary',
+                key: `${cacheKey}-${index}`
+            };
+        });
+        teamReactionAiCache.set(cacheKey, voices);
+        if (
+            requestToken === teamReactionAiRequestToken &&
+            currentReactionMode === 'ai' &&
+            currentReactionTeamName === teamName
+        ) {
+            renderTeamReactionVoiceCards(voices, true);
+            const refreshButton = document.getElementById('team-reaction-refresh-btn');
+            if (refreshButton) refreshButton.disabled = false;
+        }
+    } catch (error) {
+        console.error('AIファンコメントの生成に失敗しました:', error);
+        if (
+            requestToken === teamReactionAiRequestToken &&
+            currentReactionMode === 'ai' &&
+            currentReactionTeamName === teamName
+        ) {
+            showTeamReactionAiError();
+        }
+    }
+}
+
+function renderTeamTournamentReaction(teamName, variant = 0, mode = 'local') {
+    const modal = document.getElementById('team-reaction-modal');
+    const title = document.getElementById('team-reaction-title');
+    const subtitle = document.getElementById('team-reaction-subtitle');
+    const overview = document.getElementById('team-reaction-overview');
+    const list = document.getElementById('team-reaction-list');
+    if (!modal || !title || !subtitle || !overview || !list) return;
+
+    const report = generateTeamTournamentReaction(teamName, variant, tournamentState);
+    currentReactionTeamName = teamName;
+    currentReactionVariant = variant;
+    currentReactionMode = mode === 'ai' ? 'ai' : 'local';
+    title.textContent = `${teamName}ファンの反応`;
+    subtitle.textContent = `${tournamentState.tournamentYear || ''}年度・ファンはこのトーナメントをどう見る？`;
+    overview.innerHTML = `
+        <div class="team-reaction-chips">
+            <span class="team-reaction-chip rank-${reactionEscapeHtml(report.rank)}">${reactionEscapeHtml(report.rank)}ランク</span>
+            ${report.seedLabel ? `<span class="team-reaction-chip">🎟️ ${reactionEscapeHtml(report.seedLabel)}</span>` : ''}
+            <span class="team-reaction-chip ${reactionEscapeHtml(report.phaseClass)}">${reactionEscapeHtml(report.statusLabel)}</span>
+        </div>
+        <div class="team-reaction-overview-line">
+            <span class="team-reaction-overview-label">次の焦点</span>
+            <span>${reactionEscapeHtml(report.nextLine)}</span>
+        </div>
+        <div class="team-reaction-overview-line">
+            <span class="team-reaction-overview-label">勝ち上がり</span>
+            <span>${reactionEscapeHtml(report.journeyLine)}</span>
+        </div>
+        <div class="team-reaction-overview-line">
+            <span class="team-reaction-overview-label">山の位置</span>
+            <span>${reactionEscapeHtml(report.blockLine)}</span>
+        </div>
+    `;
+    setTeamReactionModeUi(currentReactionMode);
+    modal.classList.remove('hidden');
+    if (currentReactionMode === 'ai') {
+        void generateAiTeamFanReactions(teamName);
+    } else {
+        teamReactionAiRequestToken++;
+        renderTeamReactionVoiceCards(report.voices, false);
+    }
+}
+
+function closeTeamTournamentReaction() {
+    teamReactionAiRequestToken++;
+    document.getElementById('team-reaction-modal')?.classList.add('hidden');
+}
+// ▲▲▲ チーム別「大会への反応」エンジン ▲▲▲
+
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
     
 /**
@@ -12913,6 +14153,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
                 ${team1ConditionIcons}
             </span>
             ${createSpecialButtons(team1)} 
+            ${!t1Empty && team1 !== '(BYE)' ? `<button class="team-reaction-btn" data-team-name="${team1}" type="button" title="${team1}ファンの組み合わせ・勝ち上がりへの反応を見る">📣 ファン</button>` : ''}
             ${!t1Empty ? `<button class="show-team-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" data-team-name="${team1}" title="${team1} の通算成績を見る">📊</button>` : ''}
             
             <input type="text" class="score-input ${showInputs ? '' : 'hidden'}" value="${dbMatch.score1 ?? ''}" data-team-pos="1">
@@ -12927,6 +14168,7 @@ function createMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
                 ${team2ConditionIcons}
             </span>
             ${createSpecialButtons(team2)}
+            ${!t2Empty && team2 !== '(BYE)' ? `<button class="team-reaction-btn" data-team-name="${team2}" type="button" title="${team2}ファンの組み合わせ・勝ち上がりへの反応を見る">📣 ファン</button>` : ''}
             ${!t2Empty ? `<button class="show-team-stats-btn text-lg p-1 text-blue-600 hover:bg-blue-100 rounded" data-team-name="${team2}" title="${team2} の通算成績を見る">📊</button>` : ''}
             
             <input type="text" class="score-input ${showInputs ? '' : 'hidden'}" value="${dbMatch.score2 ?? ''}" data-team-pos="2">
@@ -27442,6 +28684,57 @@ document.body.addEventListener('click', async (e) => {
 
 
 
+    // --- チーム別「大会への反応」ボタン ---
+    const teamReactionBtn = e.target.closest('.team-reaction-btn');
+    if (teamReactionBtn) {
+        e.preventDefault();
+        const teamName = teamReactionBtn.dataset.teamName;
+        if (teamName) renderTeamTournamentReaction(teamName, 0, 'local');
+        return;
+    }
+
+    if (e.target.closest('#team-reaction-close-btn') || e.target.id === 'team-reaction-modal') {
+        e.preventDefault();
+        closeTeamTournamentReaction();
+        return;
+    }
+
+    if (e.target.closest('#team-reaction-local-mode-btn')) {
+        e.preventDefault();
+        if (currentReactionTeamName && currentReactionMode !== 'local') {
+            renderTeamTournamentReaction(currentReactionTeamName, currentReactionVariant, 'local');
+        }
+        return;
+    }
+
+    if (e.target.closest('#team-reaction-ai-mode-btn')) {
+        e.preventDefault();
+        if (currentReactionTeamName && currentReactionMode !== 'ai') {
+            renderTeamTournamentReaction(currentReactionTeamName, currentReactionVariant, 'ai');
+        }
+        return;
+    }
+
+    if (e.target.closest('#team-reaction-refresh-btn')) {
+        e.preventDefault();
+        if (currentReactionTeamName) {
+            if (currentReactionMode === 'ai') {
+                void generateAiTeamFanReactions(currentReactionTeamName, true);
+            } else {
+                renderTeamTournamentReaction(currentReactionTeamName, currentReactionVariant + 1, 'local');
+            }
+        }
+        return;
+    }
+
+    if (e.target.closest('#team-reaction-ai-retry-btn')) {
+        e.preventDefault();
+        if (currentReactionTeamName) {
+            void generateAiTeamFanReactions(currentReactionTeamName, true);
+        }
+        return;
+    }
+
 
     // --- 試合進行ボタン (▶) ---
     if (e.target.matches('.win-btn')) {
@@ -30338,6 +31631,13 @@ function updatePlayerStatsFromDetails(match) {
         // ... (投手集計ロジックは省略。fillPitcherStatsFromBattingなどを使う前提) ...
     }
 }
+
+// 反応モーダルはEscキーでも閉じられる
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !document.getElementById('team-reaction-modal')?.classList.contains('hidden')) {
+        closeTeamTournamentReaction();
+    }
+});
 
 // 通知バナーをクリック -> SNSモーダルを開く
     const trendNotification = document.getElementById('trend-notification');
