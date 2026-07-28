@@ -671,36 +671,1154 @@
 }
 /* ▲▲▲ ここまで ▲▲▲ */
 
-/* ▼▼▼ 抽選会イベント用のCSS ▼▼▼ */
-#drawn-team-container.fade-in-out {
-    animation: fadeInOut 2.5s ease-in-out forwards;
+/* ▼▼▼ 組み合わせ抽選会（会場進行版） ▼▼▼ */
+#lottery-modal {
+    --draw-navy: #10263f;
+    --draw-blue: #1f4f7a;
+    --draw-gold: #d7a928;
+    --draw-paper: #f7f3e8;
 }
 
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: scale(0.8); }
-    20%, 80% { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0.8); }
+.draw-ceremony-shell {
+    width: min(1540px, 98vw);
+    height: min(960px, 97vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #e8edf2;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .52);
+}
+
+.draw-ceremony-header {
+    flex: 0 0 auto;
+    min-height: 76px;
+    padding: 12px 22px;
+    color: white;
+    background:
+        linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px) 0 0 / 34px 34px,
+        linear-gradient(135deg, #0b1c31, #173b60 60%, #0f2945);
+    border-bottom: 4px solid var(--draw-gold);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+}
+
+.draw-live-badge {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px;
+    background: rgba(0,0,0,.18);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.draw-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4b4b;
+    box-shadow: 0 0 0 5px rgba(255,75,75,.16);
+    animation: drawLivePulse 1.25s infinite;
+}
+
+.draw-title-wrap { text-align: center; }
+.draw-title-wrap h2 {
+    margin: 0;
+    font-size: clamp(20px, 2.3vw, 34px);
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+.draw-title-wrap p {
+    margin: 2px 0 0;
+    color: #cbd8e5;
+    font-size: 12px;
+    letter-spacing: .05em;
+}
+.draw-venue {
+    justify-self: end;
+    text-align: right;
+    font-size: 12px;
+    color: #d9e4ef;
+    line-height: 1.45;
+}
+
+.draw-ceremony-main {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 300px minmax(520px, 1fr) 260px;
+    gap: 12px;
+    padding: 12px;
+}
+
+.draw-panel {
+    min-height: 0;
+    border: 1px solid #c8d1db;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(25, 45, 65, .08);
+    overflow: hidden;
+}
+
+.draw-panel-heading {
+    min-height: 44px;
+    padding: 9px 13px;
+    color: white;
+    background: linear-gradient(135deg, var(--draw-navy), var(--draw-blue));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.draw-phase-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 25px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    color: #3d2c00;
+    background: #ffe58c;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.draw-stage-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.draw-current-school {
+    margin: 12px 12px 8px;
+    padding: 12px;
+    border: 1px solid #d5dde6;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #f8fafc, #eef3f8);
+}
+
+.draw-current-label {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+#lottery-current-team {
+    margin-top: 4px;
+    color: #16263a;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+#lottery-current-meta {
+    margin-top: 5px;
+    color: #526277;
+    font-size: 12px;
+}
+
+.draw-podium {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 205px;
+    margin: 0 12px 8px;
+    border-radius: 12px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 25%, rgba(255,255,255,.27), transparent 36%),
+        linear-gradient(#345d83 0 62%, #d3b486 62% 66%, #a87e4c 66%);
+}
+
+.draw-podium::before,
+.draw-podium::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 54px;
+    height: 65%;
+    background: linear-gradient(90deg, #e9edf1, #b7c1cb);
+    opacity: .35;
+}
+.draw-podium::before { left: 0; clip-path: polygon(0 0, 100% 0, 65% 100%, 0 100%); }
+.draw-podium::after { right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 35% 100%); }
+
+#lottery-pot {
+    position: absolute;
+    left: 50%;
+    bottom: 43px;
+    width: 146px;
+    height: 112px;
+    transform: translateX(-50%);
+    border: 5px solid #e2bd47;
+    border-radius: 16px 16px 30px 30px;
+    color: white;
+    background:
+        linear-gradient(155deg, rgba(255,255,255,.2), transparent 32%),
+        linear-gradient(#9a1c24, #5f1018);
+    box-shadow: 0 12px 22px rgba(0,0,0,.3), inset 0 0 0 3px rgba(255,255,255,.08);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: transform .16s ease, filter .16s ease;
+}
+
+#lottery-pot::before {
+    content: "";
+    position: absolute;
+    top: -16px;
+    width: 94px;
+    height: 20px;
+    border: 4px solid #d9b33d;
+    border-radius: 50%;
+    background: #3d0d12;
+}
+
+#lottery-pot:hover:not(.disabled) {
+    transform: translateX(-50%) translateY(-3px);
+    filter: brightness(1.08);
+}
+#lottery-pot.disabled {
+    cursor: not-allowed;
+    filter: grayscale(.65) brightness(.82);
+}
+#lottery-pot.is-shaking { animation: drawPotShake .55s ease; }
+
+.draw-pot-label {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    line-height: 1.2;
+}
+.draw-pot-label small {
+    display: block;
+    margin-top: 3px;
+    color: #ffeaa6;
+    font-size: 10px;
+}
+
+.draw-captain-silhouette {
+    position: absolute;
+    left: calc(50% - 112px);
+    bottom: 56px;
+    width: 54px;
+    height: 80px;
+    border-radius: 45% 45% 18% 18%;
+    background: #172538;
+    box-shadow: 0 -30px 0 -10px #172538;
+    opacity: .9;
+}
+
+.draw-podium-sign {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    width: 78%;
+    padding: 5px 8px;
+    border: 2px solid #cda74b;
+    color: #263548;
+    background: #f7f1df;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .04em;
+}
+
+#drawn-team-container {
+    min-height: 88px;
+    margin: 0 12px 10px;
+    border: 2px dashed #aebaca;
+    border-radius: 10px;
+    color: #17263a;
+    background: #f8fafc;
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    opacity: .55;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+#drawn-team-container.revealed {
+    opacity: 1;
+    transform: translateY(-2px);
+    border-style: solid;
+    border-color: #d5a928;
+    background: #fff9df;
+    animation: drawTicketReveal .42s ease-out;
+}
+
+#drawn-number {
+    min-width: 70px;
+    padding: 8px 5px;
+    border: 2px solid #213c59;
+    border-radius: 6px;
+    color: #12263d;
+    background: var(--draw-paper);
+    text-align: center;
+    font-size: 28px;
+    font-weight: 1000;
+    box-shadow: 0 3px 0 #b9ac8d;
+}
+
+#drawn-team {
+    min-width: 0;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.draw-board-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: transform .28s ease, filter .28s ease, box-shadow .28s ease;
+}
+
+#lottery-stage .draw-stage-panel,
+#lottery-stage .draw-sidebar-panel {
+    transition: transform .28s ease, filter .28s ease, opacity .28s ease, box-shadow .28s ease;
+}
+
+#lottery-stage.camera-stage .draw-stage-panel {
+    transform: scale(1.018);
+    box-shadow: 0 0 0 3px #e2b53e, 0 16px 34px rgba(16,38,63,.32);
+}
+
+#lottery-stage.camera-stage .draw-board-panel,
+#lottery-stage.camera-stage .draw-sidebar-panel {
+    filter: brightness(.78) saturate(.78);
+}
+
+#lottery-stage.camera-ticket #drawn-team-container {
+    transform: translateY(-4px) scale(1.055);
+    box-shadow: 0 0 0 3px rgba(224,181,55,.45), 0 12px 24px rgba(31,49,67,.24);
+}
+
+#lottery-stage.camera-board .draw-board-panel {
+    transform: scale(1.008);
+    box-shadow: 0 0 0 3px #e2b53e, 0 18px 38px rgba(16,38,63,.34);
+}
+
+#lottery-stage.camera-board .draw-stage-panel,
+#lottery-stage.camera-board .draw-sidebar-panel {
+    filter: brightness(.64) saturate(.65);
+    opacity: .72;
+}
+
+.draw-progress-wrap {
+    width: 160px;
+    height: 7px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: rgba(255,255,255,.24);
+}
+#lottery-progress-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: #ffd85b;
+    transition: width .28s ease;
+}
+
+.lottery-board-toolbar {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border-bottom: 1px solid #c5cdd5;
+    background: #edf1f4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#lottery-block-tabs {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.lottery-board-tab {
+    min-width: 52px;
+    padding: 6px 11px;
+    border: 1px solid #9faab4;
+    border-radius: 5px;
+    color: #314355;
+    background: #f8fafb;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.lottery-board-tab.active {
+    border-color: #173e64;
+    color: white;
+    background: #214f78;
+    box-shadow: inset 0 -3px 0 #e0b63b;
+}
+
+.lottery-board-legend {
+    color: #617181;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+#lottery-bracket {
+    min-height: 0;
+    flex: 1 1 auto;
+    position: relative;
+    padding: 12px;
+    overflow: auto;
+    background:
+        linear-gradient(90deg, rgba(96,86,68,.035) 1px, transparent 1px) 0 0 / 28px 100%,
+        linear-gradient(#d9d5c8, #ece9df);
+    scrollbar-color: #7d8b97 #d5d9dc;
+}
+
+.lottery-block-board {
+    position: relative;
+    display: none;
+    width: 1584px;
+    min-height: 420px;
+    padding: 12px 24px 18px;
+    overflow: hidden;
+    border: 1px solid #aaa79d;
+    border-radius: 3px;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.018) 1px, transparent 1px) 0 0 / 48px 100%,
+        linear-gradient(#faf9f4, #f0eee7);
+    box-shadow:
+        0 8px 20px rgba(50, 44, 34, .18),
+        inset 0 0 0 5px rgba(255,255,255,.55);
+}
+
+.lottery-block-board.active {
+    display: block;
+    animation: drawWallBoardIn .22s ease-out;
+}
+
+.lottery-wall-title {
+    width: 1536px;
+    min-height: 34px;
+    margin: 0 auto 4px;
+    padding: 5px 12px;
+    border-bottom: 2px solid #30363a;
+    color: #252a2e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.lottery-wall-title span:last-child {
+    color: #666a6d;
+    font-family: sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .03em;
+}
+
+.lottery-bracket-tree {
+    position: relative;
+    width: 1536px;
+    height: 170px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.lottery-tree-svg {
+    display: block;
+    width: 1536px;
+    height: 170px;
+}
+
+.lottery-tree-svg path {
+    fill: none;
+    stroke: #596064;
+    stroke-width: 1.35;
+    vector-effect: non-scaling-stroke;
+    transition: stroke .18s ease, stroke-width .18s ease, filter .18s ease;
+}
+
+.lottery-tree-svg .tree-final-line {
+    stroke: #32383d;
+    stroke-width: 2.2;
+}
+
+.lottery-tree-svg path.route-active {
+    stroke: #d13d36;
+    stroke-width: 3.4;
+    filter: drop-shadow(0 0 3px rgba(209,61,54,.72));
+}
+
+.lottery-tree-svg path.route-complete {
+    stroke: #c39624;
+    stroke-width: 2.5;
+}
+
+.lottery-tree-svg text {
+    fill: #555d62;
+    font-family: sans-serif;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.lottery-wall-rail {
+    position: relative;
+    width: 1536px;
+    height: 8px;
+    margin: -1px auto 0;
+    border-top: 3px solid #4a4e50;
+    border-bottom: 1px solid #a9a59a;
+    background: linear-gradient(#d6d3ca, #f5f3ec);
+    box-shadow: 0 2px 3px rgba(0,0,0,.12);
+}
+
+.lottery-wall-placards {
+    width: 1536px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
 }
 
 .lottery-slot {
-    border: 1px solid #d1d5db;
-    background-color: #f3f4f6;
-    padding: 4px 8px;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 4px;
-    transition: all 0.3s ease-in-out;
+    position: relative;
+    flex: 0 0 48px;
+    width: 48px;
+    min-height: 190px;
+    color: #1e2428;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    transition: filter .25s ease;
 }
+
+.lottery-slot:nth-child(2n) {
+    background: rgba(38,49,57,.022);
+}
+
+.lottery-slot .slot-number {
+    width: 100%;
+    height: 25px;
+    border-left: 1px solid rgba(75,77,76,.18);
+    color: #252b2f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 13px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.lottery-slot:last-child .slot-number {
+    border-right: 1px solid rgba(75,77,76,.18);
+}
+
+.lottery-slot-hook {
+    position: relative;
+    z-index: 2;
+    width: 12px;
+    height: 9px;
+    margin-top: -1px;
+    border: 2px solid #6c6a64;
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+    background: #d4d0c6;
+    box-shadow: 0 1px 1px rgba(0,0,0,.22);
+}
+
+.lottery-team-board {
+    position: relative;
+    width: 41px;
+    height: 154px;
+    margin-top: 0;
+    padding: 9px 5px 6px;
+    border: 1px solid #a5a39c;
+    color: #17191a;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.025), transparent 20%, rgba(255,255,255,.5) 55%, rgba(0,0,0,.02)),
+        #fbfaf6;
+    box-shadow: 0 2px 4px rgba(0,0,0,.22);
+    opacity: .12;
+    transform: translateY(-34px);
+    transform-origin: 50% 0;
+    transition: opacity .22s ease, transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease;
+}
+
+.lottery-team-board::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    transform: translateX(-50%);
+    border: 1px solid #88857e;
+    border-radius: 50%;
+    background: #dad6ca;
+}
+
+.lottery-slot .team-name-placeholder {
+    width: 100%;
+    height: 100%;
+    padding-top: 3px;
+    overflow: hidden;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    line-height: 1.15;
+}
+
+.lottery-seed-mark {
+    position: absolute;
+    left: 2px;
+    bottom: 3px;
+    min-width: 15px;
+    min-height: 15px;
+    padding: 1px 2px;
+    border: 1px solid #9c7b23;
+    border-radius: 2px;
+    color: #5c4305;
+    background: #fff0a7;
+    font-family: sans-serif;
+    font-size: 7px;
+    font-weight: 1000;
+    line-height: 11px;
+    text-align: center;
+    opacity: 0;
+}
+
 .lottery-slot.filled {
-    background-color: #fffbeb; /* amber-100 */
-    border-color: #f59e0b; /* amber-500 */
-    font-weight: 700;
-    transform: scale(1.05);
+    color: #17191a;
 }
+
+.lottery-slot.filled .lottery-team-board {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.lottery-slot.seeded .lottery-seed-mark {
+    opacity: 1;
+}
+
+.lottery-slot.bye-slot {
+    color: #77726a;
+}
+
+.lottery-slot.bye-slot .lottery-team-board {
+    background: repeating-linear-gradient(135deg, #f3f1e9 0 5px, #e7e4da 5px 10px);
+    box-shadow: none;
+}
+
+.lottery-slot.bye-slot .team-name-placeholder {
+    color: #837c70;
+    font-family: sans-serif;
+    font-size: 11px;
+    letter-spacing: .18em;
+}
+
 .lottery-slot.highlight {
-    background-color: #ef4444; /* red-500 */
+    position: relative;
+    z-index: 2;
+    filter: brightness(1.04);
+}
+
+.lottery-slot.highlight .lottery-team-board {
+    border-color: #a52b2b;
+    box-shadow:
+        0 0 0 3px #d14a42,
+        0 0 0 6px #f3d361,
+        0 8px 18px rgba(115,28,24,.34);
+}
+
+.lottery-slot.focus-draw {
+    animation: drawPlacardSettle 1.15s ease;
+}
+
+#lottery-board-staff-overlay {
+    position: absolute;
+    z-index: 14;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(90deg, rgba(12,24,34,.1), transparent 22%, transparent 78%, rgba(12,24,34,.08));
+    transition: opacity .12s ease;
+}
+
+#lottery-board-staff-overlay.active {
+    opacity: 1;
+}
+
+#lottery-board-attendant {
+    --staff-duration: 650ms;
+    --staff-start-x: 8px;
+    --staff-target-x: 220px;
+    position: absolute;
+    left: var(--staff-start-x);
+    bottom: 6px;
+    width: 98px;
+    height: 190px;
+    opacity: 0;
+}
+
+#lottery-board-staff-overlay.active #lottery-board-attendant {
+    animation: lotteryStaffCarry var(--staff-duration) cubic-bezier(.2,.7,.25,1) forwards;
+}
+
+.lottery-attendant-person {
+    position: absolute;
+    left: 4px;
+    bottom: 0;
+    width: 43px;
+    height: 135px;
+}
+
+.lottery-attendant-head {
+    position: absolute;
+    top: 0;
+    left: 12px;
+    width: 22px;
+    height: 25px;
+    border-radius: 50% 50% 44% 44%;
+    background: #d4aa87;
+    box-shadow: inset 0 6px 0 #22272b;
+}
+
+.lottery-attendant-body {
+    position: absolute;
+    top: 23px;
+    left: 5px;
+    width: 35px;
+    height: 64px;
+    border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(90deg, #f9faf9, #d9e0e4);
+    box-shadow: inset 0 -10px 0 #28313a;
+}
+
+.lottery-attendant-body::before,
+.lottery-attendant-body::after {
+    content: "";
+    position: absolute;
+    top: 58px;
+    width: 10px;
+    height: 54px;
+    border-radius: 4px;
+    background: #26313b;
+    transform-origin: 50% 0;
+}
+.lottery-attendant-body::before { left: 5px; animation: lotteryStaffLegLeft .42s infinite alternate; }
+.lottery-attendant-body::after { right: 5px; animation: lotteryStaffLegRight .42s infinite alternate; }
+
+.lottery-staff-carry-board {
+    position: absolute;
+    top: 2px;
+    right: 1px;
+    width: 42px;
+    height: 150px;
+    padding: 8px 5px;
+    border: 1px solid #989791;
+    color: #17191a;
+    background: #fbfaf6;
+    box-shadow: 0 5px 10px rgba(0,0,0,.28);
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-align: start;
+}
+
+.lottery-staff-carry-board::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    transform: translateX(-50%);
+    border: 1px solid #85827a;
+    border-radius: 50%;
+    background: #d8d4c9;
+}
+
+#lottery-broadcast-overlay {
+    position: relative;
+    z-index: 24;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    flex: 0 0 64px;
+    width: calc(100% - 20px);
+    min-height: 64px;
+    margin: 8px 10px 10px;
     color: white;
-    border-color: #b91c1c; /* red-700 */
+    background: linear-gradient(90deg, rgba(8,29,50,.97), rgba(23,66,104,.96) 72%, rgba(13,38,61,.95));
+    border-left: 7px solid #d9b036;
+    box-shadow: 0 10px 28px rgba(0,0,0,.36);
+    display: grid;
+    grid-template-columns: 112px minmax(0,1fr);
+    align-items: stretch;
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .24s ease;
+}
+
+#lottery-broadcast-overlay.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#lottery-broadcast-overlay.tone-alert {
+    background: linear-gradient(90deg, rgba(93,17,22,.98), rgba(176,35,40,.96) 72%, rgba(89,15,20,.96));
+    border-left-color: #ffd85d;
+}
+
+#lottery-broadcast-overlay.tone-gold {
+    color: #172331;
+    background: linear-gradient(90deg, #f4df95, #fff6d0 72%, #e8c763);
+    border-left-color: #8f6d13;
+}
+
+.lottery-broadcast-kicker {
+    padding: 8px 10px;
+    border-right: 1px solid rgba(255,255,255,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 1000;
+    line-height: 1.25;
+    letter-spacing: .06em;
+}
+
+.lottery-broadcast-copy {
+    min-width: 0;
+    padding: 7px 13px;
+}
+
+#lottery-broadcast-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 18px;
+    font-weight: 1000;
+    line-height: 1.25;
+}
+
+#lottery-broadcast-subtitle {
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: .86;
+}
+
+#lottery-block-complete-flash {
+    position: absolute;
+    z-index: 18;
+    top: 50%;
+    left: 50%;
+    width: min(520px, 82%);
+    padding: 18px 22px;
+    transform: translate(-50%, -50%) scale(.86);
+    border: 2px solid #f1d46f;
+    border-radius: 8px;
+    color: white;
+    background: rgba(10,35,57,.95);
+    box-shadow: 0 18px 44px rgba(0,0,0,.4);
+    text-align: center;
+    font-size: 22px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#lottery-block-complete-flash.show {
+    animation: lotteryBlockComplete 1.5s ease forwards;
+}
+
+.draw-sidebar-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.draw-focus-wrap {
+    padding: 10px;
+    border-bottom: 1px solid #dce3ea;
+    background: #f7f9fb;
+}
+.draw-focus-wrap label {
+    display: block;
+    margin-bottom: 4px;
+    color: #526277;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .04em;
+}
+#lottery-focus-team {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid #b9c4cf;
+    border-radius: 7px;
+    color: #203147;
+    background: white;
+    font-size: 12px;
+}
+
+.draw-next-wrap {
+    padding: 9px 10px;
+    border-bottom: 1px solid #dce3ea;
+}
+.draw-side-label {
+    margin-bottom: 6px;
+    color: #65758a;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .07em;
+}
+#lottery-next-teams {
+    display: grid;
+    gap: 5px;
+}
+.draw-next-team {
+    padding: 6px 7px;
+    border-left: 3px solid #94a8ba;
+    border-radius: 4px;
+    color: #33465a;
+    background: #f3f6f8;
+    font-size: 11px;
+    font-weight: 700;
+}
+.draw-next-team.current {
+    border-left-color: #d3a529;
+    color: #263342;
+    background: #fff6d5;
+}
+
+#lottery-draw-log {
+    min-height: 0;
+    flex: 1 1 auto;
+    margin: 0;
+    padding: 8px 10px 12px;
+    overflow-y: auto;
+    list-style: none;
+}
+.draw-log-item {
+    padding: 7px 2px;
+    border-bottom: 1px dashed #d8e0e7;
+    color: #405269;
+    font-size: 11px;
+    line-height: 1.4;
+}
+.draw-log-item strong { color: #14283f; }
+.draw-log-item.matchup {
+    color: #8b2c2c;
+    background: #fff5f2;
+}
+
+.draw-ceremony-footer {
+    flex: 0 0 auto;
+    padding: 9px 12px 11px;
+    border-top: 1px solid #bcc8d3;
+    background: #f8fafc;
+}
+
+#lottery-commentary {
+    min-height: 52px;
+    padding: 8px 14px;
+    border: 1px solid #d5c07e;
+    border-radius: 8px;
+    color: #2a3542;
+    background: #fff9df;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+#lottery-controls {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.draw-control-btn {
+    min-height: 36px;
+    padding: 7px 15px;
+    border: 0;
+    border-radius: 7px;
+    color: white;
+    background: #245d91;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: filter .15s ease, transform .15s ease;
+}
+.draw-control-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.draw-control-btn.secondary { background: #526477; }
+.draw-control-btn.danger { background: #8a3c3c; }
+.draw-control-btn.confirm { background: #14754e; }
+.draw-control-btn:disabled { cursor: not-allowed; filter: grayscale(.8); opacity: .55; transform: none; }
+#lottery-speed {
+    min-height: 36px;
+    padding: 6px 8px;
+    border: 1px solid #b8c4cf;
+    border-radius: 7px;
+    color: #34465a;
+    background: white;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#lottery-summary {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    padding: 22px;
+    color: white;
+    background: rgba(6, 18, 31, .93);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#lottery-summary.hidden { display: none; }
+.draw-summary-card {
+    width: min(680px, 95%);
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 14px;
+    background: linear-gradient(145deg, #173653, #0e2439);
+    box-shadow: 0 18px 45px rgba(0,0,0,.4);
+}
+.draw-summary-card h3 {
+    margin: 0 0 6px;
+    color: #ffe083;
+    font-size: 25px;
+    font-weight: 900;
+    text-align: center;
+}
+.draw-summary-card > p {
+    margin: 0 0 18px;
+    color: #cbd7e2;
+    text-align: center;
+    font-size: 13px;
+}
+.draw-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+}
+.draw-summary-stat {
+    padding: 12px;
+    border-radius: 9px;
+    background: rgba(255,255,255,.08);
+}
+.draw-summary-stat span {
+    display: block;
+    margin-bottom: 4px;
+    color: #aebed0;
+    font-size: 10px;
+    font-weight: 800;
+}
+.draw-summary-stat strong {
+    color: white;
+    font-size: 14px;
+}
+.draw-summary-actions {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+}
+
+@keyframes drawLivePulse {
+    50% { opacity: .45; transform: scale(.82); }
+}
+@keyframes drawPotShake {
+    0%,100% { transform: translateX(-50%) rotate(0); }
+    20% { transform: translateX(-50%) rotate(-4deg); }
+    40% { transform: translateX(-50%) rotate(4deg); }
+    60% { transform: translateX(-50%) rotate(-3deg); }
+    80% { transform: translateX(-50%) rotate(3deg); }
+}
+@keyframes drawTicketReveal {
+    from { opacity: .25; transform: translateY(12px) rotateX(65deg); }
+    to { opacity: 1; transform: translateY(-2px) rotateX(0); }
+}
+@keyframes drawSlotFlash {
+    0%,100% { box-shadow: none; }
+    35% { box-shadow: inset 0 0 0 999px rgba(255,220,83,.45), 0 0 0 3px #e4b62e; }
+}
+@keyframes drawWallBoardIn {
+    from { opacity: .35; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes drawPlacardSettle {
+    0% { transform: translateY(-8px); }
+    45% { transform: translateY(3px); }
+    70% { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
+}
+@keyframes lotteryStaffCarry {
+    0% { left: var(--staff-start-x); opacity: 0; transform: translateY(5px); }
+    12% { opacity: 1; }
+    70% { left: var(--staff-target-x); opacity: 1; transform: translateY(0); }
+    86% { left: var(--staff-target-x); opacity: 1; transform: translateY(-12px); }
+    100% { left: var(--staff-target-x); opacity: 0; transform: translateY(-18px); }
+}
+@keyframes lotteryStaffLegLeft {
+    from { transform: rotate(8deg); }
+    to { transform: rotate(-8deg); }
+}
+@keyframes lotteryStaffLegRight {
+    from { transform: rotate(-8deg); }
+    to { transform: rotate(8deg); }
+}
+@keyframes lotteryBlockComplete {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.82); }
+    18%,72% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
 }
 
 @keyframes fadeIn {
@@ -714,7 +1832,33 @@
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-/* ▲▲▲ ここまで ▲▲▲ */
+
+@media (max-width: 1050px) {
+    .draw-ceremony-main { grid-template-columns: 250px minmax(430px, 1fr); }
+    .draw-sidebar-panel { display: none; }
+}
+
+@media (max-width: 720px) {
+    .draw-ceremony-shell { width: 100vw; height: 100vh; border-radius: 0; }
+    .draw-ceremony-header { grid-template-columns: auto 1fr; padding: 8px 10px; }
+    .draw-title-wrap { text-align: left; }
+    .draw-venue { display: none; }
+    .draw-ceremony-main { grid-template-columns: 1fr; padding: 7px; overflow-y: auto; }
+    .draw-stage-panel { min-height: 300px; }
+    .draw-board-panel { display: flex; min-height: 330px; }
+    .draw-podium { min-height: 160px; }
+    #drawn-team-container { min-height: 70px; }
+    #lottery-commentary { min-height: 44px; font-size: 13px; }
+    .draw-summary-grid { grid-template-columns: 1fr; }
+    .lottery-board-legend { display: none; }
+    #lottery-broadcast-overlay {
+        width: calc(100% - 12px);
+        margin: 5px 6px 7px;
+        grid-template-columns: 82px minmax(0,1fr);
+    }
+    #lottery-broadcast-title { font-size: 14px; }
+}
+/* ▲▲▲ 抽選会CSSここまで ▲▲▲ */
 
 /* Weather Effects */
 .rain {
@@ -3379,6 +4523,476 @@
 }
 /* ▲▲▲ チーム別「大会への反応」機能 ▲▲▲ */
 
+/* ▼▼▼ 大会全体「ファン広場」 ▼▼▼ */
+.fan-hub-open-btn {
+    position: relative;
+    overflow: visible;
+    background: linear-gradient(135deg, #e11d48, #f97316) !important;
+}
+.fan-hub-open-btn:hover { filter: brightness(1.06); }
+.fan-hub-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 21px;
+    height: 21px;
+    display: grid;
+    place-items: center;
+    padding: 0 5px;
+    border: 2px solid white;
+    border-radius: 999px;
+    color: white;
+    background: #7f1d1d;
+    font-size: 9px;
+    font-weight: 900;
+}
+.fan-hub-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 415;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(2, 6, 23, 0.82);
+    backdrop-filter: blur(8px);
+}
+.fan-hub-modal.hidden { display: none; }
+.fan-hub-panel {
+    width: min(1120px, 100%);
+    max-height: 95vh;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 24px;
+    background: #f8fafc;
+    box-shadow: 0 32px 90px rgba(0,0,0,0.48);
+    animation: fanHubOpen 0.24s ease-out both;
+}
+@keyframes fanHubOpen {
+    from { opacity: 0; transform: translateY(15px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fan-hub-header {
+    position: relative;
+    padding: 21px 62px 19px 24px;
+    color: white;
+    background:
+        radial-gradient(circle at 85% 10%, rgba(255,255,255,0.18), transparent 25%),
+        linear-gradient(125deg, #450a0a, #9f1239 48%, #ea580c);
+}
+.fan-hub-kicker {
+    color: #fed7aa;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+}
+.fan-hub-title {
+    margin: 4px 0 0;
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(23px, 4vw, 32px);
+    font-weight: 900;
+}
+.fan-hub-subtitle {
+    margin-top: 5px;
+    color: #ffedd5;
+    font-size: 12px;
+}
+.fan-hub-close {
+    position: absolute;
+    top: 15px;
+    right: 17px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: white;
+    background: rgba(255,255,255,0.13);
+    font-size: 26px;
+    line-height: 36px;
+    cursor: pointer;
+}
+.fan-hub-close:hover { background: rgba(255,255,255,0.25); }
+.fan-hub-scroll {
+    max-height: calc(95vh - 104px);
+    overflow-y: auto;
+    padding: 18px 20px 25px;
+}
+.fan-hub-hero {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+}
+.fan-hub-stat {
+    padding: 12px 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: white;
+    box-shadow: 0 3px 11px rgba(15,23,42,0.05);
+}
+.fan-hub-stat-label {
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+}
+.fan-hub-stat-value {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fan-hub-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: 14px;
+    padding: 5px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #e9eff7;
+}
+.fan-hub-tab {
+    min-height: 42px;
+    padding: 8px;
+    border-radius: 10px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.fan-hub-tab.active {
+    color: #be123c;
+    background: white;
+    box-shadow: 0 3px 10px rgba(15,23,42,0.1);
+}
+.fan-hub-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 2px;
+}
+.fan-hub-filter {
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    background: white;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.fan-hub-filter.active {
+    border-color: #fb7185;
+    color: #9f1239;
+    background: #fff1f2;
+}
+.fan-hub-content {
+    min-height: 300px;
+    margin-top: 14px;
+}
+.fan-hub-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px;
+    color: #172554;
+    font-size: 15px;
+    font-weight: 900;
+}
+.fan-hub-section-title small {
+    color: #94a3b8;
+    font-size: 9px;
+}
+.fan-hub-timeline {
+    display: grid;
+    gap: 12px;
+}
+.fan-hub-event {
+    position: relative;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #64748b;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(15,23,42,0.06);
+}
+.fan-hub-event.event-upset { border-left-color: #e11d48; }
+.fan-hub-event.event-close { border-left-color: #f59e0b; }
+.fan-hub-event.event-blowout { border-left-color: #2563eb; }
+.fan-hub-event.event-region { border-left-color: #059669; }
+.fan-hub-event-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.fan-hub-score {
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 900;
+}
+.fan-hub-round {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+}
+.fan-hub-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.fan-hub-tag {
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: #475569;
+    background: #f1f5f9;
+    font-size: 9px;
+    font-weight: 900;
+}
+.fan-hub-tag.hot { color: #9f1239; background: #ffe4e6; }
+.fan-hub-tag.region { color: #047857; background: #d1fae5; }
+.fan-hub-post {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 10px;
+}
+.fan-hub-avatar {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: #fff1f2;
+    font-size: 19px;
+}
+.fan-hub-author {
+    margin-bottom: 3px;
+    color: #0f172a;
+    font-size: 11px;
+    font-weight: 900;
+}
+.fan-hub-author span {
+    margin-left: 6px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 700;
+}
+.fan-hub-post-text {
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.68;
+}
+.fan-hub-post-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 7px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 800;
+}
+.fan-hub-replies {
+    display: grid;
+    gap: 8px;
+    margin: 11px 0 0 46px;
+    padding-left: 12px;
+    border-left: 2px solid #e2e8f0;
+}
+.fan-hub-reply {
+    padding: 9px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+.fan-hub-reply .fan-hub-post-text { font-size: 11px; }
+.fan-hub-thread-toggle {
+    margin: 10px 0 0 46px;
+    color: #be123c;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.fan-hub-replies.is-collapsed { display: none; }
+.fan-hub-rooting {
+    margin-bottom: 13px;
+    padding: 12px 14px;
+    border: 1px solid #c7d2fe;
+    border-radius: 13px;
+    color: #3730a3;
+    background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+}
+.fan-hub-rooting strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+}
+.fan-hub-rooting p {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.6;
+}
+.fan-hub-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.fan-hub-card {
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 3px 12px rgba(15,23,42,0.05);
+}
+.fan-hub-card h4 {
+    margin: 0 0 9px;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 900;
+}
+.fan-hub-ranking {
+    display: grid;
+    gap: 7px;
+}
+.fan-hub-rank-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 9px;
+    background: #f8fafc;
+}
+.fan-hub-rank-no {
+    color: #e11d48;
+    font-size: 12px;
+    font-weight: 900;
+}
+.fan-hub-team-link {
+    overflow: hidden;
+    color: #1e3a8a;
+    font-size: 11px;
+    font-weight: 900;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.fan-hub-team-link:hover { text-decoration: underline; }
+.fan-hub-rank-value {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+}
+.fan-hub-region-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+}
+.fan-hub-region {
+    padding: 10px 8px;
+    border-radius: 11px;
+    background: #ecfdf5;
+    text-align: center;
+}
+.fan-hub-region strong {
+    display: block;
+    color: #065f46;
+    font-size: 15px;
+}
+.fan-hub-region span {
+    color: #047857;
+    font-size: 9px;
+    font-weight: 800;
+}
+.fan-hub-reputation-list {
+    display: grid;
+    gap: 9px;
+}
+.fan-hub-reputation-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.2fr) minmax(160px, 2fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: white;
+}
+.fan-hub-reputation-name {
+    min-width: 0;
+}
+.fan-hub-reputation-name button {
+    max-width: 100%;
+    overflow: hidden;
+    color: #172554;
+    font-size: 12px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fan-hub-reputation-name small {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 9px;
+}
+.fan-hub-meter {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+.fan-hub-meter > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #8b5cf6, #e11d48);
+}
+.fan-hub-reputation-copy {
+    margin-top: 4px;
+    color: #475569;
+    font-size: 9px;
+    font-weight: 700;
+}
+.fan-hub-rank-change {
+    min-width: 76px;
+    padding: 6px 8px;
+    border-radius: 9px;
+    color: #334155;
+    background: #f1f5f9;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: center;
+}
+.fan-hub-empty {
+    padding: 34px 20px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    color: #64748b;
+    background: white;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.7;
+}
+@media (max-width: 760px) {
+    .fan-hub-modal { padding: 6px; }
+    .fan-hub-panel { max-height: 98vh; border-radius: 17px; }
+    .fan-hub-scroll { max-height: calc(98vh - 101px); padding: 12px; }
+    .fan-hub-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fan-hub-grid { grid-template-columns: 1fr; }
+    .fan-hub-reputation-row { grid-template-columns: 1fr auto; }
+    .fan-hub-reputation-row > div:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .fan-hub-replies { margin-left: 24px; }
+    .fan-hub-thread-toggle { margin-left: 24px; }
+    .fan-hub-region-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* ▲▲▲ 大会全体「ファン広場」 ▲▲▲ */
+
 
 
 　 </style>
@@ -3617,6 +5231,10 @@
 <button id="open-sns-btn" class="bg-sky-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-sky-600 shadow-md mt-4 w-full md:w-auto ml-2">
     📱 SNSを見る
  </button>
+<button id="open-fan-hub-btn" class="fan-hub-open-btn relative text-white font-bold py-3 px-6 rounded-lg shadow-md mt-4 w-full md:w-auto ml-2" type="button">
+    🔥 大会ファン広場
+    <span id="fan-hub-button-badge" class="fan-hub-badge hidden">0</span>
+</button>
 <button id="show-contribution-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md ml-2">
     🌌 貢献度・天体観測
 </button>
@@ -4073,34 +5691,109 @@
 </div>
 
 <div id="lottery-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 hidden items-center justify-center z-[200] font-sans">
-    <div id="lottery-content" class="bg-white rounded-lg shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col p-6">
-        <h2 class="text-4xl font-bold text-center mb-4 scorebook-font text-gray-800 tracking-widest">夏の高校野球 組み合わせ抽選会</h2>
-        <div id="lottery-stage" class="flex-grow bg-gray-800 rounded p-4 flex gap-4 overflow-hidden relative border-4 border-gray-600">
-            <div class="w-1/3 flex flex-col items-center justify-between bg-gray-200 rounded-lg shadow-inner p-4">
-                <div id="lottery-pot-container" class="w-full flex flex-col items-center">
-                    <p id="pot-name" class="text-2xl font-bold text-gray-700 mb-2">Aシード</p>
-                    <div id="lottery-pot" class="w-48 h-48 bg-red-800 border-4 border-yellow-400 text-white flex items-center justify-center text-5xl font-bold shadow-lg rounded-full cursor-pointer transition-transform duration-200 hover:scale-105">
-                        抽選
+    <div id="lottery-content" class="draw-ceremony-shell">
+        <header class="draw-ceremony-header">
+            <div class="draw-live-badge"><span class="draw-live-dot"></span> LIVE・組み合わせ抽選会</div>
+            <div class="draw-title-wrap">
+                <h2 class="scorebook-font">全国高校野球選手権 静岡大会</h2>
+                <p>組み合わせ抽選会・参加117校</p>
+            </div>
+            <div class="draw-venue">静岡県高等学校野球連盟<br>抽選会場・大会議室</div>
+        </header>
+
+        <main id="lottery-stage" class="draw-ceremony-main">
+            <section class="draw-panel draw-stage-panel">
+                <div class="draw-panel-heading">
+                    <span>抽選ステージ</span>
+                    <span id="pot-name" class="draw-phase-badge">開会前</span>
+                </div>
+                <div class="draw-current-school">
+                    <div class="draw-current-label">ただいまの登壇校</div>
+                    <div id="lottery-current-team">抽選開始をお待ちください</div>
+                    <div id="lottery-current-meta">シード校から順に抽選を行います</div>
+                </div>
+                <div class="draw-podium">
+                    <div class="draw-captain-silhouette" aria-hidden="true"></div>
+                    <button id="lottery-pot" class="disabled" type="button" aria-label="抽選箱から番号札を引く">
+                        <span class="draw-pot-label">抽選箱<small>クリックして番号札を引く</small></span>
+                    </button>
+                    <div class="draw-podium-sign">静岡大会 組み合わせ抽選</div>
+                </div>
+                <div id="drawn-team-container" aria-live="polite">
+                    <div id="drawn-number">—</div>
+                    <p id="drawn-team">番号札はまだ開かれていません</p>
+                </div>
+            </section>
+
+            <section class="draw-panel draw-board-panel">
+                <div class="draw-panel-heading">
+                    <span>大会会場・組み合わせ掲示板</span>
+                    <div class="flex items-center gap-2">
+                        <span id="lottery-progress-text" class="text-xs">0 / 117校</span>
+                        <div class="draw-progress-wrap"><div id="lottery-progress-bar"></div></div>
                     </div>
                 </div>
-                <div id="drawn-team-container" class="w-full h-32 border-4 border-dashed border-gray-400 rounded-lg flex items-center justify-center opacity-0 bg-white">
-                    <p id="drawn-team" class="text-4xl font-bold text-gray-800"></p>
+                <div class="lottery-board-toolbar">
+                    <div id="lottery-block-tabs" role="tablist" aria-label="掲示するブロック">
+                        <button class="lottery-board-tab active" type="button" data-lottery-board-tab="A" aria-selected="true">Aブロック</button>
+                        <button class="lottery-board-tab" type="button" data-lottery-board-tab="B" aria-selected="false">Bブロック</button>
+                        <button class="lottery-board-tab" type="button" data-lottery-board-tab="C" aria-selected="false">Cブロック</button>
+                        <button class="lottery-board-tab" type="button" data-lottery-board-tab="D" aria-selected="false">Dブロック</button>
+                    </div>
+                    <div class="lottery-board-legend">抽選番号の金具へ校名札を掲示します</div>
                 </div>
+                <div id="lottery-bracket" aria-label="抽選番号1番から128番までの組み合わせ掲示板"></div>
+                <div id="lottery-board-staff-overlay" aria-hidden="true">
+                    <div id="lottery-board-attendant">
+                        <div class="lottery-attendant-person">
+                            <span class="lottery-attendant-head"></span>
+                            <span class="lottery-attendant-body"></span>
+                        </div>
+                        <div id="lottery-staff-carry-board" class="lottery-staff-carry-board"></div>
+                    </div>
+                </div>
+                <div id="lottery-broadcast-overlay" aria-live="polite">
+                    <div id="lottery-broadcast-kicker" class="lottery-broadcast-kicker">LIVE<br>抽選会</div>
+                    <div class="lottery-broadcast-copy">
+                        <div id="lottery-broadcast-title"></div>
+                        <div id="lottery-broadcast-subtitle"></div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="draw-panel draw-sidebar-panel">
+                <div class="draw-panel-heading"><span>進行状況</span><span id="lottery-remaining-count">残り117校</span></div>
+                <div class="draw-focus-wrap">
+                    <label for="lottery-focus-team">注目校（自動進行時に一時停止）</label>
+                    <select id="lottery-focus-team">
+                        <option value="">指定なし</option>
+                    </select>
+                </div>
+                <div class="draw-next-wrap">
+                    <div class="draw-side-label">このあとの抽選順</div>
+                    <div id="lottery-next-teams"></div>
+                </div>
+                <div class="draw-side-label px-3 pt-3 mb-0">最近の抽選結果</div>
+                <ol id="lottery-draw-log"></ol>
+            </aside>
+
+            <div id="lottery-block-complete-flash" aria-live="polite"></div>
+            <div id="lottery-summary" class="hidden" aria-live="polite"></div>
+        </main>
+
+        <footer class="draw-ceremony-footer">
+            <div id="lottery-commentary"><p>開会の準備が整いました。「抽選を開始」を押してください。</p></div>
+            <div id="lottery-controls">
+                <button id="start-lottery-btn" class="draw-control-btn" type="button">抽選を開始</button>
+                <button id="lottery-auto-btn" class="draw-control-btn secondary hidden" type="button">▶ 自動進行</button>
+                <select id="lottery-speed" class="hidden" aria-label="自動進行速度">
+                    <option value="1300">標準</option>
+                    <option value="650">高速</option>
+                    <option value="260">最速</option>
+                </select>
+                <button id="skip-lottery-btn" class="draw-control-btn danger" type="button">抽選会を省略</button>
             </div>
-            <div id="lottery-bracket" class="w-2/3 grid grid-cols-2 gap-x-4 h-full overflow-y-auto p-2 bg-gray-100 rounded-lg shadow-inner">
-                <div id="lottery-bracket-left" class="space-y-1"></div>
-                <div id="lottery-bracket-right" class="space-y-1"></div>
-            </div>
-        </div>
-        <div class="h-32 flex flex-col justify-between pt-4">
-            <div id="lottery-commentary" class="h-20 text-center text-2xl font-semibold text-gray-800 bg-yellow-100 border-2 border-yellow-300 rounded p-2 flex items-center justify-center">
-                <p>静岡大会 抽選会へようこそ。主将は抽選箱をクリックしてクジを引いてください。</p>
-            </div>
-            <div id="lottery-controls" class="text-center">
-    <button id="start-lottery-btn" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700">抽選を開始</button>
-    <button id="skip-lottery-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 ml-4">スキップ</button>
-</div>
-        </div>
+        </footer>
     </div>
 </div>
 
@@ -4316,9 +6009,10 @@ graph TD
                 <h4 class="font-bold text-lg text-pink-700 mb-2">その他の機能</h4>
                 <ul class="list-disc list-inside space-y-2 text-sm">
                     <li><strong>チームステータス:</strong> トーナメント表のチーム名をクリックすると、そのチームの過去の最高成績や直近の成績、獲得した称号（例：ジャイアントキラー）などを確認できます。</li>
+                    <li><strong>大会ファン広場:</strong> 大会画面の「🔥 大会ファン広場」から、全試合を横断したファンのタイムライン、番狂わせや接戦への返信、他校ファンの利害、話題校・厳しい山・開いた山のランキング、各校の「今大会評価」を確認できます。学校名を押すと、その学校の三者視点ファン反応へ移動します。</li>
                     <li><strong>スキップ機能:</strong> 各大会やラウンドごとに用意された「スキップ」ボタンを使うと、試合結果を自動で（ランク差などを考慮して）生成し、大会を高速で進行させることができます。</li>
                     <li><strong>設定:</strong> 画面右上の「⚙️ 設定」ボタンから、ニュース記事や掲示板コメントの自動生成をON/OFFできます。</li>
-                    <li><strong>抽選会/勢力図分析:</strong> 夏の大会開始時には抽選会イベントが、抽選後には各ブロックの勢力図をAIが分析・解説するアニメーションが表示されます。</li>
+                    <li><strong>抽選会/勢力図分析:</strong> 夏の大会開始時には、各校の登壇、抽選箱からの番号札開封、司会による復唱、係員による校名札の運搬、会場のトーナメント壁面ボードへの掲示までをテレビ中継風に再現します。A～Dブロックを切り替えながら、番号の金具へ縦札が掛かり、該当校の勝ち上がりルートが点灯する様子を確認できます。好カード決定時には速報テロップも表示されます。抽選箱をクリックして1校ずつ進めるほか、自動進行、注目校での一時停止、残りの一括抽選も利用できます。抽選後には各ブロックの勢力図をAIが分析・解説します。</li>
                  </ul>
             </div>
 
@@ -4509,6 +6203,28 @@ graph TD
     <div>
         <p class="text-xs opacity-90">日本のトレンド</p>
         <p id="trend-notification-word" class="font-bold">#283学園</p>
+    </div>
+</div>
+
+<!-- 大会全体「ファン広場」モーダル -->
+<div id="fan-hub-modal" class="fan-hub-modal hidden" role="dialog" aria-modal="true" aria-labelledby="fan-hub-title">
+    <div class="fan-hub-panel">
+        <header class="fan-hub-header">
+            <button id="fan-hub-close-btn" class="fan-hub-close" type="button" aria-label="閉じる">&times;</button>
+            <div class="fan-hub-kicker">TOURNAMENT FAN UNIVERSE</div>
+            <h3 id="fan-hub-title" class="fan-hub-title">🔥 大会ファン広場</h3>
+            <p id="fan-hub-subtitle" class="fan-hub-subtitle">他会場速報、番狂わせ、勝ち上がり評価がひとつにつながる。</p>
+        </header>
+        <div class="fan-hub-scroll">
+            <div id="fan-hub-hero" class="fan-hub-hero"></div>
+            <div class="fan-hub-tabs" role="tablist" aria-label="大会ファン広場">
+                <button class="fan-hub-tab active" data-fan-hub-tab="timeline" type="button">💬 大会タイムライン</button>
+                <button class="fan-hub-tab" data-fan-hub-tab="trends" type="button">🔥 話題・山の動き</button>
+                <button class="fan-hub-tab" data-fan-hub-tab="reputation" type="button">📈 今大会評価</button>
+            </div>
+            <div id="fan-hub-filters" class="fan-hub-filters"></div>
+            <div id="fan-hub-content" class="fan-hub-content"></div>
+        </div>
     </div>
 </div>
 
@@ -9502,12 +11218,132 @@ function styleReactionAsFanVoice(text, persona, teamName, variant, index, mood) 
     return `${intro}${normalized}${suffix}`.replace(/、、/g, '、').trim();
 }
 
-function buildReactionVoices(texts, moods, teamName, variant) {
-    const group = TEAM_REACTION_SPEAKER_GROUPS[variant % TEAM_REACTION_SPEAKER_GROUPS.length];
+function buildReactionCounterpartyText(context) {
+    const {
+        teamName,
+        opponentName,
+        opponentConfirmed,
+        loss,
+        champion,
+        rank,
+        aVictims,
+        bVictims,
+        cVictims,
+        majorUpset,
+        fortunateLowerOpponent,
+        ownStrength,
+        opponentStrength,
+        nextThreat,
+        block,
+        reachedRoundLabel,
+        variant
+    } = context;
+    const key = `${teamName}|${opponentName || ''}|${variant}|counterparty`;
+
+    if (!opponentConfirmed || !opponentName) {
+        if (nextThreat) {
+            return reactionPick([
+                `${teamName}と同じ山の学校からすると、先を見れば${nextThreat}もいる。${teamName}だけを意識していればいいブロックではない。`,
+                `${teamName}ファンは先まで見ているけど、同じブロック側としては${nextThreat}との潰し合いも含めてまだ読めない。`,
+                `この山にいる側からすると、${teamName}と${nextThreat}のどちらが残るかで準備も空気もかなり変わる。`
+            ], key);
+        }
+        return `${block?.label || '同じブロック'}の他校ファンからすると、${teamName}だけに注目が集まりすぎるのは少し気になる。組み合わせはまだ動く。`;
+    }
+
+    if (champion) {
+        return `${opponentName}ファンとしては決勝で負けたのは悔しい。でも${teamName}が${reachedRoundLabel}まで勝ち切った道の最後に戦えたことは誇りたい。`;
+    }
+    if (loss) {
+        return reactionPick([
+            `${teamName}に勝てたのは大きい。ただ、スコアほど簡単な試合ではなかったし、${opponentName}側も次で浮かれてはいられない。`,
+            `${teamName}を倒した以上、${opponentName}にはこの勝利を無駄にせずもっと先まで行ってほしい。`,
+            `${teamName}の分まで、という言い方は軽々しくしたくないけど、勝った${opponentName}は次も内容を見せてほしい。`
+        ], key);
+    }
+    if (fortunateLowerOpponent) {
+        return reactionPick([
+            `${teamName}側には「この相手でラッキー」と思われてるだろうけど、${opponentName}は失うものがない。序盤で食らいつけば空気は変えられる。`,
+            `${opponentName}ファンとしては格下扱いされる方が燃える。${teamName}が勝って当然と思っている間に、一発ひっくり返したい。`,
+            `組み合わせ上は${teamName}有利で否定できない。でも${opponentName}はここまで勝って来たし、名前だけで試合は終わらない。`
+        ], key);
+    }
+    if (majorUpset) {
+        return `${opponentName}側から見ても、${teamName}がすでに大きな番狂わせを起こしているのは怖い。元の${rank}ランクより今大会の勝負強さを見ないと危ない。`;
+    }
+    if (aVictims.length) {
+        return `${teamName}はAランクの${formatReactionNames(aVictims.map(item => item.opponent))}を消している。${opponentName}ファンとしては、もう挑戦者扱いではなく優勝候補を倒した相手として構えたい。`;
+    }
+    if (bVictims.length) {
+        return `${teamName}はBランクの${formatReactionNames(bVictims.map(item => item.opponent))}を倒している。県上位級を越えた相手だから、${opponentName}側も名前の比較だけで安心できない。`;
+    }
+    if (cVictims.length) {
+        return `${teamName}はCランクの${formatReactionNames(cVictims.map(item => item.opponent))}を越えている。大波乱とまでは言わなくても、中堅上位を倒した勢いは${opponentName}側も警戒したい。`;
+    }
+    if (ownStrength >= opponentStrength + 14) {
+        return `${opponentName}ファンとしては、戦力評価で${teamName}が上なのは分かってる。だからこそ終盤まで接戦にして、相手を焦らせたい。`;
+    }
+    if (opponentStrength >= ownStrength + 14) {
+        return `${opponentName}側から見れば戦力では上。ただ、${teamName}は失うものがない分、こういう相手ほど先に勢いへ乗せたくない。`;
+    }
+    return `${opponentName}ファンから見ても、${teamName}とはほぼ五分のカード。どちらかが一方的に勝てる相手ではないと思う。`;
+}
+
+function buildReactionVoices(texts, moods, teamName, variant, factionContext = null) {
+    if (!factionContext) {
+        const group = TEAM_REACTION_SPEAKER_GROUPS[variant % TEAM_REACTION_SPEAKER_GROUPS.length];
+        return texts.slice(0, 3).map((text, index) => ({
+            ...group[index],
+            text: styleReactionAsFanVoice(text, group[index], teamName, variant, index, moods[index] || 'wary'),
+            mood: moods[index] || 'wary',
+            key: `${teamName}-${variant}-${index}`
+        }));
+    }
+
+    const selfRoles = [
+        { role: `${teamName}の地元ファン`, icon: '🏟️', tag: '自校側', tone: 'local' },
+        { role: `${teamName}卒業生ファン`, icon: '🎓', tag: '自校側', tone: 'alumni' },
+        { role: `${teamName}応援席の常連`, icon: '📣', tag: '自校側', tone: 'optimist' },
+        { role: `${teamName}を追う現役高校生`, icon: '🎒', tag: '自校側', tone: 'sns' },
+        { role: `${teamName}のブラバン好き`, icon: '🎺', tag: '自校側', tone: 'warm' },
+        { role: `${teamName}親子二代ファン`, icon: '👪', tag: '自校側', tone: 'veteran' },
+        { role: `${teamName}慎重派ファン`, icon: '🤞', tag: '自校側', tone: 'cautious' },
+        { role: `${teamName}の楽観派`, icon: '🌟', tag: '自校側', tone: 'optimist' }
+    ];
+    const opponentLabel = factionContext.opponentConfirmed && factionContext.opponentName
+        ? factionContext.opponentName
+        : '同ブロック他校';
+    const opponentRoles = [
+        { role: `${opponentLabel}ファン`, icon: '🧢', tag: '相手側', tone: 'cautious' },
+        { role: `${opponentLabel}応援席`, icon: '🥁', tag: '相手側', tone: 'local' },
+        { role: `${opponentLabel}の卒業生`, icon: '🎓', tag: '相手側', tone: 'away' },
+        { role: `${opponentLabel}の古参ファン`, icon: '📻', tag: '相手側', tone: 'veteran' },
+        { role: `${opponentLabel}側のデータ派`, icon: '📊', tag: '相手側', tone: 'data' },
+        { role: `${opponentLabel}ブラバン席`, icon: '🎺', tag: '相手側', tone: 'warm' },
+        { role: `${opponentLabel}の現役高校生`, icon: '🎒', tag: '相手側', tone: 'sns' },
+        { role: `${opponentLabel}遠征組`, icon: '🚌', tag: '相手側', tone: 'local' }
+    ];
+    const neutralRoles = [
+        { role: '中立の県大会ファン', icon: '⚖️', tag: '第三者', tone: 'neutral' },
+        { role: '勝ち上がりを見るデータ派', icon: '📊', tag: '第三者', tone: 'data' },
+        { role: '昔からの大会ウォッチャー', icon: '📻', tag: '第三者', tone: 'veteran' },
+        { role: 'トーナメント予想勢', icon: '📝', tag: '第三者', tone: 'bracket' },
+        { role: '他地区推しの観戦者', icon: '🗾', tag: '第三者', tone: 'away' },
+        { role: '高校野球SNS民', icon: '📱', tag: '第三者', tone: 'sns' },
+        { role: '球場を渡り歩く観戦者', icon: '👀', tag: '第三者', tone: 'casual' },
+        { role: '番狂わせ好きの中立客', icon: '⚡', tag: '第三者', tone: 'upset' }
+    ];
+    const personas = [
+        selfRoles[variant % selfRoles.length],
+        opponentRoles[variant % opponentRoles.length],
+        neutralRoles[variant % neutralRoles.length]
+    ];
+    const speakerTeams = [teamName, factionContext.opponentName || teamName, teamName];
     return texts.slice(0, 3).map((text, index) => ({
-        ...group[index],
-        text: styleReactionAsFanVoice(text, group[index], teamName, variant, index, moods[index] || 'wary'),
+        ...personas[index],
+        text: styleReactionAsFanVoice(text, personas[index], speakerTeams[index], variant, index, moods[index] || 'wary'),
         mood: moods[index] || 'wary',
+        faction: ['self', 'opponent', 'neutral'][index],
         key: `${teamName}-${variant}-${index}`
     }));
 }
@@ -9864,7 +11700,49 @@ function generateTeamTournamentReaction(teamName, variant = 0, state = tournamen
         moods = ['out', 'wary', 'wary'];
     }
 
-    const voices = buildReactionVoices(texts, moods, teamName, variant);
+    const factionOpponent = loss?.opponent ||
+        (champion ? path[path.length - 1]?.opponent : null) ||
+        (isReactionTeamName(knownOpponent) ? knownOpponent : null);
+    const opponentConfirmed = isReactionTeamName(factionOpponent);
+    const counterpartyText = buildReactionCounterpartyText({
+        teamName,
+        opponentName: factionOpponent,
+        opponentConfirmed,
+        loss,
+        champion,
+        rank,
+        aVictims,
+        bVictims,
+        cVictims,
+        majorUpset,
+        fortunateLowerOpponent,
+        ownStrength,
+        opponentStrength: factionOpponent ? getReactionStrength(factionOpponent, state) : 0,
+        nextThreat,
+        block,
+        reachedRoundLabel,
+        variant
+    });
+    const counterpartyMood = champion
+        ? 'out'
+        : loss
+            ? 'confident'
+            : fortunateLowerOpponent || (factionOpponent && ownStrength >= getReactionStrength(factionOpponent, state) + 14)
+                ? 'hard'
+                : factionOpponent && getReactionStrength(factionOpponent, state) >= ownStrength + 14
+                    ? 'confident'
+                    : 'wary';
+    const selfFactionText = fortunateLowerOpponent ? (texts[1] || texts[0]) : texts[0];
+    const neutralFactionText = fortunateLowerOpponent
+        ? (texts[2] || texts[0])
+        : (texts[1] || texts[2] || texts[0]);
+    const factionTexts = [selfFactionText, counterpartyText, neutralFactionText];
+    const factionMoods = [moods[0] || 'wary', counterpartyMood, moods[1] || moods[2] || 'wary'];
+    const voices = buildReactionVoices(factionTexts, factionMoods, teamName, variant, {
+        opponentName: factionOpponent,
+        opponentConfirmed
+    });
+    const liveReputation = getFanHubTeamReputation(teamName, state);
     return {
         teamName,
         rank,
@@ -9910,6 +11788,7 @@ function generateTeamTournamentReaction(teamName, variant = 0, state = tournamen
         },
         fortunateLowerOpponent,
         reachedRoundLabel,
+        liveReputation,
         voices
     };
 }
@@ -9954,7 +11833,7 @@ function setTeamReactionModeUi(mode) {
     if (note) {
         note.textContent = isAi
             ? 'AI生成時のみ通信します。結果・学校名の創作は禁止する指示付き'
-            : '地元ファン・卒業生・データ派など24種類の人物像';
+            : '自校側・相手側・第三者の3視点×各8人。更新ごとに人物像も変化';
     }
 }
 
@@ -9997,7 +11876,13 @@ function getTeamReactionAiFacts(teamName, state = tournamentState) {
             name: teamName,
             rank: report.rank,
             seed: report.seedLabel || 'シードなし',
-            status: report.statusLabel
+            status: report.statusLabel,
+            tournamentReputation: report.liveReputation ? {
+                preseasonRank: report.liveReputation.baseRank,
+                currentPublicRank: report.liveReputation.liveRank,
+                movement: report.liveReputation.trendLabel,
+                headline: report.liveReputation.headline
+            } : null
         },
         nextMatch: report.nextLine,
         completedWins: pathToPlainData(path),
@@ -10124,7 +12009,8 @@ function buildTeamReactionAiPrompt(teamName, facts) {
 
 【絶対条件】
 - 監督・選手・主将・マネージャーなどチーム内部の発言にしない。全件を観客、地元ファン、卒業生ファン、他校ファン、データ派など外から応援・観戦する人の言葉にする。
-- 3件は人物像も温度感も変える。楽観、慎重、勝ち上がり比較など、少し意見が割れてよい。
+- 3件は必ず三者視点にする。1件目は${teamName}側ファン、2件目は confirmedOpponent があればその学校側ファン（敗退後なら eliminatedBy の学校側ファン）、3件目はどちらのファンでもない中立の県大会ファンにする。相手未確定なら2件目は同ブロック他校ファンにする。
+- 三者の意見は一致させすぎない。自校側の期待、相手側の警戒や反論、中立側の勝ち上がり比較というように、温度差を出す。
 - 掲示板や球場帰りの会話のような、くだけた自然な日本語にする。記事調・解説者調・敬語だけの文章は避ける。
 - 組み合わせ直後なら、目の前の相手だけでなく次戦候補や小ブロックの有力校にも触れてよい。
 - 試合が進んでいるなら、${teamName}と相手が実際に倒してきた学校の差を具体的に比較してよい。
@@ -10146,9 +12032,9 @@ ${JSON.stringify(facts, null, 2)}
 
 次のJSON配列だけを返してください。説明文やMarkdownは不要です。
 [
-  {"personality":"地元ファン","comment":"コメント本文","mood":"confident"},
-  {"personality":"データ派の県大会ファン","comment":"コメント本文","mood":"wary"},
-  {"personality":"卒業生ファン","comment":"コメント本文","mood":"hard"}
+  {"personality":"${teamName}側の地元ファン","comment":"コメント本文","mood":"confident"},
+  {"personality":"対戦相手側のファン","comment":"コメント本文","mood":"wary"},
+  {"personality":"中立の県大会ファン","comment":"コメント本文","mood":"hard"}
 ]
 moodは confident / wary / hard / out のいずれかにしてください。
 `.trim();
@@ -10268,6 +12154,7 @@ function renderTeamTournamentReaction(teamName, variant = 0, mode = 'local') {
             ${report.seedLabel ? `<span class="team-reaction-chip">🎟️ ${reactionEscapeHtml(report.seedLabel)}</span>` : ''}
             <span class="team-reaction-chip ${reactionEscapeHtml(report.phaseClass)}">${reactionEscapeHtml(report.statusLabel)}</span>
             ${report.storyLabel ? `<span class="team-reaction-chip ${reactionEscapeHtml(report.storyClass)}">${reactionEscapeHtml(report.storyLabel)}</span>` : ''}
+            ${report.liveReputation ? `<span class="team-reaction-chip">📈 今大会 ${reactionEscapeHtml(report.liveReputation.baseRank)}→${reactionEscapeHtml(report.liveReputation.liveRank)}</span>` : ''}
         </div>
         <div class="team-reaction-overview-line">
             <span class="team-reaction-overview-label">次の焦点</span>
@@ -10281,6 +12168,11 @@ function renderTeamTournamentReaction(teamName, variant = 0, mode = 'local') {
             <span class="team-reaction-overview-label">山の位置</span>
             <span>${reactionEscapeHtml(report.blockLine)}</span>
         </div>
+        ${report.liveReputation ? `
+        <div class="team-reaction-overview-line">
+            <span class="team-reaction-overview-label">世間評価</span>
+            <span>${reactionEscapeHtml(report.liveReputation.trendLabel)}・${reactionEscapeHtml(report.liveReputation.headline)}</span>
+        </div>` : ''}
     `;
     setTeamReactionModeUi(currentReactionMode);
     modal.classList.remove('hidden');
@@ -10296,6 +12188,815 @@ function closeTeamTournamentReaction() {
     teamReactionAiRequestToken++;
     document.getElementById('team-reaction-modal')?.classList.add('hidden');
 }
+
+// ▼▼▼ 大会全体「ファン広場」エンジン ▼▼▼
+let fanHubActiveTab = 'timeline';
+let fanHubActiveFilter = 'all';
+let fanHubVariant = 0;
+
+function fanHubClamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function getFanHubNumericScore(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getFanHubCompletedMatches(state = tournamentState) {
+    return Object.values(state.matches || {})
+        .filter(match =>
+            match &&
+            isReactionTeamName(match.winner) &&
+            isReactionTeamName(match.team1) &&
+            isReactionTeamName(match.team2) &&
+            match.winner !== '(BYE)'
+        )
+        .sort((a, b) => {
+            const roundDiff = getReactionRoundNumber(b.id, state) - getReactionRoundNumber(a.id, state);
+            if (roundDiff) return roundDiff;
+            return String(b.id || '').localeCompare(String(a.id || ''), 'ja');
+        });
+}
+
+function getFanHubActiveTeams(state = tournamentState) {
+    const eliminated = new Set(getFanHubCompletedMatches(state).map(match =>
+        match.winner === match.team1 ? match.team2 : match.team1
+    ));
+    return (state.teams || [])
+        .filter(isReactionTeamName)
+        .filter(team => team !== '(BYE)' && !eliminated.has(team));
+}
+
+function getFanHubMatchAssessment(match, state = tournamentState) {
+    const winner = match.winner;
+    const loser = winner === match.team1 ? match.team2 : match.team1;
+    const winnerIsTeam1 = winner === match.team1;
+    const winnerScore = getFanHubNumericScore(winnerIsTeam1 ? match.score1 : match.score2);
+    const loserScore = getFanHubNumericScore(winnerIsTeam1 ? match.score2 : match.score1);
+    const hasNumericScore = winnerScore !== null && loserScore !== null;
+    const scoreGap = hasNumericScore ? Math.abs(winnerScore - loserScore) : null;
+    const winnerRankValue = getReactionCompetitiveRankValue(winner, state);
+    const loserRankValue = getReactionCompetitiveRankValue(loser, state);
+    const winnerRank = getReactionRankLabelFromValue(winnerRankValue);
+    const loserRank = getReactionRankLabelFromValue(loserRankValue);
+    const rankGap = loserRankValue - winnerRankValue;
+    const roundNumber = getReactionRoundNumber(match.id, state);
+    const roundLabel = getReactionRoundLabel(roundNumber, state);
+    const inningScore = match.details?.inningScore;
+    const inningCount = inningScore
+        ? Math.max(inningScore.team1?.length || 0, inningScore.team2?.length || 0)
+        : 0;
+    const isExtraInnings = inningCount > 9;
+    const lastBottomRun = inningScore?.team2?.[inningCount - 1];
+    const isWalkoff = Boolean(
+        inningCount >= 9 &&
+        winner === match.team2 &&
+        getFanHubNumericScore(lastBottomRun) > 0
+    );
+    const isMajorUpset = rankGap >= 2;
+    const isUpset = rankGap >= 1;
+    const isClose = scoreGap !== null && scoreGap <= 1;
+    const isBlowout = scoreGap !== null && scoreGap >= 7;
+    const isShutout = loserScore === 0 && winnerScore !== null;
+    const isFavoriteShaky = winnerRankValue - loserRankValue >= 2 && isClose;
+    const isUnderdogMoralWin = winnerRankValue - loserRankValue >= 2 && isClose;
+    const teamData = typeof TEAM_DATA !== 'undefined' ? TEAM_DATA : {};
+    const winnerData = teamData[winner] || {};
+    const loserData = teamData[loser] || {};
+    const sameRegion = winnerData.region && winnerData.region === loserData.region
+        ? winnerData.region
+        : '';
+    const publicPrivate = winnerData.type && loserData.type && winnerData.type !== loserData.type &&
+        new Set([winnerData.type, loserData.type]).size === 2 &&
+        [winnerData.type, loserData.type].every(type => ['公立', '私立', '国立'].includes(type))
+        ? `${winnerData.type}対${loserData.type}`
+        : '';
+    let rivalry = match.rivalryType || '';
+    if (!rivalry && typeof checkRivalry === 'function') {
+        try {
+            rivalry = checkRivalry(winner, loser) || '';
+        } catch (_) {
+            rivalry = '';
+        }
+    }
+    const tags = [];
+    if (isMajorUpset) tags.push({ text: `${rankGap}ランク差の番狂わせ`, kind: 'hot' });
+    else if (isUpset) tags.push({ text: '格上撃破', kind: 'hot' });
+    if (isExtraInnings) tags.push({ text: '延長戦', kind: 'hot' });
+    if (isWalkoff) tags.push({ text: 'サヨナラ', kind: 'hot' });
+    if (match.calledGame) tags.push({ text: `${match.calledInning || ''}回コールド`, kind: '' });
+    if (isShutout) tags.push({ text: '完封', kind: '' });
+    if (isClose) tags.push({ text: '1点差', kind: '' });
+    if (sameRegion) tags.push({ text: `${sameRegion}対決`, kind: 'region' });
+    if (publicPrivate) tags.push({ text: publicPrivate, kind: 'region' });
+    if (rivalry) tags.push({ text: rivalry, kind: 'hot' });
+    if (
+        typeof POWERHOUSE_REVIVAL_TEAMS !== 'undefined' &&
+        POWERHOUSE_REVIVAL_TEAMS.includes(winner)
+    ) {
+        tags.push({ text: '古豪復活へ', kind: 'region' });
+    }
+    if (/初戦敗退/.test(winnerData.last || '') && roundNumber >= 3) {
+        tags.push({ text: '昨夏から躍進', kind: 'region' });
+    }
+
+    const excitement = fanHubClamp(
+        10 +
+        roundNumber * 5 +
+        (isMajorUpset ? 38 : isUpset ? 17 : 0) +
+        (isClose ? 11 : 0) +
+        (isExtraInnings ? 14 : 0) +
+        (isWalkoff ? 13 : 0) +
+        (isBlowout ? 5 : 0) +
+        (rivalry ? 8 : 0),
+        0,
+        100
+    );
+    const eventClass = isUpset
+        ? 'event-upset'
+        : isClose || isExtraInnings
+            ? 'event-close'
+            : isBlowout
+                ? 'event-blowout'
+                : sameRegion || publicPrivate
+                    ? 'event-region'
+                    : '';
+    return {
+        match,
+        winner,
+        loser,
+        winnerScore,
+        loserScore,
+        hasNumericScore,
+        scoreGap,
+        winnerRank,
+        loserRank,
+        winnerRankValue,
+        loserRankValue,
+        rankGap,
+        roundNumber,
+        roundLabel,
+        isMajorUpset,
+        isUpset,
+        isClose,
+        isBlowout,
+        isShutout,
+        isExtraInnings,
+        isWalkoff,
+        isFavoriteShaky,
+        isUnderdogMoralWin,
+        sameRegion,
+        publicPrivate,
+        rivalry,
+        tags,
+        excitement,
+        eventClass
+    };
+}
+
+function getFanHubLiveRank(score) {
+    if (score >= 84) return 'A';
+    if (score >= 67) return 'B';
+    if (score >= 50) return 'C';
+    if (score >= 35) return 'D';
+    return 'E';
+}
+
+function getFanHubTeamReputation(teamName, state = tournamentState, preparedAssessments = null) {
+    const assessments = preparedAssessments || getFanHubCompletedMatches(state)
+        .map(match => getFanHubMatchAssessment(match, state));
+    const teamMatches = assessments.filter(item =>
+        item.winner === teamName || item.loser === teamName
+    );
+    const wins = teamMatches.filter(item => item.winner === teamName);
+    const loss = teamMatches.find(item => item.loser === teamName) || null;
+    const baseRankValue = getReactionCompetitiveRankValue(teamName, state);
+    const baseRank = getReactionRankLabelFromValue(baseRankValue);
+    const baseScores = { A: 88, B: 72, C: 56, D: 41, E: 27 };
+    const victimPoints = { A: 18, B: 13, C: 9, D: 5, E: 3 };
+    let score = baseScores[baseRank] || 27;
+    let buzz = 0;
+    let routeDifficulty = 0;
+    let shakyWins = 0;
+
+    wins.forEach(item => {
+        score += victimPoints[item.loserRank] || 3;
+        routeDifficulty += item.loserRankValue * 10;
+        buzz += 7 + item.excitement * 0.35;
+        if (item.rankGap > 0) score += item.rankGap * 7;
+        if (item.isMajorUpset) buzz += 22;
+        if (item.isBlowout && item.loserRankValue >= baseRankValue) score += 3;
+        if (item.isFavoriteShaky) {
+            score -= 6;
+            shakyWins++;
+        }
+        score += Math.max(0, item.roundNumber - 1);
+    });
+    if (loss) {
+        buzz += loss.excitement * 0.18;
+        if (loss.winnerRankValue < baseRankValue) score -= (baseRankValue - loss.winnerRankValue) * 6;
+        if (loss.isUnderdogMoralWin) score += 3;
+        if (loss.isBlowout) score -= 4;
+    }
+    const champion = state.matches?.['F-R1-M1']?.winner === teamName;
+    if (champion) {
+        score += 12;
+        buzz += 30;
+    }
+    score = Math.round(fanHubClamp(score, 18, 98));
+    buzz = Math.round(fanHubClamp(buzz, 0, 100));
+    const liveRank = getFanHubLiveRank(score);
+    const liveRankValue = TEAM_REACTION_RANK_VALUE[liveRank] || 1;
+    const movement = liveRankValue - baseRankValue;
+    const rankedWins = {
+        A: wins.filter(item => item.loserRank === 'A'),
+        B: wins.filter(item => item.loserRank === 'B'),
+        C: wins.filter(item => item.loserRank === 'C')
+    };
+    const trendLabel = movement >= 2
+        ? '🚀 評価急上昇'
+        : movement === 1
+            ? '📈 評価上昇'
+            : movement <= -1
+                ? '📉 評価下降'
+                : shakyWins
+                    ? '⚠️ 勝利も不安残り'
+                    : '➡️ 評価維持';
+    let headline = '開幕前評価の範囲内';
+    if (champion) headline = '県王者・大会の結論';
+    else if (rankedWins.A.length) headline = `Aランク撃破で大会の主役`;
+    else if (rankedWins.B.length) headline = `Bランク撃破で優勝争いへ`;
+    else if (rankedWins.C.length) headline = `中堅上位を越えて評価上昇`;
+    else if (['D', 'E'].includes(baseRank) && wins.length >= 3) headline = `${wins.length}勝の旋風`;
+    else if (['D', 'E'].includes(baseRank) && wins.length >= 2) headline = `複数勝利で注目校入り`;
+    else if (shakyWins) headline = '勝ち上がるも内容には不安';
+    else if (loss && loss.winnerRankValue < baseRankValue) headline = '格下敗戦で評価を落とす';
+    else if (wins.length) headline = `${wins.length}勝、次戦で真価`;
+    else if (loss?.isClose && loss.winnerRankValue > baseRankValue) headline = '敗退も格上相手に善戦';
+    else if (loss) headline = '今大会は敗退';
+    else headline = '初戦を待つ段階';
+    const highestWin = wins
+        .slice()
+        .sort((a, b) => b.loserRankValue - a.loserRankValue)[0] || null;
+    return {
+        teamName,
+        baseRank,
+        baseRankValue,
+        liveRank,
+        liveRankValue,
+        score,
+        movement,
+        trendLabel,
+        headline,
+        wins: wins.length,
+        loss,
+        champion,
+        eliminated: Boolean(loss),
+        buzz,
+        routeDifficulty,
+        shakyWins,
+        highestWin,
+        rankedWins,
+        active: !loss
+    };
+}
+
+function getFanHubAllReputations(state = tournamentState, assessments = null) {
+    const prepared = assessments || getFanHubCompletedMatches(state)
+        .map(match => getFanHubMatchAssessment(match, state));
+    return (state.teams || [])
+        .filter(team => isReactionTeamName(team) && team !== '(BYE)')
+        .map(team => getFanHubTeamReputation(team, state, prepared));
+}
+
+function getFanHubScoreLabel(item) {
+    return item.hasNumericScore
+        ? `${item.winner} ${item.winnerScore}―${item.loserScore} ${item.loser}`
+        : `${item.winner} ○―● ${item.loser}`;
+}
+
+function getFanHubMatchMainPost(item, variant = 0) {
+    const score = item.hasNumericScore ? `${item.winnerScore}―${item.loserScore}` : '勝利';
+    const loserTier = getReactionVictoryTierMeta(item.loserRank);
+    const key = `${item.match.id}|${variant}|main`;
+    if (item.isMajorUpset) {
+        return reactionPick([
+            `${item.winnerRank}ランクの${item.winner}が、${item.loserRank}ランクの${item.loser}を${score}で撃破。${loserTier.label}を倒す${item.rankGap}ランク差の番狂わせ、これは大会全体がざわつく。`,
+            `${item.loser}がここで消えるのか。${item.winner}は${item.winnerRank}評価から${item.loserRank}を食った。もう次から「下位校だから」で済ませられない。`,
+            `${item.winner}、完全に大会の主役側へ。${loserTier.label}の${item.loser}を倒した実績は、普通の一勝とは重さが違う。`
+        ], key);
+    }
+    if (item.isUpset) {
+        return `${item.winnerRank}ランクの${item.winner}が${item.loserRank}ランクの${item.loser}に${score}。一段上を倒した価値ある勝利で、この山の見方が少し変わった。`;
+    }
+    if (item.isFavoriteShaky) {
+        return `${item.winner}は${item.loser}に${score}で勝ったけど、${item.winnerRank}対${item.loserRank}の戦力差を考えると内容はかなりギリギリ。次戦へ向けて不安の方が残る。`;
+    }
+    if (item.isWalkoff) {
+        return `${item.winner}が${item.loser}に${score}、最後はサヨナラ。現地で見ていたファンなら、この試合は何年たっても語りたくなる。`;
+    }
+    if (item.isExtraInnings) {
+        return `${item.winner}が延長の末に${item.loser}を${score}で振り切った。勝ち上がりだけでなく、消耗が次戦へどう出るかまで気になる。`;
+    }
+    if (item.isClose) {
+        return `${item.winner}が${item.loser}との1点差ゲームを${score}で制した。ランク差より、一つのミスと継投判断で決まったようなカード。`;
+    }
+    if (item.isBlowout) {
+        return `${item.winner}が${item.loser}に${score}。力の差を見せたうえ、投手を温存できているなら次戦まで含めて理想的な勝ち方だ。`;
+    }
+    if (item.isShutout) {
+        return `${item.winner}が${item.loser}を${score}で完封。相手関係だけでなく、守りから崩れない勝ち方は上のラウンドでも怖い。`;
+    }
+    return reactionPick([
+        `${item.winner}が${item.loser}に${score}で勝利。順当という見方もできるが、トーナメントは実際に一つずつ勝ち切ってこそ。`,
+        `${item.roundLabel}、${item.winner}が${item.loser}を下した。派手な波乱ではないが、この一勝で次の山の形がはっきりした。`,
+        `${item.winner}が${score}で次へ。ここからは開幕前の名前より、実際の勝ち方と消耗度を見たい。`
+    ], key);
+}
+
+function getFanHubStakeholder(item, state = tournamentState) {
+    const currentMatch = getReactionCurrentMatch(item.winner, state);
+    if (!currentMatch) return null;
+    const opponent = getReactionOpponent(currentMatch, item.winner);
+    return isReactionTeamName(opponent) ? opponent : null;
+}
+
+function getFanHubMatchReplies(item, reputations, state = tournamentState, variant = 0) {
+    const winnerRep = reputations.find(rep => rep.teamName === item.winner);
+    const stakeholder = getFanHubStakeholder(item, state);
+    const key = `${item.match.id}|${variant}|replies`;
+    let winnerReply;
+    let counterReply;
+    if (item.isMajorUpset) {
+        winnerReply = `${item.winner}ファンだけど、正直ここまでの大物食いは想像してなかった。嬉しいけど、もう一勝して本物だと証明してほしい。`;
+        counterReply = stakeholder
+            ? `${stakeholder}側からすると、次が${item.winner}なのは全然ラッキーじゃない。${item.loser}を倒した勢いごと来るのが一番怖い。`
+            : `${item.loser}ファンとしてはまだ信じられない。でも負けた以上、${item.winner}にはこの先まで勝って実力を示してほしい。`;
+    } else if (item.isFavoriteShaky) {
+        winnerReply = `トーナメントは勝てばいいだろ、という気持ちもある。ただ${item.winner}ファンでも、この内容のまま次へ行くのはちょっと怖い。`;
+        counterReply = `${item.loser}側からすれば、ランク差ほど離れていなかった。負けは悔しいけど、少なくとも一方的な試合ではなかった。`;
+    } else if (item.isClose && item.winnerRankValue > item.loserRankValue) {
+        winnerReply = `${item.winner}ファンとしては薄氷でも一勝。こういう試合を拾えるのが強さだと思いたい。`;
+        counterReply = `${item.loser}は格上相手に1点差。敗退だけ見れば終わりだけど、ここまで食らいついた内容はもっと評価されていい。`;
+    } else if (item.isBlowout) {
+        winnerReply = `${item.winner}側としては理想的。ただ大勝の次に打線が急に止まることもあるから、浮かれすぎないでほしい。`;
+        counterReply = stakeholder
+            ? `${stakeholder}ファンから見ると、この点差はさすがに警戒する。投手を残しているならなおさら嫌な相手。`
+            : `${item.loser}ファンにはきつい結果。でもこの一試合だけで学校や選手たちの夏全部まで否定したくはない。`;
+    } else if (item.isUpset) {
+        winnerReply = `${item.winner}は一段上を倒した。この勝利を「ちょっと意外」で終わらせず、次も勝って評価を定着させたい。`;
+        counterReply = `${item.loser}側からすると悔しいけど、C・B・Aで重みが違うように、一段差でも簡単な相手ではなかった。`;
+    } else {
+        winnerReply = reactionPick([
+            `${item.winner}ファンとしてはまず一安心。次は相手のランクだけでなく、この試合の消耗も見ておきたい。`,
+            `勝ったのは大きいけど、${item.winner}の本当の評価は次の相手で決まりそう。`,
+            `${item.winner}らしい勝ち方ができた。このまま一戦ごとに期待値を上げてほしい。`
+        ], key);
+        counterReply = stakeholder
+            ? `${stakeholder}側としては結局${item.winner}が来たか、という感じ。勝ち方まで見て対策したい相手だ。`
+            : `${item.loser}ファンとしては悔しい。それでも勝った${item.winner}がどこまで行くかは見届けたい。`;
+    }
+    const winnerBuzz = winnerRep?.buzz || item.excitement;
+    return [
+        {
+            author: `${item.winner}ファン`,
+            tag: '勝者側',
+            icon: '📣',
+            text: winnerReply,
+            likes: 8 + Math.round(winnerBuzz * 0.8)
+        },
+        {
+            author: stakeholder ? `${stakeholder}ファン` : `${item.loser}ファン`,
+            tag: stakeholder ? '次戦相手側' : '敗者側',
+            icon: stakeholder ? '🧢' : '😢',
+            text: counterReply,
+            likes: 5 + Math.round(item.excitement * 0.55)
+        }
+    ];
+}
+
+function getFanHubRootingInterests(state = tournamentState) {
+    const interests = [];
+    const seen = new Set();
+    for (const teamName of getFanHubActiveTeams(state)) {
+        const currentMatch = getReactionCurrentMatch(teamName, state);
+        if (!currentMatch) continue;
+        const candidates = getReactionNextRoundCandidates(teamName, currentMatch, state);
+        if (candidates.length < 2) continue;
+        const uniqueCandidates = [...new Set(candidates)].slice(0, 4);
+        const strongest = uniqueCandidates
+            .slice()
+            .sort((a, b) => getReactionStrength(b, state) - getReactionStrength(a, state))[0];
+        const weakest = uniqueCandidates
+            .slice()
+            .sort((a, b) => getReactionStrength(a, state) - getReactionStrength(b, state))[0];
+        if (!strongest || !weakest || strongest === weakest) continue;
+        const key = `${teamName}|${strongest}|${weakest}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const strengthGap = getReactionStrength(strongest, state) - getReactionStrength(weakest, state);
+        const nextRound = Math.min(getReactionFinalRound(state), getReactionRoundNumber(currentMatch.id, state) + 1);
+        const text = strengthGap >= 10
+            ? `${teamName}ファンとしては、次の${getReactionRoundLabel(nextRound, state)}を考えると${strongest}より${weakest}に勝ってほしいのが本音。でもこういう願い通りにはなかなか行かない。`
+            : `${teamName}ファン目線では、${strongest}対${weakest}はどちらが来ても嫌。できれば延長まで競って消耗してくれ、と思ってしまう。`;
+        interests.push({ teamName, strongest, weakest, text });
+        if (interests.length >= 4) break;
+    }
+    return interests;
+}
+
+function getFanHubBlockOpenness(state = tournamentState, reputations = null) {
+    const teams = (state.teams || []).filter(isReactionTeamName);
+    if (!teams.length) return [];
+    const reps = reputations || getFanHubAllReputations(state);
+    const repMap = new Map(reps.map(rep => [rep.teamName, rep]));
+    const blockSize = teams.length >= 64 ? 8 : teams.length >= 16 ? 4 : Math.max(2, teams.length);
+    const blocks = [];
+    for (let start = 0; start < teams.length; start += blockSize) {
+        const blockTeams = teams.slice(start, start + blockSize);
+        const powers = blockTeams.filter(team => getReactionCompetitiveRankValue(team, state) >= TEAM_REACTION_RANK_VALUE.B);
+        const fallen = powers.filter(team => repMap.get(team)?.eliminated);
+        const survivors = blockTeams.filter(team => repMap.get(team)?.active);
+        if (!fallen.length) continue;
+        const leadingSurvivor = survivors
+            .slice()
+            .sort((a, b) => {
+                const repDiff = (repMap.get(b)?.score || 0) - (repMap.get(a)?.score || 0);
+                return repDiff || getReactionStrength(b, state) - getReactionStrength(a, state);
+            })[0] || null;
+        blocks.push({
+            label: `第${Math.floor(start / blockSize) + 1}小ブロック`,
+            fallen,
+            survivors,
+            leadingSurvivor,
+            openness: fallen.length * 25 + (leadingSurvivor ? 5 : 0)
+        });
+    }
+    return blocks.sort((a, b) => b.openness - a.openness).slice(0, 5);
+}
+
+function getFanHubRegionStatus(state = tournamentState, reputations = null) {
+    const teamData = typeof TEAM_DATA !== 'undefined' ? TEAM_DATA : {};
+    const reps = reputations || getFanHubAllReputations(state);
+    const repMap = new Map(reps.map(rep => [rep.teamName, rep]));
+    const regions = ['東部', '中部', '西部', '伊豆'];
+    return regions.map(region => {
+        const teams = (state.teams || []).filter(team => teamData[team]?.region === region);
+        const surviving = teams.filter(team => repMap.get(team)?.active);
+        return {
+            region,
+            initial: teams.length,
+            surviving,
+            count: surviving.length,
+            lastTeam: surviving.length === 1 ? surviving[0] : null
+        };
+    });
+}
+
+function buildFanHubSnapshot(state = tournamentState) {
+    const assessments = getFanHubCompletedMatches(state)
+        .map(match => getFanHubMatchAssessment(match, state));
+    const reputations = getFanHubAllReputations(state, assessments);
+    const reputationMap = new Map(reputations.map(rep => [rep.teamName, rep]));
+    const events = assessments.map((item, index) => ({
+        id: item.match.id,
+        assessment: item,
+        mainPost: getFanHubMatchMainPost(item, fanHubVariant + index),
+        replies: getFanHubMatchReplies(item, reputations, state, fanHubVariant + index),
+        likes: 12 + Math.round(item.excitement * 1.35),
+        comments: 2 + Math.round(item.excitement / 12)
+    }));
+    const buzzTop = reputations
+        .filter(rep => rep.wins || rep.loss)
+        .sort((a, b) => b.buzz - a.buzz || b.wins - a.wins)
+        .slice(0, 5);
+    const risingTop = reputations
+        .filter(rep => rep.movement > 0)
+        .sort((a, b) => b.movement - a.movement || b.score - a.score)
+        .slice(0, 5);
+    const toughRoute = reputations
+        .filter(rep => rep.wins)
+        .sort((a, b) => b.routeDifficulty - a.routeDifficulty)
+        .slice(0, 5);
+    const shakyFavorites = reputations
+        .filter(rep => ['A', 'B'].includes(rep.baseRank) && rep.shakyWins)
+        .sort((a, b) => b.shakyWins - a.shakyWins || a.score - b.score)
+        .slice(0, 5);
+    const favorableRoutes = reputations
+        .filter(rep => rep.wins >= 2)
+        .sort((a, b) =>
+            (a.routeDifficulty / Math.max(1, a.wins)) - (b.routeDifficulty / Math.max(1, b.wins))
+        )
+        .slice(0, 5);
+    const blockOpenness = getFanHubBlockOpenness(state, reputations);
+    const regionStatus = getFanHubRegionStatus(state, reputations);
+    const rootingInterests = getFanHubRootingInterests(state);
+    return {
+        assessments,
+        events,
+        reputations,
+        reputationMap,
+        buzzTop,
+        risingTop,
+        toughRoute,
+        shakyFavorites,
+        favorableRoutes,
+        blockOpenness,
+        regionStatus,
+        rootingInterests,
+        completedCount: assessments.length,
+        upsetCount: assessments.filter(item => item.isUpset).length,
+        majorUpsetCount: assessments.filter(item => item.isMajorUpset).length,
+        closeCount: assessments.filter(item => item.isClose || item.isExtraInnings).length,
+        hottestTeam: buzzTop[0]?.teamName || 'まだなし'
+    };
+}
+
+function renderFanHubHero(snapshot, state = tournamentState) {
+    const hero = document.getElementById('fan-hub-hero');
+    const subtitle = document.getElementById('fan-hub-subtitle');
+    if (!hero) return;
+    hero.innerHTML = [
+        ['終了試合', `${snapshot.completedCount}試合`],
+        ['番狂わせ', `${snapshot.upsetCount}件`],
+        ['1点差・延長', `${snapshot.closeCount}件`],
+        ['現在の話題校', snapshot.hottestTeam]
+    ].map(([label, value]) => `
+        <div class="fan-hub-stat">
+            <span class="fan-hub-stat-label">${reactionEscapeHtml(label)}</span>
+            <strong class="fan-hub-stat-value">${reactionEscapeHtml(value)}</strong>
+        </div>
+    `).join('');
+    if (subtitle) {
+        subtitle.textContent = `${state.tournamentYear || ''}年度 ${tournamentNameMap[state.currentTournament] || '大会'}・試合結果に連動して自動更新`;
+    }
+}
+
+function renderFanHubFilters() {
+    const container = document.getElementById('fan-hub-filters');
+    if (!container) return;
+    const options = fanHubActiveTab === 'timeline'
+        ? [
+            ['all', 'すべて'],
+            ['upset', '⚡ 番狂わせ'],
+            ['close', '🔥 接戦・劇的'],
+            ['route', '👀 他校の利害'],
+            ['region', '🗾 地域・因縁']
+        ]
+        : fanHubActiveTab === 'reputation'
+            ? [
+                ['all', '話題順'],
+                ['rising', '📈 評価上昇'],
+                ['upset', '⚡ 大物食い'],
+                ['shaky', '⚠️ 不安な強豪'],
+                ['surviving', '✅ 勝ち残り']
+            ]
+            : [];
+    if (!options.length) {
+        container.innerHTML = '';
+        return;
+    }
+    if (!options.some(([value]) => value === fanHubActiveFilter)) {
+        fanHubActiveFilter = 'all';
+    }
+    container.innerHTML = options.map(([value, label]) => `
+        <button class="fan-hub-filter ${fanHubActiveFilter === value ? 'active' : ''}" data-fan-hub-filter="${value}" type="button">
+            ${label}
+        </button>
+    `).join('');
+}
+
+function renderFanHubTeamRanking(title, icon, items, valueFormatter) {
+    return `
+        <section class="fan-hub-card">
+            <h4>${icon} ${reactionEscapeHtml(title)}</h4>
+            <div class="fan-hub-ranking">
+                ${items.length ? items.map((item, index) => `
+                    <div class="fan-hub-rank-row">
+                        <span class="fan-hub-rank-no">${index + 1}</span>
+                        <button class="fan-hub-team-link" data-fan-hub-team="${reactionEscapeHtml(item.teamName)}" type="button">${reactionEscapeHtml(item.teamName)}</button>
+                        <span class="fan-hub-rank-value">${reactionEscapeHtml(valueFormatter(item))}</span>
+                    </div>
+                `).join('') : '<div class="fan-hub-empty">該当校はまだありません。</div>'}
+            </div>
+        </section>
+    `;
+}
+
+function renderFanHubTimeline(snapshot) {
+    const container = document.getElementById('fan-hub-content');
+    if (!container) return;
+    let events = snapshot.events;
+    if (fanHubActiveFilter === 'upset') {
+        events = events.filter(event => event.assessment.isUpset);
+    } else if (fanHubActiveFilter === 'close') {
+        events = events.filter(event =>
+            event.assessment.isClose ||
+            event.assessment.isExtraInnings ||
+            event.assessment.isWalkoff
+        );
+    } else if (fanHubActiveFilter === 'region') {
+        events = events.filter(event =>
+            event.assessment.sameRegion ||
+            event.assessment.publicPrivate ||
+            event.assessment.rivalry
+        );
+    }
+    const rootingHtml = (fanHubActiveFilter === 'all' || fanHubActiveFilter === 'route') &&
+        snapshot.rootingInterests.length
+        ? `
+            <h4 class="fan-hub-section-title">👀 他会場への本音 <small>次戦を考えた利害関係</small></h4>
+            ${snapshot.rootingInterests.map(item => `
+                <div class="fan-hub-rooting">
+                    <strong>${reactionEscapeHtml(item.teamName)}ファンの他会場ウォッチ</strong>
+                    <p>「${reactionEscapeHtml(item.text)}」</p>
+                </div>
+            `).join('')}
+        `
+        : fanHubActiveFilter === 'route'
+            ? '<div class="fan-hub-empty">次戦候補が二校以上見えてくると、各校ファンの「勝ってほしい相手」が表示されます。</div>'
+            : '';
+    const timelineHtml = fanHubActiveFilter === 'route'
+        ? ''
+        : events.length
+            ? `
+                <h4 class="fan-hub-section-title">💬 大会全体タイムライン <small>自校側・相手側・第三者が返信</small></h4>
+                <div class="fan-hub-timeline">
+                    ${events.slice(0, 60).map(event => {
+                        const item = event.assessment;
+                        const threadId = `fan-thread-${reactionHash(event.id)}`;
+                        return `
+                            <article class="fan-hub-event ${item.eventClass}">
+                                <div class="fan-hub-event-head">
+                                    <div>
+                                        <div class="fan-hub-score">${reactionEscapeHtml(getFanHubScoreLabel(item))}</div>
+                                        <div class="fan-hub-round">${reactionEscapeHtml(item.roundLabel)}・${reactionEscapeHtml(event.id)}</div>
+                                    </div>
+                                    <div class="fan-hub-tags">
+                                        ${item.tags.slice(0, 5).map(tag => `<span class="fan-hub-tag ${tag.kind}">${reactionEscapeHtml(tag.text)}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="fan-hub-post">
+                                    <div class="fan-hub-avatar">⚾</div>
+                                    <div>
+                                        <div class="fan-hub-author">県大会を全部見る人<span>第三者</span></div>
+                                        <p class="fan-hub-post-text">${reactionEscapeHtml(event.mainPost)}</p>
+                                        <div class="fan-hub-post-actions">
+                                            <span>💬 ${event.comments}</span>
+                                            <span>🔁 ${Math.max(1, Math.round(event.likes / 4))}</span>
+                                            <span>❤️ ${event.likes}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="fan-hub-thread-toggle" data-fan-hub-thread="${threadId}" type="button">返信を隠す</button>
+                                <div id="${threadId}" class="fan-hub-replies">
+                                    ${event.replies.map(reply => `
+                                        <div class="fan-hub-reply">
+                                            <div class="fan-hub-author">${reply.icon} ${reactionEscapeHtml(reply.author)}<span>${reactionEscapeHtml(reply.tag)}</span></div>
+                                            <p class="fan-hub-post-text">「${reactionEscapeHtml(reply.text)}」</p>
+                                            <div class="fan-hub-post-actions"><span>❤️ ${reply.likes}</span></div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </article>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '<div class="fan-hub-empty">この条件に当てはまる反応はまだありません。試合が進むと自動で増えます。</div>';
+    container.innerHTML = `${rootingHtml}${timelineHtml}`;
+}
+
+function renderFanHubTrends(snapshot) {
+    const container = document.getElementById('fan-hub-content');
+    if (!container) return;
+    const regionHtml = snapshot.regionStatus.map(item => `
+        <div class="fan-hub-region">
+            <strong>${item.count}</strong>
+            <span>${reactionEscapeHtml(item.region)}残存${item.lastTeam ? `・最後は${reactionEscapeHtml(item.lastTeam)}` : ''}</span>
+        </div>
+    `).join('');
+    const opennessHtml = snapshot.blockOpenness.length
+        ? snapshot.blockOpenness.map((item, index) => `
+            <div class="fan-hub-rank-row">
+                <span class="fan-hub-rank-no">${index + 1}</span>
+                <span class="fan-hub-team-link">${reactionEscapeHtml(item.label)}</span>
+                <span class="fan-hub-rank-value">${reactionEscapeHtml(formatReactionNames(item.fallen))}敗退${item.leadingSurvivor ? `／軸 ${reactionEscapeHtml(item.leadingSurvivor)}` : ''}</span>
+            </div>
+        `).join('')
+        : '<div class="fan-hub-empty">A・Bランク校が敗退すると「開いた山」が表示されます。</div>';
+    container.innerHTML = `
+        <h4 class="fan-hub-section-title">🔥 大会の空気 <small>勝敗・相手ランク・内容から集計</small></h4>
+        <div class="fan-hub-grid">
+            ${renderFanHubTeamRanking('いま最も話題の学校', '🔥', snapshot.buzzTop, item => `話題度 ${item.buzz}`)}
+            ${renderFanHubTeamRanking('評価を上げた学校', '📈', snapshot.risingTop, item => `${item.baseRank}→${item.liveRank}`)}
+            ${renderFanHubTeamRanking('最も厳しい山を突破', '⛰️', snapshot.toughRoute, item => `${item.wins}勝／難度 ${item.routeDifficulty}`)}
+            ${renderFanHubTeamRanking('勝ったけど不安な強豪', '⚠️', snapshot.shakyFavorites, item => `薄氷 ${item.shakyWins}試合`)}
+            ${renderFanHubTeamRanking('比較的恵まれた勝ち上がり', '🍀', snapshot.favorableRoutes, item => `${item.wins}勝／平均 ${Math.round(item.routeDifficulty / Math.max(1, item.wins))}`)}
+            <section class="fan-hub-card">
+                <h4>🧩 強豪敗退で開いた山</h4>
+                <div class="fan-hub-ranking">${opennessHtml}</div>
+            </section>
+            <section class="fan-hub-card" style="grid-column:1/-1">
+                <h4>🗾 地区別・勝ち残り</h4>
+                <div class="fan-hub-region-grid">${regionHtml}</div>
+            </section>
+        </div>
+    `;
+}
+
+function renderFanHubReputation(snapshot) {
+    const container = document.getElementById('fan-hub-content');
+    if (!container) return;
+    let items = snapshot.reputations
+        .filter(item => item.wins || item.loss || item.active)
+        .sort((a, b) => b.buzz - a.buzz || b.score - a.score);
+    if (fanHubActiveFilter === 'rising') {
+        items = items.filter(item => item.movement > 0)
+            .sort((a, b) => b.movement - a.movement || b.score - a.score);
+    } else if (fanHubActiveFilter === 'upset') {
+        items = items.filter(item => item.rankedWins.A.length || item.rankedWins.B.length || item.rankedWins.C.length)
+            .sort((a, b) =>
+                (b.highestWin?.loserRankValue || 0) - (a.highestWin?.loserRankValue || 0) ||
+                b.score - a.score
+            );
+    } else if (fanHubActiveFilter === 'shaky') {
+        items = items.filter(item => item.shakyWins)
+            .sort((a, b) => b.shakyWins - a.shakyWins);
+    } else if (fanHubActiveFilter === 'surviving') {
+        items = items.filter(item => item.active)
+            .sort((a, b) => b.score - a.score);
+    }
+    container.innerHTML = `
+        <h4 class="fan-hub-section-title">📈 今大会の世間評価 <small>開幕前ランクは変更せず、別枠の暫定評価として表示</small></h4>
+        <div class="fan-hub-reputation-list">
+            ${items.slice(0, 80).map(item => `
+                <article class="fan-hub-reputation-row">
+                    <div class="fan-hub-reputation-name">
+                        <button data-fan-hub-team="${reactionEscapeHtml(item.teamName)}" type="button">${reactionEscapeHtml(item.teamName)}</button>
+                        <small>${item.wins}勝${item.eliminated ? '・敗退' : '・勝ち残り'}／話題度 ${item.buzz}</small>
+                    </div>
+                    <div>
+                        <div class="fan-hub-meter"><span style="width:${item.score}%"></span></div>
+                        <div class="fan-hub-reputation-copy">${reactionEscapeHtml(item.trendLabel)}・${reactionEscapeHtml(item.headline)}</div>
+                    </div>
+                    <div class="fan-hub-rank-change">${item.baseRank} → ${item.liveRank}<br><small>${item.score}pt</small></div>
+                </article>
+            `).join('') || '<div class="fan-hub-empty">大会開始後、各校の暫定評価がここに表示されます。</div>'}
+        </div>
+    `;
+}
+
+function renderTournamentFanHub(state = tournamentState) {
+    const modal = document.getElementById('fan-hub-modal');
+    if (!modal) return;
+    const snapshot = buildFanHubSnapshot(state);
+    renderFanHubHero(snapshot, state);
+    document.querySelectorAll('[data-fan-hub-tab]').forEach(button => {
+        button.classList.toggle('active', button.dataset.fanHubTab === fanHubActiveTab);
+    });
+    renderFanHubFilters();
+    if (fanHubActiveTab === 'trends') renderFanHubTrends(snapshot);
+    else if (fanHubActiveTab === 'reputation') renderFanHubReputation(snapshot);
+    else renderFanHubTimeline(snapshot);
+}
+
+function openTournamentFanHub(tab = 'timeline') {
+    fanHubActiveTab = ['timeline', 'trends', 'reputation'].includes(tab) ? tab : 'timeline';
+    fanHubActiveFilter = 'all';
+    fanHubVariant++;
+    const modal = document.getElementById('fan-hub-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    renderTournamentFanHub(tournamentState);
+}
+
+function closeTournamentFanHub() {
+    document.getElementById('fan-hub-modal')?.classList.add('hidden');
+}
+
+function refreshFanHubIfOpen(state = tournamentState) {
+    const modal = document.getElementById('fan-hub-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        renderTournamentFanHub(state);
+    }
+    updateFanHubButtonBadge(state);
+}
+
+function updateFanHubButtonBadge(state = tournamentState) {
+    const badge = document.getElementById('fan-hub-button-badge');
+    if (!badge) return;
+    const hotCount = getFanHubCompletedMatches(state)
+        .map(match => getFanHubMatchAssessment(match, state))
+        .filter(item => item.isUpset || item.isClose || item.isExtraInnings || item.rivalry)
+        .length;
+    badge.textContent = String(hotCount);
+    badge.classList.toggle('hidden', hotCount === 0);
+}
+// ▲▲▲ 大会全体「ファン広場」エンジン ▲▲▲
+
 // ▲▲▲ チーム別「大会への反応」エンジン ▲▲▲
 
 // --- Team Rank Calculation (Reality-Adjusted Version) ---
@@ -13913,6 +16614,7 @@ async function generateSkipRoundArticleContent(roundName, results) {
         renderNamcoNews(data.namcoNews);
         checkTournamentProgress(); // 夏・秋・春 共通のスキップボタン表示制御
         updateTicker();
+        refreshFanHubIfOpen(data);
     }
 // ▲▲▲ 置き換えここまで ▲▲▲
 
@@ -26821,43 +29523,666 @@ function createHomepageMatchHTML(matchId, team1, team2, dbMatch, seeds = []) {
 // ▲▲▲ 置き換えここまで ▲▲▲
 
 
+let activeLotterySession = null;
+
+function createLotteryBracketTreeSvgMarkup() {
+    const width = 1536;
+    const height = 170;
+    const leafGap = 48;
+    const baseY = 168;
+    const roundGap = 29;
+    const roundNames = ['1回戦', '2回戦', '3回戦', '準々決勝', 'ブロック代表'];
+    let points = Array.from({ length: 32 }, (_, index) => ({
+        x: index * leafGap + leafGap / 2,
+        y: baseY,
+        start: index,
+        end: index
+    }));
+    const paths = [];
+    const labels = [];
+
+    for (let round = 0; round < 5; round++) {
+        const targetY = baseY - (round + 1) * roundGap;
+        const nextPoints = [];
+        for (let index = 0; index < points.length; index += 2) {
+            const left = points[index];
+            const right = points[index + 1];
+            const parentX = (left.x + right.x) / 2;
+            const finalClass = round === 4 ? ' class="tree-final-line"' : '';
+            paths.push(
+                `<path${finalClass} data-tree-round="${round + 1}" data-tree-start="${left.start}" data-tree-end="${right.end}" ` +
+                `d="M ${left.x} ${left.y} V ${targetY} H ${parentX} ` +
+                `M ${right.x} ${right.y} V ${targetY} H ${parentX}" />`
+            );
+            nextPoints.push({ x: parentX, y: targetY, start: left.start, end: right.end });
+        }
+        labels.push(`<text x="8" y="${Math.max(11, targetY - 5)}">${roundNames[round]}</text>`);
+        points = nextPoints;
+    }
+
+    if (points[0]) {
+        paths.push(
+            `<path class="tree-final-line" data-tree-round="6" data-tree-start="0" data-tree-end="31" ` +
+            `d="M ${points[0].x} ${points[0].y} V 7" />`
+        );
+    }
+
+    return `
+        <svg class="lottery-tree-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="32校からブロック代表までの勝ち上がり線">
+            ${paths.join('')}
+            ${labels.join('')}
+        </svg>
+    `;
+}
+
+function showLotteryBoardBlock(blockName) {
+    document.querySelectorAll('.lottery-block-board').forEach(board => {
+        board.classList.toggle('active', board.dataset.block === blockName);
+    });
+    document.querySelectorAll('[data-lottery-board-tab]').forEach(button => {
+        const isActive = button.dataset.lotteryBoardTab === blockName;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+    });
+}
+
+let lotteryBroadcastToken = 0;
+
+function setLotteryCameraMode(mode = '') {
+    const stage = document.getElementById('lottery-stage');
+    if (!stage) return;
+    stage.classList.remove('camera-stage', 'camera-ticket', 'camera-board');
+    if (mode) stage.classList.add(`camera-${mode}`);
+}
+
+function showLotteryBroadcast({ kicker = 'LIVE\n抽選会', title = '', subtitle = '', tone = '', hold = 0 } = {}) {
+    const overlay = document.getElementById('lottery-broadcast-overlay');
+    if (!overlay) return;
+    const token = ++lotteryBroadcastToken;
+    const kickerEl = document.getElementById('lottery-broadcast-kicker');
+    const titleEl = document.getElementById('lottery-broadcast-title');
+    const subtitleEl = document.getElementById('lottery-broadcast-subtitle');
+    if (kickerEl) kickerEl.innerHTML = kicker.replace(/\n/g, '<br>');
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+    overlay.classList.remove('tone-alert', 'tone-gold');
+    if (tone) overlay.classList.add(`tone-${tone}`);
+    overlay.classList.add('show');
+    if (hold > 0) {
+        window.setTimeout(() => {
+            if (token === lotteryBroadcastToken) overlay.classList.remove('show');
+        }, hold);
+    }
+}
+
+function hideLotteryBroadcast() {
+    lotteryBroadcastToken++;
+    document.getElementById('lottery-broadcast-overlay')?.classList.remove('show');
+}
+
+function highlightLotteryBoardRoute(position, duration = 1700) {
+    const blockName = position < 32 ? 'A' : position < 64 ? 'B' : position < 96 ? 'C' : 'D';
+    const localPosition = position % 32;
+    const board = document.querySelector(`.lottery-block-board[data-block="${blockName}"]`);
+    if (!board) return;
+    const routePaths = [...board.querySelectorAll('.lottery-tree-svg path[data-tree-start]')]
+        .filter(path => {
+            const start = Number(path.dataset.treeStart);
+            const end = Number(path.dataset.treeEnd);
+            return localPosition >= start && localPosition <= end;
+        });
+    routePaths.forEach(path => path.classList.add('route-active'));
+    window.setTimeout(() => routePaths.forEach(path => path.classList.remove('route-active')), duration);
+}
+
+async function animateLotteryBoardPlacement(item, position, duration) {
+    const overlay = document.getElementById('lottery-board-staff-overlay');
+    const attendant = document.getElementById('lottery-board-attendant');
+    const carryBoard = document.getElementById('lottery-staff-carry-board');
+    const slot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+    const blockName = position < 32 ? 'A' : position < 64 ? 'B' : position < 96 ? 'C' : 'D';
+    showLotteryBoardBlock(blockName);
+
+    setLotteryCameraMode('board');
+    if (!slot || !overlay || !attendant || !carryBoard) {
+        await sleep(Math.min(duration, 90));
+        return;
+    }
+
+    const bracket = document.getElementById('lottery-bracket');
+    const board = slot.closest('.lottery-block-board');
+    const bracketRect = bracket?.getBoundingClientRect();
+    const slotRectBeforePan = slot.getBoundingClientRect();
+    if (bracket && bracketRect) {
+        const desiredScrollLeft = bracket.scrollLeft +
+            (slotRectBeforePan.left - bracketRect.left) -
+            bracket.clientWidth * .7 +
+            slotRectBeforePan.width / 2;
+        const maxScrollLeft = Math.max(0, bracket.scrollWidth - bracket.clientWidth);
+        const clampedScrollLeft = Math.max(0, Math.min(maxScrollLeft, desiredScrollLeft));
+        if (typeof bracket.scrollTo === 'function') {
+            bracket.scrollTo({
+                left: clampedScrollLeft,
+                behavior: duration > 300 ? 'smooth' : 'auto'
+            });
+        } else {
+            bracket.scrollLeft = clampedScrollLeft;
+        }
+        await sleep(duration > 300 ? Math.min(190, duration * .24) : 15);
+    }
+
+    if (board) board.appendChild(overlay);
+    const boardRect = board?.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
+    const localPosition = position % 32;
+    const fallbackSlotCenter = 24 + localPosition * 48 + 24;
+    const measuredSlotCenter = boardRect && slotRect.width
+        ? slotRect.left - boardRect.left + slotRect.width / 2
+        : fallbackSlotCenter;
+    const boardWidth = boardRect?.width || board?.clientWidth || 1584;
+    const carryBoardCenterOffset = 76;
+    const targetLeft = Math.max(-36, Math.min(boardWidth - 102, measuredSlotCenter - carryBoardCenterOffset));
+    const startLeft = targetLeft - Math.min(230, Math.max(120, targetLeft + 36));
+
+    carryBoard.textContent = item.teamName;
+    attendant.style.setProperty('--staff-duration', `${duration}ms`);
+    attendant.style.setProperty('--staff-start-x', `${startLeft}px`);
+    attendant.style.setProperty('--staff-target-x', `${targetLeft}px`);
+    attendant.dataset.targetPosition = String(position);
+    overlay.classList.remove('active');
+    void overlay.offsetWidth;
+    overlay.classList.add('active');
+    await sleep(duration);
+    overlay.classList.remove('active');
+}
+
+function markLotteryBlockComplete(position, announce = true) {
+    const session = activeLotterySession;
+    if (!session) return false;
+    const blockIndex = Math.floor(position / 32);
+    const blockName = ['A', 'B', 'C', 'D'][blockIndex];
+    if (session.completedBlocks.has(blockName)) return false;
+    const start = blockIndex * 32;
+    const isComplete = session.teamPositions.slice(start, start + 32).every(Boolean);
+    if (!isComplete) return false;
+
+    session.completedBlocks.add(blockName);
+    const board = document.querySelector(`.lottery-block-board[data-block="${blockName}"]`);
+    board?.querySelectorAll('.lottery-tree-svg path').forEach(path => path.classList.add('route-complete'));
+    if (!announce) return true;
+    const flash = document.getElementById('lottery-block-complete-flash');
+    if (flash) {
+        flash.textContent = `${blockName}ブロック　組み合わせ決定`;
+        flash.classList.remove('show');
+        void flash.offsetWidth;
+        flash.classList.add('show');
+    }
+    showLotteryBroadcast({
+        kicker: 'BLOCK\nCOMPLETE',
+        title: `${blockName}ブロックの組み合わせが決定`,
+        subtitle: '32校の校名札がすべて掲示されました',
+        tone: 'gold',
+        hold: 1500
+    });
+    addLotteryLog(`<strong>${blockName}ブロック完成</strong><br>32校の組み合わせが決定`, true);
+    return true;
+}
+
+function renderLotteryCeremonyBoard() {
+    const bracket = document.getElementById('lottery-bracket');
+    const staffOverlay = document.getElementById('lottery-board-staff-overlay');
+    const boardPanel = bracket.closest('.draw-board-panel');
+    const broadcastOverlay = document.getElementById('lottery-broadcast-overlay');
+    if (staffOverlay && bracket.contains(staffOverlay) && boardPanel) {
+        boardPanel.insertBefore(staffOverlay, broadcastOverlay || null);
+    }
+    bracket.innerHTML = '';
+    ['A', 'B', 'C', 'D'].forEach((blockName, blockIndex) => {
+        const block = document.createElement('section');
+        block.className = 'lottery-block-board';
+        block.dataset.block = blockName;
+        block.innerHTML = `
+            <div class="lottery-wall-title">
+                <span>${blockName}ブロック　組み合わせ</span>
+                <span>抽選番号 ${blockIndex * 32 + 1}～${blockIndex * 32 + 32}番</span>
+            </div>
+            <div class="lottery-bracket-tree">${createLotteryBracketTreeSvgMarkup()}</div>
+            <div class="lottery-wall-rail" aria-hidden="true"></div>
+            <div class="lottery-wall-placards"></div>
+        `;
+        const placards = block.querySelector('.lottery-wall-placards');
+        for (let position = blockIndex * 32; position < blockIndex * 32 + 32; position++) {
+            const slot = document.createElement('div');
+            slot.className = 'lottery-slot';
+            slot.dataset.index = position;
+            slot.innerHTML = `
+                <span class="slot-number">${position + 1}</span>
+                <span class="lottery-slot-hook" aria-hidden="true"></span>
+                <span class="lottery-team-board">
+                    <span class="team-name-placeholder"></span>
+                    <span class="lottery-seed-mark"></span>
+                </span>
+            `;
+            placards.appendChild(slot);
+        }
+        bracket.appendChild(block);
+    });
+
+    document.querySelectorAll('[data-lottery-board-tab]').forEach(button => {
+        button.onclick = () => showLotteryBoardBlock(button.dataset.lotteryBoardTab);
+    });
+    showLotteryBoardBlock('A');
+}
+
+function getLotteryPhaseLabel(item) {
+    return item.seedInfo ? `${item.seedInfo.tier}シード抽選` : '一般校抽選';
+}
+
+function getLotteryTeamDisplay(item) {
+    if (!item?.seedInfo) return item?.teamName || '';
+    return `[${item.seedInfo.tier}${item.seedInfo.rank}] ${item.teamName}`;
+}
+
+function updateLotteryCeremonyProgress() {
+    const session = activeLotterySession;
+    if (!session) return;
+    const drawnCount = session.currentIndex;
+    const total = session.items.length;
+    const percent = total ? (drawnCount / total) * 100 : 0;
+    document.getElementById('lottery-progress-text').textContent = `${drawnCount} / ${total}校`;
+    document.getElementById('lottery-progress-bar').style.width = `${percent}%`;
+    document.getElementById('lottery-remaining-count').textContent = `残り${Math.max(0, total - drawnCount)}校`;
+}
+
+function renderLotteryNextTeams() {
+    const session = activeLotterySession;
+    const nextTeamsEl = document.getElementById('lottery-next-teams');
+    if (!session || session.finished) {
+        nextTeamsEl.innerHTML = '<div class="draw-next-team">全校の抽選が終了しました</div>';
+        return;
+    }
+    nextTeamsEl.innerHTML = session.items
+        .slice(session.currentIndex, session.currentIndex + 4)
+        .map((item, index) => `
+            <div class="draw-next-team ${index === 0 ? 'current' : ''}">
+                ${index === 0 ? '▶ ' : ''}${getLotteryTeamDisplay(item)}
+            </div>
+        `).join('');
+}
+
+function addLotteryLog(html, isMatchup = false) {
+    const list = document.getElementById('lottery-draw-log');
+    const item = document.createElement('li');
+    item.className = `draw-log-item${isMatchup ? ' matchup' : ''}`;
+    item.innerHTML = html;
+    list.prepend(item);
+    while (list.children.length > 18) list.lastElementChild.remove();
+}
+
+function setLotteryPotEnabled(enabled) {
+    const pot = document.getElementById('lottery-pot');
+    pot.classList.toggle('disabled', !enabled);
+    pot.disabled = !enabled;
+}
+
+function markLotteryBye(position) {
+    const slot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+    if (!slot) return;
+    slot.querySelector('.team-name-placeholder').textContent = '不戦勝';
+    slot.querySelector('.lottery-seed-mark').textContent = '';
+    slot.classList.add('filled', 'bye-slot');
+}
+
+function placeLotteryTeam(item, position, animate = true) {
+    const slot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
+    if (!slot) return null;
+    slot.querySelector('.team-name-placeholder').textContent = item.teamName;
+    const seedMark = slot.querySelector('.lottery-seed-mark');
+    seedMark.textContent = item.seedInfo ? `${item.seedInfo.tier}${item.seedInfo.rank}` : '';
+    slot.classList.toggle('seeded', Boolean(item.seedInfo));
+    slot.classList.add('filled');
+    if (animate) {
+        const blockName = position < 32 ? 'A' : position < 64 ? 'B' : position < 96 ? 'C' : 'D';
+        showLotteryBoardBlock(blockName);
+        slot.classList.add('highlight', 'focus-draw');
+        const scrollToPlacard = () => {
+            slot.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        };
+        if (window.requestAnimationFrame) window.requestAnimationFrame(scrollToPlacard);
+        else scrollToPlacard();
+        window.setTimeout(() => slot.classList.remove('highlight'), 850);
+        window.setTimeout(() => slot.classList.remove('focus-draw'), 1400);
+    }
+    return slot;
+}
+
+function getLotteryMatchupComment(teamName, opponentName) {
+    const rankOrder = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+    const teamRank = calculateRank(teamName, {});
+    const opponentRank = calculateRank(opponentName, {});
+    const teamStrength = rankOrder[teamRank] || 1;
+    const opponentStrength = rankOrder[opponentRank] || 1;
+    const rankGap = Math.abs(teamStrength - opponentStrength);
+    const rivalry = checkRivalry(teamName, opponentName);
+    if (rivalry) return `因縁のカード、${teamName}対${opponentName}が1回戦で実現します。`;
+    if (['A', 'B'].includes(teamRank) && ['A', 'B'].includes(opponentRank)) {
+        return `会場がどよめきます。1回戦屈指の好カード、${teamName}対${opponentName}です。`;
+    }
+    if (rankGap >= 3) {
+        const strongerTeam = teamStrength > opponentStrength ? teamName : opponentName;
+        const challenger = strongerTeam === teamName ? opponentName : teamName;
+        return `${challenger}は初戦から強豪${strongerTeam}へ挑む組み合わせになりました。`;
+    }
+    if (teamRank === opponentRank && ['A', 'B', 'C'].includes(teamRank)) {
+        return `実力校同士、${teamName}対${opponentName}。序盤の注目カードです。`;
+    }
+    return `これで1回戦は${teamName}対${opponentName}に決まりました。`;
+}
+
+function playLotteryCeremonySound(id) {
+    const soundElement = document.getElementById(id);
+    if (!soundElement) return;
+    soundElement.currentTime = 0;
+    soundElement.play().catch(() => {});
+}
+
+function prepareCurrentLotteryTeam() {
+    const session = activeLotterySession;
+    if (!session || session.finished) return;
+    const item = session.items[session.currentIndex];
+    if (!item) return;
+
+    const phaseLabel = getLotteryPhaseLabel(item);
+    const phaseChanged = phaseLabel !== session.lastPhaseLabel;
+    session.lastPhaseLabel = phaseLabel;
+
+    document.getElementById('pot-name').textContent = phaseLabel;
+    document.getElementById('lottery-current-team').textContent = item.teamName;
+    document.getElementById('lottery-current-meta').textContent = item.seedInfo
+        ? `第${item.seedInfo.rank}シード・${item.seedInfo.tier}シード校代表`
+        : `ノーシード校代表・抽選順 ${session.currentIndex + 1}番`;
+    document.getElementById('drawn-number').textContent = '—';
+    document.getElementById('drawn-team').textContent = '番号札を開いてください';
+    document.getElementById('drawn-team-container').classList.remove('revealed');
+    setLotteryPotEnabled(true);
+    renderLotteryNextTeams();
+
+    const commentary = document.getElementById('lottery-commentary').querySelector('p');
+    commentary.textContent = phaseChanged
+        ? `続いて${phaseLabel}です。${item.teamName}高校、くじを引いてください。`
+        : `${item.teamName}高校、くじを引いてください。`;
+    setLotteryCameraMode('stage');
+    showLotteryBroadcast({
+        kicker: item.seedInfo ? `${item.seedInfo.tier} SEED\nDRAW` : 'LIVE\n一般抽選',
+        title: `${item.teamName}高校　登壇`,
+        subtitle: item.seedInfo
+            ? `第${item.seedInfo.rank}シード・番号札を抽選`
+            : `抽選順${session.currentIndex + 1}番・番号札を抽選`
+    });
+
+    const focusTeam = document.getElementById('lottery-focus-team').value;
+    if (
+        session.auto &&
+        focusTeam === item.teamName &&
+        !session.focusPausedTeams.has(item.teamName)
+    ) {
+        session.auto = false;
+        session.focusPausedTeams.add(item.teamName);
+        document.getElementById('lottery-auto-btn').textContent = '▶ 自動進行';
+        commentary.textContent = `注目校の${item.teamName}です。ここは抽選箱をクリックして、自分で番号札を引いてください。`;
+        return;
+    }
+    scheduleLotteryAutoDraw();
+}
+
+function scheduleLotteryAutoDraw() {
+    const session = activeLotterySession;
+    if (!session || !session.auto || session.busy || session.finished) return;
+    window.clearTimeout(session.autoTimer);
+    const speed = Number(document.getElementById('lottery-speed').value) || 1300;
+    session.autoTimer = window.setTimeout(() => drawCurrentLotteryTeam(true), Math.max(80, speed * .28));
+}
+
+async function drawCurrentLotteryTeam(fromAuto = false) {
+    const session = activeLotterySession;
+    if (!session || session.busy || session.finished) return;
+    const item = session.items[session.currentIndex];
+    if (!item) return;
+
+    session.busy = true;
+    window.clearTimeout(session.autoTimer);
+    setLotteryPotEnabled(false);
+    document.getElementById('skip-lottery-btn').disabled = true;
+
+    const pot = document.getElementById('lottery-pot');
+    const commentary = document.getElementById('lottery-commentary').querySelector('p');
+    const speed = Number(document.getElementById('lottery-speed').value) || 1300;
+    const revealDelay = fromAuto ? Math.max(55, speed * .22) : 430;
+    const settleDelay = fromAuto ? Math.max(70, speed * .26) : 520;
+    const ticketHoldDelay = fromAuto ? Math.max(35, speed * .08) : 280;
+    const staffDuration = fromAuto ? Math.max(105, speed * .36) : 720;
+
+    setLotteryCameraMode('stage');
+    pot.classList.add('is-shaking');
+    commentary.textContent = `${item.teamName}高校、番号札を開きます。`;
+    playLotteryCeremonySound('sound-drumroll');
+    await sleep(revealDelay);
+
+    let position;
+    if (Number.isInteger(item.position)) {
+        position = item.position;
+    } else {
+        const slotIndex = Math.floor(Math.random() * session.availableNonSeedSlots.length);
+        position = session.availableNonSeedSlots.splice(slotIndex, 1)[0];
+    }
+    session.teamPositions[position] = item.teamName;
+
+    pot.classList.remove('is-shaking');
+    document.getElementById('drawn-number').textContent = `${position + 1}番`;
+    document.getElementById('drawn-team').textContent = item.teamName;
+    document.getElementById('drawn-team-container').classList.add('revealed');
+    setLotteryCameraMode('ticket');
+    showLotteryBroadcast({
+        kicker: '抽選番号\n決定',
+        title: `第${position + 1}番　${item.teamName}高校`,
+        subtitle: `${position + 1}番の校名札を組み合わせボードへ掲示します`,
+        tone: item.seedInfo ? 'gold' : ''
+    });
+    await sleep(ticketHoldDelay);
+
+    await animateLotteryBoardPlacement(item, position, staffDuration);
+    placeLotteryTeam(item, position, true);
+    highlightLotteryBoardRoute(position);
+    playLotteryCeremonySound('sound-cymbal');
+
+    let announcement = `${position + 1}番。${item.teamName}高校、${position + 1}番です。`;
+    const opponentPosition = position % 2 === 0 ? position + 1 : position - 1;
+    const opponentName = session.teamPositions[opponentPosition];
+    if (opponentName === '(BYE)') {
+        announcement += ' 初戦は不戦勝、2回戦から登場します。';
+        showLotteryBroadcast({
+            kicker: '2回戦から\n登場',
+            title: `${item.teamName}高校　初戦は不戦勝`,
+            subtitle: `抽選番号${position + 1}番・2回戦から大会へ`,
+            tone: 'gold'
+        });
+    } else if (opponentName) {
+        const matchupComment = getLotteryMatchupComment(item.teamName, opponentName);
+        announcement += ` ${matchupComment}`;
+        const opponentSlot = document.querySelector(`.lottery-slot[data-index="${opponentPosition}"]`);
+        opponentSlot?.classList.add('highlight');
+        window.setTimeout(() => opponentSlot?.classList.remove('highlight'), 850);
+        addLotteryLog(`<strong>対戦決定</strong><br>${item.teamName} vs ${opponentName}`, true);
+        showLotteryBroadcast({
+            kicker: /好カード|因縁|強豪/.test(matchupComment) ? '注目カード\n決定' : '1回戦\n対戦決定',
+            title: `${item.teamName} － ${opponentName}`,
+            subtitle: matchupComment,
+            tone: /好カード|因縁|強豪/.test(matchupComment) ? 'alert' : ''
+        });
+    }
+    commentary.textContent = announcement;
+    addLotteryLog(`<strong>${position + 1}番</strong>　${getLotteryTeamDisplay(item)}`);
+    const blockCompleted = markLotteryBlockComplete(position, true);
+
+    session.currentIndex++;
+    updateLotteryCeremonyProgress();
+    renderLotteryNextTeams();
+    await sleep(settleDelay + (blockCompleted ? Math.min(850, speed * .5) : 0));
+
+    session.busy = false;
+    document.getElementById('skip-lottery-btn').disabled = false;
+    if (session.currentIndex >= session.items.length) {
+        completeLotteryCeremony();
+    } else {
+        prepareCurrentLotteryTeam();
+    }
+}
+
+function fillRemainingLotteryDraws() {
+    const session = activeLotterySession;
+    if (!session || session.busy || session.finished) return;
+    session.auto = false;
+    window.clearTimeout(session.autoTimer);
+
+    while (session.currentIndex < session.items.length) {
+        const item = session.items[session.currentIndex];
+        let position;
+        if (Number.isInteger(item.position)) {
+            position = item.position;
+        } else {
+            const slotIndex = Math.floor(Math.random() * session.availableNonSeedSlots.length);
+            position = session.availableNonSeedSlots.splice(slotIndex, 1)[0];
+        }
+        session.teamPositions[position] = item.teamName;
+        placeLotteryTeam(item, position, false);
+        markLotteryBlockComplete(position, false);
+        session.currentIndex++;
+    }
+    updateLotteryCeremonyProgress();
+    completeLotteryCeremony();
+}
+
+function getLotteryCeremonySummary(teamPositions) {
+    const rankScore = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+    const blockScores = ['A', 'B', 'C', 'D'].map((block, blockIndex) => {
+        const teams = teamPositions
+            .slice(blockIndex * 32, blockIndex * 32 + 32)
+            .filter(team => team && team !== '(BYE)');
+        return {
+            block,
+            score: teams.reduce((sum, team) => sum + (rankScore[calculateRank(team, {})] || 1), 0),
+            strongCount: teams.filter(team => ['A', 'B'].includes(calculateRank(team, {}))).length
+        };
+    }).sort((a, b) => b.score - a.score);
+
+    const matchups = [];
+    for (let position = 0; position < teamPositions.length; position += 2) {
+        const team1 = teamPositions[position];
+        const team2 = teamPositions[position + 1];
+        if (!team1 || !team2 || team1 === '(BYE)' || team2 === '(BYE)') continue;
+        const score1 = rankScore[calculateRank(team1, {})] || 1;
+        const score2 = rankScore[calculateRank(team2, {})] || 1;
+        matchups.push({
+            team1,
+            team2,
+            value: score1 + score2 + (Math.abs(score1 - score2) <= 1 ? 2 : 0)
+        });
+    }
+    matchups.sort((a, b) => b.value - a.value);
+    return {
+        hardestBlock: blockScores[0],
+        notableMatchup: matchups[0] || null,
+        byeCount: teamPositions.filter(team => team === '(BYE)').length
+    };
+}
+
+function completeLotteryCeremony() {
+    const session = activeLotterySession;
+    if (!session || session.finished) return;
+    session.finished = true;
+    session.auto = false;
+    window.clearTimeout(session.autoTimer);
+    setLotteryCameraMode('');
+    hideLotteryBroadcast();
+    document.getElementById('lottery-board-staff-overlay')?.classList.remove('active');
+    setLotteryPotEnabled(false);
+    updateLotteryCeremonyProgress();
+    renderLotteryNextTeams();
+
+    document.getElementById('lottery-current-team').textContent = '全校の抽選が終了';
+    document.getElementById('lottery-current-meta').textContent = '組み合わせ表を確認してください';
+    document.getElementById('pot-name').textContent = '抽選終了';
+    document.getElementById('lottery-auto-btn').classList.add('hidden');
+    document.getElementById('lottery-speed').classList.add('hidden');
+    document.getElementById('skip-lottery-btn').classList.add('hidden');
+    document.getElementById('lottery-commentary').querySelector('p').textContent =
+        '以上をもちまして、全117校の組み合わせ抽選を終了します。';
+
+    const summary = getLotteryCeremonySummary(session.teamPositions);
+    const matchupText = summary.notableMatchup
+        ? `${summary.notableMatchup.team1} vs ${summary.notableMatchup.team2}`
+        : '該当なし';
+    const summaryEl = document.getElementById('lottery-summary');
+    summaryEl.innerHTML = `
+        <div class="draw-summary-card">
+            <h3>組み合わせ決定</h3>
+            <p>全117校の抽選が完了しました。大会本部が組み合わせ表を正式に掲示します。</p>
+            <div class="draw-summary-grid">
+                <div class="draw-summary-stat">
+                    <span>抽選完了</span>
+                    <strong>117校・128枠</strong>
+                </div>
+                <div class="draw-summary-stat">
+                    <span>最も戦力が集まった山</span>
+                    <strong>${summary.hardestBlock.block}ブロック</strong>
+                </div>
+                <div class="draw-summary-stat">
+                    <span>序盤の注目カード</span>
+                    <strong>${matchupText}</strong>
+                </div>
+            </div>
+            <div class="draw-summary-actions">
+                <button id="confirm-lottery-result-btn" class="draw-control-btn confirm" type="button">
+                    組み合わせを確定して大会へ
+                </button>
+            </div>
+        </div>
+    `;
+    summaryEl.classList.remove('hidden');
+
+    document.getElementById('confirm-lottery-result-btn').onclick = async event => {
+        event.currentTarget.disabled = true;
+        event.currentTarget.textContent = session.initialAiEnabled
+            ? '主将インタビューを準備中…'
+            : '大会を準備中…';
+        if (session.initialAiEnabled) {
+            await generateCaptainInterviews(session.teamPositions);
+        } else {
+            const lotteryModal = document.getElementById('lottery-modal');
+            lotteryModal.classList.add('hidden');
+            lotteryModal.classList.remove('flex');
+            SoundManager.stopBgm();
+            createNewTournament(false, 'summer', session.teamPositions);
+        }
+    };
+}
+
 /**
- * 抽選会イベントを開始する
- * (★128チーム制＝128スロットに対応)
+ * 抽選会イベントを開始する。
+ * シード抽選→一般校抽選の順に、登壇・番号札開封・校名札掲示を再現する。
  */
 async function startLotteryEvent() {
     const lotteryModal = document.getElementById('lottery-modal');
     lotteryModal.classList.remove('hidden');
     lotteryModal.classList.add('flex');
+    activeLotterySession = null;
+    renderLotteryCeremonyBoard();
+    setLotteryCameraMode('');
+    hideLotteryBroadcast();
+    document.getElementById('lottery-board-staff-overlay')?.classList.remove('active');
+    document.getElementById('lottery-block-complete-flash')?.classList.remove('show');
 
-    // 現行方式: 春季県大会ベスト16をA4・B4・C8のシード校とする
     const seeds = createInitialSummerSeeds();
-    
-    // ★★★ ここからが修正箇所 ★★★
-    // 簡易トーナメント表を作成 (128チーム分)
-    const leftBracket = document.getElementById('lottery-bracket-left');
-    const rightBracket = document.getElementById('lottery-bracket-right');
-    leftBracket.innerHTML = '';
-    rightBracket.innerHTML = '';
-    for(let i=0; i<128; i++){ // 64 -> 128
-        const slot = document.createElement('div');
-        slot.className = 'lottery-slot';
-        slot.dataset.index = i;
-        slot.innerHTML = `<span>${i+1}.</span> <span class="team-name-placeholder">---</span>`;
-        // 64未満は左、64以上は右
-        document.getElementById(i < 64 ? 'lottery-bracket-left' : 'lottery-bracket-right').appendChild(slot);
-    }
-    // ★★★ 修正ここまで ★★★
-
-    // (ボタンイベントリスナーは変更なし)
-    document.getElementById('start-lottery-btn').onclick = () => runLotteryAnimation(lotteryOrder, seeds);
-    document.getElementById('skip-lottery-btn').onclick = () => {
-        lotteryModal.classList.add('hidden');
-        SoundManager.stopBgm();
-        createNewTournament(false, 'summer', null, participatingTeamPool);
-    };
-
-    // 実在108校と架空9校の全117校が参加し、シード16校のあとにノーシード校が抽選する
     const preparedPoolIsValid =
         Array.isArray(preparedInitialSummerTeamPool) &&
         preparedInitialSummerTeamPool.length === CURRENT_SUMMER_SCHOOL_COUNT &&
@@ -26865,46 +30190,98 @@ async function startLotteryEvent() {
     const participatingTeamPool = preparedPoolIsValid
         ? [...preparedInitialSummerTeamPool]
         : createCurrentSummerTeamPool(seeds);
-    const seedTeamsList = seeds.map(s => s.team);
-    const nonSeeds = participatingTeamPool.filter(t => !seedTeamsList.includes(t));
-    // BYEは自動配置するため抽選対象に含めない
-    const lotteryOrder = [...seedTeamsList, ...shuffleArray(nonSeeds)];
+    const seedTeams = new Set(seeds.map(seed => seed.team));
+    const nonSeeds = shuffleArray(participatingTeamPool.filter(team => !seedTeams.has(team)));
+    const lotteryOrder = [
+        ...[...seeds].sort((a, b) => a.rank - b.rank).map(seed => seed.team),
+        ...nonSeeds
+    ];
+
+    const focusSelect = document.getElementById('lottery-focus-team');
+    focusSelect.innerHTML = '<option value="">指定なし</option>' +
+        participatingTeamPool
+            .slice()
+            .sort((a, b) => a.localeCompare(b, 'ja'))
+            .map(team => `<option value="${team}">${team}</option>`)
+            .join('');
+
+    document.getElementById('pot-name').textContent = '開会前';
+    document.getElementById('lottery-current-team').textContent = '抽選開始をお待ちください';
+    document.getElementById('lottery-current-meta').textContent = 'A・B・Cシード校から順に抽選を行います';
+    document.getElementById('drawn-number').textContent = '—';
+    document.getElementById('drawn-team').textContent = '番号札はまだ開かれていません';
+    document.getElementById('drawn-team-container').classList.remove('revealed');
+    document.getElementById('lottery-progress-text').textContent = `0 / ${lotteryOrder.length}校`;
+    document.getElementById('lottery-progress-bar').style.width = '0%';
+    document.getElementById('lottery-remaining-count').textContent = `残り${lotteryOrder.length}校`;
+    document.getElementById('lottery-next-teams').innerHTML =
+        lotteryOrder.slice(0, 4).map((team, index) =>
+            `<div class="draw-next-team ${index === 0 ? 'current' : ''}">${index === 0 ? '▶ ' : ''}${team}</div>`
+        ).join('');
+    document.getElementById('lottery-draw-log').innerHTML = '';
+    document.getElementById('lottery-summary').classList.add('hidden');
+    setLotteryPotEnabled(false);
+
+    const startBtn = document.getElementById('start-lottery-btn');
+    const autoBtn = document.getElementById('lottery-auto-btn');
+    const speedSelect = document.getElementById('lottery-speed');
+    const skipBtn = document.getElementById('skip-lottery-btn');
+    startBtn.classList.remove('hidden');
+    autoBtn.classList.add('hidden');
+    speedSelect.classList.add('hidden');
+    skipBtn.classList.remove('hidden');
+    skipBtn.disabled = false;
+    skipBtn.textContent = '抽選会を省略';
+    autoBtn.textContent = '▶ 自動進行';
+    document.getElementById('lottery-commentary').querySelector('p').textContent =
+        '開会の準備が整いました。「抽選を開始」を押してください。';
+
+    startBtn.onclick = () => runLotteryAnimation(lotteryOrder, seeds);
+    autoBtn.onclick = () => {
+        const session = activeLotterySession;
+        if (!session || session.finished) return;
+        session.auto = !session.auto;
+        autoBtn.textContent = session.auto ? 'Ⅱ 一時停止' : '▶ 自動進行';
+        if (session.auto) {
+            document.getElementById('lottery-commentary').querySelector('p').textContent =
+                '自動進行を開始します。注目校が登壇すると自動で一時停止します。';
+            scheduleLotteryAutoDraw();
+        } else {
+            window.clearTimeout(session.autoTimer);
+        }
+    };
+    skipBtn.onclick = () => {
+        if (activeLotterySession && !activeLotterySession.finished) {
+            fillRemainingLotteryDraws();
+            return;
+        }
+        lotteryModal.classList.add('hidden');
+        lotteryModal.classList.remove('flex');
+        SoundManager.stopBgm();
+        createNewTournament(false, 'summer', null, participatingTeamPool);
+    };
 
     SoundManager.startBgm();
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
 
 /**
- * 抽選会のアニメーションを実行する
- * (★128枠・現行16校シード制・7ラウンド制に対応)
- * @param {Array<string>} lotteryOrder - 全チームの抽選順 (シード校が先)
- * @param {Array<object>} seeds - シード校16チームのランク・区分付きオブジェクト配列
+ * 抽選会を開始し、最初の登壇校を呼び出す。
  */
 async function runLotteryAnimation(lotteryOrder, seeds) {
-    // --- 1. 初期設定 ---
-    document.getElementById('lottery-pot').onclick = null;
-    document.getElementById('skip-lottery-btn').style.display = 'none';
-    
-    const initialAiEnabled = document.getElementById('initial-ai-generation-toggle').checked;
+    if (activeLotterySession) return;
 
-    const commentaryEl = document.getElementById('lottery-commentary').querySelector('p');
-    const drawnTeamContainer = document.getElementById('drawn-team-container');
-    const drawnTeamEl = document.getElementById('drawn-team');
-    const potEl = document.getElementById('lottery-pot');
-    const potNameEl = document.getElementById('pot-name');
-    
     const teamPositions = Array(128).fill(null);
     const seedPlacements = createSummerSeedPlacements(seeds);
-    const seedPositionsTemplate = Object.keys(seedPlacements).map(Number);
+    const seedPositions = Object.keys(seedPlacements).map(Number);
     const totalByesNeeded = 128 - lotteryOrder.length;
     const seedByeTeams = getSummerSeedByeTeams(seeds, totalByesNeeded);
     const byePositions = Object.entries(seedPlacements)
         .filter(([, seed]) => seedByeTeams.has(seed.team))
         .map(([position]) => Number(position) + 1);
-    let availableNonSeedSlots = Array.from({length: 128}, (_, i) => i)
-        .filter(position => !seedPositionsTemplate.includes(position) && !byePositions.includes(position));
 
-    // シード校へ割り当ててもBYEが残る場合は、互いに異なる1回戦カードへ配置する。
+    let availableNonSeedSlots = Array.from({ length: 128 }, (_, index) => index)
+        .filter(position => !seedPositions.includes(position) && !byePositions.includes(position));
+
     const extraByesNeeded = totalByesNeeded - byePositions.length;
     const openFirstRoundPairs = [];
     for (let slot = 0; slot < 128; slot += 2) {
@@ -26915,190 +30292,51 @@ async function runLotteryAnimation(lotteryOrder, seeds) {
     const extraByePositions = shuffleArray(openFirstRoundPairs)
         .slice(0, extraByesNeeded)
         .map(pair => pair[Math.floor(Math.random() * pair.length)]);
-    extraByePositions.forEach(position => {
+    const allByePositions = [...byePositions, ...extraByePositions];
+    allByePositions.forEach(position => {
         teamPositions[position] = '(BYE)';
+        markLotteryBye(position);
     });
     availableNonSeedSlots = availableNonSeedSlots
         .filter(position => !extraByePositions.includes(position));
-    const blockDeathAnnounced = { A: false, B: false, C: false, D: false };
 
-    // (内部ヘルパー関数: playSound, isStrongRank ... 変更なし)
-    const playSound = (id) => {
-        const soundElement = document.getElementById(id);
-        if (soundElement) {
-            soundElement.currentTime = 0;
-            soundElement.play().catch(e => console.warn(`Audio play failed for ${id}:`, e));
+    const seedByTeam = new Map(seeds.map(seed => [seed.team, seed]));
+    const items = lotteryOrder.map(teamName => {
+        const seedInfo = seedByTeam.get(teamName) || null;
+        let position = null;
+        if (seedInfo) {
+            const placement = Object.entries(seedPlacements)
+                .find(([, seed]) => seed.team === teamName);
+            position = placement ? Number(placement[0]) : null;
         }
+        return { teamName, seedInfo, position };
+    });
+
+    activeLotterySession = {
+        items,
+        teamPositions,
+        availableNonSeedSlots,
+        currentIndex: 0,
+        busy: false,
+        auto: false,
+        autoTimer: null,
+        finished: false,
+        lastPhaseLabel: '',
+        focusPausedTeams: new Set(),
+        completedBlocks: new Set(),
+        initialAiEnabled: document.getElementById('initial-ai-generation-toggle').checked
     };
-    const isStrongRank = (team) => ['A'].includes(calculateRank(team, {}));
 
-    // (内部ヘルパー関数: checkDeathBlock ... ★修正★)
-    const checkDeathBlock = (position) => {
-        // 128チーム / 4ブロック = 1ブロック32チーム
-        const blockName = position < 32 ? 'A' : position < 64 ? 'B' : position < 96 ? 'C' : 'D';
-        const startIdx = position < 32 ? 0 : position < 64 ? 32 : position < 96 ? 64 : 96;
-        constblockSize = 32; // ★ 16 -> 32
-        
-        if (blockDeathAnnounced[blockName]) return false;
-        
-        const teamsInBlock = teamPositions.slice(startIdx, startIdx + blockSize);
-        // ★ 3チーム -> 4チーム に変更
-        const strongTeamsCount = teamsInBlock.filter(team => team && ['A', 'B'].includes(calculateRank(team, {}))).length; 
-        if (strongTeamsCount >= 4) { // ★ 3 -> 4
-            commentaryEl.textContent = `これは...！ ${blockName}ブロックは有力校が集中する「死のブロック」になりました！`;
-            blockDeathAnnounced[blockName] = true;
-            playSound('sound-gasp');
-            return true;
-        }
-        return false;
-    };
-    // ★★★ 修正ここまで ★★★
-
-
-    // --- 2. 抽選会フェーズ1：A・B・Cシード校の配置 ---
-    const orderedSeeds = [...seeds].sort((a, b) => a.rank - b.rank);
-    for (const seedInfo of orderedSeeds) {
-        const teamName = seedInfo.team;
-        const teamRank = seedInfo.rank;
-        const tier = seedInfo.tier;
-        const placementEntry = Object.entries(seedPlacements)
-            .find(([, placedSeed]) => placedSeed.team === teamName);
-        if (!placementEntry) continue;
-        const position = Number(placementEntry[0]);
-        const hasFirstRoundBye = seedByeTeams.has(teamName);
-        const byePosition = hasFirstRoundBye ? position + 1 : null;
-
-        potNameEl.textContent = `${tier}シード校`;
-        let dreadBg = null;
-        if (isStrongRank(teamName) && initialAiEnabled) {
-            dreadBg = document.createElement('div');
-            dreadBg.className = 'dread-mode-bg';
-            document.body.appendChild(dreadBg);
-            potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る... ${tier}シード、${teamName}です...`;
-            await sleep(2500);
-        }
-
-        commentaryEl.textContent = `${tier}シード（第${teamRank}シード）、${teamName}がクジを引きます...`;
-        playSound('sound-drumroll');
-        await sleep(1500);
-        drawnTeamEl.textContent = teamName;
-        drawnTeamContainer.classList.add('fade-in-out');
-        teamPositions[position] = teamName;
-        if (hasFirstRoundBye) {
-            teamPositions[byePosition] = '(BYE)';
-        }
-        await sleep(1250);
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        const byeSlot = hasFirstRoundBye
-            ? document.querySelector(`.lottery-slot[data-index="${byePosition}"]`)
-            : null;
-        targetSlot.querySelector('.team-name-placeholder').textContent = `[${tier}${teamRank}] ${teamName}`;
-        if (byeSlot) {
-            byeSlot.querySelector('.team-name-placeholder').textContent = '(BYE)';
-        }
-        targetSlot.classList.add('filled', 'highlight');
-        if (byeSlot) {
-            byeSlot.classList.add('filled');
-        }
-        playSound('sound-cymbal');
-        if (dreadBg) {
-            dreadBg.remove();
-            potEl.classList.remove('dread');
-            playSound('sound-gasp');
-        }
-        commentaryEl.textContent = hasFirstRoundBye
-            ? `${tier}シードの${teamName}は ${position + 1}番、2回戦からの登場です！`
-            : `${tier}シードの${teamName}は ${position + 1}番、1回戦から登場します！`;
-        await sleep(1500);
-        drawnTeamContainer.classList.remove('fade-in-out');
-        targetSlot.classList.remove('highlight');
-    }
-
-    if (extraByePositions.length > 0) {
-        commentaryEl.textContent = `参加117校に合わせ、追加の不戦勝枠${extraByePositions.length}枠を配置します。`;
-        extraByePositions.forEach(position => {
-            const byeSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-            byeSlot.querySelector('.team-name-placeholder').textContent = '(BYE)';
-            byeSlot.classList.add('filled');
-        });
-        await sleep(1500);
-    }
-
-    // --- 3. 抽選会フェーズ2：ノーシード校の配置 (ロジック変更なし) ---
-    potNameEl.textContent = "ノーシード校";
-    const nonSeeds = lotteryOrder.filter(t => !seeds.map(s => s.team).includes(t));
-    for (const teamName of nonSeeds) {
-        let dreadBg = null;
-        if (isStrongRank(teamName) && initialAiEnabled) {
-            dreadBg = document.createElement('div');
-            dreadBg.className = 'dread-mode-bg';
-            document.body.appendChild(dreadBg);
-            potEl.classList.add('dread');
-            commentaryEl.textContent = `会場が静まり返る... ノーシードの強豪 ${teamName} が登場...`;
-            await sleep(2500);
-        }
-
-        commentaryEl.textContent = `${teamName}がクジを引きます...`;
-        playSound('sound-drumroll');
-        await sleep(250);
-        drawnTeamEl.textContent = teamName;
-        drawnTeamContainer.classList.add('fade-in-out');
-        const slotIndex = Math.floor(Math.random() * availableNonSeedSlots.length);
-        const position = availableNonSeedSlots.splice(slotIndex, 1)[0];
-        teamPositions[position] = teamName;
-        await sleep(200);
-        const targetSlot = document.querySelector(`.lottery-slot[data-index="${position}"]`);
-        targetSlot.querySelector('.team-name-placeholder').textContent = teamName;
-        targetSlot.classList.add('filled');
-        playSound('sound-cymbal');
-        if (dreadBg) {
-            dreadBg.remove();
-            potEl.classList.remove('dread');
-            playSound('sound-gasp');
-        }
-        commentaryEl.textContent = `${teamName}は ${position + 1}番 に決定！`;
-        
-        let didComment = false;
-        if (initialAiEnabled) {
-             didComment = checkDeathBlock(position);
-        }
-
-        if (!didComment) {
-            const opponentIndex = position % 2 === 0 ? position + 1 : position - 1;
-            if(teamPositions[opponentIndex]) {
-                const opponentName = teamPositions[opponentIndex];
-                const opponentIsSeed = seeds.some(s => s.team === opponentName);
-                const isRival = (isStrongRank(teamName) && opponentIsSeed) || 
-                              (['A','B'].includes(calculateRank(teamName, {})) && ['A','B'].includes(calculateRank(opponentName, {})));
-                if (isRival && initialAiEnabled) {
-                    commentaryEl.textContent = `決まったー！1回戦から屈指の好カード！ ${teamName} vs ${opponentName}`;
-                    playSound('sound-gasp');
-                    document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.add('highlight');
-                    targetSlot.classList.add('highlight');
-                    await sleep(1500);
-                    document.querySelector(`.lottery-slot[data-index="${opponentIndex}"]`).classList.remove('highlight');
-                    targetSlot.classList.remove('highlight');
-                }
-            }
-        }
-        await sleep(250);
-        drawnTeamContainer.classList.remove('fade-in-out');
-    }
-
-    // --- 4. 終了処理 ---
-    commentaryEl.textContent = '全ての組み合わせが決定しました！';
-    await sleep(2000);
-    
-    if (initialAiEnabled) {
-        await generateCaptainInterviews(teamPositions);
-    } else {
-        document.getElementById('lottery-modal').classList.add('hidden');
-        SoundManager.stopBgm();
-        createNewTournament(false, 'summer', teamPositions);
-    }
+    document.getElementById('start-lottery-btn').classList.add('hidden');
+    document.getElementById('lottery-auto-btn').classList.remove('hidden');
+    document.getElementById('lottery-speed').classList.remove('hidden');
+    document.getElementById('skip-lottery-btn').textContent = '残りを一括抽選';
+    document.getElementById('lottery-pot').onclick = () => drawCurrentLotteryTeam(false);
+    addLotteryLog(`<strong>抽選開始</strong><br>シード16校から順に登壇`);
+    updateLotteryCeremonyProgress();
+    prepareCurrentLotteryTeam();
 }
-// ▲▲▲ 置き換えここまで ▲▲▲
+// ▲▲▲ 抽選会イベントここまで ▲▲▲
 
 // ▲▲▲ 置き換えここまで ▲▲▲
 /**
@@ -27196,6 +30434,7 @@ ${extraInstruction}
     document.getElementById('close-interview-btn').onclick = () => {
         interviewModal.classList.add('hidden');
         document.getElementById('lottery-modal').classList.add('hidden');
+        document.getElementById('lottery-modal').classList.remove('flex');
         SoundManager.stopBgm();
         
         if (isKoshien) {
@@ -29020,6 +32259,57 @@ document.getElementById('contribution-close-btn').addEventListener('click', () =
 
 document.body.addEventListener('click', async (e) => {
 
+    // --- 大会全体「ファン広場」 ---
+    if (e.target.closest('#open-fan-hub-btn')) {
+        e.preventDefault();
+        openTournamentFanHub('timeline');
+        return;
+    }
+
+    if (e.target.closest('#fan-hub-close-btn') || e.target.id === 'fan-hub-modal') {
+        e.preventDefault();
+        closeTournamentFanHub();
+        return;
+    }
+
+    const fanHubTab = e.target.closest('[data-fan-hub-tab]');
+    if (fanHubTab) {
+        e.preventDefault();
+        fanHubActiveTab = fanHubTab.dataset.fanHubTab;
+        fanHubActiveFilter = 'all';
+        renderTournamentFanHub(tournamentState);
+        return;
+    }
+
+    const fanHubFilter = e.target.closest('[data-fan-hub-filter]');
+    if (fanHubFilter) {
+        e.preventDefault();
+        fanHubActiveFilter = fanHubFilter.dataset.fanHubFilter;
+        renderTournamentFanHub(tournamentState);
+        return;
+    }
+
+    const fanHubTeam = e.target.closest('[data-fan-hub-team]');
+    if (fanHubTeam) {
+        e.preventDefault();
+        const teamName = fanHubTeam.dataset.fanHubTeam;
+        if (teamName) {
+            closeTournamentFanHub();
+            renderTeamTournamentReaction(teamName, 0, 'local');
+        }
+        return;
+    }
+
+    const fanHubThreadToggle = e.target.closest('[data-fan-hub-thread]');
+    if (fanHubThreadToggle) {
+        e.preventDefault();
+        const thread = document.getElementById(fanHubThreadToggle.dataset.fanHubThread);
+        if (thread) {
+            const collapsed = thread.classList.toggle('is-collapsed');
+            fanHubThreadToggle.textContent = collapsed ? '返信を表示' : '返信を隠す';
+        }
+        return;
+    }
 
 
     // --- チーム別「大会への反応」ボタン ---
