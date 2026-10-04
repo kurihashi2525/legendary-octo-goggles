@@ -5928,6 +5928,29 @@ body{padding-bottom:42px;}
 @media(max-width:760px){body{padding-bottom:42px}.v13-side-panel{grid-template-columns:1fr}.v13-tournament-grid{gap:8px}.news-filter-btn{font-size:.62rem !important}.v13-news-list{grid-template-columns:1fr}.v13-news-top{grid-template-columns:54px 1fr;padding:12px;gap:10px}.v13-news-top-icon{height:54px;font-size:24px}.v13-news-top-title{font-size:1.05rem}.bracket-ui-toolbar{grid-template-columns:1fr;grid-template-areas:'identity' 'actions';}.v13-bracket-map{display:none}.v13-bracket-actions{justify-content:flex-start}.ticker-label{min-width:60px}.v13-ticker-item{font-size:10px;padding:0 12px}}
 </style>
 
+
+<style id="manual-pre-tournament-ai-styles">
+.manual-ai-panel{margin:12px 16px 4px;border:1px solid #dbe4ee;border-radius:12px;background:linear-gradient(180deg,#f8fbff,#f5f7fa);overflow:hidden}
+.manual-ai-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fff}
+.manual-ai-panel-title{font-size:.9rem;font-weight:800;color:#1f2937;display:flex;align-items:center;gap:7px}
+.manual-ai-panel-note{font-size:.72rem;color:#64748b}
+.manual-ai-actions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;padding:10px}
+.manual-ai-btn{appearance:none;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:9px;padding:8px 6px;font-size:.73rem;font-weight:800;line-height:1.25;cursor:pointer;transition:.15s ease;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.manual-ai-btn:hover{border-color:#64748b;background:#f8fafc;transform:translateY(-1px)}
+.manual-ai-btn[data-manual-ai="preview"],.manual-ai-btn[data-manual-ai="analysis"]{border-color:#93c5fd;color:#1d4ed8;background:#eff6ff}
+.manual-ai-btn[data-manual-ai="topics"]{border-color:#c4b5fd;color:#6d28d9;background:#f5f3ff}
+.manual-ai-btn[data-manual-ai="feuds"]{border-color:#fca5a5;color:#b91c1c;background:#fff1f2}
+.manual-ai-btn[data-manual-ai="namco"]{border-color:#86efac;color:#15803d;background:#f0fdf4}
+.manual-ai-btn[data-manual-ai="bbs"]{border-color:#fdba74;color:#c2410c;background:#fff7ed}
+.manual-ai-btn:disabled{opacity:.48;cursor:wait;transform:none}
+#manual-ai-status{min-height:23px;padding:0 11px 9px;font-size:.72rem;color:#64748b}
+#manual-ai-status.is-working{color:#1d4ed8;font-weight:700}
+#manual-ai-status.is-success{color:#15803d;font-weight:700}
+#manual-ai-status.is-error{color:#b91c1c;font-weight:700}
+@media(max-width:1000px){.manual-ai-actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.manual-ai-panel{margin:8px}.manual-ai-panel-head{align-items:flex-start;flex-direction:column}.manual-ai-actions{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px}.manual-ai-btn{font-size:.68rem;padding:8px 4px}}
+</style>
+
 </head>
 <body class="p-4 md:p-8">
      <audio id="lottery-bgm" src="./bgm.mp3" loop preload="auto"></audio>
@@ -5967,7 +5990,7 @@ body{padding-bottom:42px;}
     </div>
         
 <div class="flex items-center justify-center space-x-4 p-4 mt-4 bg-slate-800/50 rounded-lg">
-            <span class="font-semibold text-white">大会開始時のAI自動生成</span>
+            <span class="font-semibold text-white">大会開始時のAI自動生成 <span class="text-xs font-normal text-slate-300">（後から個別生成可）</span></span>
             <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="initial-ai-generation-toggle" class="sr-only peer" checked>
                 <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -6336,6 +6359,22 @@ body{padding-bottom:42px;}
             <span class="text-2xl mr-2">📰</span> 速報ニュース
         </h2>
         <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Auto Update</span>
+    </div>
+
+    <div id="manual-ai-generation-panel" class="manual-ai-panel">
+        <div class="manual-ai-panel-head">
+            <div class="manual-ai-panel-title"><span>✦</span> 大会前コンテンツを個別生成</div>
+            <div class="manual-ai-panel-note">自動生成OFFでも使用できます</div>
+        </div>
+        <div class="manual-ai-actions">
+            <button type="button" class="manual-ai-btn" data-manual-ai="preview">📰 大会展望</button>
+            <button type="button" class="manual-ai-btn" data-manual-ai="analysis">🗺️ 組み合わせ分析</button>
+            <button type="button" class="manual-ai-btn" data-manual-ai="topics">🔎 話題校特集</button>
+            <button type="button" class="manual-ai-btn" data-manual-ai="feuds">🔥 因縁カード</button>
+            <button type="button" class="manual-ai-btn" data-manual-ai="namco">🏢 公式リリース</button>
+            <button type="button" class="manual-ai-btn" data-manual-ai="bbs">💬 組み合わせBBS</button>
+        </div>
+        <div id="manual-ai-status">大会開始後、必要なコンテンツだけ生成できます。設定のON/OFFは自動生成にだけ影響します。</div>
     </div>
 
     <div class="news-filter-tab">
@@ -6985,7 +7024,7 @@ graph TD
                     <li><strong>チームステータス:</strong> トーナメント表のチーム名をクリックすると、そのチームの過去の最高成績や直近の成績、獲得した称号（例：ジャイアントキラー）などを確認できます。</li>
                     <li><strong>大会ファン広場:</strong> 大会画面の「🔥 大会ファン広場」から、全試合を横断したファンのタイムライン、番狂わせや接戦への返信、他校ファンの利害、話題校・厳しい山・開いた山のランキング、各校の「今大会評価」を確認できます。学校名を押すと、その学校の三者視点ファン反応へ移動します。</li>
                     <li><strong>スキップ機能:</strong> 各大会やラウンドごとに用意された「スキップ」ボタンを使うと、試合結果を自動で（ランク差などを考慮して）生成し、大会を高速で進行させることができます。</li>
-                    <li><strong>設定:</strong> 画面右上の「⚙️ 設定」ボタンから、ニュース記事や掲示板コメントの自動生成をON/OFFできます。</li>
+                    <li><strong>設定:</strong> 画面右上の「⚙️ 設定」ボタンから、ニュース記事や掲示板コメントの自動生成をON/OFFできます。自動生成をOFFにしても、ニュース欄の「大会前コンテンツを個別生成」から必要なものだけ後から生成できます。</li>
                     <li><strong>抽選会/勢力図分析:</strong> 夏の大会開始時には、各校の登壇、抽選箱からの番号札開封、司会による復唱、係員による校名札の運搬、会場のトーナメント壁面ボードへの掲示までをテレビ中継風に再現します。A～Dブロックを切り替えながら、番号の金具へ縦札が掛かり、該当校の勝ち上がりルートが点灯する様子を確認できます。好カード決定時には速報テロップも表示されます。抽選箱をクリックして1校ずつ進めるほか、自動進行、注目校での一時停止、残りの一括抽選も利用できます。抽選後には各ブロックの勢力図をAIが分析・解説します。</li>
                  </ul>
             </div>
@@ -16041,7 +16080,7 @@ async function createNewTournament(
         namcoNewsSection.classList.remove('hidden');
         namcoNewsContent.innerHTML = `<div class="loader">ナムコグループからのお知らせを確認中...</div>`;
         let analysisArticlePromise = generateBracketAnalysisNewsArticle(tournamentState);
-        let bracketBbsPromise = generateBracketBbsThread(tournamentState); 
+        let bracketBbsPromise = tournamentState.settings.enableBbsGeneration ? generateBracketBbsThread(tournamentState) : Promise.resolve(null); 
         try {
             const topicArticles = await generateTopicSchoolArticles(tournamentState); 
             if (topicArticles && topicArticles.length > 0) {
@@ -16062,11 +16101,13 @@ async function createNewTournament(
         renderBbsComments(tournamentState.bbsComments); 
         renderNamcoNews(tournamentState.namcoNews);
         saveState();
+        setManualAiStatus('自動生成が完了しました。必要な項目は上のボタンから個別に再生成できます。', 'success');
     } else {
-        saveState(); 
-        renderTournament(tournamentState); 
-        newsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる自動記事生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
-        bbsCommentsContainer.innerHTML = `<p class="text-gray-500 text-center">（AIによる掲示板生成は現在オフです。設定 ⚙️ からオンにできます）</p>`;
+        saveState();
+        renderTournament(tournamentState);
+        renderNews(tournamentState.news || []);
+        renderBbsComments(tournamentState.bbsComments || []);
+        setManualAiStatus('自動生成はOFFです。必要な「大会前コンテンツ」だけ上のボタンから個別生成できます。');
         namcoNewsSection.classList.add('hidden');
     }
 }
@@ -19899,6 +19940,150 @@ function sanitizePublicRankDeep(value) {
 }
 
 let currentNewsFilter = 'all'; // 現在のフィルター状態
+
+
+function setManualAiStatus(message, kind = '') {
+    const el = document.getElementById('manual-ai-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.className = kind ? `is-${kind}` : '';
+}
+
+function setManualAiBusy(activeButton, busy) {
+    document.querySelectorAll('.manual-ai-btn').forEach(btn => {
+        btn.disabled = !!busy;
+    });
+    if (activeButton) {
+        if (busy) {
+            activeButton.dataset.originalLabel = activeButton.textContent;
+            activeButton.textContent = '生成中…';
+        } else if (activeButton.dataset.originalLabel) {
+            activeButton.textContent = activeButton.dataset.originalLabel;
+            delete activeButton.dataset.originalLabel;
+        }
+    }
+}
+
+function canGenerateTournamentIntroManually() {
+    return !!(tournamentState && Array.isArray(tournamentState.teams) && tournamentState.teams.length && tournamentState.matches && Object.keys(tournamentState.matches).length);
+}
+
+function replaceManualNewsArticle(article, predicate) {
+    if (!article) return;
+    tournamentState.news = Array.isArray(tournamentState.news) ? tournamentState.news : [];
+    if (typeof predicate === 'function') tournamentState.news = tournamentState.news.filter(item => !predicate(item));
+    tournamentState.news.unshift(article);
+}
+
+function hasSameFeud(existing, incoming) {
+    if (!existing || !incoming || !Array.isArray(existing.teams) || !Array.isArray(incoming.teams)) return false;
+    const a = [...existing.teams].sort().join('|');
+    const b = [...incoming.teams].sort().join('|');
+    return a === b && (existing.type || '') === (incoming.type || '');
+}
+
+async function generateManualPreTournamentContent(type, button = null) {
+    if (!canGenerateTournamentIntroManually()) {
+        setManualAiStatus('大会開始後に利用できます。まだ組み合わせデータがありません。', 'error');
+        return;
+    }
+
+    const labels = {
+        preview: '大会展望',
+        analysis: '組み合わせ分析',
+        topics: '話題校特集',
+        feuds: '因縁カード',
+        namco: '公式リリース',
+        bbs: '組み合わせBBS'
+    };
+    const label = labels[type] || 'コンテンツ';
+    setManualAiBusy(button, true);
+    setManualAiStatus(`${label}をAIが生成しています…`, 'working');
+
+    try {
+        if (type === 'preview') {
+            const article = await generateNewsArticle({ matchId: 'preview', manualGeneration: true });
+            if (!article) throw new Error('大会展望を生成できませんでした。');
+            article.manualGeneration = true;
+            article.manualContentType = 'preview';
+            replaceManualNewsArticle(article, item => item?.manualContentType === 'preview' || (item?.context?.matchId === 'preview' && !item?.context?.isBracketAnalysis && !item?.manualContentType));
+            renderNews(tournamentState.news);
+        }
+        else if (type === 'analysis') {
+            const article = await generateBracketAnalysisNewsArticle(tournamentState);
+            if (!article) throw new Error('組み合わせ分析を生成できませんでした。');
+            article.manualGeneration = true;
+            article.manualContentType = 'analysis';
+            replaceManualNewsArticle(article, item => item?.manualContentType === 'analysis' || item?.context?.isBracketAnalysis);
+            renderNews(tournamentState.news);
+        }
+        else if (type === 'topics') {
+            const articles = await generateTopicSchoolArticles(tournamentState);
+            if (!articles || !articles.length) throw new Error('話題校特集を生成できませんでした。');
+            tournamentState.news = (tournamentState.news || []).filter(item => !(item?.manualGeneration && item?.manualContentType === 'topics'));
+            const stamped = articles.map(article => ({ ...article, manualGeneration: true, manualContentType: 'topics' }));
+            tournamentState.news.unshift(...stamped);
+            renderNews(tournamentState.news);
+        }
+        else if (type === 'feuds') {
+            const newFeuds = await generateDynamicFeuds(tournamentState);
+            if (!newFeuds || !newFeuds.length) throw new Error('新しい因縁カードを抽出できませんでした。');
+            tournamentState.feuds = Array.isArray(tournamentState.feuds) ? tournamentState.feuds : [];
+            const unique = newFeuds.filter(feud => !tournamentState.feuds.some(existing => hasSameFeud(existing, feud)));
+            if (unique.length) tournamentState.feuds.push(...unique);
+            const used = unique.length ? unique : newFeuds;
+            const feudTitles = used.map(f => `「${f.teams?.[0] || '未定'} vs ${f.teams?.[1] || '未定'}${f.type ? `（${f.type}）` : ''}」`).join('、');
+            const article = {
+                title: '【大会前特集】今大会の注目対決をピックアップ',
+                body: `組み合わせから注目すべき対決を抽出した。\n${feudTitles}\n大会序盤から見逃せないカードが並ぶ。`,
+                timestamp: Date.now(),
+                isTopicArticle: true,
+                manualGeneration: true,
+                manualContentType: 'feuds',
+                context: { manualPreTournament: true, contentType: 'feuds' }
+            };
+            replaceManualNewsArticle(article, item => item?.manualGeneration && item?.manualContentType === 'feuds');
+            renderNews(tournamentState.news);
+            renderTournament(tournamentState);
+        }
+        else if (type === 'namco') {
+            const item = await generateNamcoNews(tournamentState, 'bracket');
+            if (!item) throw new Error('公式リリースを生成できませんでした。');
+            tournamentState.namcoNews = item;
+            const section = document.getElementById('namco-news-section');
+            if (section) section.classList.remove('hidden');
+            renderNamcoNews(tournamentState.namcoNews);
+        }
+        else if (type === 'bbs') {
+            const thread = await generateBracketBbsThread(tournamentState);
+            if (!thread) throw new Error('組み合わせBBSを生成できませんでした。');
+            tournamentState.bbsComments = Array.isArray(tournamentState.bbsComments) ? tournamentState.bbsComments : [];
+            tournamentState.bbsComments = tournamentState.bbsComments.filter(item => item?.matchId !== 'bracket' && !item?.context?.isBracketThread);
+            tournamentState.bbsComments.push(thread.error ? { ...thread, context: { isBracketThread: true } } : thread);
+            renderBbsComments(tournamentState.bbsComments);
+        }
+        else {
+            throw new Error('不明な生成タイプです。');
+        }
+
+        saveState();
+        if (typeof updateTournamentPortal === 'function') updateTournamentPortal(tournamentState);
+        if (typeof updateTicker === 'function') updateTicker();
+        setManualAiStatus(`${label}を生成しました。自動生成設定は変更していません。`, 'success');
+    } catch (error) {
+        console.error(`[manual AI] ${label} generation failed:`, error);
+        setManualAiStatus(`${label}の生成に失敗しました。通信状態やAI設定を確認してください。`, 'error');
+    } finally {
+        setManualAiBusy(button, false);
+    }
+}
+
+document.addEventListener('click', (event) => {
+    const btn = event.target.closest('.manual-ai-btn[data-manual-ai]');
+    if (!btn) return;
+    event.preventDefault();
+    generateManualPreTournamentContent(btn.dataset.manualAi, btn);
+});
 
 /**
  * ニュース一覧を描画する (フィルター対応版)
