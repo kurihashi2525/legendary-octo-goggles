@@ -9140,6 +9140,154 @@ const FINAL_STAGE_STADIUMS = [
 ];
 // ▲▲▲ 追加ここまで ▲▲
 
+// ▼▼▼ v13.6: 2026年・選手権静岡大会の実日程テンプレート ▼▼▼
+const SHIZUOKA_SUMMER_2026_SCHEDULE = Object.freeze({
+    templateId: 'shizuoka-summer-2026',
+    R1: ['7/4', '7/5'],
+    R2: ['7/11', '7/12'],
+    R3: ['7/18', '7/19'],
+    R4: ['7/21'],
+    R5: ['7/23'],
+    R6: ['7/25'],
+    F: ['7/27']
+});
+
+function buildBalancedScheduleSlots(dates, stadiums, gamesPerDayPerStadium) {
+    const slots = [];
+    for (const date of dates || []) {
+        // 同一球場を先に埋め切らず「第1試合を各球場 → 第2試合を各球場…」と配る。
+        // これで同日の開催が複数球場へ自然に分散する。
+        for (let gameNum = 1; gameNum <= gamesPerDayPerStadium; gameNum++) {
+            for (const stadium of stadiums || []) {
+                slots.push({
+                    date,
+                    stadium: stadium.abbr,
+                    stadiumFull: stadium.name,
+                    region: stadium.region,
+                    gameNum
+                });
+            }
+        }
+    }
+    return slots;
+}
+
+function assignScheduleSlotsToState(state, matchIds, dates, stadiums, gamesPerDayPerStadium, options = {}) {
+    if (!state?.matches || !Array.isArray(matchIds) || !matchIds.length) return;
+    const eligibleIds = matchIds.filter(id => {
+        const m = state.matches[id];
+        if (!m) return false;
+        if (options.skipByes && (m.team1 === '(BYE)' || m.team2 === '(BYE)')) return false;
+        return true;
+    });
+    const slots = buildBalancedScheduleSlots(dates, stadiums, gamesPerDayPerStadium);
+    // 標準117校では通常枠内に収まる。カスタムで参加校を増やしても日程日そのものは増やさず、
+    // 必要な分だけ同日の「第4試合以降」を追加して未割当を防ぐ。
+    let overflowGameNum = gamesPerDayPerStadium + 1;
+    while (slots.length < eligibleIds.length) {
+        for (const date of dates || []) {
+            for (const stadium of stadiums || []) {
+                slots.push({ date, stadium: stadium.abbr, stadiumFull: stadium.name, region: stadium.region, gameNum: overflowGameNum });
+                if (slots.length >= eligibleIds.length) break;
+            }
+            if (slots.length >= eligibleIds.length) break;
+        }
+        overflowGameNum++;
+    }
+
+    eligibleIds.forEach((id, index) => {
+        const match = state.matches[id];
+        if (!match) return;
+        let slotIndex = index < slots.length ? index : -1;
+
+        // 1回戦だけは可能な範囲で地元地区に寄せる。
+        if (options.preferRegion && slots.length) {
+            const team1Region = TEAM_DATA[match.team1]?.region;
+            const team2Region = TEAM_DATA[match.team2]?.region;
+            let targetRegion = team1Region === team2Region ? team1Region : null;
+            if (targetRegion === '伊豆') targetRegion = '東部';
+            if (targetRegion) {
+                const preferred = slots.findIndex((slot, i) => !slot._used && slot.region === targetRegion);
+                if (preferred >= 0) slotIndex = preferred;
+            }
+        }
+
+        let slot = slotIndex >= 0 ? slots[slotIndex] : null;
+        if (!slot || slot._used) {
+            slot = slots.find(s => !s._used) || slots[index % Math.max(1, slots.length)];
+        }
+        if (!slot) return;
+        slot._used = true;
+        match.schedule = {
+            date: slot.date,
+            stadium: slot.stadium,
+            stadiumFull: slot.stadiumFull,
+            game: slot.gameNum
+        };
+    });
+
+    // BYE枠には実試合の開催日を持たせない。
+    if (options.skipByes) {
+        matchIds.forEach(id => {
+            const m = state.matches[id];
+            if (m && (m.team1 === '(BYE)' || m.team2 === '(BYE)')) delete m.schedule;
+        });
+    }
+}
+
+function migrateGamelogDatesToCurrentMatchSchedule(state) {
+    if (!state?.teamRecords || !state?.matches) return 0;
+    let changed = 0;
+    Object.values(state.teamRecords).forEach(record => {
+        const statGroups = [record?.playerStats?.pitching, record?.playerStats?.batting];
+        statGroups.forEach(group => {
+            Object.values(group || {}).forEach(stats => {
+                (stats?.gamelogs || []).forEach(log => {
+                    const match = state.matches[log.matchId];
+                    const newDate = match?.schedule?.date;
+                    if (!newDate || log.date === newDate) return;
+                    log.date = newDate;
+                    if (!log.tournament) log.tournament = state.currentTournament;
+                    if (log.tournamentYear === undefined) log.tournamentYear = state.tournamentYear;
+                    changed++;
+                });
+            });
+        });
+    });
+    return changed;
+}
+
+function applyShizuoka2026SummerSchedule(state = tournamentState, options = {}) {
+    if (!state || state.currentTournament !== 'summer' || !state.matches) return false;
+    const force = !!options.force;
+    if (!force && state.summerScheduleTemplate === SHIZUOKA_SUMMER_2026_SCHEDULE.templateId) return false;
+
+    const ids = Object.keys(state.matches);
+    const byRound = round => ids.filter(id => id.includes(`-R${round}-`) && !id.startsWith('F-'));
+
+    // 117校・128枠ではR1の実試合は最大53試合。10球場×2日×3試合=60枠を確保。
+    assignScheduleSlotsToState(state, byRound(1), SHIZUOKA_SUMMER_2026_SCHEDULE.R1, STADIUM_DATA, 3, { skipByes: true, preferRegion: true });
+    // 2回戦32試合: 10球場×2日×2試合=40枠。
+    assignScheduleSlotsToState(state, byRound(2), SHIZUOKA_SUMMER_2026_SCHEDULE.R2, STADIUM_DATA, 2);
+    // 3回戦16試合: 主要4球場×2日×2試合=16枠。
+    assignScheduleSlotsToState(state, byRound(3), SHIZUOKA_SUMMER_2026_SCHEDULE.R3, ROUND_3_STADIUMS, 2);
+    // 4回戦8試合: 草薙・愛鷹・清水・浜松で2試合ずつ。
+    assignScheduleSlotsToState(state, byRound(4), SHIZUOKA_SUMMER_2026_SCHEDULE.R4, ROUND_3_STADIUMS, 2);
+    // 準々決勝4試合: 2026実大会同様、草薙・清水で2試合ずつ。
+    assignScheduleSlotsToState(state, byRound(5), SHIZUOKA_SUMMER_2026_SCHEDULE.R5, QUARTER_FINAL_STADIUMS, 2);
+    // 準決勝2試合・決勝1試合: 草薙。
+    assignScheduleSlotsToState(state, byRound(6), SHIZUOKA_SUMMER_2026_SCHEDULE.R6, FINAL_STAGE_STADIUMS, 2);
+    assignScheduleSlotsToState(state, ids.filter(id => id.startsWith('F-R1-')), SHIZUOKA_SUMMER_2026_SCHEDULE.F, FINAL_STAGE_STADIUMS, 1);
+
+    state.summerScheduleTemplate = SHIZUOKA_SUMMER_2026_SCHEDULE.templateId;
+    state.summerScheduleSource = '2026選手権静岡大会準拠';
+    state.summerScheduleMigratedAt = Date.now();
+
+    if (options.migrateLogs !== false) migrateGamelogDatesToCurrentMatchSchedule(state);
+    return true;
+}
+// ▲▲▲ v13.6 ここまで ▲▲▲
+
 /**
  * AIの解像度を上げるための「静岡県高校野球の常識・勢力図」（現実ベース＋架空・詳細版）
  * 全てのAI関数がこの情報を参照し、文脈を理解する。
@@ -16216,24 +16364,36 @@ async function createNewTournament(
         datesR6 = ["4/25"];
         dateFinal = ["4/27"];
     } else {
-        datesR1 = ["7/10", "7/11", "7/12", "7/13"];
-        datesR2 = ["7/15", "7/16"];
-        datesR3 = ["7/18", "7/19"];
-        datesR4 = ["7/21"];
-        datesR5 = ["7/23"];
-        datesR6 = ["7/25"];
-        dateFinal = ["7/27"];
+        // 2026年・第108回選手権静岡大会の日程に準拠。
+        datesR1 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R1];
+        datesR2 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R2];
+        datesR3 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R3];
+        datesR4 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R4];
+        datesR5 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R5];
+        datesR6 = [...SHIZUOKA_SUMMER_2026_SCHEDULE.R6];
+        dateFinal = [...SHIZUOKA_SUMMER_2026_SCHEDULE.F];
     }
     
     // (R1のスケジュール割り当て ... 変更なし)
-    const matchIdsR1 = Object.keys(tournamentState.matches).filter(id => id.includes('-R1-'));
-    let fullScheduleQueueR1 = [];
-    for (const date of datesR1) {
-        for (const stadium of STADIUM_DATA) { 
-            for (let i = 1; i <= 2; i++) { fullScheduleQueueR1.push({ date: date, stadium: stadium.abbr, stadiumFull: stadium.name, region: stadium.region, gameNum: i }); }
+    const matchIdsR1 = Object.keys(tournamentState.matches).filter(id => id.includes('-R1-') && !id.startsWith('F-') && tournamentState.matches[id]?.team1 !== '(BYE)' && tournamentState.matches[id]?.team2 !== '(BYE)');
+    // 2026静岡大会と同じ2日間で収めるため、117校・128枠の実試合53試合に対して
+    // 最大60枠（10球場×2日×3試合）を用意する。BYEは開催枠を消費しない。
+    let fullScheduleQueueR1 = buildBalancedScheduleSlots(datesR1, STADIUM_DATA, 3);
+    // 参加校カスタムでBYEが減り実試合が60を超えた場合も、開催日は7/4・7/5のまま維持する。
+    // 標準117校（実試合53）ではこの追加枠は使われない。
+    let r1OverflowGame = 4;
+    while (fullScheduleQueueR1.length < matchIdsR1.length) {
+        for (const date of datesR1) {
+            for (const stadium of STADIUM_DATA) {
+                fullScheduleQueueR1.push({ date, stadium: stadium.abbr, stadiumFull: stadium.name, region: stadium.region, gameNum: r1OverflowGame });
+                if (fullScheduleQueueR1.length >= matchIdsR1.length) break;
+            }
+            if (fullScheduleQueueR1.length >= matchIdsR1.length) break;
         }
+        r1OverflowGame++;
     }
-    fullScheduleQueueR1 = shuffleArray(fullScheduleQueueR1);
+    // 同日の試合が地域・球場へ偏りすぎないよう、日付単位で軽くシャッフルする。
+    fullScheduleQueueR1 = datesR1.flatMap(date => shuffleArray(fullScheduleQueueR1.filter(slot => slot.date === date)));
     const seedMatchIds = [];
     const normalMatchIds = [];
     const seedTeamsList = tournamentState.seeds.map(s => s.team); 
@@ -16298,7 +16458,7 @@ async function createNewTournament(
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R5-')), 
-        datesR5, shuffleArray(QUARTER_FINAL_STADIUMS), 4 // R5 (準々 4試合) -> 2球場 (シャッフル)
+        datesR5, QUARTER_FINAL_STADIUMS, 2 // R5 (準々 4試合) -> 2026実大会同様、草薙・清水で2試合ずつ
     );
     scheduleRoundMatches(
         Object.keys(tournamentState.matches).filter(id => id.includes('-R6-')), 
@@ -16308,6 +16468,10 @@ async function createNewTournament(
         Object.keys(tournamentState.matches).filter(id => id.startsWith('F-R1-')), 
         dateFinal, FINAL_STAGE_STADIUMS, 1 // 決勝 (1試合) -> メイン球場
     );
+    if (nextTournamentType === 'summer') {
+        tournamentState.summerScheduleTemplate = SHIZUOKA_SUMMER_2026_SCHEDULE.templateId;
+        tournamentState.summerScheduleSource = '2026選手権静岡大会準拠';
+    }
 // ▲▲▲ 置き換えここまで ▲▲▲
     
     // 4. 画面とAIの初期化
@@ -17499,6 +17663,7 @@ function backfillCpuStats(teamName) {
             
             const pLog = {
                 matchId: matchId, date: match.schedule?.date || '日付不明', round: roundName,
+                tournament: tournamentState.currentTournament, tournamentYear: tournamentState.tournamentYear,
                 opponent: opponentName, opponentRank: calculateRank(opponentName, tournamentState),
                 result: isWin ? 'W' : 'L', ip: ip, h: hitsAllowed, bb: bbAllowed, so: so, r: oppScore, er: er
             };
@@ -17564,6 +17729,7 @@ function backfillCpuStats(teamName) {
 
                 const bLog = {
                     matchId: matchId, date: match.schedule?.date || '日付不明', round: roundName,
+                tournament: tournamentState.currentTournament, tournamentYear: tournamentState.tournamentYear,
                     opponent: opponentName, opponentRank: calculateRank(opponentName, tournamentState),
                     order: batter.order, 
                     stats: { ab, h, hr, rbi, sb, bb, tb } // ★詳細データを保存
@@ -24853,7 +25019,8 @@ isCaptain: row.querySelector('.captain-btn')?.classList.contains('active') || fa
                         const opponentRank = opponentName ? calculateRank(opponentName, tournamentState) : 'E';
                         pStats.gamelogs.push({
                             matchId: currentMatchIdForDetails,
-                            date: match.schedule?.date || '不明', 
+                            date: match.schedule?.date || '不明',
+                            tournament: tournamentState.currentTournament, tournamentYear: tournamentState.tournamentYear,
                             round: getRoundNameFromMatchId(currentMatchIdForDetails),
                             opponent: opponentName,
                             opponentRank: opponentRank, 
@@ -26903,30 +27070,61 @@ async function setupSpringMainTournament_Round2() {
  * @param {number} baseYear - 大会の年度
  * @returns {string} - " (連投)", " (中1日)", " (中4日)" など
  */
+function parseTournamentDate(dateStr, baseYear = tournamentState?.tournamentYear) {
+    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('/')) return null;
+    const [m, d] = dateStr.split('/').map(Number);
+    if (!Number.isInteger(m) || !Number.isInteger(d) || m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const year = Number(baseYear) || new Date().getFullYear();
+    const y = (m <= 3) ? year + 1 : year;
+    return Date.UTC(y, m - 1, d);
+}
+
 function getRestDaysString(currentDateStr, prevDateStr, baseYear) {
-    if (!currentDateStr || !prevDateStr) return "";
-    if (currentDateStr === '日付不明' || prevDateStr === '日付不明') return "";
-    
-    const parse = (dStr) => {
-        if (!dStr || !dStr.includes('/')) return null;
-        const [m, d] = dStr.split('/').map(Number);
-        // 1~3月は翌年扱い (年度またぎ対応)
-        const y = (m <= 3) ? baseYear + 1 : baseYear; 
-        return new Date(y, m - 1, d);
+    const curr = parseTournamentDate(currentDateStr, baseYear);
+    const prev = parseTournamentDate(prevDateStr, baseYear);
+    if (curr === null || prev === null) return "";
+
+    const diffDays = Math.round((curr - prev) / 86400000);
+    // 同日・未来日付は「中日」を出さない。誤った記事材料にしない。
+    if (diffDays <= 0) return "";
+    if (diffDays === 1) return " (連投)";
+    return ` (中${diffDays - 1}日)`;
+}
+
+function getCurrentTournamentMatchMapForLogs() {
+    return {
+        ...(tournamentState?.matches || {}),
+        ...(tournamentState?.autumnData?.allMatches || {}),
+        ...(tournamentState?.springData?.allMatches || {})
     };
+}
 
-    const curr = parse(currentDateStr);
-    const prev = parse(prevDateStr);
-    
-    if (!curr || !prev) return "";
+function isCurrentTournamentGamelog(log, teamName) {
+    if (!log || !log.matchId || !teamName) return false;
+    if (log.tournament && log.tournament !== tournamentState.currentTournament) return false;
+    if (log.tournamentYear !== undefined && Number(log.tournamentYear) !== Number(tournamentState.tournamentYear)) return false;
 
-    // ミリ秒差分を日数に変換 (Math.roundで微細なズレを吸収)
-    const diffTime = curr - prev;
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const match = getCurrentTournamentMatchMapForLogs()[log.matchId];
+    if (!match) return false;
+    if (match.team1 !== teamName && match.team2 !== teamName) return false;
 
-    if (diffDays <= 0) return " (ダブルヘッダー)"; // 同日または過去
-    if (diffDays === 1) return " (連投)"; // 翌日 (差が1日 -> 中0日)
-    return ` (中${diffDays - 1}日)`; // 2日以上 (差が2日 -> 中1日)
+    const opponent = match.team1 === teamName ? match.team2 : match.team1;
+    if (log.opponent && opponent && log.opponent !== opponent) return false;
+    if (log.date && match.schedule?.date && log.date !== match.schedule.date) return false;
+    return true;
+}
+
+function getPriorPitchingLogsForCurrentMatch(pStats, teamName, currentMatchId, currentDateStr) {
+    if (!pStats?.gamelogs?.length) return [];
+    const currentMs = parseTournamentDate(currentDateStr, tournamentState.tournamentYear);
+    return pStats.gamelogs
+        .filter(log => log.matchId !== currentMatchId)
+        .filter(log => isCurrentTournamentGamelog(log, teamName))
+        .filter(log => {
+            const ms = parseTournamentDate(log.date, tournamentState.tournamentYear);
+            return ms !== null && (currentMs === null || ms < currentMs);
+        })
+        .sort((a, b) => parseTournamentDate(a.date, tournamentState.tournamentYear) - parseTournamentDate(b.date, tournamentState.tournamentYear));
 }
 
 /**
@@ -26955,7 +27153,7 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
     let relevantLogsFound = false;
     
     // ★ この試合の日付を取得 (なければデフォルト)
-    const todayStr = dbMatch.schedule?.date || "7/15";
+    const todayStr = dbMatch.schedule?.date || "";
 
     if (dbMatch.details && dbMatch.details.pitching) {
         for (const teamKey of ['team1', 'team2']) {
@@ -26967,16 +27165,12 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                 const pStats = teamRecord?.playerStats?.pitching[playerName];
                 
                 if (pStats && pStats.gamelogs && pStats.gamelogs.length > 0) {
-                    const currentTournamentKey = tournamentState.currentTournament;
-                    const previousLogs = pStats.gamelogs.filter(log => {
-                        if (log.matchId === matchId) return false;
-                        const logRound = log.round || '';
-                        // 大会フィルター
-                        if (currentTournamentKey === 'summer') return logRound.includes('回戦') || logRound.includes('決勝');
-                        if (currentTournamentKey === 'autumn') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
-                        if (currentTournamentKey === 'spring') return logRound.includes('地区') || logRound.includes('回戦') || logRound.includes('決勝');
-                        return false;
-                    });
+                    const previousLogs = getPriorPitchingLogsForCurrentMatch(
+                        pStats,
+                        dbMatch[teamKey],
+                        matchId,
+                        todayStr
+                    );
 
                     if (previousLogs.length > 0) {
                         relevantLogsFound = true;
@@ -26990,11 +27184,14 @@ function createMatchContext(matchId, winnerName, team1QualityText, team2QualityT
                         };
                         previousLogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
 
-                        previousLogs.forEach(log => {
-                            // ★ ここで新ヘルパー関数を使用 (正確に計算)
-                            const intervalInfo = getRestDaysString(todayStr, log.date, tournamentState.tournamentYear);
-                            const dateInfo = log.date + intervalInfo;
-                            
+                        const latestPriorIndex = previousLogs.length - 1;
+                        previousLogs.forEach((log, logIndex) => {
+                            // 登板間隔は「直近登板」と今回だけを比較する。古い登板には中日表記を付けない。
+                            const intervalInfo = (logIndex === latestPriorIndex)
+                                ? getRestDaysString(todayStr, log.date, tournamentState.tournamentYear)
+                                : '';
+                            const dateInfo = (log.date || '日付不明') + intervalInfo;
+
                             const opponentRank = log.opponentRank || 'E';
                             const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
                             pitcherGamelogInfo += `  - ${log.round} (${dateInfo}) (対 ${log.opponent} [${opponentRank}]): ${resultMark}${log.ip}回 ${log.h}被安打 ${log.bb}四球 ${log.so}奪三振 ${log.r}失点(自責${log.er})\n`;
@@ -33969,15 +34166,12 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText, referen
     // 基準日の決定: 引数があればそれ、なければトーナメントの最新試合の日付
     let todayStr = referenceDate;
     if (!todayStr) {
-        const allMatches = Object.values(tournamentState.matches);
-        // 実施済みの最後の試合を探す
-        for (let i = allMatches.length - 1; i >= 0; i--) {
-            if (allMatches[i].winner && allMatches[i].schedule?.date) {
-                todayStr = allMatches[i].schedule.date;
-                break;
-            }
-        }
-        if (!todayStr) todayStr = "7/25"; // 完全なフォールバック
+        const completedDates = Object.values(getCurrentTournamentMatchMapForLogs())
+            .filter(match => match?.winner && match?.schedule?.date)
+            .map(match => match.schedule.date)
+            .filter(Boolean)
+            .sort((a, b) => (parseTournamentDate(a, tournamentState.tournamentYear) || 0) - (parseTournamentDate(b, tournamentState.tournamentYear) || 0));
+        todayStr = completedDates.length ? completedDates[completedDates.length - 1] : null;
     }
 
     // 日付ソート用ヘルパー
@@ -34032,12 +34226,22 @@ function formatPlayerGamelogsForPrompt(mentionedTeams, conversationText, referen
                         relevantLogsFound = true;
                         logInfo += `- ${playerName} (${teamName}, 投手):\n`;
 
-                        pStats.gamelogs.sort((a, b) => parseForSort(a.date) - parseForSort(b.date));
+                        const currentLogs = pStats.gamelogs
+                            .filter(log => isCurrentTournamentGamelog(log, teamName))
+                            .filter(log => {
+                                const logMs = parseTournamentDate(log.date, tournamentState.tournamentYear);
+                                const refMs = parseTournamentDate(todayStr, tournamentState.tournamentYear);
+                                return logMs !== null && (refMs === null || logMs <= refMs);
+                            })
+                            .sort((a, b) => parseTournamentDate(a.date, tournamentState.tournamentYear) - parseTournamentDate(b.date, tournamentState.tournamentYear));
 
-                        pStats.gamelogs.forEach(log => {
-                            // ★ ここで新ヘルパー関数を使用
-                            const intervalInfo = getRestDaysString(todayStr, log.date, tournamentState.tournamentYear);
-                            const dateInfo = log.date + intervalInfo;
+                        currentLogs.forEach((log, logIndex) => {
+                            // 基準日がその登板より後の場合のみ、最新登板にだけ中日表記を付ける。
+                            const latestIndex = currentLogs.length - 1;
+                            const intervalInfo = (logIndex === latestIndex && todayStr !== log.date)
+                                ? getRestDaysString(todayStr, log.date, tournamentState.tournamentYear)
+                                : '';
+                            const dateInfo = (log.date || '日付不明') + intervalInfo;
 
                             const opponentRank = log.opponentRank || 'E';
                             const resultMark = {'W': '○', 'L': '●', 'S': 'Ｓ', 'H': 'Ｈ'}[log.result] || '';
@@ -37970,6 +38174,14 @@ setupTeamTracker();
                     // --- [はい] データを適用して再開 ---
                     tournamentState = loadedData;
 
+                    // v13.6: 旧セーブの夏県大会も2026静岡大会準拠の日程へ移行する。
+                    // 既に記録済みのgamelogの日付もmatchId基準で追従させ、中日計算の整合性を保つ。
+                    const summerScheduleMigrated = applyShizuoka2026SummerSchedule(tournamentState, { migrateLogs: true });
+                    if (summerScheduleMigrated) {
+                        console.log('夏県大会の日程を2026静岡大会準拠へ移行しました。');
+                        saveState({ skipAutosave: true });
+                    }
+
                     // 甲子園データの復元（ダミーチーム等の再設定）
                     if (tournamentState.currentTournament === 'summer_koshien') {
                         restoreKoshienData(tournamentState.teams);
@@ -41681,6 +41893,7 @@ function updatePlayerStatsFromDetails(match) {
             const newLog = {
                 matchId: match.id,
                 date: match.schedule?.date || '不明',
+                tournament: tournamentState.currentTournament, tournamentYear: tournamentState.tournamentYear,
                 round: getRoundNameFromMatchId(match.id),
                 opponent: opponentName,
                 opponentRank: opponentRank,
