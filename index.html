@@ -5951,6 +5951,263 @@ body{padding-bottom:42px;}
 @media(max-width:620px){.manual-ai-panel{margin:8px}.manual-ai-panel-head{align-items:flex-start;flex-direction:column}.manual-ai-actions{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px}.manual-ai-btn{font-size:.68rem;padding:8px 4px}}
 </style>
 
+
+<style id="v13-2-details-dock-css">
+:root{--details-dock-width:clamp(560px,42vw,760px);}
+
+/* Detailed match input: desktop dock instead of covering the bracket */
+@media (min-width:1280px){
+  body.details-dock-open #tournament-display{
+    padding-right:calc(var(--details-dock-width) + 14px);
+    transition:padding-right .22s ease;
+  }
+  #details-modal:not(.hidden){
+    display:block !important;
+    position:fixed !important;
+    inset:0 0 42px auto !important;
+    width:var(--details-dock-width) !important;
+    height:auto !important;
+    padding:10px 10px 10px 0 !important;
+    background:transparent !important;
+    pointer-events:none;
+    z-index:175 !important;
+  }
+  #details-modal .details-modal-content{
+    pointer-events:auto;
+    width:100% !important;
+    max-width:none !important;
+    height:100% !important;
+    max-height:none !important;
+    padding:0 !important;
+    border:1px solid #cbd5e1;
+    border-right:0;
+    border-radius:14px 0 0 14px !important;
+    overflow:hidden;
+    box-shadow:-18px 0 42px rgba(15,23,42,.18) !important;
+    background:#fff;
+  }
+  #details-modal .details-modal-titlebar{
+    position:relative;
+    flex:none;
+    padding:12px 16px 10px;
+    background:linear-gradient(180deg,#f8fbff,#eef4f9);
+    border-bottom:1px solid #d9e2ea;
+  }
+  #details-modal #details-modal-body{
+    padding:14px 14px 20px !important;
+    margin:0 !important;
+    overflow:auto !important;
+    flex:1 1 auto;
+    min-height:0;
+  }
+  #details-modal .details-modal-footer{
+    flex:none;
+    position:relative;
+    margin:0 !important;
+    padding:10px 12px !important;
+    background:#fff;
+    border-top:1px solid #dce4eb !important;
+    box-shadow:0 -8px 18px rgba(15,23,42,.05);
+  }
+  #details-modal .details-modal-footer button{margin-top:3px;margin-bottom:3px;}
+}
+
+/* On narrower screens it becomes a bottom sheet instead of a giant centered card. */
+@media (max-width:1279px){
+  #details-modal:not(.hidden){
+    display:flex !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+    padding:0 !important;
+    background:rgba(15,23,42,.48) !important;
+    z-index:210 !important;
+  }
+  #details-modal .details-modal-content{
+    width:100% !important;
+    max-width:none !important;
+    max-height:86vh !important;
+    border-radius:18px 18px 0 0 !important;
+    padding:0 !important;
+    overflow:hidden;
+  }
+  #details-modal .details-modal-titlebar{
+    flex:none;
+    padding:12px 14px 9px;
+    background:#f8fafc;
+    border-bottom:1px solid #e2e8f0;
+  }
+  #details-modal #details-modal-body{padding:12px !important;overflow:auto !important;min-height:0;}
+  #details-modal .details-modal-footer{margin:0 !important;padding:10px 10px 12px !important;background:#fff;border-top:1px solid #e2e8f0 !important;}
+}
+
+.details-modal-titlebar h3{margin:0 !important;padding:0 !important;border:0 !important;text-align:left !important;font-size:1rem !important;color:#0f172a;}
+.details-match-context{margin-top:3px;font-size:.72rem;font-weight:800;color:#1769aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.details-match-subcontext{margin-top:2px;font-size:.63rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.details-dock-hint{position:absolute;right:13px;top:11px;font-size:.58rem;font-weight:900;letter-spacing:.08em;color:#64748b;background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:3px 7px;}
+@media(max-width:1279px){.details-dock-hint{display:none;}}
+</style>
+
+<style id="v13-3-input-lane-css">
+:root{
+  --match-ops-dock-width:370px;
+}
+
+/* Desktop: reserve the right column itself for any match input UI. */
+@media (min-width:1280px){
+  body.match-ops-dock-open .v13-tournament-grid{
+    grid-template-columns:minmax(0,1fr) calc(var(--match-ops-dock-width) + 16px) !important;
+  }
+  body.details-dock-open .v13-tournament-grid{
+    grid-template-columns:minmax(0,1fr) calc(var(--details-dock-width) + 16px) !important;
+  }
+  body.match-ops-dock-open #v13-side-panel,
+  body.details-dock-open #v13-side-panel{
+    display:none !important;
+  }
+
+  /* Do not also pad the bracket: the empty second grid column is the reserved space. */
+  body.details-dock-open #tournament-display,
+  body.match-ops-dock-open #tournament-display{
+    padding-right:0 !important;
+  }
+
+  #main-bracket-container .matchup.ops-open{z-index:auto !important;}
+  #main-bracket-container .matchup.ops-open .match-ops-panel{
+    display:flex !important;
+    flex-direction:column;
+    position:fixed !important;
+    left:auto !important;
+    right:16px !important;
+    top:16px !important;
+    bottom:54px !important;
+    width:var(--match-ops-dock-width) !important;
+    height:auto !important;
+    max-height:none !important;
+    transform:none !important;
+    overflow:auto !important;
+    padding:12px !important;
+    border:1px solid #cbd5e1 !important;
+    border-radius:14px 0 0 14px !important;
+    background:#fff !important;
+    box-shadow:-18px 0 42px rgba(15,23,42,.18) !important;
+    z-index:176 !important;
+  }
+  #main-bracket-container .matchup.ops-open .match-ops-panel::before{display:none !important;}
+  #main-bracket-container .matchup.ops-open .match-ops-heading{
+    position:sticky;
+    top:-12px;
+    z-index:5;
+    margin:-12px -12px 10px;
+    padding:13px 14px 10px;
+    background:linear-gradient(180deg,#f8fbff,#eef4f9);
+    border-bottom:1px solid #d9e2ea;
+    font-size:13px;
+  }
+  #main-bracket-container .matchup.ops-open .matchup-footer{
+    position:sticky;
+    bottom:-12px;
+    z-index:4;
+    margin:10px -12px -12px !important;
+    padding:10px 12px 12px;
+    background:#fff;
+    border-top:1px solid #e2e8f0;
+    box-shadow:0 -8px 18px rgba(15,23,42,.05);
+  }
+
+  /* Detailed input occupies the same lane; never a second overlay layer. */
+  #details-modal:not(.hidden){
+    right:16px !important;
+    top:16px !important;
+    bottom:54px !important;
+    left:auto !important;
+    width:var(--details-dock-width) !important;
+    height:auto !important;
+    padding:0 !important;
+  }
+  #details-modal .details-modal-content{
+    border-right:1px solid #cbd5e1 !important;
+    border-radius:14px 0 0 14px !important;
+  }
+}
+
+/* Tablet: use one deliberate bottom sheet rather than a center popover. */
+@media (min-width:761px) and (max-width:1279px){
+  #main-bracket-container .matchup.ops-open .match-ops-panel{
+    display:block !important;
+    position:fixed !important;
+    left:16px !important;
+    right:16px !important;
+    top:auto !important;
+    bottom:50px !important;
+    width:auto !important;
+    max-height:62vh !important;
+    transform:none !important;
+    overflow:auto !important;
+    z-index:220 !important;
+  }
+  #main-bracket-container .matchup.ops-open .match-ops-panel::before{display:none !important;}
+}
+
+/* While detailed input is open, suppress any stale operation panel entirely. */
+body.details-dock-open #main-bracket-container .match-ops-panel{display:none !important;}
+</style>
+
+
+<style id="v13-4-physical-input-dock-css">
+@media (min-width:1280px){
+  body.match-ops-dock-open .v13-tournament-grid{
+    grid-template-columns:minmax(0,1fr) 386px !important;
+  }
+  body.match-ops-dock-open #v13-side-panel{display:none !important;}
+  #match-ops-dock{
+    display:block;
+    position:sticky;
+    top:12px;
+    align-self:start;
+    min-width:0;
+    height:calc(100vh - 66px);
+    overflow:hidden;
+  }
+  #match-ops-dock.hidden{display:none !important;}
+  #match-ops-dock .match-ops-panel{
+    display:flex !important;
+    flex-direction:column;
+    position:static !important;
+    inset:auto !important;
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:auto !important;
+    width:100% !important;
+    height:100% !important;
+    max-height:none !important;
+    transform:none !important;
+    overflow:auto !important;
+    padding:12px !important;
+    border:1px solid #cbd5e1 !important;
+    border-radius:12px !important;
+    background:#fff !important;
+    box-shadow:0 8px 24px rgba(15,23,42,.12) !important;
+    zoom:1 !important;
+  }
+  #match-ops-dock .match-ops-panel::before{display:none !important;}
+  #match-ops-dock .match-ops-heading{
+    position:sticky;top:-12px;z-index:6;
+    margin:-12px -12px 10px;padding:13px 14px 10px;
+    background:linear-gradient(180deg,#f8fbff,#eef4f9);
+    border-bottom:1px solid #d9e2ea;font-size:13px;
+  }
+  #match-ops-dock .matchup-footer{
+    position:sticky;bottom:-12px;z-index:5;
+    margin:10px -12px -12px !important;padding:10px 12px 12px !important;
+    background:#fff;border-top:1px solid #e2e8f0;
+    box-shadow:0 -8px 18px rgba(15,23,42,.05);
+  }
+}
+@media (max-width:1279px){
+  #match-ops-dock{display:none !important;}
+}
+</style>
 </head>
 <body class="p-4 md:p-8">
      <audio id="lottery-bgm" src="./bgm.mp3" loop preload="auto"></audio>
@@ -6551,11 +6808,16 @@ body{padding-bottom:42px;}
 
     <div id="details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="details-modal-content bg-white p-6 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-        <h3 class="text-xl font-bold mb-4 text-center border-b pb-3">試合詳細入力</h3>
-        <div id="details-modal-body" class="overflow-y-auto space-y-6 flex-grow pr-2"> {/* pr-2 を追加してスクロールバーとの隙間を作る */}
+        <div class="details-modal-titlebar">
+            <h3 class="text-xl font-bold">試合詳細入力</h3>
+            <div id="details-match-context" class="details-match-context">対戦カード</div>
+            <div id="details-match-subcontext" class="details-match-subcontext">ラウンド・日程</div>
+            <span class="details-dock-hint">SIDE INPUT</span>
+        </div>
+        <div id="details-modal-body" class="overflow-y-auto space-y-6 flex-grow pr-2">
             </div>
         
-                <div class="mt-6 text-center border-t pt-4">
+                <div class="details-modal-footer mt-6 text-center border-t pt-4">
             <button id="details-save" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 mr-2">
                 この内容で保存
             </button>
@@ -18856,6 +19118,7 @@ ${leaderText}
      * (★夏・秋・春 すべて128チーム制のメインブラケットを描画するよう統一)
      */
     function renderTournament(data) {
+        closeMatchOpsDock({ discard: true });
         let tournamentNameString = tournamentNameMap[data.currentTournament] || '大会';
 
         // UI要素を一度すべて非表示に初期化
@@ -22740,6 +23003,15 @@ function openDetailsModal(matchId) {
         return;
     }
 
+    const detailsMatchContext = document.getElementById('details-match-context');
+    const detailsMatchSubcontext = document.getElementById('details-match-subcontext');
+    if (detailsMatchContext) detailsMatchContext.textContent = `${match.team1 || '未定'}  vs  ${match.team2 || '未定'}`;
+    if (detailsMatchSubcontext) {
+        const roundLabel = getRoundNameFromMatchId(matchId);
+        const scheduleLabel = match.schedule ? [match.schedule.date, match.schedule.stadiumFull || match.schedule.stadium].filter(Boolean).join(' / ') : '';
+        detailsMatchSubcontext.textContent = [roundLabel, scheduleLabel].filter(Boolean).join('　｜　') || '試合情報';
+    }
+
     // 1. 既存データの読み込み、または初期化
     let details = JSON.parse(JSON.stringify(match.details || {}));
 
@@ -22982,7 +23254,9 @@ function openDetailsModal(matchId) {
 
     for (const teamKey of ['team1', 'team2']) refreshDhPanelVisibility(teamKey);
 
+    closeMatchOpsDock();
     detailsModal.classList.remove('hidden');
+    document.body.classList.add('details-dock-open');
     updateTotalScores();
 }
 // ▲▲▲ 置き換えここまで ▲▲▲ 
@@ -24623,6 +24897,8 @@ isCaptain: row.querySelector('.captain-btn')?.classList.contains('active') || fa
     delete detailsBeforeExternalImport[currentMatchIdForDetails];
     saveState();
     detailsModal.classList.add('hidden');
+    document.body.classList.remove('details-dock-open');
+    document.body.classList.remove('match-ops-dock-open');
     renderTournament(tournamentState);
     alert('詳細を保存しました。');
 }
@@ -38107,22 +38383,90 @@ document.getElementById('contribution-close-btn').addEventListener('click', () =
 });
 
 
+function ensureMatchOpsDock() {
+    ensureTournamentPortalShell();
+    let dock = document.getElementById('match-ops-dock');
+    if (dock) return dock;
+    const grid = document.getElementById('v13-tournament-grid');
+    if (!grid) return null;
+    dock = document.createElement('aside');
+    dock.id = 'match-ops-dock';
+    dock.className = 'match-input-dock hidden';
+    const sidePanel = document.getElementById('v13-side-panel');
+    grid.insertBefore(dock, sidePanel || null);
+    return dock;
+}
+
+function closeMatchOpsDock({ discard = false } = {}) {
+    const dock = document.getElementById('match-ops-dock');
+    const panel = dock?.querySelector('.match-ops-panel');
+    const ownerMatchId = panel?.dataset.ownerMatchId || panel?.dataset.matchId || '';
+    const owner = ownerMatchId
+        ? document.querySelector(`#main-bracket-container .matchup[data-match-id="${CSS.escape(ownerMatchId)}"]`)
+        : null;
+    if (owner) owner.classList.remove('ops-open');
+    if (panel) {
+        if (!discard && owner) {
+            delete panel.dataset.ownerMatchId;
+            delete panel.dataset.matchId;
+            owner.appendChild(panel);
+        } else {
+            panel.remove();
+        }
+    } else {
+        document.querySelectorAll('#main-bracket-container .matchup.ops-open').forEach(el => el.classList.remove('ops-open'));
+    }
+    dock?.classList.add('hidden');
+    document.body.classList.remove('match-ops-dock-open');
+}
+
+function openMatchOpsDock(matchup) {
+    if (!matchup) return;
+
+    // Tablet/mobile: keep the panel inside its match card and use the bottom-sheet CSS.
+    if (window.innerWidth < 1280) {
+        const wasOpen = matchup.classList.contains('ops-open');
+        document.querySelectorAll('#main-bracket-container .matchup.ops-open').forEach(el => el.classList.remove('ops-open'));
+        if (!wasOpen) matchup.classList.add('ops-open');
+        document.body.classList.remove('match-ops-dock-open');
+        return;
+    }
+
+    const matchId = matchup.dataset.matchId || '';
+    const wasOpen = matchup.classList.contains('ops-open') && document.body.classList.contains('match-ops-dock-open');
+    closeMatchOpsDock();
+    if (wasOpen) return;
+    const panel = matchup.querySelector('.match-ops-panel');
+    const dock = ensureMatchOpsDock();
+    if (!panel || !dock) return;
+    matchup.classList.add('ops-open');
+    panel.dataset.ownerMatchId = matchId;
+    panel.dataset.matchId = matchId;
+    dock.appendChild(panel);
+    dock.classList.remove('hidden');
+    document.body.classList.add('match-ops-dock-open');
+}
+
+function syncMatchOpsDockState() {
+    const dock = document.getElementById('match-ops-dock');
+    const isOpen = !!dock?.querySelector('.match-ops-panel');
+    document.body.classList.toggle('match-ops-dock-open', isOpen);
+    dock?.classList.toggle('hidden', !isOpen);
+}
+
 document.body.addEventListener('click', async (e) => {
 
     const matchOpsToggle = e.target.closest('.match-ops-toggle');
     if (matchOpsToggle) {
         e.preventDefault();
         e.stopPropagation();
-        const matchup = matchOpsToggle.closest('.matchup');
-        const wasOpen = matchup?.classList.contains('ops-open');
-        document.querySelectorAll('#main-bracket-container .matchup.ops-open').forEach(el => el.classList.remove('ops-open'));
-        if (matchup && !wasOpen) matchup.classList.add('ops-open');
+        openMatchOpsDock(matchOpsToggle.closest('.matchup'));
         return;
     }
     if (e.target.closest('.match-ops-close')) {
         e.preventDefault();
         e.stopPropagation();
-        e.target.closest('.matchup')?.classList.remove('ops-open');
+        closeMatchOpsDock();
         return;
     }
     const bracketAction = e.target.closest('[data-bracket-action]');
@@ -40629,7 +40973,15 @@ document.body.addEventListener('change', (e) => {
         }
         pendingExternalGameLogImport = null;
         detailsModal.classList.add('hidden');
+        document.body.classList.remove('details-dock-open');
+        document.body.classList.remove('match-ops-dock-open');
     });
+    const v13DetailsDockEscape = (event) => {
+        if (event.key !== 'Escape' || detailsModal.classList.contains('hidden')) return;
+        document.getElementById('details-close')?.click();
+    };
+    document.addEventListener('keydown', v13DetailsDockEscape);
+
     saveLoadCloseBtn.addEventListener('click', () => saveLoadModal.classList.add('hidden'));
     newspaperCloseBtn.addEventListener('click', () => newspaperModal.classList.add('hidden'));
 document.getElementById('skip-newspaper-close-btn').addEventListener('click', closeSkipNewspaper);
